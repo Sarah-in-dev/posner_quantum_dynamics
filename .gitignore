@@ -29,3 +29,21 @@ results/*
 # Logs
 *.log
 logs/
+# Database files
+*.db
+*.sqlite
+
+# Results directories
+results/
+notebooks/results/
+
+# HTML files
+*.html
+
+# HDF5 data files
+*.h5
+*.hdf5
+
+# Checkpoint files
+*.pkl
+checkpoints/
