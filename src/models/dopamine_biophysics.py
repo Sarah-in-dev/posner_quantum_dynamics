@@ -109,7 +109,7 @@ class DopamineParameters:
     def __post_init__(self):
         """Calculate derived parameters"""
         self.D_effective = self.D_dopamine / (self.tortuosity ** 2)
-        logger.info(f"Dopamine parameters initialized: D_eff={self.D_effective:.2e} m²/s")
+        print(f"Dopamine parameters initialized: D_eff={self.D_effective:.2e} m²/s")
 
 
 class DopamineField:
@@ -238,15 +238,27 @@ class DopamineField:
         self.total_molecules_released += total_molecules
         self.vesicles_released += n_vesicles
         
-        # Convert to concentration
-        # Assuming release into ~1 µm³ volume initially
-        release_volume = 1e-18  # m³ (1 µm³)
+        # Convert to concentration using actual voxel volume
+        # Volume = dx * dx * cleft_width
+        cleft_width = 20e-9  # 20 nm synaptic cleft
+        voxel_volume = self.dx * self.dx * cleft_width  # m³
+
         avogadro = 6.022e23
         moles = total_molecules / avogadro
-        concentration = moles / (release_volume * 1000)  # M
-        
-        # Add with spatial spread
+        concentration = moles / voxel_volume  # M (not divided by 1000!)
+
+        if self.vesicles_released <= 1:  # Print debug for first release
+            print(f"DEBUG RELEASE: dx={self.dx*1e9:.1f}nm, volume={voxel_volume:.2e}m³")
+            print(f"  Molecules: {total_molecules}, Moles: {moles:.2e}")
+            print(f"  Concentration: {concentration:.2e} M = {concentration*1e9:.1f} nM")
+
         self._add_with_gaussian_spread(i, j, concentration)
+
+        if self.vesicles_released <= 1:
+            print(f"  Max field after release: {np.max(self.field)*1e9:.1f} nM")
+        
+        # Apply spatial spread using Gaussian
+        sigma_grid = self.params.release_spread_sigma / self.dx
     
     def _add_with_gaussian_spread(self, i: int, j: int, concentration: float):
         """Add concentration with Gaussian spatial spread"""
@@ -312,7 +324,7 @@ class DopamineField:
         self.field = np.maximum(self.field, self.params.tonic_concentration)
         
         # Maximum based on diluted vesicle concentration
-        max_possible = self.params.vesicle_concentration / 1000  # ~75 µM
+        max_possible = 10e-6  # 10 µM is a reasonable maximum
         self.field = np.minimum(self.field, max_possible)
     
     def get_statistics(self) -> Dict:

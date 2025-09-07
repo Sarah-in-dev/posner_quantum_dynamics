@@ -23,6 +23,7 @@ from pathlib import Path
 import json
 import h5py
 from dopamine_biophysics import DopamineField, DopamineParameters
+import matplotlib.pyplot as plt
 logger = logging.getLogger(__name__)
 
 # ============================================================================
@@ -673,26 +674,6 @@ class NeuromodulatedQuantumSynapse:
         
         return calcium_final * self.active_mask
     
-    def update_phosphate_from_ATP(self, dt: float, activity_level: float):
-        """
-        ATP hydrolysis releases phosphate during activity.
-        Creates phosphate hotspots near active channels.
-        """
-        if activity_level > 0:
-            # ATP hydrolysis rate proportional to activity
-            hydrolysis_rate = self.params.k_atp_hydrolysis * activity_level
-            
-            # Phosphate production (10% of ATP gets hydrolyzed)
-            phosphate_production = self.params.atp_concentration * hydrolysis_rate * dt * 0.1
-            
-            # Add preferentially near active channels
-            for idx, (ci, cj) in enumerate(self.channel_indices):
-                if idx < len(self.channels.states) and self.channels.states[idx] == 1:
-                    # Local enhancement around active channel
-                    r = np.sqrt((self.X - self.X[ci, cj])**2 + (self.Y - self.Y[ci, cj])**2)
-                    enhancement = np.exp(-r / 10e-9)  # 10 nm decay length
-                    self.phosphate_field += phosphate_production * enhancement
-    
     def calculate_complex_equilibrium(self):
         """
         Calculate CaHPO4 complex concentration.
@@ -827,146 +808,94 @@ class NeuromodulatedQuantumSynapse:
             # ATP hydrolysis rate from Rangaraju et al. 2014 (Cell)
             # ~4.7 × 10^5 ATP molecules/synapse/AP
             base_hydrolysis_rate = 10.0  # s⁻¹ during activity
-        
+    
             # Spatial pattern - enhanced near channels (ATPase pumps colocalized)
             hydrolysis_field = np.zeros_like(self.atp_field)
-        
+    
+            # Count active channels
+            active_channels = 0
             for idx, (ci, cj) in enumerate(self.channel_indices):
                 if idx < len(self.channels.states) and self.channels.states[idx] == 1:
                     # Create gradient around active channel
                     r = np.sqrt((self.X - self.X[ci, cj])**2 + 
                             (self.Y - self.Y[ci, cj])**2)
-                
+            
                     # ATPase activity falls off with distance (10 nm scale)
                     local_rate = base_hydrolysis_rate * np.exp(-r / 10e-9)
                     hydrolysis_field += local_rate * activity_level
-        
+
+            print(f"  Active channels: {active_channels}")
+    
             # Apply hydrolysis
             atp_consumed = self.atp_field * hydrolysis_field * dt
             atp_consumed = np.minimum(atp_consumed, self.atp_field)  # Can't consume more than available
-        
+
+            # Check if any ATP was consumed
+            total_consumed = np.sum(atp_consumed)
+            print(f"  ATP consumed: {total_consumed:.2e} M")
+    
             # Products: ADP + Pi (with enhanced J-coupling)
             phosphate_produced = atp_consumed
             self.atp_field -= atp_consumed
             self.phosphate_field += phosphate_produced
+    
+            # KEY: Set J-coupling to 20 Hz where ATP was just hydrolyzed
+            # This is the ONLY place we set high J-coupling
+            high_hydrolysis_mask = phosphate_produced > 1e-10  # Wherever phosphate was produced
+            n_high = np.sum(high_hydrolysis_mask)
         
-            # KEY: Track J-coupling strength of phosphate
-            # Based on Adams et al. 2025 - ATP phosphates have J_PP ~ 20 Hz
-            # This decays to bulk value (~0.2 Hz) over ~10 ms
-        
-            # Update J-coupling field
-            new_coupling = np.where(
-                phosphate_produced > 0,
-                self.params.J_PP_atp,  # 20 Hz for fresh ATP-derived phosphate
-                self.phosphate_j_coupling  # Keep existing value
-            )
-            self.phosphate_j_coupling = new_coupling
+            # Debug output to verify
+            if n_high > 0:
+                self.phosphate_j_coupling[high_hydrolysis_mask] = self.params.J_PP_atp
+                max_j = np.max(self.phosphate_j_coupling)
+                print(f"  Set J-coupling to {self.params.J_PP_atp}Hz at {n_high} locations")
+                print(f"  Max J-coupling now: {max_j:.1f}Hz")
+    
+            # ATP regeneration (simplified - would involve mitochondria)
+            # During rest, slow regeneration
+            if activity_level < 0.1:
+                regeneration_rate = 1.0  # s⁻¹
+                atp_deficit = self.params.atp_baseline - self.atp_field
+                self.atp_field += atp_deficit * regeneration_rate * dt * 0.1
 
-            # Where hydrolysis is high, set J-coupling to ATP value
-            mask = hydrolysis_field > 1e-6  # Some threshold
-            self.phosphate_j_coupling[mask] = self.params.J_PP_atp  # Should be 20 Hz
-        
-            # J-coupling decay (exponential with 10 ms time constant)
-            tau_j_decay = 0.010  # 10 ms
-            decay_factor = np.exp(-dt / tau_j_decay)
-    
-            # Decay toward baseline J-coupling
-            self.phosphate_j_coupling = (
-                self.params.J_PO_atp +  # Baseline: 7.5 Hz
-                (self.phosphate_j_coupling - self.params.J_PO_atp) * decay_factor
-            )
-    
-        # ATP regeneration (simplified - would involve mitochondria)
-        # During rest, slow regeneration
-        if activity_level < 0.1:
-            regeneration_rate = 1.0  # s⁻¹
-            atp_deficit = self.params.atp_baseline - self.atp_field
-            self.atp_field += atp_deficit * regeneration_rate * dt * 0.1
-    
-    
     def update_j_coupling_decay(self, dt: float):
-        """J-coupling decays from 20 Hz to 0.2 Hz over ~10ms"""
-        
+        """
+        J-coupling decays from 20 Hz to 0.2 Hz over ~10ms
+        This should be called AFTER update_atp_dynamics in the main loop
+        """
         # Decay time constant
-        tau = 0.01  # 10 ms
-        
+        tau = self.params.J_coupling_decay_time  # Should be 0.01 (10 ms)
+    
         # Exponential decay
         decay_factor = np.exp(-dt / tau)
-        
-        # Decay toward baseline (0.2 Hz)
-        self.phosphate_j_coupling = 0.2 + (self.phosphate_j_coupling - 0.2) * decay_factor
+    
+        # Decay toward baseline (0.2 Hz for free phosphate)
+        baseline = 0.2
+        self.phosphate_j_coupling = baseline + (self.phosphate_j_coupling - baseline) * decay_factor
+    
+        # Debug: Check if we still have high J-coupling
+        max_j = np.max(self.phosphate_j_coupling)
+        if max_j > 10.0:
+            print(f"DEBUG J-DECAY: Max J-coupling after decay: {max_j:.1f} Hz")
     
     
     def update_dopamine(self, dt: float, reward_signal: bool):
-        """Dopamine release with vesicular dynamics"""
+        """Use the biophysical dopamine model to update dopamine field"""
         
-        # Check if we should start phasic burst
-        if reward_signal and not self.dopamine_burst_active:
-            self.dopamine_burst_active = True
-            self.dopamine_burst_timer = 0.0
-            
-        # Update burst timer
-        if self.dopamine_burst_active:
-            self.dopamine_burst_timer += dt
-            if self.dopamine_burst_timer > 0.1:  # 100ms burst
-                self.dopamine_burst_active = False
-                
-        # Determine firing rate
-        firing_rate = self.phasic_firing_rate if self.dopamine_burst_active else self.tonic_firing_rate
-        
-        # Stochastic release from each site
-        for site in self.da_release_sites:
-            if site not in self.vesicle_pools:
-                self.vesicle_pools[site] = 20
-                
-            # Poisson probability of spike in dt
-            p_spike = 1 - np.exp(-firing_rate * dt)
-            
-            if np.random.random() < p_spike:
-                # Spike occurred - check for vesicle release
-                if np.random.random() < self.release_probability and self.vesicle_pools[site] > 0:
-                    # Release one vesicle
-                    molecules = 3000  # molecules per vesicle
-                    
-                    # Convert to concentration
-                    # Volume = dx * dx * cleft_width
-                    volume = self.params.dx * self.params.dx * self.params.cleft_width  # m³
-                    concentration = molecules / (volume * 6.022e23)  # M
-                    
-                    # Add to field
-                    i, j = site
-                    self.dopamine_field[j, i] += concentration  # Note: [j,i] for numpy array
-                    
-                    # Consume vesicle
-                    self.vesicle_pools[site] -= 1
-        
-        # Refill vesicles
-        for site in self.vesicle_pools:
-            if self.vesicle_pools[site] < 20:
-                refill = 2.0 * dt  # 2 vesicles/second
-                self.vesicle_pools[site] = min(20, self.vesicle_pools[site] + refill)
-        
-        # Diffusion
-        result = self.apply_diffusion(
-            self.dopamine_field,
-            self.params.D_dopamine,
-            dt
+        # Update using the biophysical model
+        stats = self.da_field.update(
+            dt=dt,
+            stimulus=True,  # Always some baseline activity
+            reward=reward_signal
         )
-        self.dopamine_field = np.clip(result, 0, 10e-6)  # Max 10 µM for dopamine
-
-        # DAT uptake (Michaelis-Menten)
-        Km = 220e-9  # 220 nM
-        Vmax = 4.1e-6  # M/s
-        excess = np.maximum(0, self.dopamine_field - self.params.dopamine_tonic)
-        uptake_rate = Vmax * excess / (Km + excess)
-        self.dopamine_field -= uptake_rate * dt
-        
-        # Ensure we don't go below tonic
-        self.dopamine_field = np.maximum(self.dopamine_field, self.params.dopamine_tonic)
-        
-        # Reset reward signal
-        if self.reward_signal:
-            self.reward_signal = False
+    
+        # Copy the field to our dopamine_field for compatibility
+        self.dopamine_field = self.da_field.field.copy()
+    
+        # Debug output
+        if reward_signal:
+            print(f"DEBUG DA: Reward signal! Max={stats['max']*1e9:.1f} nM, "
+                f"Vesicles released={stats['vesicles_released']}")
         
     
     def update_template_fusion(self, dt: float):
@@ -978,40 +907,42 @@ class NeuromodulatedQuantumSynapse:
         for ti, tj in self.template_indices:
             # Check PNC occupancy at template
             occupancy = self.template_pnc_bound[tj, ti] / self.params.n_binding_sites
-            
+        
             if occupancy >= 0.5:  # Threshold for fusion attempt
                 # === Environmental modulation (from Model 4) ===
-                # Multiple factors affect fusion probability
-
-                # Get quantum modulation from dopamine
-                da_modulation = self.da_field.get_quantum_modulation(ti, tj)
-                
+            
                 # 1. Cooperative effect - more bound PNCs help
                 cooperative_factor = 1 + 2 * (occupancy - 0.5)
-                
+            
                 # 2. Calcium enhancement - Ca²⁺ stabilizes transition
                 ca_local = self.calcium_field[tj, ti]
                 ca_enhancement = 1 + (ca_local / 100e-6)  # Enhanced above 100 µM
-                
+            
                 # 3. pH effect - lower pH favors fusion
                 pH_local = self.local_pH[tj, ti]
                 pH_factor = 1 + 0.5 * (7.3 - pH_local)
-                
+            
                 # 4. Activity-dependent template conformational change
                 activity_level = np.sum(self.channels.get_open_channels()) / self.params.n_channels
                 template_activation = 1 + activity_level * 2
-
-                # Apply coincidence timing
-                timing_factor = self.coincidence_factor
-                
-                # Combined enhancement
+            
+                # 5. Get quantum modulation from dopamine
+                da_modulation = self.da_field.get_quantum_modulation(ti, tj)
+            
+                # 6. Apply coincidence timing using biophysical calculation
+                coincidence_factor = self.da_field.get_coincidence_factor(
+                    calcium_spike_time=self.calcium_spike_time,
+                    current_time=self.current_time
+                )
+            
+                # Combined enhancement (including template_activation)
                 total_enhancement = (cooperative_factor * ca_enhancement * 
-                                    pH_factor * timing_factor)
-                
+                                    pH_factor * coincidence_factor * template_activation)
+            
                 # Calculate fusion probability
                 fusion_prob = self.params.fusion_probability * total_enhancement
                 fusion_prob = min(fusion_prob, 0.5)  # Cap at 50%
-                
+            
                 # Stochastic fusion event
                 if np.random.random() < fusion_prob:
                     # Use biophysical dopamine to select dimer vs trimer
@@ -1023,11 +954,7 @@ class NeuromodulatedQuantumSynapse:
                         # Form trimers (suppressed if DA present)
                         n_trimers = np.random.poisson(2 * da_modulation['trimer_suppression'])
                         self.trimer_field[tj, ti] += n_trimers * 1e-9
-                    
-                    # Reset template
-                    self.template_pnc_bound[tj, ti] *= 0.3
-                    self.fusion_count += 1
-                    
+                
                     # Template recycling depends on activity
                     if activity_level > 0.5:
                         # High activity: partial reset (fast recycling)
@@ -1035,14 +962,14 @@ class NeuromodulatedQuantumSynapse:
                     else:
                         # Low activity: full reset (slow recycling)
                         self.template_pnc_bound[tj, ti] = 0
-                    
+                
                     # PNC consumption
                     pncs_consumed = self.params.pnc_per_posner
-                    # Fix: Check for zero before division
+                    # Check for zero before division
                     if self.pnc_field[tj, ti] > 0:
                         consumption_factor = max(0, 1 - pncs_consumed * 1e-10 / self.pnc_field[tj, ti])
                         self.pnc_field[tj, ti] *= consumption_factor
-                    
+                
                     self.fusion_count += 1
     
     def form_dimers_and_trimers(self, dt: float):
@@ -1051,79 +978,104 @@ class NeuromodulatedQuantumSynapse:
         Based on classical nucleation theory where PNCs aggregate into dimers/trimers.
         Enhanced by ATP-derived phosphate J-coupling and modulated by dopamine.
         """
+        total_dimers_before = np.sum(self.dimer_field) * 1e9
+        if total_dimers_before > 1000:  # If already high
+            print(f"WARNING: Total dimers already at {total_dimers_before:.1f} nM before formation!")
+        
         for i in range(self.params.grid_size):
             for j in range(self.params.grid_size):
-                if not self.active_mask[j, i]:
-                    continue
-            
-                # Use PNC concentration as the driver (not Ca/PO4)
-                pnc_local = self.pnc_field[j, i]
-            
-                # Need minimum PNC concentration for aggregation
-                pnc_critical = 100e-9  # 100 nM threshold
-            
-                if pnc_local > pnc_critical:
-                    # Supersaturation in terms of PNC availability
-                    S_pnc = pnc_local / pnc_critical
+                if self.active_mask[j, i]:
+                    pnc_local = self.pnc_field[j, i]
+                
+                    # FIX 1: Add missing 'if'
+                    if pnc_local > 50e-9:  # 50 nM threshold
+                    
+                        # Need minimum PNC concentration for aggregation
+                        pnc_critical = 100e-9  # 100 nM threshold
+                    
+                        if pnc_local > pnc_critical:
+                            # Supersaturation in terms of PNC availability
+                            S_pnc = pnc_local / pnc_critical
 
-                    # J-coupling enhancement factor
-                    # Strong J-coupling (20 Hz) helps maintain quantum coherence during formation
-                    j_coupling = self.phosphate_j_coupling[j, i]
-                    j_enhancement = j_coupling / 0.2  # Normalized to free phosphate baseline
-                    # This gives ~2.7x enhancement for ATP-derived phosphate
-                
-                    # Get modulation factors
-                    da = self.dopamine_field[j, i]
-                    pH_local = self.local_pH[j, i]
-                
-                    # pH affects aggregation (lower pH favors it)
-                    pH_factor = 10 ** (7.3 - pH_local)  # Inverted - acidic favors
-                
-                    # J-coupling specifically helps dimer formation (fewer spins to couple)
-                    if da > 100e-9:
-                        dimer_rate = self.params.k_dimer_formation * 10 * j_enhancement
-                        trimer_rate = self.params.k_trimer_formation * 0.1  # No J benefit
-                    else:
-                        dimer_rate = self.params.k_dimer_formation * j_enhancement
-                        trimer_rate = self.params.k_trimer_formation * j_enhancement
-                
-                    if i == 25 and j == 25:  # Only print for test location
-                        print(f"DEBUG: DA={da*1e9:.1f}nM, J={j_coupling:.1f}Hz, dimer_rate={dimer_rate}, trimer_rate={trimer_rate}")
-                    
-                    # Dimer formation (2 PNCs → 1 dimer)
-                    # Rate depends on PNC supersaturation and J-coupling
-                    dimer_formation = dimer_rate * (S_pnc - 1.0) * pH_factor * dt
-                
-                    # Trimer formation (3 PNCs → 1 trimer) 
-                    # Requires higher supersaturation
-                    trimer_formation = 0
-                    if S_pnc > 1.5:  # Need 50% more PNCs for trimers
-                        trimer_formation = trimer_rate * (S_pnc - 1.5) * pH_factor * dt
-                
-                    # Consume PNCs (stoichiometry matters!)
-                    pnc_consumed = 0
-                
-                    # Cap formation by available PNCs
-                    max_dimers = pnc_local / (2 * 1e-9)  # 2 PNCs per dimer, 30 units per PNC
-                    if dimer_formation > 0:
-                        dimer_formation = min(dimer_formation, max_dimers * 1e-9)
-                        self.dimer_field[j, i] += dimer_formation
-                        pnc_consumed += dimer_formation * 2  # Consume 2 PNCs
-                
-                    max_trimers = (pnc_local - pnc_consumed) / (3 * 30 * 1e-9)  # 3 PNCs per trimer
-                    if trimer_formation > 0:
-                        trimer_formation = min(trimer_formation, max_trimers * 1e-9)
-                        self.trimer_field[j, i] += trimer_formation
-                        pnc_consumed += trimer_formation * 3 * 30 * 1e-9  # Consume 3 PNCs
-                
-                    # After calculating dimer_formation, add:
-                    if i == 25 and j == 25 and dimer_formation > 1e-6:
-                        print(f"DEBUG FORMATION: dimer_rate={dimer_rate}, S_pnc={S_pnc}, pH_factor={pH_factor}, dt={dt}")
-                        print(f"  dimer_formation={dimer_formation}, max_dimers={max_dimers}")
-                    
-                    # Update PNC field
-                    self.pnc_field[j, i] -= pnc_consumed
-                    self.pnc_field[j, i] = max(0, self.pnc_field[j, i])
+                            # J-coupling enhancement factor
+                            j_coupling = self.phosphate_j_coupling[j, i]
+                            j_enhancement = j_coupling / 0.2  # Normalized to free phosphate baseline
+                        
+                            # GET MODULATION FROM BIOPHYSICAL DOPAMINE FIELD
+                            da_modulation = self.da_field.get_quantum_modulation(i, j)
+
+                            pH_local = self.local_pH[j, i]
+                        
+                            # pH affects aggregation (lower pH favors it)
+                            pH_factor = 10 ** (7.3 - pH_local)  # Inverted - acidic favors
+                        
+                            # Apply dopamine modulation to rates
+                            if da_modulation['above_quantum_threshold']:
+                                # High dopamine enhances dimers, suppresses trimers
+                                dimer_rate = self.params.k_dimer_formation * da_modulation['dimer_enhancement'] * j_enhancement
+                                trimer_rate = self.params.k_trimer_formation * da_modulation['trimer_suppression']
+                            else:
+                                # Low dopamine - normal rates
+                                dimer_rate = self.params.k_dimer_formation * j_enhancement
+                                trimer_rate = self.params.k_trimer_formation * j_enhancement
+                        
+                            if i == 25 and j == 25:  # Debug location
+                                print(f"DEBUG: DA modulation - dimer_enh={da_modulation['dimer_enhancement']:.1f}, "
+                                    f"trimer_supp={da_modulation['trimer_suppression']:.1f}, "
+                                    f"D2 occupancy={da_modulation['d2_occupancy']:.2f}")
+                        
+                            # Dimer formation (2 PNCs → 1 dimer)
+                            dimer_formation = dimer_rate * (S_pnc - 1.0) * pH_factor * dt
+                        
+                            # Trimer formation (3 PNCs → 1 trimer) 
+                            trimer_formation = 0
+                            if S_pnc > 1.5:  # Need 50% more PNCs for trimers
+                                trimer_formation = trimer_rate * (S_pnc - 1.5) * pH_factor * dt
+                        
+                            # FIX 2: Proper stoichiometric constraints
+                            # PNC is consumed to form dimers/trimers
+                            # Let's assume 1 PNC unit = 30e-9 M (30 nM)
+                            pnc_units_available = pnc_local / 30e-9  # Convert to units
+                        
+                            # FIX 3: Constrain dimer formation
+                            # Each dimer needs 2 PNC units
+                            max_dimer_units = pnc_units_available / 2
+                            max_dimer_conc = max_dimer_units * 30e-9  # Convert back to M
+                        
+                            if dimer_formation > max_dimer_conc:
+                                dimer_formation = max_dimer_conc
+
+                            if i == 25 and j == 25 and dimer_formation > 1e-9:
+                                print(f"DEBUG DIMER: pnc={pnc_local*1e9:.1f}nM, S_pnc={S_pnc:.1f}")
+                                print(f"  dimer_rate={dimer_rate}, pH_factor={pH_factor:.2f}, dt={dt}")
+                                print(f"  dimer_formation before cap: {dimer_formation*1e9:.1f}nM")
+                                print(f"  max allowed: {max_dimer_conc*1e9:.1f}nM")
+                            
+                            # Update dimer field
+                            self.dimer_field[j, i] += dimer_formation
+                            pnc_consumed = dimer_formation * 2 / 30e-9  # Units consumed
+                        
+                            # FIX 4: Constrain trimer formation with remaining PNC
+                            pnc_remaining = pnc_units_available - pnc_consumed
+                            max_trimer_units = pnc_remaining / 3  # Each trimer needs 3 units
+                            max_trimer_conc = max_trimer_units * 30e-9
+                        
+                            if trimer_formation > max_trimer_conc:
+                                trimer_formation = max_trimer_conc
+                        
+                            # Update trimer field
+                            self.trimer_field[j, i] += trimer_formation
+                            pnc_consumed += trimer_formation * 3 / 30e-9
+                        
+                            # Debug output
+                            if i == 25 and j == 25 and dimer_formation > 1e-12:
+                                print(f"DEBUG FORMATION: dimer_rate={dimer_rate}, S_pnc={S_pnc}, pH_factor={pH_factor}, dt={dt}")
+                                print(f"  dimer_formation={dimer_formation*1e9:.2f}nM, max_allowed={max_dimer_conc*1e9:.2f}nM")
+                        
+                            # Update PNC field
+                            total_pnc_consumed = pnc_consumed * 30e-9  # Convert back to M
+                            self.pnc_field[j, i] -= total_pnc_consumed
+                            self.pnc_field[j, i] = max(0, self.pnc_field[j, i])
     
     def update_quantum_coherence(self, dt: float):
         """
@@ -1207,32 +1159,31 @@ class NeuromodulatedQuantumSynapse:
         3. Recent activity (elevated Ca)
         
         This triple coincidence is the quantum signature of learning!
+        The coincidence factor from dopamine biophysics ensures proper STDP timing.
         """
-        # Check timing window (50-200ms after calcium spike)
-        if self.calcium_spike_time < 0:
-            return 0.0
-            
-        time_since_calcium = self.current_time - self.calcium_spike_time
-        if time_since_calcium < 0.05 or time_since_calcium > 0.2:
-            return 0.0
-        
-        # Find sites meeting all criteria
-        coherent_dimers = (self.dimer_field > 1e-9) & (self.coherence_dimer > 0.5)
-        dopamine_present = self.dopamine_field > 100e-9
-        recent_calcium = self.calcium_field > 10e-6
-        
-        # Triple coincidence
-        learning_sites = coherent_dimers & dopamine_present & recent_calcium
-        
-        if np.any(learning_sites):
-            # Weight by coherence and dopamine level
-            learning_strength = np.sum(
-                self.coherence_dimer[learning_sites] * 
-                (self.dopamine_field[learning_sites] / 1e-6)
-            )
-            return learning_strength / (self.params.grid_size ** 2)
-        
-        return 0.0
+        # Find regions with high dimer coherence
+        high_coherence = self.coherence_dimer > 0.5
+    
+        # Use the dopamine field's D2 occupancy for dopamine signal
+        d2_occupancy = self.da_field.D2_occupancy
+        high_dopamine = d2_occupancy > 0.5  # 50% D2 occupancy
+    
+        # Activity from calcium
+        high_calcium = self.calcium_field > 50e-6  # 50 µM
+    
+        # Get coincidence factor for the whole field
+        coincidence = self.da_field.get_coincidence_factor(
+            calcium_spike_time=self.calcium_spike_time,
+            current_time=self.current_time
+        )
+    
+        # Triple overlap with timing
+        overlap = high_coherence * high_dopamine * high_calcium * coincidence
+    
+        # Learning signal is the spatial integral
+        learning_signal = np.sum(overlap) * self.dx * self.dx
+    
+        return learning_signal
     
     # ========================================================================
     # MAIN UPDATE AND SIMULATION
@@ -1259,22 +1210,23 @@ class NeuromodulatedQuantumSynapse:
         # Track calcium spikes for coincidence detection (ADD THIS)
         if np.max(self.calcium_field) > 10e-6 and self.calcium_spike_time < 0:
             self.calcium_spike_time = self.current_time
+
+         # 3. ATP creates J-coupling
+        self.update_atp_dynamics(dt, activity_level)
         
-        # 3. Phosphate from ATP hydrolysis
-        self.update_phosphate_from_ATP(dt, activity_level)
-        
+        # 3.5 J-coupling decay (ADD THIS NEW STEP)
+        self.update_j_coupling_decay(dt)
+
+        # DEBUG: Check J-coupling after decay
+        max_j_after_decay = np.max(self.phosphate_j_coupling)
+        if max_j_after_decay > 1.0:
+            print(f"DEBUG after decay: Max J-coupling = {max_j_after_decay:.1f} Hz")
+
         # 4. CaHPO4 complex equilibrium
         self.calculate_complex_equilibrium()
         
         # 5. PNC dynamics with template accumulation
         self.update_pnc_dynamics(dt)
-        
-        # === Model 5 enhancements ===
-        # 6. ATP creates J-coupling
-        self.update_atp_dynamics(dt, activity_level)
-
-        # 6.5 J-coupling decay (ADD THIS NEW STEP)
-        self.update_j_coupling_decay(dt)
         
         # 7. Dopamine if reward signal
         if reward_signal:
@@ -1416,46 +1368,129 @@ class NeuromodulatedQuantumSynapse:
 # ANALYSIS FUNCTIONS
 # ============================================================================
 
-def analyze_quantum_advantage(results: Model5Results) -> Dict:
-    """
-    Analyze the quantum advantage of dopamine-modulated dimer formation.
+    def analyze_dopamine_gradients(self):
+        """Analyze spatial gradients for directional learning effects"""
+        gradient_mag = self.da_field.calculate_spatiotemporal_gradient()
     
-    Key metrics:
-    - Coherence time ratio (dimer vs trimer)
-    - Dopamine enhancement factor
-    - Learning efficiency
-    """
-    analysis = {}
+        # High gradients indicate boundaries between high/low DA regions
+        # These might be important for spatial learning
+        return gradient_mag
+
+    def analyze_quantum_advantage(results: Model5Results) -> Dict:
+        """
+        Analyze the quantum advantage of dopamine-modulated dimer formation.
     
-    # Coherence time advantage
-    if results.max_coherence_trimer > 0:
-        analysis['coherence_advantage'] = results.max_coherence_dimer / results.max_coherence_trimer
-    else:
-        analysis['coherence_advantage'] = np.inf
+        Key metrics:
+        - Coherence time ratio (dimer vs trimer)
+        - Dopamine enhancement factor
+        - Learning efficiency
+        """
+        analysis = {}
     
-    # Dimer/trimer ratio
-    total_dimers = np.sum(results.dimer_map)
-    total_trimers = np.sum(results.trimer_map)
-    if total_trimers > 0:
-        analysis['dimer_trimer_ratio'] = total_dimers / total_trimers
-    else:
-        analysis['dimer_trimer_ratio'] = np.inf
+        # Coherence time advantage
+        if results.max_coherence_trimer > 0:
+            analysis['coherence_advantage'] = results.max_coherence_dimer / results.max_coherence_trimer
+        else:
+            analysis['coherence_advantage'] = np.inf
     
-    # Spatial correlation of dopamine and dimers
-    if np.std(results.dopamine_map) > 0 and np.std(results.dimer_map) > 0:
-        correlation = np.corrcoef(
-            results.dopamine_map.flatten(),
-            results.dimer_map.flatten()
-        )[0, 1]
-        analysis['dopamine_dimer_correlation'] = correlation
-    else:
-        analysis['dopamine_dimer_correlation'] = 0
+        # Dimer/trimer ratio
+        total_dimers = np.sum(results.dimer_map)
+        total_trimers = np.sum(results.trimer_map)
+        if total_trimers > 0:
+            analysis['dimer_trimer_ratio'] = total_dimers / total_trimers
+        else:
+            analysis['dimer_trimer_ratio'] = np.inf
     
-    # Learning efficiency
-    analysis['learning_signal'] = results.learning_signal
-    analysis['peak_coherence'] = results.max_coherence_dimer
+        # Spatial correlation of dopamine and dimers
+        if np.std(results.dopamine_map) > 0 and np.std(results.dimer_map) > 0:
+            correlation = np.corrcoef(
+                results.dopamine_map.flatten(),
+                results.dimer_map.flatten()
+            )[0, 1]
+            analysis['dopamine_dimer_correlation'] = correlation
+        else:
+            analysis['dopamine_dimer_correlation'] = 0
     
-    return analysis
+        # Learning efficiency
+        analysis['learning_signal'] = results.learning_signal
+        analysis['peak_coherence'] = results.max_coherence_dimer
+    
+        return analysis
+
+    def get_simulation_metrics(self) -> Dict[str, float]:
+        """
+        Get current state metrics for analysis.
+        Enhanced with gradient analysis.
+        """
+        # Existing metrics
+        metrics = {
+            'mean_calcium': np.mean(self.calcium_field[self.active_mask]),
+            'mean_phosphate': np.mean(self.phosphate_field[self.active_mask]),
+            'mean_pnc': np.mean(self.pnc_field[self.active_mask]),
+            'mean_dopamine': np.mean(self.dopamine_field[self.active_mask]),
+            'total_dimers': np.sum(self.dimer_field[self.active_mask]),
+            'total_trimers': np.sum(self.trimer_field[self.active_mask]),
+            'mean_coherence_dimer': np.mean(self.coherence_dimer[self.active_mask]),
+            'mean_coherence_trimer': np.mean(self.coherence_trimer[self.active_mask]),
+            'learning_signal': getattr(self, 'learning_signal', 0.0),
+            'fusion_events': self.fusion_count
+        }
+    
+        # Add gradient analysis
+        gradient_mag = self.analyze_dopamine_gradients()
+        metrics['max_da_gradient'] = np.max(gradient_mag)
+        metrics['mean_da_gradient'] = np.mean(gradient_mag[self.active_mask])
+    
+        return metrics
+
+    def plot_dopamine_analysis(self):
+        """Visualize dopamine field and gradients"""
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    
+        # Dopamine concentration
+        im1 = ax1.imshow(self.dopamine_field * 1e9, cmap='viridis')
+        ax1.set_title('Dopamine Concentration (nM)')
+        plt.colorbar(im1, ax=ax1)
+    
+        # Dopamine gradients
+        gradient_mag = self.analyze_dopamine_gradients()
+        im2 = ax2.imshow(gradient_mag * 1e9, cmap='hot')
+        ax2.set_title('Dopamine Gradient Magnitude (nM/µm)')
+        plt.colorbar(im2, ax=ax2)
+    
+        plt.tight_layout()
+        return fig
+
+    def debug_dopamine_system(self):
+            """Debug the dopamine system to find why vesicles aren't releasing"""
+            print("\n=== DOPAMINE SYSTEM DEBUG ===")
+        
+            # Check basic parameters
+            print(f"DopamineField parameters:")
+            print(f"  Burst frequency: {self.da_field.params.burst_frequency} Hz")
+            print(f"  Release probability: {self.da_field.params.release_probability}")
+            print(f"  Vesicles per bouton: {self.da_field.params.vesicles_per_bouton}")
+            print(f"  Molecules per vesicle: {self.da_field.params.quantal_size}")
+        
+            # Check release sites
+            print(f"\nRelease sites: {self.da_field.release_sites}")
+        
+            # Manually test release probability
+            dt = 0.001
+            p_spike = 1 - np.exp(-self.da_field.params.burst_frequency * dt)
+            print(f"\nWith dt={dt}s and burst_frequency={self.da_field.params.burst_frequency}Hz:")
+            print(f"  P(spike) = {p_spike:.4f}")
+            print(f"  P(release|spike) = {self.da_field.params.release_probability}")
+            print(f"  P(release) = {p_spike * self.da_field.params.release_probability:.6f}")
+        
+            # Check if _phasic_release is being called
+            print(f"\nTesting manual phasic release:")
+            initial_max = np.max(self.da_field.field)
+            self.da_field._phasic_release(0.01)  # 10ms timestep
+            final_max = np.max(self.da_field.field)
+            print(f"  Before: {initial_max*1e9:.1f} nM")
+            print(f"  After: {final_max*1e9:.1f} nM")
+            print(f"  Change: {(final_max-initial_max)*1e9:.1f} nM")
 
 # ============================================================================
 # EXAMPLE USAGE
