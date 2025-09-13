@@ -60,7 +60,7 @@ class Model5Parameters:
     ca_baseline: float = 100e-9         # 100 nM resting calcium
     po4_baseline: float = 1e-3          # 1 mM phosphate
     atp_concentration: float = 3e-3     # 3 mM ATP (Model 4)
-    pnc_baseline: float = 1e-10         # 0.1 nM - CRITICAL! Non-zero for nucleation
+    pnc_baseline: float = 1e-15         # 0.1 nM - CRITICAL! Non-zero for nucleation
     ca_microdomain_peak: float = 100e-6  # 100 µM in microdomains
     
     # ============= DIFFUSION COEFFICIENTS =============
@@ -71,8 +71,9 @@ class Model5Parameters:
     
     # ============= PNC DYNAMICS (Model 4 and Model 5 Enhancement) =============
     # CaHPO4 complex formation - precursor to PNCs
-    k_complex_formation: float = 1e8    # M⁻¹s⁻¹ - near diffusion limited
+    k_complex_formation: float = 1e6    # M⁻¹s⁻¹ - near diffusion limited
     k_complex_dissociation: float = 5300.0  # s⁻¹ - moderate stability
+    # This gives K_eq = 189 M⁻¹ (closer to McDonogh's 470 M⁻¹)
 
     # This gives K_eq = 1e8/5300 = 18,900 M⁻¹
     # Justification breakdown:
@@ -91,17 +92,17 @@ class Model5Parameters:
     
     # ============= PNC DYNAMICS (RATE-LIMITING STEP) =============
     # PNCs are the bottleneck - they form slowly!
-    k_pnc_formation: float = 2.0      # s⁻¹ (was 20, now 10x slower)
-    k_pnc_dissolution: float = 10.0     # s⁻¹ - PNC lifetime ~100 ms
+    k_pnc_formation: float = 0.01     # REDUCED from 10.0 (100x reduction)
+    k_pnc_dissolution: float = 100.0     # s⁻¹ - PNC lifetime ~100 ms
     pnc_size: int = 30                  # ~30 Ca/PO4 units per PNC
-    pnc_max_concentration: float = 1e-6 # 1 µM maximum to prevent runaway
+    pnc_max_concentration: float = 1e-9 # 1 µM maximum to prevent runaway
     pnc_critical: float = 100e-9        # 100 nM threshold for aggregation
     
     # ============= TEMPLATE PARAMETERS (Model 4) =============
-    templates_per_synapse: int = 500    # Synaptotagmin molecules
+    templates_per_synapse: int = 100    # Synaptotagmin molecules
     n_binding_sites: int = 3            # Binding sites per template
-    k_pnc_binding: float = 1e9          # M⁻¹s⁻¹ - strong binding
-    k_pnc_unbinding: float = 0.1        # s⁻¹ - slow unbinding
+    k_pnc_binding: float = 1e6          # M⁻¹s⁻¹ - strong binding
+    k_pnc_unbinding: float = 1.0        # s⁻¹ - slow unbinding
     template_accumulation_range: int = 2  # Grid cells - drift radius
     template_accumulation_rate: float = 0.0003  # 0.03% per ms = 30% per second
     
@@ -119,7 +120,7 @@ class Model5Parameters:
     gamma_po4: float = 0.2              # Activity coefficient for PO₄³⁻ (non-ideal)
     
     # ============= ENHANCEMENT FACTORS (Model 4) =============
-    template_factor: float = 10.0       # Template enhancement of complex formation
+    template_factor: float = 2.0       # Template enhancement of complex formation
     confinement_factor: float = 5.0     # 2D confinement enhancement
     electrostatic_factor: float = 3.0   # Membrane charge enhancement
     membrane_concentration_factor: float = 5.0  # Near-membrane concentration boost
@@ -150,8 +151,8 @@ class Model5Parameters:
 
     # Formation: These are EFFECTIVE first-order rates in supersaturated regions
     # True mechanism is higher-order but we use pseudo-first-order approximation
-    k_dimer_formation: float = 1e-5     # s⁻¹ maximum rate (was 1e-3)
-    k_trimer_formation: float = 1e-5    # s⁻¹ maximum rate (was 1e-4)
+    k_dimer_formation: float = 10.0     # s⁻¹ maximum rate (was 1e-3)
+    k_trimer_formation: float = 5.0    # s⁻¹ maximum rate (was 1e-4)
 
     # Dissolution rates based on stability
     kr_dimer: float = 0.01             # s⁻¹ → 100s lifetime (CORRECT!)
@@ -639,50 +640,39 @@ class NeuromodulatedQuantumSynapse:
     
     def calculate_calcium_microdomains(self, channel_open: np.ndarray) -> np.ndarray:
         """
-        Calculate calcium concentration from open channels.
-        Uses analytical solution for steady-state diffusion from point source.
-        Creates sharp microdomains with 1/r profile.
+        Fixed version that maintains baseline calcium
         """
+        # Start with baseline everywhere
         calcium = self.params.ca_baseline * np.ones(self.grid_shape)
-        
+    
         for idx, (ci, cj) in enumerate(self.channel_indices):
             if idx < len(channel_open) and channel_open[idx]:
-                # Distance from channel
                 r = np.sqrt((self.X - self.X[ci, cj])**2 + (self.Y - self.Y[ci, cj])**2)
-                r = np.maximum(r, 1e-9)  # Avoid singularity (1 nm minimum)
-                
-                # Calcium flux from single channel
-                # Current in Amperes: 0.3e-12 A = 0.3 pA
-                # Convert to Ca ions/sec: I/(2e) where e = 1.602e-19 C
-
-                # FIX: The issue is we need to scale properly for the grid
-                # The analytical solution assumes infinite medium, but we have finite grid
-                # Add a scaling factor to get physiological values
+                r = np.maximum(r, 1e-9)
+            
                 flux_ions_per_sec = self.params.channel_current / (2 * 1.602e-19)
-                
-                # Convert to molar flux
-                flux_molar = flux_ions_per_sec / 6.022e23  # moles/sec
-                
-                # Steady-state concentration from point source
-                # C(r) = flux / (4 * pi * D * r)
-                # Add a factor to account for finite volume and buffering
-
-                scaling_factor = 1e-4  # Adjusted scaling factor for physiological range
+                flux_molar = flux_ions_per_sec / 6.022e23
+            
+                # REDUCED scaling factor to prevent depletion
+                scaling_factor = 1e-5  # Was 1e-4
                 single_ca = scaling_factor * flux_molar / (4 * np.pi * self.params.D_calcium * r)
-                
-                # Add to baseline
+            
+                # ADD to baseline, don't replace
                 calcium += single_ca
-        
-        # Apply membrane enhancement (Ca²⁺ attracted to negative membrane)
-        calcium[self.membrane_mask] *= self.params.membrane_concentration_factor
-        
-        # Apply buffering (reduced to allow higher peaks)
-        kappa = 5  # Buffering power
+    
+        # Less aggressive membrane enhancement
+        calcium[self.membrane_mask] *= 2.0  # Was membrane_concentration_factor
+    
+        # Gentler buffering
+        kappa = 2  # Was 5
         calcium_buffered = calcium / (1 + kappa)
-        
-        # Apply saturation only at very high levels (10 mM)
-        calcium_final = calcium_buffered / (1 + calcium_buffered/10e-3)
-        
+    
+        # Higher saturation limit
+        calcium_final = calcium_buffered / (1 + calcium_buffered/100e-3)  # Was 10e-3
+    
+        # CRITICAL: Ensure minimum baseline is maintained
+        calcium_final = np.maximum(calcium_final, self.params.ca_baseline)
+    
         return calcium_final * self.active_mask
     
     def calculate_complex_equilibrium(self):
@@ -695,79 +685,83 @@ class NeuromodulatedQuantumSynapse:
         ca_eff = self.calcium_field * self.params.gamma_ca
         po4_eff = self.phosphate_field * self.f_hpo4_local * self.params.gamma_po4
         
+        # CRITICAL FIX: Only form complex above baseline calcium
+        # This prevents PNC formation at rest
+        ca_threshold = 1e-6  # 1 µM threshold for complex formation
+        ca_above_threshold = np.maximum(0, ca_eff - ca_threshold)
+        
+        
         # Prevent overflow
-        ca_eff = np.clip(ca_eff, 0, 1e-3)  # Max 1 mM
-        po4_eff = np.clip(po4_eff, 0, 1e-3)  # Max 1 mM
+        ca_above_threshold = np.clip(ca_above_threshold, 0, 100e-6)
+        po4_eff = np.clip(po4_eff, 0, 100e-6)
         
         # Equilibrium constant
         K_eq = self.params.k_complex_formation / self.params.k_complex_dissociation
         
-        # Mass action equilibrium
-        denominator = 1 + K_eq * (ca_eff + po4_eff)
-        denominator = np.maximum(denominator, 1.0)  # Prevent divide by zero
+        # Mass action equilibrium - using only calcium above threshold
+        denominator = 1 + K_eq * (ca_above_threshold + po4_eff)
+        denominator = np.maximum(denominator, 1.0)
         
-        self.complex_field = K_eq * ca_eff * po4_eff / denominator
+        self.complex_field = K_eq * ca_above_threshold * po4_eff / denominator
         
-        # Templates enhance complex formation
+        # Templates enhance complex formation but with strict cap
         for ti, tj in self.template_indices:
             self.complex_field[tj, ti] = min(
-                self.complex_field[tj, ti] * self.params.template_factor, 
-                100e-9  # Cap at 100 nM, not 1 µM!
+                self.complex_field[tj, ti] * self.params.template_factor,
+                1e-9  # Cap at 1 nM
             )
         
         self.complex_field *= self.active_mask
     
     def update_pnc_dynamics(self, dt: float):
         """
-        Update prenucleation cluster dynamics with diffusion-based template accumulation.
-        PNCs form from CaHPO4 complexes and bind to templates via diffusion.
+        Fixed version with proper saturation and activity dependence
         """
         # Calculate complex concentration first
         self.calculate_complex_equilibrium()
     
-        # Formation from complexes
-        formation = self.params.k_pnc_formation * self.complex_field
+        # CRITICAL: Only form PNC when there's significant complex
+        complex_threshold = 1e-12  # 1 pM threshold
+        active_complex = np.maximum(0, self.complex_field - complex_threshold)
     
-        # Apply saturation to prevent runaway growth
-        saturation = 1 - self.pnc_field / self.params.pnc_max_concentration
-        saturation = np.clip(saturation, 0, 1)
-        formation *= saturation
+        # Formation from complexes - only where complex exists
+        formation = self.params.k_pnc_formation * active_complex
     
-        # Dissolution back to ions
+        # FIXED saturation - ensure it works properly
+        current_saturation = self.pnc_field / self.params.pnc_max_concentration
+        saturation_factor = np.exp(-current_saturation * 10)  # Exponential decay
+        formation *= saturation_factor
+    
+        # Increased dissolution to prevent accumulation
         dissolution = self.params.k_pnc_dissolution * self.pnc_field
     
         # Update PNC field with formation/dissolution
         dpnc_dt = formation - dissolution
         self.pnc_field += dpnc_dt * dt * self.active_mask
+    
+        # Hard cap to prevent explosion
         self.pnc_field = np.clip(self.pnc_field, 0, self.params.pnc_max_concentration)
     
-        # === DIFFUSION (happens everywhere) ===
+        # Reduced diffusion to prevent spreading
         laplacian = self.calculate_laplacian_neumann(self.pnc_field)
-        self.pnc_field += self.params.D_pnc * laplacian * dt
+        self.pnc_field += 0.1 * self.params.D_pnc * laplacian * dt  # Reduce diffusion by 10x
     
-        # === TEMPLATE BINDING (local trapping, not accumulation) ===
-        for ti, tj in self.template_indices:
-            if self.pnc_field[tj, ti] > 1e-9:  # If PNCs present
-                available = self.params.n_binding_sites - self.template_pnc_bound[tj, ti]
-            
-                if available > 0:
-                    # Binding rate proportional to local PNC concentration
-                    binding_rate = self.params.k_pnc_binding  # M⁻¹s⁻¹
-                    binding = binding_rate * self.pnc_field[tj, ti] * available * dt
-                    binding = min(binding, available, self.pnc_field[tj, ti])
+        # Template binding - but only if activity is present
+        mean_j_coupling = np.mean(self.phosphate_j_coupling)
+        if mean_j_coupling > 1.0:  # Only bind during activity
+            for ti, tj in self.template_indices:
+                if self.pnc_field[tj, ti] > 1e-12:  # If PNCs present
+                    available = self.params.n_binding_sites - self.template_pnc_bound[tj, ti]
                 
-                    # Transfer from free to bound
-                    self.template_pnc_bound[tj, ti] += binding
-                    self.pnc_field[tj, ti] -= binding
-                
-                # Handle unbinding (add this for completeness)
-                if self.template_pnc_bound[tj, ti] > 0:
-                    unbinding = self.params.k_pnc_unbinding * self.template_pnc_bound[tj, ti] * dt
-                    unbinding = min(unbinding, self.template_pnc_bound[tj, ti])
-                    self.template_pnc_bound[tj, ti] -= unbinding
-                    self.pnc_field[tj, ti] += unbinding
+                    if available > 0:
+                        binding_rate = self.params.k_pnc_binding
+                        binding = binding_rate * self.pnc_field[tj, ti] * available * dt
+                        binding = min(binding, available * 0.01, self.pnc_field[tj, ti])  # Limit binding
+                    
+                        self.template_pnc_bound[tj, ti] += binding
+                        self.pnc_field[tj, ti] -= binding
     
-        # Ensure non-negative
+        # Final safety check
         self.pnc_field = np.maximum(self.pnc_field, 0)
         self.template_pnc_bound = np.maximum(self.template_pnc_bound, 0)
     
@@ -977,78 +971,59 @@ class NeuromodulatedQuantumSynapse:
     
     def form_dimers_and_trimers(self, dt: float):
         """
-        Direct formation with proper substrate depletion and emergent dopamine effects.
+        Fixed version - proper supersaturation calculation
         """
         for i in range(self.params.grid_size):
             for j in range(self.params.grid_size):
                 if self.active_mask[j, i]:
-                    
-                    
-                    # Get available substrates (not total concentrations!)
-                    ca_free = self.calcium_field[j, i] - self.complex_field[j, i]
-                    po4_free = self.phosphate_field[j, i] - self.complex_field[j, i]
                     pnc_local = self.pnc_field[j, i]
                 
-                    # Skip if insufficient substrates
-                    if pnc_local < self.params.pnc_critical or ca_free < 0 or po4_free < 0:
-                        continue
+                    # Higher threshold for formation (need significant PNC)
+                    pnc_critical = 100e-9  # 100 nM (was 1e-10)
                 
-                    # Get EMERGENT dopamine effects (not prescribed!)
-                    emergent = self.da_field.calculate_emergent_selectivity(
-                        i, j, ca_free, po4_free
-                    )
-                
-                    # Get other modulation factors
-                    j_coupling = self.phosphate_j_coupling[j, i]
-                    j_factor = 1.0 + min((j_coupling - 5.0) / 10.0, 2.0)  # 1x at 5Hz, 3x max at 25Hz
-                
-                    pH_local = self.local_pH[j, i]
-                    pH_factor = 10 ** (7.3 - pH_local)
-                
-                    # Calculate formation with emergent selectivity
-                    S_pnc = pnc_local / self.params.pnc_critical  # Supersaturation
-                
-                    dimer_rate = self.params.k_dimer_formation * emergent['dimer_factor'] * j_factor
-                    trimer_rate = self.params.k_trimer_formation * emergent['trimer_factor'] * j_factor
-                
-                    # Calculate how much CAN form given substrates
-                    max_dimers_ca = ca_free / (6 * 50e-9)  # Limited by calcium
-                    max_dimers_po4 = po4_free / (4 * 50e-9)  # Limited by phosphate
-                    max_dimers_pnc = pnc_local / (2 * 50e-9)  # Limited by PNC
-                    max_dimers = min(max_dimers_ca, max_dimers_po4, max_dimers_pnc)
-                
-                    max_trimers_ca = ca_free / (9 * 50e-9)
-                    max_trimers_po4 = po4_free / (6 * 50e-9)
-                    max_trimers_pnc = pnc_local / (3 * 50e-9)
-                    max_trimers = min(max_trimers_ca, max_trimers_po4, max_trimers_pnc)
-                
-                    # Actual formation (rate-limited AND substrate-limited)
-                    dimer_formation = min(
-                        dimer_rate * (S_pnc - 1.0) * pH_factor * dt,
-                        max_dimers * 50e-9
-                    )
-                
-                    trimer_formation = min(
-                        trimer_rate * (S_pnc - 1.0) * pH_factor * dt,
-                        max_trimers * 50e-9
-                    )
-                
-                    # Ensure non-negative
-                    dimer_formation = max(0, dimer_formation)
-                    trimer_formation = max(0, trimer_formation)
-                
-                    # Update fields with proper stoichiometry
-                    if dimer_formation > 0:
-                        self.dimer_field[j, i] += dimer_formation
-                        self.calcium_field[j, i] -= 6 * dimer_formation
-                        self.phosphate_field[j, i] -= 4 * dimer_formation
-                        self.pnc_field[j, i] -= 2 * dimer_formation
-                
-                    if trimer_formation > 0:
-                        self.trimer_field[j, i] += trimer_formation
-                        self.calcium_field[j, i] -= 9 * trimer_formation
-                        self.phosphate_field[j, i] -= 6 * trimer_formation
-                        self.pnc_field[j, i] -= 3 * trimer_formation
+                    if pnc_local > pnc_critical:
+                        # Supersaturation - use logarithmic scale to prevent explosion
+                        S_pnc = np.log10(pnc_local / pnc_critical) + 1  # Will be ~1-3 range
+                    
+                        # Get modulation factors
+                        j_coupling = self.phosphate_j_coupling[j, i]
+                        j_enhancement = max(1.0, j_coupling / 10.0)  # Reduced enhancement
+                    
+                        da_modulation = self.da_field.get_quantum_modulation(i, j)
+                    
+                        pH_local = self.local_pH[j, i]
+                        pH_factor = np.exp(7.3 - pH_local)  # Exponential, not power
+                    
+                        # Formation rates - NO additional scaling
+                        if da_modulation['above_quantum_threshold']:
+                            dimer_rate = 0.001 * da_modulation['dimer_enhancement'] * j_enhancement
+                            trimer_rate = 0.0001 * da_modulation['trimer_suppression']
+                        else:
+                            # Without dopamine, minimal formation
+                            dimer_rate = 0.0001
+                            trimer_rate = 0.00001
+                    
+                        # Formation amounts - directly in M
+                        dimer_formation = dimer_rate * S_pnc * pH_factor * dt
+                        trimer_formation = trimer_rate * S_pnc * pH_factor * dt if S_pnc > 1.5 else 0
+                    
+                        # Stoichiometric constraints
+                        max_dimers = pnc_local / (2 * 50e-9)  # Each dimer needs 2 PNC units
+                        max_trimers = pnc_local / (3 * 50e-9)  # Each trimer needs 3 PNC units
+                    
+                        dimer_formation = min(dimer_formation, max_dimers * 50e-9 * dt)
+                        trimer_formation = min(trimer_formation, max_trimers * 50e-9 * dt)
+                    
+                        # Update fields with proper consumption
+                        if dimer_formation > 0:
+                            self.dimer_field[j, i] += dimer_formation
+                            self.pnc_field[j, i] -= 2 * dimer_formation
+                    
+                        if trimer_formation > 0:
+                            self.trimer_field[j, i] += trimer_formation
+                            self.pnc_field[j, i] -= 3 * trimer_formation
+                    
+                        self.pnc_field[j, i] = max(0, self.pnc_field[j, i])
     
     def update_quantum_coherence(self, dt: float):
         """
