@@ -11,6 +11,14 @@ Complete implementation incorporating all Model 4 dynamics plus:
 Author: Sarah Davidson
 Date: August 2025
 Version: 5.0
+
+Update September 13, 2025:
+Based on Agarwal et al. 2023 and calcium phosphate chemistry:
+1. Dimers (Ca6(PO4)4) maintain coherence for ~100s
+2. Formation requires supersaturation and nucleation
+3. Dopamine modulates selectivity, not total amount
+4. Substrate depletion provides natural feedback
+
 """
 
 import numpy as np
@@ -53,6 +61,7 @@ class Model5Parameters:
     po4_baseline: float = 1e-3          # 1 mM phosphate
     atp_concentration: float = 3e-3     # 3 mM ATP (Model 4)
     pnc_baseline: float = 1e-10         # 0.1 nM - CRITICAL! Non-zero for nucleation
+    ca_microdomain_peak: float = 100e-6  # 100 µM in microdomains
     
     # ============= DIFFUSION COEFFICIENTS =============
     D_calcium: float = 220e-12          # m²/s - Ca²⁺ diffusion
@@ -80,11 +89,13 @@ class Model5Parameters:
     Based on McDonogh et al. 2024 bulk value of 470 M⁻¹
     """
     
-    # PNC formation from complexes
-    k_pnc_formation: float = 20.0      # s⁻¹ - effective rate in complex-rich regions - reduced from 200
+    # ============= PNC DYNAMICS (RATE-LIMITING STEP) =============
+    # PNCs are the bottleneck - they form slowly!
+    k_pnc_formation: float = 2.0      # s⁻¹ (was 20, now 10x slower)
     k_pnc_dissolution: float = 10.0     # s⁻¹ - PNC lifetime ~100 ms
     pnc_size: int = 30                  # ~30 Ca/PO4 units per PNC
     pnc_max_concentration: float = 1e-6 # 1 µM maximum to prevent runaway
+    pnc_critical: float = 100e-9        # 100 nM threshold for aggregation
     
     # ============= TEMPLATE PARAMETERS (Model 4) =============
     templates_per_synapse: int = 500    # Synaptotagmin molecules
@@ -92,7 +103,7 @@ class Model5Parameters:
     k_pnc_binding: float = 1e9          # M⁻¹s⁻¹ - strong binding
     k_pnc_unbinding: float = 0.1        # s⁻¹ - slow unbinding
     template_accumulation_range: int = 2  # Grid cells - drift radius
-    template_accumulation_rate: float = 0.3  # fraction/dt - accumulation strength
+    template_accumulation_rate: float = 0.0003  # 0.03% per ms = 30% per second
     
     # ============= FUSION KINETICS =============
     fusion_probability: float = 0.01    # Base probability for PNC fusion
@@ -139,11 +150,11 @@ class Model5Parameters:
 
     # Formation: These are EFFECTIVE first-order rates in supersaturated regions
     # True mechanism is higher-order but we use pseudo-first-order approximation
-    k_dimer_formation: float = 1e-3     # s⁻¹ (effective in PNC-rich regions)
-    k_trimer_formation: float = 1e-4    # s⁻¹ (10x slower than dimers)
+    k_dimer_formation: float = 1e-5     # s⁻¹ maximum rate (was 1e-3)
+    k_trimer_formation: float = 1e-5    # s⁻¹ maximum rate (was 1e-4)
 
     # Dissolution rates based on stability
-    kr_dimer: float = 0.01             # s⁻¹ - faster dissolution (10s lifetime instead of 100s)
+    kr_dimer: float = 0.01             # s⁻¹ → 100s lifetime (CORRECT!)
     kr_trimer: float = 0.5              # s⁻¹ - fast dissolution (2s lifetime)
 
     # ============= QUANTUM PARAMETERS (Model 5) =============
@@ -701,77 +712,64 @@ class NeuromodulatedQuantumSynapse:
         for ti, tj in self.template_indices:
             self.complex_field[tj, ti] = min(
                 self.complex_field[tj, ti] * self.params.template_factor, 
-                1e-6  # Cap at 1 µM
+                100e-9  # Cap at 100 nM, not 1 µM!
             )
         
         self.complex_field *= self.active_mask
     
     def update_pnc_dynamics(self, dt: float):
         """
-        Update prenucleation cluster dynamics.
-        PNCs form from CaHPO4 complexes and accumulate at templates.
-        This is the critical precursor step before dimer/trimer formation.
+        Update prenucleation cluster dynamics with diffusion-based template accumulation.
+        PNCs form from CaHPO4 complexes and bind to templates via diffusion.
         """
         # Calculate complex concentration first
         self.calculate_complex_equilibrium()
-        
+    
         # Formation from complexes
         formation = self.params.k_pnc_formation * self.complex_field
-        
+    
         # Apply saturation to prevent runaway growth
         saturation = 1 - self.pnc_field / self.params.pnc_max_concentration
         saturation = np.clip(saturation, 0, 1)
         formation *= saturation
-        
+    
         # Dissolution back to ions
         dissolution = self.params.k_pnc_dissolution * self.pnc_field
-        
-        # === Template accumulation (KEY MECHANISM!) ===
-        # Templates actively concentrate PNCs from surrounding area
-        for ti, tj in self.template_indices:
-            if self.pnc_field[tj, ti] < self.params.pnc_max_concentration:
-                # Accumulate from surrounding grid cells
-                r_max = self.params.template_accumulation_range
-                for di in range(-r_max, r_max+1):
-                    for dj in range(-r_max, r_max+1):
-                        ni, nj = ti + di, tj + dj
-                        if (0 <= ni < self.params.grid_size and 
-                            0 <= nj < self.params.grid_size and
-                            (di != 0 or dj != 0) and
-                            self.active_mask[nj, ni]):
-                            
-                            # Drift toward template
-                            distance = np.sqrt(di**2 + dj**2)
-                            drift_rate = self.params.template_accumulation_rate / (1 + distance)
-                            transfer = self.pnc_field[nj, ni] * drift_rate * dt
-                            
-                            # Move PNCs
-                            transfer = min(transfer, self.pnc_field[nj, ni])
-                            self.pnc_field[nj, ni] -= transfer
-                            self.pnc_field[tj, ti] += transfer
-            
-            # === Template binding ===
-            # PNCs bind to template proteins for organized fusion
-            if self.pnc_field[tj, ti] > 1e-9:  # If PNCs present
-                available = self.params.n_binding_sites - self.template_pnc_bound[tj, ti]
-                
-                if available > 0:
-                    # Simple first-order binding
-                    binding_rate = 10.0  # s⁻¹ (aggressive binding)
-                    binding_amount = min(binding_rate * dt * available, available)
-                    
-                    if self.pnc_field[tj, ti] > 1e-8:  # Need at least 10 nM
-                        self.template_pnc_bound[tj, ti] += binding_amount
-        
-        # Update PNC field
+    
+        # Update PNC field with formation/dissolution
         dpnc_dt = formation - dissolution
         self.pnc_field += dpnc_dt * dt * self.active_mask
         self.pnc_field = np.clip(self.pnc_field, 0, self.params.pnc_max_concentration)
-        
-        # Add small diffusion
+    
+        # === DIFFUSION (happens everywhere) ===
         laplacian = self.calculate_laplacian_neumann(self.pnc_field)
         self.pnc_field += self.params.D_pnc * laplacian * dt
-        self.pnc_field = np.clip(self.pnc_field, 0, self.params.pnc_max_concentration)
+    
+        # === TEMPLATE BINDING (local trapping, not accumulation) ===
+        for ti, tj in self.template_indices:
+            if self.pnc_field[tj, ti] > 1e-9:  # If PNCs present
+                available = self.params.n_binding_sites - self.template_pnc_bound[tj, ti]
+            
+                if available > 0:
+                    # Binding rate proportional to local PNC concentration
+                    binding_rate = self.params.k_pnc_binding  # M⁻¹s⁻¹
+                    binding = binding_rate * self.pnc_field[tj, ti] * available * dt
+                    binding = min(binding, available, self.pnc_field[tj, ti])
+                
+                    # Transfer from free to bound
+                    self.template_pnc_bound[tj, ti] += binding
+                    self.pnc_field[tj, ti] -= binding
+                
+                # Handle unbinding (add this for completeness)
+                if self.template_pnc_bound[tj, ti] > 0:
+                    unbinding = self.params.k_pnc_unbinding * self.template_pnc_bound[tj, ti] * dt
+                    unbinding = min(unbinding, self.template_pnc_bound[tj, ti])
+                    self.template_pnc_bound[tj, ti] -= unbinding
+                    self.pnc_field[tj, ti] += unbinding
+    
+        # Ensure non-negative
+        self.pnc_field = np.maximum(self.pnc_field, 0)
+        self.template_pnc_bound = np.maximum(self.template_pnc_bound, 0)
     
     def calculate_laplacian_neumann(self, field: np.ndarray) -> np.ndarray:
         """
@@ -979,69 +977,78 @@ class NeuromodulatedQuantumSynapse:
     
     def form_dimers_and_trimers(self, dt: float):
         """
-        Direct formation pathway from PNC aggregation.
-        Based on classical nucleation theory where PNCs aggregate into dimers/trimers.
-        Enhanced by ATP-derived phosphate J-coupling and modulated by dopamine.
+        Direct formation with proper substrate depletion and emergent dopamine effects.
         """
-        total_dimers_before = np.sum(self.dimer_field) * 1e9
-        if total_dimers_before > 1000:  # If already high
-            print(f"WARNING: Total dimers already at {total_dimers_before:.1f} nM before formation!")
-    
         for i in range(self.params.grid_size):
             for j in range(self.params.grid_size):
                 if self.active_mask[j, i]:
+                    
+                    
+                    # Get available substrates (not total concentrations!)
+                    ca_free = self.calcium_field[j, i] - self.complex_field[j, i]
+                    po4_free = self.phosphate_field[j, i] - self.complex_field[j, i]
                     pnc_local = self.pnc_field[j, i]
                 
-                    # Need minimum PNC concentration for aggregation
-                    pnc_critical = 100e-9  # 100 nM threshold
+                    # Skip if insufficient substrates
+                    if pnc_local < self.params.pnc_critical or ca_free < 0 or po4_free < 0:
+                        continue
                 
-                    if pnc_local > pnc_critical:
-                        # Supersaturation ratio
-                        S_pnc = pnc_local / pnc_critical
-                    
-                        # Get all modulation factors
-                        j_coupling = self.phosphate_j_coupling[j, i]
-                        j_enhancement = j_coupling / 0.2
-                    
-                        da_modulation = self.da_field.get_quantum_modulation(i, j)
-                    
-                        pH_local = self.local_pH[j, i]
-                        pH_factor = 10 ** (7.3 - pH_local)
-                    
-                        # Calculate formation rates
-                        if da_modulation['above_quantum_threshold']:
-                            dimer_rate = self.params.k_dimer_formation * da_modulation['dimer_enhancement'] * j_enhancement
-                            trimer_rate = self.params.k_trimer_formation * da_modulation['trimer_suppression']
-                        else:
-                            dimer_rate = self.params.k_dimer_formation * j_enhancement
-                            trimer_rate = self.params.k_trimer_formation * j_enhancement
-                    
-                        # Calculate potential formation amounts
-                        dimer_formation = dimer_rate * (S_pnc - 1.0) * pH_factor * dt
-                        trimer_formation = trimer_rate * (S_pnc - 1.0) * pH_factor * dt if S_pnc > 1.5 else 0
-                    
-                        # PROPER STOICHIOMETRIC CONSTRAINTS
-                        # Calculate PNC needed
-                        pnc_for_dimers = 2 * dimer_formation  # 2 PNC → 1 dimer
-                        pnc_for_trimers = 3 * trimer_formation  # 3 PNC → 1 trimer
-                        total_pnc_needed = pnc_for_dimers + pnc_for_trimers
-                    
-                        # Apply constraints
-                        if total_pnc_needed > pnc_local:
-                            # Scale down proportionally
-                            scale_factor = pnc_local / total_pnc_needed
-                            dimer_formation *= scale_factor
-                            trimer_formation *= scale_factor
-                            pnc_for_dimers *= scale_factor
-                            pnc_for_trimers *= scale_factor
-                    
-                        # Update fields
+                    # Get EMERGENT dopamine effects (not prescribed!)
+                    emergent = self.da_field.calculate_emergent_selectivity(
+                        i, j, ca_free, po4_free
+                    )
+                
+                    # Get other modulation factors
+                    j_coupling = self.phosphate_j_coupling[j, i]
+                    j_factor = 1.0 + min((j_coupling - 5.0) / 10.0, 2.0)  # 1x at 5Hz, 3x max at 25Hz
+                
+                    pH_local = self.local_pH[j, i]
+                    pH_factor = 10 ** (7.3 - pH_local)
+                
+                    # Calculate formation with emergent selectivity
+                    S_pnc = pnc_local / self.params.pnc_critical  # Supersaturation
+                
+                    dimer_rate = self.params.k_dimer_formation * emergent['dimer_factor'] * j_factor
+                    trimer_rate = self.params.k_trimer_formation * emergent['trimer_factor'] * j_factor
+                
+                    # Calculate how much CAN form given substrates
+                    max_dimers_ca = ca_free / (6 * 50e-9)  # Limited by calcium
+                    max_dimers_po4 = po4_free / (4 * 50e-9)  # Limited by phosphate
+                    max_dimers_pnc = pnc_local / (2 * 50e-9)  # Limited by PNC
+                    max_dimers = min(max_dimers_ca, max_dimers_po4, max_dimers_pnc)
+                
+                    max_trimers_ca = ca_free / (9 * 50e-9)
+                    max_trimers_po4 = po4_free / (6 * 50e-9)
+                    max_trimers_pnc = pnc_local / (3 * 50e-9)
+                    max_trimers = min(max_trimers_ca, max_trimers_po4, max_trimers_pnc)
+                
+                    # Actual formation (rate-limited AND substrate-limited)
+                    dimer_formation = min(
+                        dimer_rate * (S_pnc - 1.0) * pH_factor * dt,
+                        max_dimers * 50e-9
+                    )
+                
+                    trimer_formation = min(
+                        trimer_rate * (S_pnc - 1.0) * pH_factor * dt,
+                        max_trimers * 50e-9
+                    )
+                
+                    # Ensure non-negative
+                    dimer_formation = max(0, dimer_formation)
+                    trimer_formation = max(0, trimer_formation)
+                
+                    # Update fields with proper stoichiometry
+                    if dimer_formation > 0:
                         self.dimer_field[j, i] += dimer_formation
+                        self.calcium_field[j, i] -= 6 * dimer_formation
+                        self.phosphate_field[j, i] -= 4 * dimer_formation
+                        self.pnc_field[j, i] -= 2 * dimer_formation
+                
+                    if trimer_formation > 0:
                         self.trimer_field[j, i] += trimer_formation
-                        self.pnc_field[j, i] -= (pnc_for_dimers + pnc_for_trimers)
-                    
-                        # Ensure PNC doesn't go negative
-                        self.pnc_field[j, i] = max(0, self.pnc_field[j, i])
+                        self.calcium_field[j, i] -= 9 * trimer_formation
+                        self.phosphate_field[j, i] -= 6 * trimer_formation
+                        self.pnc_field[j, i] -= 3 * trimer_formation
     
     def update_quantum_coherence(self, dt: float):
         """
@@ -1184,6 +1191,38 @@ class NeuromodulatedQuantumSynapse:
             'total': total_phosphate,
             'total_moles': total_moles
         }
+
+    def diagnose_formation(self):
+        """Print diagnostic info about formation dynamics"""
+        total_dimers = np.sum(self.dimer_field) * 1e9  # nM
+        total_trimers = np.sum(self.trimer_field) * 1e9
+        mean_ca = np.mean(self.calcium_field[self.active_mask]) * 1e9
+        mean_po4 = np.mean(self.phosphate_field[self.active_mask]) * 1e6  # µM
+        mean_pnc = np.mean(self.pnc_field[self.active_mask]) * 1e9
+        mean_da = np.mean(self.dopamine_field[self.active_mask]) * 1e9
+        
+        print(f"\n=== Formation Diagnostics ===")
+        print(f"Dimers: {total_dimers:.1f} nM")
+        print(f"Trimers: {total_trimers:.1f} nM")
+        print(f"Ratio: {total_dimers/total_trimers if total_trimers > 0 else 'inf':.2f}")
+        print(f"Mean Ca: {mean_ca:.1f} nM")
+        print(f"Mean PO4: {mean_po4:.1f} µM")
+        print(f"Mean PNC: {mean_pnc:.1f} nM")
+        print(f"Mean DA: {mean_da:.1f} nM")
+        
+        # Check if substrates are depleted
+        if mean_ca < 10:  # Less than 10 nM
+            print("WARNING: Calcium depleted!")
+        if mean_po4 < 100:  # Less than 100 µM
+            print("WARNING: Phosphate depleted!")
+        if mean_pnc < 1:  # Less than 1 nM
+            print("WARNING: PNC depleted!")
+            
+        # Check for runaway accumulation
+        if total_dimers > 1000:  # More than 1 µM
+            print("WARNING: Excessive dimer accumulation!")
+        if total_trimers > 1000:
+            print("WARNING: Excessive trimer accumulation!")
 
     # ========================================================================
     # MAIN UPDATE AND SIMULATION
@@ -1528,6 +1567,26 @@ class NeuromodulatedQuantumSynapse:
         # Initial phosphate was 1 mM
         if total_P > 2e-3:  # More than 2 mM
             print("ERROR: Creating phosphate from nothing!")
+
+def analyze_quantum_advantage(results):
+            """
+            Analyze quantum advantage metrics from simulation results.
+            Returns a dictionary with coherence advantage, dimer/trimer ratio, and dopamine-dimer correlation.
+            """
+            coherence_advantage = (results.max_coherence_dimer / results.max_coherence_trimer
+                                if getattr(results, 'max_coherence_trimer', 0) else 0)
+            dimer_trimer_ratio = (results.peak_dimer / results.peak_trimer
+                                if getattr(results, 'peak_trimer', 0) else 0)
+            dopamine_dimer_correlation = (
+                np.corrcoef(results.dopamine_map.flatten(), results.dimer_map.flatten())[0, 1]
+                if hasattr(results, 'dopamine_map') and hasattr(results, 'dimer_map') else 0
+            )
+
+            return {
+                'coherence_advantage': coherence_advantage,
+                'dimer_trimer_ratio': dimer_trimer_ratio,
+                'dopamine_dimer_correlation': dopamine_dimer_correlation
+            }
 
 # ============================================================================
 # EXAMPLE USAGE

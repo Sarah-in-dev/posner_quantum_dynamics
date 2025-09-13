@@ -429,11 +429,64 @@ class DopamineField:
         else:
             # Dopamine before calcium - no learning
             return 0.0
+    
+    def calculate_emergent_selectivity(self, i: int, j: int, 
+                                    ca_local: float, po4_local: float) -> Dict[str, float]:
+        """
+        Calculate emergent dimer/trimer selectivity based on dopamine's 
+        physical effects on the local environment.
+    
+        Key mechanisms:
+        1. D2 activation reduces calcium influx
+        2. Dopamine-phosphate complexation changes effective size
+        3. Local ionic strength changes affect nucleation
+        """
+        da_local = self.field[i, j]
+        d2_occupancy = da_local / (da_local + self.params.Kd_D2)
+    
+        # 1. D2 reduces calcium (via Gi/o → decreased Ca channel opening)
+        # This changes the Ca/P ratio, affecting which phase forms
+        ca_effective = ca_local * (1 - 0.3 * d2_occupancy)  # 30% reduction at full D2
+    
+        # 2. Calculate Ca/P ratio effects
+        # Dimers need Ca6(PO4)4 → Ca/P = 1.5
+        # Trimers need Ca9(PO4)6 → Ca/P = 1.5 (same ratio but different absolute amounts)
+        ca_p_ratio = ca_effective / po4_local if po4_local > 0 else 0
+    
+        # With less calcium (D2 effect), smaller clusters are favored
+        # because they need less total calcium to form
+        if d2_occupancy > 0.5:  # Significant D2 activation
+            # Favor dimers: need only 6 Ca vs 9 Ca for trimers
+            dimer_feasibility = min(ca_effective / (6 * 50e-9), 1.0)  # Can we make dimers?
+            trimer_feasibility = min(ca_effective / (9 * 50e-9), 1.0)  # Can we make trimers?
+        else:
+            # Without D2, both equally feasible if enough substrate
+            dimer_feasibility = 1.0
+            trimer_feasibility = 1.0
+    
+        # 3. Dopamine affects local ionic strength via K+ channels
+        # Higher ionic strength reduces Debye length → affects larger clusters more
+        ionic_strength_factor = 1 + 0.5 * d2_occupancy
+    
+        # Trimers have more P-P interactions (15 vs 6), more affected by screening
+        dimer_ionic_penalty = 1.0 / (1 + 0.1 * ionic_strength_factor)
+        trimer_ionic_penalty = 1.0 / (1 + 0.3 * ionic_strength_factor)  # 3x more sensitive
+    
+        # 4. Combine effects (multiplicative because they're independent)
+        dimer_factor = dimer_feasibility * dimer_ionic_penalty
+        trimer_factor = trimer_feasibility * trimer_ionic_penalty
+    
+        return {
+            'dimer_factor': dimer_factor,
+            'trimer_factor': trimer_factor,
+            'ca_effective': ca_effective,
+            'd2_occupancy': d2_occupancy,
+            'emergent_selectivity': dimer_factor / trimer_factor if trimer_factor > 0 else 10.0
+        }
 
-
-# Convenience function for integration
+    # Convenience function for integration
 def create_dopamine_system(grid_size: int, dx: float, 
-                          custom_params: Optional[Dict] = None) -> DopamineField:
+                        custom_params: Optional[Dict] = None) -> DopamineField:
     """
     Create a dopamine system with optional custom parameters.
     
