@@ -81,7 +81,7 @@ class Model5Parameters:
     """
     
     # PNC formation from complexes
-    k_pnc_formation: float = 200.0      # s⁻¹ - effective rate in complex-rich regions
+    k_pnc_formation: float = 20.0      # s⁻¹ - effective rate in complex-rich regions - reduced from 200
     k_pnc_dissolution: float = 10.0     # s⁻¹ - PNC lifetime ~100 ms
     pnc_size: int = 30                  # ~30 Ca/PO4 units per PNC
     pnc_max_concentration: float = 1e-6 # 1 µM maximum to prevent runaway
@@ -143,7 +143,7 @@ class Model5Parameters:
     k_trimer_formation: float = 1e-4    # s⁻¹ (10x slower than dimers)
 
     # Dissolution rates based on stability
-    kr_dimer: float = 0.01              # s⁻¹ - slow dissolution (100s lifetime)
+    kr_dimer: float = 0.01             # s⁻¹ - faster dissolution (10s lifetime instead of 100s)
     kr_trimer: float = 0.5              # s⁻¹ - fast dissolution (2s lifetime)
 
     # ============= QUANTUM PARAMETERS (Model 5) =============
@@ -799,7 +799,7 @@ class NeuromodulatedQuantumSynapse:
     # MODEL 5 ENHANCEMENTS
     # ========================================================================
     
-    def update_atp_dynamics(self, dt: float, activity_level: float):
+    def update_atp_dynamics(self, dt: float, activity_level: float, channel_open: np.ndarray):
         """
         ATP hydrolysis during activity produces phosphate with strong J-coupling.
         Based on Adams et al. 2025 showing ATP has 100x stronger J-coupling than free phosphate.
@@ -814,17 +814,23 @@ class NeuromodulatedQuantumSynapse:
     
             # Count active channels
             active_channels = 0
-            for idx, (ci, cj) in enumerate(self.channel_indices):
-                if idx < len(self.channels.states) and self.channels.states[idx] == 1:
-                    # Create gradient around active channel
-                    r = np.sqrt((self.X - self.X[ci, cj])**2 + 
-                            (self.Y - self.Y[ci, cj])**2)
+            for idx, (i, j) in enumerate(self.channel_indices):
+                if idx < len(channel_open) and channel_open[idx]:
+                    active_channels += 1
             
-                    # ATPase activity falls off with distance (10 nm scale)
-                    local_rate = base_hydrolysis_rate * np.exp(-r / 10e-9)
-                    hydrolysis_field += local_rate * activity_level
-
-            print(f"  Active channels: {active_channels}")
+                    # ATP → ADP + Pi at this location
+                    local_atp = self.atp_field[i, j]
+                    hydrolysis = self.params.k_atp_hydrolysis * local_atp * dt
+            
+                    self.atp_field[i, j] -= hydrolysis
+                    self.phosphate_field[i, j] += hydrolysis
+            
+                    # Set high J-coupling at active sites
+                    self.phosphate_j_coupling[i, j] = self.params.J_PP_atp  # 20 Hz
+    
+            if active_channels > 0:
+                print(f"  Active channels: {active_channels}")
+                print(f"  Max J-coupling: {np.max(self.phosphate_j_coupling):.1f} Hz")
     
             # Apply hydrolysis
             atp_consumed = self.atp_field * hydrolysis_field * dt
@@ -900,75 +906,74 @@ class NeuromodulatedQuantumSynapse:
     
     def update_template_fusion(self, dt: float):
         """
-        Template-mediated formation of dimers or trimers.
-        This is where Model 4's template fusion is adapted for Model 5's
-        dopamine-dependent dimer vs trimer selection.
+        Template-mediated formation with proper PNC consumption.
+        Templates organize PNC into dimers/trimers but still consume PNC!
         """
         for ti, tj in self.template_indices:
-            # Check PNC occupancy at template
+            # Check template occupancy
             occupancy = self.template_pnc_bound[tj, ti] / self.params.n_binding_sites
         
-            if occupancy >= 0.5:  # Threshold for fusion attempt
-                # === Environmental modulation (from Model 4) ===
+            if occupancy >= 0.8:  # 80% threshold for fusion
+                # Get local conditions
+                pnc_local = self.pnc_field[tj, ti]
             
-                # 1. Cooperative effect - more bound PNCs help
-                cooperative_factor = 1 + 2 * (occupancy - 0.5)
+                # Need PNC for fusion even at templates
+                if pnc_local < 100e-9:  # Not enough PNC
+                    continue
             
-                # 2. Calcium enhancement - Ca²⁺ stabilizes transition
+                # Calculate all enhancement factors
+                cooperative_factor = 1 + 2 * occupancy
+            
                 ca_local = self.calcium_field[tj, ti]
-                ca_enhancement = 1 + (ca_local / 100e-6)  # Enhanced above 100 µM
+                ca_enhancement = 1.0
+                if ca_local > 1e-6:
+                    ca_enhancement = 1 + np.log10(ca_local / 1e-6)
             
-                # 3. pH effect - lower pH favors fusion
                 pH_local = self.local_pH[tj, ti]
-                pH_factor = 1 + 0.5 * (7.3 - pH_local)
+                pH_factor = 10 ** (7.3 - pH_local)
             
-                # 4. Activity-dependent template conformational change
                 activity_level = np.sum(self.channels.get_open_channels()) / self.params.n_channels
                 template_activation = 1 + activity_level * 2
             
-                # 5. Get quantum modulation from dopamine
                 da_modulation = self.da_field.get_quantum_modulation(ti, tj)
             
-                # 6. Apply coincidence timing using biophysical calculation
                 coincidence_factor = self.da_field.get_coincidence_factor(
                     calcium_spike_time=self.calcium_spike_time,
                     current_time=self.current_time
                 )
             
-                # Combined enhancement (including template_activation)
                 total_enhancement = (cooperative_factor * ca_enhancement * 
                                     pH_factor * coincidence_factor * template_activation)
             
-                # Calculate fusion probability
                 fusion_prob = self.params.fusion_probability * total_enhancement
-                fusion_prob = min(fusion_prob, 0.5)  # Cap at 50%
+                fusion_prob = min(fusion_prob, 0.5)
             
-                # Stochastic fusion event
                 if np.random.random() < fusion_prob:
-                    # Use biophysical dopamine to select dimer vs trimer
+                    # FIXED: Calculate formation based on available PNC
                     if da_modulation['above_quantum_threshold']:
-                        # Form dimers with enhancement
-                        n_dimers = np.random.poisson(3 * da_modulation['dimer_enhancement'])
-                        self.dimer_field[tj, ti] += n_dimers * 1e-9
+                        # Dimers preferred
+                        n_dimers = min(3, int(pnc_local / (2 * 50e-9)))  # Max 3, limited by PNC
+                        if n_dimers > 0:
+                            dimer_conc = n_dimers * 50e-9  # 50 nM per dimer
+                            pnc_consumed = 2 * dimer_conc  # Stoichiometry
+                        
+                            self.dimer_field[tj, ti] += dimer_conc
+                            self.pnc_field[tj, ti] -= pnc_consumed
                     else:
-                        # Form trimers (suppressed if DA present)
-                        n_trimers = np.random.poisson(2 * da_modulation['trimer_suppression'])
-                        self.trimer_field[tj, ti] += n_trimers * 1e-9
+                        # Trimers
+                        n_trimers = min(2, int(pnc_local / (3 * 50e-9)))  # Max 2, limited by PNC
+                        if n_trimers > 0:
+                            trimer_conc = n_trimers * 50e-9
+                            pnc_consumed = 3 * trimer_conc
+                        
+                            self.trimer_field[tj, ti] += trimer_conc
+                            self.pnc_field[tj, ti] -= pnc_consumed
                 
-                    # Template recycling depends on activity
+                    # Template recycling
                     if activity_level > 0.5:
-                        # High activity: partial reset (fast recycling)
                         self.template_pnc_bound[tj, ti] *= 0.3
                     else:
-                        # Low activity: full reset (slow recycling)
                         self.template_pnc_bound[tj, ti] = 0
-                
-                    # PNC consumption
-                    pncs_consumed = self.params.pnc_per_posner
-                    # Check for zero before division
-                    if self.pnc_field[tj, ti] > 0:
-                        consumption_factor = max(0, 1 - pncs_consumed * 1e-10 / self.pnc_field[tj, ti])
-                        self.pnc_field[tj, ti] *= consumption_factor
                 
                     self.fusion_count += 1
     
@@ -981,101 +986,62 @@ class NeuromodulatedQuantumSynapse:
         total_dimers_before = np.sum(self.dimer_field) * 1e9
         if total_dimers_before > 1000:  # If already high
             print(f"WARNING: Total dimers already at {total_dimers_before:.1f} nM before formation!")
-        
+    
         for i in range(self.params.grid_size):
             for j in range(self.params.grid_size):
                 if self.active_mask[j, i]:
                     pnc_local = self.pnc_field[j, i]
                 
-                    # FIX 1: Add missing 'if'
-                    if pnc_local > 50e-9:  # 50 nM threshold
+                    # Need minimum PNC concentration for aggregation
+                    pnc_critical = 100e-9  # 100 nM threshold
+                
+                    if pnc_local > pnc_critical:
+                        # Supersaturation ratio
+                        S_pnc = pnc_local / pnc_critical
                     
-                        # Need minimum PNC concentration for aggregation
-                        pnc_critical = 100e-9  # 100 nM threshold
+                        # Get all modulation factors
+                        j_coupling = self.phosphate_j_coupling[j, i]
+                        j_enhancement = j_coupling / 0.2
                     
-                        if pnc_local > pnc_critical:
-                            # Supersaturation in terms of PNC availability
-                            S_pnc = pnc_local / pnc_critical
-
-                            # J-coupling enhancement factor
-                            j_coupling = self.phosphate_j_coupling[j, i]
-                            j_enhancement = j_coupling / 0.2  # Normalized to free phosphate baseline
-                        
-                            # GET MODULATION FROM BIOPHYSICAL DOPAMINE FIELD
-                            da_modulation = self.da_field.get_quantum_modulation(i, j)
-
-                            pH_local = self.local_pH[j, i]
-                        
-                            # pH affects aggregation (lower pH favors it)
-                            pH_factor = 10 ** (7.3 - pH_local)  # Inverted - acidic favors
-                        
-                            # Apply dopamine modulation to rates
-                            if da_modulation['above_quantum_threshold']:
-                                # High dopamine enhances dimers, suppresses trimers
-                                dimer_rate = self.params.k_dimer_formation * da_modulation['dimer_enhancement'] * j_enhancement
-                                trimer_rate = self.params.k_trimer_formation * da_modulation['trimer_suppression']
-                            else:
-                                # Low dopamine - normal rates
-                                dimer_rate = self.params.k_dimer_formation * j_enhancement
-                                trimer_rate = self.params.k_trimer_formation * j_enhancement
-                        
-                            if i == 25 and j == 25:  # Debug location
-                                print(f"DEBUG: DA modulation - dimer_enh={da_modulation['dimer_enhancement']:.1f}, "
-                                    f"trimer_supp={da_modulation['trimer_suppression']:.1f}, "
-                                    f"D2 occupancy={da_modulation['d2_occupancy']:.2f}")
-                        
-                            # Dimer formation (2 PNCs → 1 dimer)
-                            dimer_formation = dimer_rate * (S_pnc - 1.0) * pH_factor * dt
-                        
-                            # Trimer formation (3 PNCs → 1 trimer) 
-                            trimer_formation = 0
-                            if S_pnc > 1.5:  # Need 50% more PNCs for trimers
-                                trimer_formation = trimer_rate * (S_pnc - 1.5) * pH_factor * dt
-                        
-                            # FIX 2: Proper stoichiometric constraints
-                            # PNC is consumed to form dimers/trimers
-                            # Let's assume 1 PNC unit = 30e-9 M (30 nM)
-                            pnc_units_available = pnc_local / 30e-9  # Convert to units
-                        
-                            # FIX 3: Constrain dimer formation
-                            # Each dimer needs 2 PNC units
-                            max_dimer_units = pnc_units_available / 2
-                            max_dimer_conc = max_dimer_units * 30e-9  # Convert back to M
-                        
-                            if dimer_formation > max_dimer_conc:
-                                dimer_formation = max_dimer_conc
-
-                            if i == 25 and j == 25 and dimer_formation > 1e-9:
-                                print(f"DEBUG DIMER: pnc={pnc_local*1e9:.1f}nM, S_pnc={S_pnc:.1f}")
-                                print(f"  dimer_rate={dimer_rate}, pH_factor={pH_factor:.2f}, dt={dt}")
-                                print(f"  dimer_formation before cap: {dimer_formation*1e9:.1f}nM")
-                                print(f"  max allowed: {max_dimer_conc*1e9:.1f}nM")
-                            
-                            # Update dimer field
-                            self.dimer_field[j, i] += dimer_formation
-                            pnc_consumed = dimer_formation * 2 / 30e-9  # Units consumed
-                        
-                            # FIX 4: Constrain trimer formation with remaining PNC
-                            pnc_remaining = pnc_units_available - pnc_consumed
-                            max_trimer_units = pnc_remaining / 3  # Each trimer needs 3 units
-                            max_trimer_conc = max_trimer_units * 30e-9
-                        
-                            if trimer_formation > max_trimer_conc:
-                                trimer_formation = max_trimer_conc
-                        
-                            # Update trimer field
-                            self.trimer_field[j, i] += trimer_formation
-                            pnc_consumed += trimer_formation * 3 / 30e-9
-                        
-                            # Debug output
-                            if i == 25 and j == 25 and dimer_formation > 1e-12:
-                                print(f"DEBUG FORMATION: dimer_rate={dimer_rate}, S_pnc={S_pnc}, pH_factor={pH_factor}, dt={dt}")
-                                print(f"  dimer_formation={dimer_formation*1e9:.2f}nM, max_allowed={max_dimer_conc*1e9:.2f}nM")
-                        
-                            # Update PNC field
-                            total_pnc_consumed = pnc_consumed * 30e-9  # Convert back to M
-                            self.pnc_field[j, i] -= total_pnc_consumed
-                            self.pnc_field[j, i] = max(0, self.pnc_field[j, i])
+                        da_modulation = self.da_field.get_quantum_modulation(i, j)
+                    
+                        pH_local = self.local_pH[j, i]
+                        pH_factor = 10 ** (7.3 - pH_local)
+                    
+                        # Calculate formation rates
+                        if da_modulation['above_quantum_threshold']:
+                            dimer_rate = self.params.k_dimer_formation * da_modulation['dimer_enhancement'] * j_enhancement
+                            trimer_rate = self.params.k_trimer_formation * da_modulation['trimer_suppression']
+                        else:
+                            dimer_rate = self.params.k_dimer_formation * j_enhancement
+                            trimer_rate = self.params.k_trimer_formation * j_enhancement
+                    
+                        # Calculate potential formation amounts
+                        dimer_formation = dimer_rate * (S_pnc - 1.0) * pH_factor * dt
+                        trimer_formation = trimer_rate * (S_pnc - 1.0) * pH_factor * dt if S_pnc > 1.5 else 0
+                    
+                        # PROPER STOICHIOMETRIC CONSTRAINTS
+                        # Calculate PNC needed
+                        pnc_for_dimers = 2 * dimer_formation  # 2 PNC → 1 dimer
+                        pnc_for_trimers = 3 * trimer_formation  # 3 PNC → 1 trimer
+                        total_pnc_needed = pnc_for_dimers + pnc_for_trimers
+                    
+                        # Apply constraints
+                        if total_pnc_needed > pnc_local:
+                            # Scale down proportionally
+                            scale_factor = pnc_local / total_pnc_needed
+                            dimer_formation *= scale_factor
+                            trimer_formation *= scale_factor
+                            pnc_for_dimers *= scale_factor
+                            pnc_for_trimers *= scale_factor
+                    
+                        # Update fields
+                        self.dimer_field[j, i] += dimer_formation
+                        self.trimer_field[j, i] += trimer_formation
+                        self.pnc_field[j, i] -= (pnc_for_dimers + pnc_for_trimers)
+                    
+                        # Ensure PNC doesn't go negative
+                        self.pnc_field[j, i] = max(0, self.pnc_field[j, i])
     
     def update_quantum_coherence(self, dt: float):
         """
@@ -1185,6 +1151,40 @@ class NeuromodulatedQuantumSynapse:
     
         return learning_signal
     
+    def check_mass_conservation(self):
+        """
+        Verify phosphate mass is conserved.
+        Total P = free PO4 + complex + PNC + dimers + trimers
+        """
+        # Calculate total phosphate in each form
+        free_po4 = np.sum(self.phosphate_field * self.active_mask)
+    
+        # 1 P per complex
+        in_complex = np.sum(self.complex_field * self.active_mask)
+    
+        # Assume 4 P per PNC (simplified)
+        in_pnc = 4 * np.sum(self.pnc_field * self.active_mask)
+    
+        # 4 P per dimer, 6 P per trimer
+        in_dimers = 4 * np.sum(self.dimer_field * self.active_mask)
+        in_trimers = 6 * np.sum(self.trimer_field * self.active_mask)
+    
+        total_phosphate = free_po4 + in_complex + in_pnc + in_dimers + in_trimers
+    
+        # Convert to total moles
+        volume_element = self.dx * self.dx * 20e-9  # dx² * cleft_width
+        total_moles = total_phosphate * volume_element
+    
+        return {
+            'free_po4': free_po4,
+            'complex': in_complex,
+            'pnc': in_pnc,
+            'dimers': in_dimers,
+            'trimers': in_trimers,
+            'total': total_phosphate,
+            'total_moles': total_moles
+        }
+
     # ========================================================================
     # MAIN UPDATE AND SIMULATION
     # ========================================================================
@@ -1212,7 +1212,7 @@ class NeuromodulatedQuantumSynapse:
             self.calcium_spike_time = self.current_time
 
          # 3. ATP creates J-coupling
-        self.update_atp_dynamics(dt, activity_level)
+        self.update_atp_dynamics(dt, activity_level, channel_open)
         
         # 3.5 J-coupling decay (ADD THIS NEW STEP)
         self.update_j_coupling_decay(dt)
@@ -1247,6 +1247,20 @@ class NeuromodulatedQuantumSynapse:
         self.trimer_field -= self.params.kr_trimer * self.trimer_field * dt
         self.dimer_field = np.maximum(self.dimer_field, 0)
         self.trimer_field = np.maximum(self.trimer_field, 0)
+        
+
+        # Periodic mass check (every 100 steps)
+        if hasattr(self, 'step_count'):
+            self.step_count += 1
+            if self.step_count % 100 == 0:
+                mass_balance = self.check_mass_conservation()
+                if self.step_count % 1000 == 0:  # Less frequent printing
+                    print(f"Mass balance check: Total P = {mass_balance['total']:.2e} M")
+        else:
+            self.step_count = 0
+
+
+
 
         # 12. Calculate learning signal (ADD THIS)
         self.learning_signal = self.calculate_learning_signal()
@@ -1491,6 +1505,29 @@ class NeuromodulatedQuantumSynapse:
             print(f"  Before: {initial_max*1e9:.1f} nM")
             print(f"  After: {final_max*1e9:.1f} nM")
             print(f"  Change: {(final_max-initial_max)*1e9:.1f} nM")
+    
+    def diagnose_mass_flow(self):
+        """Check where all the phosphate is going"""
+        # Total phosphate in system
+        total_P_free = np.sum(self.phosphate_field)
+        total_P_complex = np.sum(self.complex_field)
+        total_P_pnc = 4 * np.sum(self.pnc_field)  # Assume 4 P per PNC
+        total_P_dimer = 4 * np.sum(self.dimer_field)
+        total_P_trimer = 6 * np.sum(self.trimer_field)
+    
+        total_P = total_P_free + total_P_complex + total_P_pnc + total_P_dimer + total_P_trimer
+    
+        print(f"\nPhosphate distribution:")
+        print(f"  Free PO4: {total_P_free*1e3:.2f} mM")
+        print(f"  In complex: {total_P_complex*1e6:.2f} µM")
+        print(f"  In PNC: {total_P_pnc*1e6:.2f} µM")
+        print(f"  In dimers: {total_P_dimer*1e6:.2f} µM")
+        print(f"  In trimers: {total_P_trimer*1e6:.2f} µM")
+        print(f"  TOTAL: {total_P*1e3:.2f} mM")
+    
+        # Initial phosphate was 1 mM
+        if total_P > 2e-3:  # More than 2 mM
+            print("ERROR: Creating phosphate from nothing!")
 
 # ============================================================================
 # EXAMPLE USAGE

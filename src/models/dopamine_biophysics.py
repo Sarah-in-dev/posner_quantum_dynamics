@@ -208,18 +208,18 @@ class DopamineField:
         return self.get_statistics()
     
     def _phasic_release(self, dt: float):
-        """Phasic burst release during reward"""
+        """Phasic burst release during reward - more deterministic for learning"""
         if self.release_timer < self.params.burst_duration:
+            # During learning, assume reliable burst firing
+            # Release from all sites during burst
             for (i, j) in self.release_sites:
-                # Each terminal fires at burst_frequency
-                # Probability of release PER SPIKE is 0.06
-                # Number of spikes in this dt
-                n_spikes = np.random.poisson(self.params.burst_frequency * dt)
+                # Simplified: during burst, release is more reliable
+                # Instead of stochastic, use deterministic release during learning
+                if self.release_timer < 0.1:  # First 100ms of burst
+                    # Release multiple vesicles to achieve μM concentrations
+                    vesicles_per_pulse = 5  # Multiple vesicles
+                    self._release_vesicles(i, j, vesicles_per_pulse)
         
-                for spike in range(n_spikes):
-                    if np.random.random() < self.params.release_probability:
-                        self._release_vesicles(i, j, 1)
-
             self.release_timer += dt
     
     def _tonic_release(self, dt: float):
@@ -240,19 +240,25 @@ class DopamineField:
         
         # Convert to concentration using actual voxel volume
         # Volume = dx * dx * cleft_width
-        cleft_width = 20e-9  # 20 nm synaptic cleft
-        voxel_volume = self.dx * self.dx * cleft_width  # m³
+        sigma = self.params.release_spread_sigma  # 100 nm
+        cleft_width = 20e-9   # Add this line to define cleft_width
+        
+        # Volume of Gaussian spread in synaptic cleft
+        # This is approximately the volume where 95% of the molecules will be
+        effective_radius = 2 * sigma  # 2 sigma captures ~95%
+        effective_area = np.pi * effective_radius**2
+        effective_volume = effective_area * cleft_width
 
         avogadro = 6.022e23
         moles = total_molecules / avogadro
-        concentration = moles / voxel_volume  # M (not divided by 1000!)
+        concentration_increase = moles / effective_volume
 
         if self.vesicles_released <= 1:  # Print debug for first release
-            print(f"DEBUG RELEASE: dx={self.dx*1e9:.1f}nm, volume={voxel_volume:.2e}m³")
-            print(f"  Molecules: {total_molecules}, Moles: {moles:.2e}")
-            print(f"  Concentration: {concentration:.2e} M = {concentration*1e9:.1f} nM")
+            print(f"DEBUG RELEASE: sigma={sigma*1e9:.1f}nm, effective_radius={effective_radius*1e9:.1f}nm")
+            print(f"  Volume: {effective_volume:.2e} m³")
+            print(f"  Concentration increase: {concentration_increase*1e9:.1f} nM")
 
-        self._add_with_gaussian_spread(i, j, concentration)
+        self._add_with_gaussian_spread(i, j, concentration_increase)
 
         if self.vesicles_released <= 1:
             print(f"  Max field after release: {np.max(self.field)*1e9:.1f} nM")
