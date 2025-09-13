@@ -96,7 +96,7 @@ class Model5Parameters:
     k_pnc_dissolution: float = 100.0     # s⁻¹ - PNC lifetime ~100 ms
     pnc_size: int = 30                  # ~30 Ca/PO4 units per PNC
     pnc_max_concentration: float = 1e-9 # 1 µM maximum to prevent runaway
-    pnc_critical: float = 100e-9        # 100 nM threshold for aggregation
+    pnc_critical: float = 50e-9        # 100 nM threshold for aggregation
     
     # ============= TEMPLATE PARAMETERS (Model 4) =============
     templates_per_synapse: int = 100    # Synaptotagmin molecules
@@ -190,9 +190,23 @@ class ChannelDynamics:
     """
     
     def __init__(self, n_channels: int, params: Model5Parameters):
-        self.n_channels = n_channels
-        self.params = params
         
+        self.params = params
+    
+        # Define grid_shape early, before using it
+        self.grid_shape = (self.params.grid_size, self.params.grid_size)
+        
+        # Time tracking for coincidence detection
+        self.current_time = 0.0
+        self.calcium_spike_time = -1.0  # -1 means no recent spike
+
+        # Coherence arrays
+        self.coherence_dimer = np.zeros(self.grid_shape)
+        self.coherence_trimer = np.zeros(self.grid_shape)
+        
+        
+        self.n_channels = n_channels
+
         # Channel states as integers for efficiency
         self.CLOSED = 0
         self.OPEN = 1
@@ -699,18 +713,18 @@ class NeuromodulatedQuantumSynapse:
         K_eq = self.params.k_complex_formation / self.params.k_complex_dissociation
         
         # Mass action equilibrium - using only calcium above threshold
-        denominator = 1 + K_eq * (ca_above_threshold + po4_eff)
-        denominator = np.maximum(denominator, 1.0)
+        # denominator = 1 + K_eq * (ca_above_threshold + po4_eff)
+        # denominator = np.maximum(denominator, 1.0)
         
-        self.complex_field = K_eq * ca_above_threshold * po4_eff / denominator
+        self.complex_field = K_eq * ca_above_threshold * po4_eff
+        
+        # Cap it
+        self.complex_field = np.minimum(self.complex_field, 1e-6)  # Cap at 1 µM
         
         # Templates enhance complex formation but with strict cap
         for ti, tj in self.template_indices:
-            self.complex_field[tj, ti] = min(
-                self.complex_field[tj, ti] * self.params.template_factor,
-                1e-9  # Cap at 1 nM
-            )
-        
+            self.complex_field[tj, ti] *= self.params.template_factor
+                
         self.complex_field *= self.active_mask
     
     def update_pnc_dynamics(self, dt: float):
@@ -880,20 +894,22 @@ class NeuromodulatedQuantumSynapse:
     def update_dopamine(self, dt: float, reward_signal: bool):
         """Use the biophysical dopamine model to update dopamine field"""
         
-        # Update using the biophysical model
-        stats = self.da_field.update(
-            dt=dt,
-            stimulus=True,  # Always some baseline activity
-            reward=reward_signal
-        )
+        if not hasattr(self, 'da_field'):
+            # Initialize dopamine field if not exists
+            from dopamine_biophysics import DopamineField, DopamineParameters
+            params = DopamineParameters()
+            self.da_field = DopamineField(
+                grid_size=self.params.grid_size,
+                dx=self.dx,
+                params=params,
+                release_sites=[(25, 25)]  # Or your release sites
+            )
     
-        # Copy the field to our dopamine_field for compatibility
+        # Update the field
+        self.da_field.update(dt, reward=reward_signal)
+    
+        # Copy to local array for compatibility
         self.dopamine_field = self.da_field.field.copy()
-    
-        # Debug output
-        if reward_signal:
-            print(f"DEBUG DA: Reward signal! Max={stats['max']*1e9:.1f} nM, "
-                f"Vesicles released={stats['vesicles_released']}")
         
     
     def update_template_fusion(self, dt: float):
@@ -970,60 +986,77 @@ class NeuromodulatedQuantumSynapse:
                     self.fusion_count += 1
     
     def form_dimers_and_trimers(self, dt: float):
-        """
-        Fixed version - proper supersaturation calculation
-        """
+        """Form dimers and trimers with proper calcium and dopamine gating"""
+    
+        # No formation without activity
+        calcium_peak = np.max(self.calcium_field)
+        if calcium_peak < 500e-9:
+            return
+    
         for i in range(self.params.grid_size):
             for j in range(self.params.grid_size):
-                if self.active_mask[j, i]:
-                    pnc_local = self.pnc_field[j, i]
+                ca_local = self.calcium_field[j, i]
+                pnc_local = self.pnc_field[j, i]
+                po4_local = self.phosphate_field[j, i]
+            
+                if ca_local < 500e-9 or pnc_local < self.params.pnc_critical:
+                    continue
+            
+                # USE DOPAMINE FIELD METHODS HERE!
+                if hasattr(self, 'da_field') and self.da_field is not None:
+                    # Get emergent selectivity
+                    selectivity = self.da_field.calculate_emergent_selectivity(
+                        i, j, ca_local, po4_local
+                    )
                 
-                    # Higher threshold for formation (need significant PNC)
-                    pnc_critical = 100e-9  # 100 nM (was 1e-10)
+                    # Get quantum modulation
+                    quantum_mod = self.da_field.get_quantum_modulation(i, j)
                 
-                    if pnc_local > pnc_critical:
-                        # Supersaturation - use logarithmic scale to prevent explosion
-                        S_pnc = np.log10(pnc_local / pnc_critical) + 1  # Will be ~1-3 range
-                    
-                        # Get modulation factors
-                        j_coupling = self.phosphate_j_coupling[j, i]
-                        j_enhancement = max(1.0, j_coupling / 10.0)  # Reduced enhancement
-                    
-                        da_modulation = self.da_field.get_quantum_modulation(i, j)
-                    
-                        pH_local = self.local_pH[j, i]
-                        pH_factor = np.exp(7.3 - pH_local)  # Exponential, not power
-                    
-                        # Formation rates - NO additional scaling
-                        if da_modulation['above_quantum_threshold']:
-                            dimer_rate = 0.001 * da_modulation['dimer_enhancement'] * j_enhancement
-                            trimer_rate = 0.0001 * da_modulation['trimer_suppression']
-                        else:
-                            # Without dopamine, minimal formation
-                            dimer_rate = 0.0001
-                            trimer_rate = 0.00001
-                    
-                        # Formation amounts - directly in M
-                        dimer_formation = dimer_rate * S_pnc * pH_factor * dt
-                        trimer_formation = trimer_rate * S_pnc * pH_factor * dt if S_pnc > 1.5 else 0
-                    
-                        # Stoichiometric constraints
-                        max_dimers = pnc_local / (2 * 50e-9)  # Each dimer needs 2 PNC units
-                        max_trimers = pnc_local / (3 * 50e-9)  # Each trimer needs 3 PNC units
-                    
-                        dimer_formation = min(dimer_formation, max_dimers * 50e-9 * dt)
-                        trimer_formation = min(trimer_formation, max_trimers * 50e-9 * dt)
-                    
-                        # Update fields with proper consumption
-                        if dimer_formation > 0:
-                            self.dimer_field[j, i] += dimer_formation
-                            self.pnc_field[j, i] -= 2 * dimer_formation
-                    
-                        if trimer_formation > 0:
-                            self.trimer_field[j, i] += trimer_formation
-                            self.pnc_field[j, i] -= 3 * trimer_formation
-                    
-                        self.pnc_field[j, i] = max(0, self.pnc_field[j, i])
+                    # Get timing coincidence
+                    coincidence = self.da_field.get_coincidence_factor(
+                        self.calcium_spike_time,
+                        self.current_time
+                    )
+                
+                    dimer_factor = selectivity['dimer_factor'] * quantum_mod['dimer_enhancement']
+                    trimer_factor = selectivity['trimer_factor'] * quantum_mod['trimer_suppression']
+                    d2_occupancy = selectivity['d2_occupancy']
+                else:
+                    # Fallback - minimal formation without dopamine
+                    dimer_factor = 0.1
+                    trimer_factor = 0.05
+                    d2_occupancy = 0
+                    coincidence = 1.0
+            
+                # Calculate supersaturation
+                S_pnc = np.log10(pnc_local / self.params.pnc_critical + 1)
+                S_pnc = np.clip(S_pnc, 0, 2)
+            
+                # Calculate formation rates using the factors from dopamine field
+                k_dimer = self.params.k_dimer_formation * S_pnc * dimer_factor * coincidence
+                k_trimer = self.params.k_trimer_formation * S_pnc * trimer_factor * coincidence
+            
+                # pH modulation
+                pH_local = self.local_pH[j, i]
+                if pH_local > 7.3:
+                    k_trimer *= 1.5  # Trimers need higher pH
+            
+                # Formation amounts
+                dimer_formation = k_dimer * pnc_local * dt
+                trimer_formation = k_trimer * pnc_local * dt
+            
+                # Stoichiometric constraints
+                max_conversion = pnc_local * 0.001
+                dimer_formation = min(dimer_formation, max_conversion / 2)
+                trimer_formation = min(trimer_formation, max_conversion / 3)
+            
+                # Apply formation
+                self.dimer_field[j, i] += dimer_formation
+                self.trimer_field[j, i] += trimer_formation
+            
+                # Consume PNC
+                self.pnc_field[j, i] -= (2 * dimer_formation + 3 * trimer_formation)
+                self.pnc_field[j, i] = max(0, self.pnc_field[j, i])
     
     def update_quantum_coherence(self, dt: float):
         """
@@ -1033,17 +1066,17 @@ class NeuromodulatedQuantumSynapse:
         """
         for i in range(self.params.grid_size):
             for j in range(self.params.grid_size):
-                da_local = self.dopamine_field[j, i]
-                j_coupling_local = self.phosphate_j_coupling[j, i]
+                da_local = self.dopamine_field[j, i] if hasattr(self, 'dopamine_field') else self.dopamine_field[j, i]
+                j_coupling_local = self.phosphate_j_coupling[j, i] if hasattr(self, 'phosphate_j_coupling') else self.phosphate_j_coupling[j, i]
             
                 # === DIMERS - Long baseline coherence ===
                 if self.dimer_field[j, i] > 1e-12:  # If dimers present
                     # Base T2 from Agarwal et al. 2023
-                    T2_dimer = self.params.T2_base_dimer  # 100s baseline
+                    T2_dimer = self.params.T2_base_dimer if hasattr(self.params, 'T2_base_dimer') else 100.0  # 100s baseline
                 
                     # J-coupling enhancement (stronger coupling = better coherence)
-                    j_factor = j_coupling_local / self.params.J_PO_atp
-                    T2_dimer *= j_factor  # Up to 2.7x for ATP-derived phosphate
+                    j_factor = j_coupling_local / 0.27 if j_coupling_local > 0 else 0.5  # Normalized to ATP J-coupling
+                    T2_dimer *= max(j_factor, 0.5)  # At least 50% of base
                 
                     # Dopamine protection mechanism
                     # Based on D2 receptor activation (Kd = 10 nM)
@@ -1053,51 +1086,60 @@ class NeuromodulatedQuantumSynapse:
                         T2_dimer *= protection
                 
                     # Environmental decoherence (temperature, noise)
-                    # From Player et al. 2018 - dipolar coupling effects
                     concentration_factor = min(self.dimer_field[j, i] / 100e-9, 2.0)
-                    T2_dimer /= concentration_factor  # Higher conc = more dipolar coupling
+                    T2_dimer /= max(concentration_factor, 1.0)  # Higher conc = more dipolar coupling
                 
                     # Update coherence (exponential decay)
-                    if not hasattr(self, 'coherence_dimer') or self.coherence_dimer[j, i] == 0:
+                    if not hasattr(self, 'coherence_dimer'):
+                        self.coherence_dimer = np.ones((self.params.grid_size, self.params.grid_size))
+                
+                    if self.coherence_dimer[j, i] == 0:
                         # Initialize to 1 when dimers first form
                         self.coherence_dimer[j, i] = 1.0
                     else:
                         # Decay existing coherence
-                        self.coherence_dimer[j, i] *= np.exp(-dt / T2_dimer)
+                        decay_rate = dt / T2_dimer
+                        self.coherence_dimer[j, i] *= np.exp(-decay_rate)
                 else:
-                    self.coherence_dimer[j, i] = 0
+                    if hasattr(self, 'coherence_dimer'):
+                        self.coherence_dimer[j, i] = 0
             
                 # === TRIMERS - Short baseline coherence ===
                 if self.trimer_field[j, i] > 1e-12:  # If trimers present
                     # Base T2 from Agarwal et al. 2023
-                    T2_trimer = self.params.T2_base_trimer  # 0.5-1s baseline
+                    T2_trimer = self.params.T2_base_trimer if hasattr(self.params, 'T2_base_trimer') else 1.0  # 1s baseline (100x shorter!)
                 
                     # J-coupling has minimal effect on trimers (too many coupled spins)
-                    # Based on Adams et al. 2025 - complexity overwhelms enhancement
-                    j_factor = 1 + 0.1 * (j_coupling_local / self.params.J_PO_atp - 1)
+                    j_factor = 1 + 0.1 * (j_coupling_local / 0.27 - 1) if j_coupling_local > 0 else 1.0
                     T2_trimer *= j_factor  # Only 10% of J benefit
                 
                     # Dopamine can't save trimers (Agarwal et al. 2023)
-                    # The 6 coupled ³¹P nuclei create too many decoherence pathways
-                    # Minimal protection even at high dopamine
                     if da_local > 100e-9:
-                        T2_trimer *= 1.1  # Only 10% improvement
+                        T2_trimer *= 1.1  # Only 10% improvement even at high dopamine
                 
                     # Environmental decoherence - stronger for trimers
                     concentration_factor = min(self.trimer_field[j, i] / 100e-9, 3.0)
-                    T2_trimer /= concentration_factor
+                    T2_trimer /= max(concentration_factor, 1.0)
                 
-                    # Update coherence
-                    if not hasattr(self, 'coherence_trimer') or self.coherence_trimer[j, i] == 0:
+                    # Update coherence with faster decay
+                    if not hasattr(self, 'coherence_trimer'):
+                        self.coherence_trimer = np.ones((self.params.grid_size, self.params.grid_size))
+                    
+                    if self.coherence_trimer[j, i] == 0:
                         self.coherence_trimer[j, i] = 1.0
                     else:
-                        self.coherence_trimer[j, i] *= np.exp(-dt / T2_trimer)
+                        # Trimers decay much faster
+                        decay_rate = dt / T2_trimer
+                        self.coherence_trimer[j, i] *= np.exp(-decay_rate)
                 else:
-                    self.coherence_trimer[j, i] = 0
+                    if hasattr(self, 'coherence_trimer'):
+                        self.coherence_trimer[j, i] = 0
             
-                # Ensure coherence stays in [0, 1]
-                self.coherence_dimer[j, i] = np.clip(self.coherence_dimer[j, i], 0, 1)
-                self.coherence_trimer[j, i] = np.clip(self.coherence_trimer[j, i], 0, 1)
+        # Ensure coherence stays in [0, 1]
+        if hasattr(self, 'coherence_dimer'):
+            self.coherence_dimer = np.clip(self.coherence_dimer, 0, 1)
+        if hasattr(self, 'coherence_trimer'):
+            self.coherence_trimer = np.clip(self.coherence_trimer, 0, 1)
     
     def calculate_learning_signal(self) -> float:
         """
@@ -1109,26 +1151,22 @@ class NeuromodulatedQuantumSynapse:
         This triple coincidence is the quantum signature of learning!
         The coincidence factor from dopamine biophysics ensures proper STDP timing.
         """
-        # Find regions with high dimer coherence
+        if not hasattr(self, 'da_field'):
+            return 0.0
+    
+        # Triple coincidence detection
         high_coherence = self.coherence_dimer > 0.5
+        high_dopamine = self.da_field.D2_occupancy > 0.5
+        high_calcium = self.calcium_field > 50e-6
     
-        # Use the dopamine field's D2 occupancy for dopamine signal
-        d2_occupancy = self.da_field.D2_occupancy
-        high_dopamine = d2_occupancy > 0.5  # 50% D2 occupancy
-    
-        # Activity from calcium
-        high_calcium = self.calcium_field > 50e-6  # 50 µM
-    
-        # Get coincidence factor for the whole field
+        # Get timing factor
         coincidence = self.da_field.get_coincidence_factor(
-            calcium_spike_time=self.calcium_spike_time,
-            current_time=self.current_time
+            self.calcium_spike_time,
+            self.current_time
         )
     
-        # Triple overlap with timing
+        # Spatial integral
         overlap = high_coherence * high_dopamine * high_calcium * coincidence
-    
-        # Learning signal is the spatial integral
         learning_signal = np.sum(overlap) * self.dx * self.dx
     
         return learning_signal
