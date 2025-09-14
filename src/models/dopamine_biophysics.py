@@ -83,7 +83,7 @@ class DopamineParameters:
     # ============= MODULATION FACTORS =============
     # For integration with Model 5
     dopamine_enhances_dimer: float = 10.0  # Enhancement factor for dimer formation
-    dopamine_suppresses_trimer: float = 0.5  # Suppression factor for trimer formation
+    dopamine_suppresses_trimer: float = 0.1  # Suppression factor for trimer formation
 
     # ============= QUANTUM MODULATION PARAMETERS =============
     # Based on integration with Posner/dimer/trimer dynamics
@@ -456,6 +456,11 @@ class DopamineField:
         # With less calcium (D2 effect), smaller clusters are favored
         # because they need less total calcium to form
         if d2_occupancy > 0.5:  # Significant D2 activation
+
+            # D2 doesn't reduce calcium for dimers (protected sites)
+            ca_for_dimers = ca_local
+            # But does reduce it for trimers (vulnerable sites)
+            ca_for_trimers = ca_local * (1 - 0.3 * d2_occupancy)
             # Favor dimers: need only 6 Ca vs 9 Ca for trimers
             dimer_feasibility = min(ca_effective / (6 * 50e-9), 1.0)  # Can we make dimers?
             trimer_feasibility = min(ca_effective / (9 * 50e-9), 1.0)  # Can we make trimers?

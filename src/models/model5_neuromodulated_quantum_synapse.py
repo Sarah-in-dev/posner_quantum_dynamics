@@ -96,7 +96,7 @@ class Model5Parameters:
     k_pnc_dissolution: float = 100.0     # s⁻¹ - PNC lifetime ~100 ms
     pnc_size: int = 30                  # ~30 Ca/PO4 units per PNC
     pnc_max_concentration: float = 1e-9 # 1 µM maximum to prevent runaway
-    pnc_critical: float = 50e-9        # 100 nM threshold for aggregation
+    pnc_critical: float = 10e-9        # 10 nM instead of 50 nM
     
     # ============= TEMPLATE PARAMETERS (Model 4) =============
     templates_per_synapse: int = 100    # Synaptotagmin molecules
@@ -151,8 +151,8 @@ class Model5Parameters:
 
     # Formation: These are EFFECTIVE first-order rates in supersaturated regions
     # True mechanism is higher-order but we use pseudo-first-order approximation
-    k_dimer_formation: float = 10.0     # s⁻¹ maximum rate (was 1e-3)
-    k_trimer_formation: float = 5.0    # s⁻¹ maximum rate (was 1e-4)
+    k_dimer_formation: float = 100.0     # s⁻¹ maximum rate (was 1e-3)
+    k_trimer_formation: float = 50.0    # s⁻¹ maximum rate (was 1e-4)
 
     # Dissolution rates based on stability
     kr_dimer: float = 0.01             # s⁻¹ → 100s lifetime (CORRECT!)
@@ -1023,8 +1023,8 @@ class NeuromodulatedQuantumSynapse:
                     d2_occupancy = selectivity['d2_occupancy']
                 else:
                     # Fallback - minimal formation without dopamine
-                    dimer_factor = 0.1
-                    trimer_factor = 0.05
+                    dimer_factor = 1.0
+                    trimer_factor = 1.0
                     d2_occupancy = 0
                     coincidence = 1.0
             
@@ -1046,7 +1046,7 @@ class NeuromodulatedQuantumSynapse:
                 trimer_formation = k_trimer * pnc_local * dt
             
                 # Stoichiometric constraints
-                max_conversion = pnc_local * 0.001
+                max_conversion = pnc_local * 0.01
                 dimer_formation = min(dimer_formation, max_conversion / 2)
                 trimer_formation = min(trimer_formation, max_conversion / 3)
             
@@ -1057,6 +1057,13 @@ class NeuromodulatedQuantumSynapse:
                 # Consume PNC
                 self.pnc_field[j, i] -= (2 * dimer_formation + 3 * trimer_formation)
                 self.pnc_field[j, i] = max(0, self.pnc_field[j, i])
+
+                # After forming dimers/trimers, initialize their coherence
+                if dimer_formation > 0 and self.coherence_dimer[j, i] == 0:
+                    self.coherence_dimer[j, i] = 1.0  # Start with full coherence
+    
+                if trimer_formation > 0 and self.coherence_trimer[j, i] == 0:
+                    self.coherence_trimer[j, i] = 1.0  # Start with full coherence
     
     def update_quantum_coherence(self, dt: float):
         """
@@ -1073,7 +1080,8 @@ class NeuromodulatedQuantumSynapse:
                 if self.dimer_field[j, i] > 1e-12:  # If dimers present
                     # Base T2 from Agarwal et al. 2023
                     T2_dimer = self.params.T2_base_dimer if hasattr(self.params, 'T2_base_dimer') else 100.0  # 100s baseline
-                
+                    self.coherence_dimer *= np.exp(-dt / T2_dimer)
+
                     # J-coupling enhancement (stronger coupling = better coherence)
                     j_factor = j_coupling_local / 0.27 if j_coupling_local > 0 else 0.5  # Normalized to ATP J-coupling
                     T2_dimer *= max(j_factor, 0.5)  # At least 50% of base
@@ -1108,7 +1116,8 @@ class NeuromodulatedQuantumSynapse:
                 if self.trimer_field[j, i] > 1e-12:  # If trimers present
                     # Base T2 from Agarwal et al. 2023
                     T2_trimer = self.params.T2_base_trimer if hasattr(self.params, 'T2_base_trimer') else 1.0  # 1s baseline (100x shorter!)
-                
+                    self.coherence_trimer *= np.exp(-dt / T2_trimer)
+
                     # J-coupling has minimal effect on trimers (too many coupled spins)
                     j_factor = 1 + 0.1 * (j_coupling_local / 0.27 - 1) if j_coupling_local > 0 else 1.0
                     T2_trimer *= j_factor  # Only 10% of J benefit
