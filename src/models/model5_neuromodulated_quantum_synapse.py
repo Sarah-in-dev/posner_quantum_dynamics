@@ -32,6 +32,9 @@ import json
 import h5py
 from dopamine_biophysics import DopamineField, DopamineParameters
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from matplotlib.patches import FancyBboxPatch, Circle, Rectangle
+import matplotlib.gridspec as gridspec
 logger = logging.getLogger(__name__)
 
 # ============================================================================
@@ -1610,39 +1613,237 @@ def analyze_quantum_advantage(results):
                 'dopamine_dimer_correlation': dopamine_dimer_correlation
             }
 
-# ============================================================================
-# EXAMPLE USAGE
-# ============================================================================
+
+
+def create_actual_data_visualization(results, save_path='model5_actual_data.png'):
+    """
+    Create a comprehensive visualization of ACTUAL simulation data over time
+    Shows real values from the simulation, not conceptual diagrams
+    """
+    
+    # Create figure with proper layout for time series data
+    fig = plt.figure(figsize=(20, 14))
+    gs = gridspec.GridSpec(5, 2, height_ratios=[1, 1, 1, 1, 0.8], 
+                          hspace=0.3, wspace=0.3)
+    
+    # Convert time to milliseconds
+    time_ms = results.time * 1000
+    
+    # Color scheme
+    colors = {
+        'calcium': '#3498db',
+        'phosphate': '#f39c12', 
+        'pnc': '#e67e22',
+        'dopamine': '#e74c3c',
+        'dimer': '#9b59b6',
+        'trimer': '#95a5a6',
+        'coherence_d': '#1abc9c',
+        'coherence_t': '#16a085',
+        'learning': '#2ecc71'
+    }
+    
+    # === PANEL 1: Calcium Dynamics ===
+    ax1 = fig.add_subplot(gs[0, 0])
+    # Get peak calcium at each timepoint (max across spatial dimensions)
+    ca_peak = np.max(results.calcium_map, axis=(1, 2)) * 1e6  # Convert to µM
+    ca_mean = np.mean(results.calcium_map, axis=(1, 2)) * 1e6
+    
+    ax1.plot(time_ms, ca_peak, color=colors['calcium'], linewidth=2, label='Peak')
+    ax1.plot(time_ms, ca_mean, color=colors['calcium'], linewidth=1, alpha=0.5, linestyle='--', label='Mean')
+    ax1.fill_between(time_ms, 0, ca_peak, alpha=0.2, color=colors['calcium'])
+    
+    ax1.set_title('Calcium Concentration', fontsize=12, fontweight='bold')
+    ax1.set_ylabel('[Ca²⁺] (µM)', fontsize=11)
+    ax1.set_xlabel('Time (ms)', fontsize=11)
+    ax1.grid(True, alpha=0.3)
+    ax1.legend(loc='upper right')
+    
+    # Add annotations for key events
+    max_ca_idx = np.argmax(ca_peak)
+    if ca_peak[max_ca_idx] > 0.1:
+        ax1.annotate(f'Peak: {ca_peak[max_ca_idx]:.1f} µM', 
+                    xy=(time_ms[max_ca_idx], ca_peak[max_ca_idx]),
+                    xytext=(time_ms[max_ca_idx] + 50, ca_peak[max_ca_idx]),
+                    arrowprops=dict(arrowstyle='->', color=colors['calcium'], alpha=0.5),
+                    fontsize=9)
+    
+    # === PANEL 2: PNC Formation ===
+    ax2 = fig.add_subplot(gs[0, 1])
+    pnc_total = np.sum(results.pnc_map, axis=(1, 2)) * 1e9  # Total PNC in nM
+    pnc_peak = np.max(results.pnc_map, axis=(1, 2)) * 1e9   # Peak PNC in nM
+    
+    ax2.plot(time_ms, pnc_total, color=colors['pnc'], linewidth=2, label='Total')
+    ax2.plot(time_ms, pnc_peak, color=colors['pnc'], linewidth=1, alpha=0.5, linestyle='--', label='Peak')
+    ax2.fill_between(time_ms, 0, pnc_total, alpha=0.2, color=colors['pnc'])
+    
+    ax2.set_title('PNC (Prenucleation Clusters)', fontsize=12, fontweight='bold')
+    ax2.set_ylabel('[PNC] (nM)', fontsize=11)
+    ax2.set_xlabel('Time (ms)', fontsize=11)
+    ax2.grid(True, alpha=0.3)
+    ax2.legend(loc='upper right')
+    
+    # === PANEL 3: Dopamine Release ===
+    ax3 = fig.add_subplot(gs[1, 0])
+    da_peak = np.max(results.dopamine_map, axis=(1, 2)) * 1e9  # Peak dopamine in nM
+    da_mean = np.mean(results.dopamine_map, axis=(1, 2)) * 1e9
+    
+    ax3.plot(time_ms, da_peak, color=colors['dopamine'], linewidth=2, label='Peak')
+    ax3.plot(time_ms, da_mean, color=colors['dopamine'], linewidth=1, alpha=0.5, linestyle='--', label='Mean')
+    ax3.fill_between(time_ms, 0, da_peak, alpha=0.2, color=colors['dopamine'])
+    
+    # Add threshold lines
+    ax3.axhline(y=100, color='red', linestyle=':', alpha=0.5, label='Quantum threshold')
+    ax3.axhline(y=10, color='orange', linestyle=':', alpha=0.5, label='D2 Kd')
+    
+    ax3.set_title('Dopamine Concentration', fontsize=12, fontweight='bold')
+    ax3.set_ylabel('[DA] (nM)', fontsize=11)
+    ax3.set_xlabel('Time (ms)', fontsize=11)
+    ax3.set_yscale('log')
+    ax3.set_ylim(1, 20000)
+    ax3.grid(True, alpha=0.3)
+    ax3.legend(loc='upper right')
+    
+    # === PANEL 4: Dimer vs Trimer Formation ===
+    ax4 = fig.add_subplot(gs[1, 1])
+    dimer_total = np.sum(results.dimer_map, axis=(1, 2)) * 1e9  # Total dimers in nM
+    trimer_total = np.sum(results.trimer_map, axis=(1, 2)) * 1e9  # Total trimers in nM
+    
+    ax4.plot(time_ms, dimer_total, color=colors['dimer'], linewidth=2, label='Dimers (Ca₆(PO₄)₄)')
+    ax4.plot(time_ms, trimer_total, color=colors['trimer'], linewidth=2, label='Trimers (Ca₉(PO₄)₆)')
+    
+    ax4.set_title('Quantum State Formation', fontsize=12, fontweight='bold')
+    ax4.set_ylabel('Concentration (nM)', fontsize=11)
+    ax4.set_xlabel('Time (ms)', fontsize=11)
+    ax4.grid(True, alpha=0.3)
+    ax4.legend(loc='upper right')
+    
+    # Add ratio annotation
+    if np.max(trimer_total) > 0:
+        final_ratio = dimer_total[-1] / trimer_total[-1] if trimer_total[-1] > 0 else np.inf
+        ax4.text(0.7, 0.95, f'Final D/T Ratio: {final_ratio:.1f}', 
+                transform=ax4.transAxes, fontsize=10,
+                bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8))
+    
+    # === PANEL 5: Quantum Coherence ===
+    ax5 = fig.add_subplot(gs[2, 0])
+    coherence_dimer = np.max(results.coherence_dimer_map, axis=(1, 2))
+    coherence_trimer = np.max(results.coherence_trimer_map, axis=(1, 2))
+    
+    ax5.plot(time_ms, coherence_dimer, color=colors['coherence_d'], linewidth=2, label='Dimer coherence')
+    ax5.plot(time_ms, coherence_trimer, color=colors['coherence_t'], linewidth=2, label='Trimer coherence')
+    ax5.axhline(y=1/np.e, color='red', linestyle='--', alpha=0.3, label='1/e threshold')
+    
+    ax5.set_title('Quantum Coherence', fontsize=12, fontweight='bold')
+    ax5.set_ylabel('Coherence (0-1)', fontsize=11)
+    ax5.set_xlabel('Time (ms)', fontsize=11)
+    ax5.set_ylim(0, 1.1)
+    ax5.grid(True, alpha=0.3)
+    ax5.legend(loc='upper right')
+    
+    # === PANEL 6: Channel States ===
+    ax6 = fig.add_subplot(gs[2, 1])
+    # Count open channels at each timepoint
+    open_channels = np.sum(results.channel_states == 1, axis=1)  # Assuming 1 = open
+    
+    ax6.plot(time_ms, open_channels, color='navy', linewidth=2, drawstyle='steps-post')
+    ax6.fill_between(time_ms, 0, open_channels, alpha=0.3, color='navy', step='post')
+    
+    ax6.set_title('Active Calcium Channels', fontsize=12, fontweight='bold')
+    ax6.set_ylabel('# Open Channels', fontsize=11)
+    ax6.set_xlabel('Time (ms)', fontsize=11)
+    ax6.set_ylim(0, results.channel_states.shape[1] + 1)
+    ax6.grid(True, alpha=0.3)
+    
+    # === PANEL 7: Energy/ATP (if available) ===
+    ax7 = fig.add_subplot(gs[3, 0])
+    # This would show ATP/energy if tracked - placeholder for now
+    ax7.text(0.5, 0.5, 'ATP/Energy dynamics\n(data not tracked in current results)', 
+            ha='center', va='center', fontsize=11, alpha=0.5)
+    ax7.set_title('Metabolic State', fontsize=12, fontweight='bold')
+    ax7.set_xlabel('Time (ms)', fontsize=11)
+    ax7.set_xlim(0, time_ms[-1])
+    
+    # === PANEL 8: Learning Signal ===
+    ax8 = fig.add_subplot(gs[3, 1])
+    # Calculate learning signal over time (simplified - would need actual calculation)
+    # For now, approximate as product of key factors
+    ca_norm = ca_peak / (np.max(ca_peak) + 1e-10)
+    da_norm = da_peak / (np.max(da_peak) + 1e-10)
+    dimer_norm = dimer_total / (np.max(dimer_total) + 1e-10)
+    learning_signal = ca_norm * da_norm * dimer_norm * coherence_dimer
+    
+    ax8.plot(time_ms, learning_signal, color=colors['learning'], linewidth=2.5)
+    ax8.fill_between(time_ms, 0, learning_signal, alpha=0.3, color=colors['learning'])
+    
+    ax8.set_title('Learning Signal (Calculated)', fontsize=12, fontweight='bold')
+    ax8.set_ylabel('Signal Strength', fontsize=11)
+    ax8.set_xlabel('Time (ms)', fontsize=11)
+    ax8.set_ylim(0, 1.1)
+    ax8.grid(True, alpha=0.3)
+    
+    # === PANEL 9: Summary Statistics ===
+    ax9 = fig.add_subplot(gs[4, :])
+    ax9.axis('off')
+    
+    # Calculate key metrics
+    metrics_text = f"""
+    KEY METRICS FROM SIMULATION:
+    
+    Calcium:          Peak = {np.max(ca_peak):.2f} µM at t = {time_ms[np.argmax(ca_peak)]:.1f} ms
+    Dopamine:         Peak = {np.max(da_peak):.0f} nM at t = {time_ms[np.argmax(da_peak)]:.1f} ms  
+    PNC:              Max = {np.max(pnc_total):.1f} nM
+    Dimers:           Max = {np.max(dimer_total):.2f} nM, Final = {dimer_total[-1]:.2f} nM
+    Trimers:          Max = {np.max(trimer_total):.3f} nM, Final = {trimer_total[-1]:.3f} nM
+    Dimer/Trimer:     Final ratio = {(dimer_total[-1]/trimer_total[-1] if trimer_total[-1] > 0 else 0):.1f}
+    Coherence:        Dimer max = {np.max(coherence_dimer):.3f}, Trimer max = {np.max(coherence_trimer):.3f}
+    Learning Signal:  Peak = {np.max(learning_signal):.3f}
+    """
+    
+    ax9.text(0.5, 0.5, metrics_text, fontsize=11, family='monospace',
+            ha='center', va='center',
+            bbox=dict(boxstyle="round,pad=0.5", facecolor='lightyellow', alpha=0.5))
+    
+    # Main title
+    fig.suptitle('Model 5: Actual Simulation Data Over Time', 
+                fontsize=16, fontweight='bold')
+    
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    print(f"✓ Saved actual data visualization to '{save_path}'")
+    return fig
 
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    from pathlib import Path
+    
     # Setup logging
     logging.basicConfig(level=logging.INFO)
     
     # Create model with default parameters
     model = NeuromodulatedQuantumSynapse()
     
-    # Run simulation with reward
+    # Run simulation
     results = model.run_simulation(
         duration=1.0,
         stim_protocol='single_spike',
-        reward_time=0.2  # Dopamine 100ms after stimulus
+        reward_time=0.2
     )
     
     # Analyze quantum advantage
     analysis = analyze_quantum_advantage(results)
     
+    # Print results
     print("\n=== Model 5 Simulation Results ===")
     print(f"Peak Calcium: {results.peak_calcium:.1f} µM")
-    print(f"Peak PNC: {results.peak_pnc:.1f} nM")
     print(f"Peak Dimer: {results.peak_dimer:.1f} nM")
     print(f"Peak Trimer: {results.peak_trimer:.1f} nM")
     print(f"Peak Dopamine: {results.peak_dopamine:.1f} nM")
-    print(f"Max Dimer Coherence: {results.max_coherence_dimer:.3f}")
-    print(f"Max Trimer Coherence: {results.max_coherence_trimer:.3f}")
     print(f"Learning Signal: {results.learning_signal:.3f}")
-    print(f"\nCoherence Advantage (Dimer/Trimer): {analysis['coherence_advantage']:.1f}x")
-    print(f"Dimer/Trimer Ratio: {analysis['dimer_trimer_ratio']:.1f}")
-    print(f"Dopamine-Dimer Correlation: {analysis['dopamine_dimer_correlation']:.3f}")
+    print(f"Coherence Advantage: {analysis['coherence_advantage']:.1f}x")
+    
+    # Create visualization of actual data
+    fig = create_actual_data_visualization(results)
+    plt.show()
     
     # Save results
     results.save(Path("results/model5_test"))

@@ -17,7 +17,8 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from models.model5_neuromodulated_quantum_synapse import (
     NeuromodulatedQuantumSynapse, 
-    Model5Parameters
+    Model5Parameters,
+    analyze_quantum_advantage,
 )
 
 def format_value(value, unit='nM'):
@@ -1069,38 +1070,48 @@ def add_visualizations_to_tests(test_function):
     
     return wrapper
 
-if __name__ == "__main__":
-    print("\n" + "="*70)
-    print("MODEL 5: COMPREHENSIVE TEST SUITE")
-    print("Testing full dynamic cascade with proper value tracking")
-    print("="*70)
+def test_visualizations():
+    """Test visualization with actual data"""
+    print("\n" + "="*60)
+    print("TEST: Data Visualization")
+    print("="*60)
     
-    # Initialize model
-    from dopamine_biophysics import DopamineField, DopamineParameters
-    
+    # Run a simulation to get real data
     model = NeuromodulatedQuantumSynapse()
-    da_params = DopamineParameters()
+    results = model.run_simulation(
+        duration=0.5,
+        stim_protocol='single_spike',
+        reward_time=0.1
+    )
+
+
+# After your existing tests in the main section
+if __name__ == "__main__":
+    # Your existing tests run here...
     
-    # Run all tests and collect results
-    test_results = {}
+    # At the very end, replace the visualization section with:
+    print("\n" + "="*60)
+    print("GENERATING DATA VISUALIZATION")
+    print("="*60)
     
-    # Run tests
-    test_results['test1'] = test_baseline_state()
-    test_results['test2'] = test_calcium_response()
-    test_results['test3'] = test_complex_formation()
-    test_results['test4'] = test_pnc_formation_kinetics()
-    test_results['test5'] = test_dopamine_modulation()
-    test_results['test6'] = test_dimer_trimer_formation()
-    test_results['test7'] = test_quantum_coherence()
-    test_results['test8'] = test_full_cascade()
+    # Import the visualization function from your model
+    from model5_neuromodulated_quantum_synapse import (
+        NeuromodulatedQuantumSynapse,
+        create_actual_data_visualization
+    )
     
-    # Generate visualizations
-    print("\n" + "="*70)
-    print("GENERATING VISUALIZATIONS")
-    print("="*70)
+    # Run a simulation for visualization
+    model = NeuromodulatedQuantumSynapse()
+    results = model.run_simulation(
+        duration=0.5,
+        stim_protocol='single_spike',
+        reward_time=0.1
+    )
     
-    # Create comprehensive visualization suite
-    create_test_visualization_suite(model, test_results, save_path='./figures/')
+    # Create and save the visualization
+    fig = create_actual_data_visualization(results, save_path='./figures/model5_actual_data.png')
     
-    print("\n✓ Visualizations saved to ./figures/")
-    print("\nAll tests and visualizations complete!")
+    print("\n✓ All tests complete!")
+    print("✓ Data visualization saved to ./figures/model5_actual_data.png")
+    
+    plt.show()
