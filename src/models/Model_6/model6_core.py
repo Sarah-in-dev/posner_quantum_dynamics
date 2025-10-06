@@ -28,7 +28,7 @@ from datetime import datetime
 from model6_parameters import Model6Parameters
 from calcium_system import CalciumSystem
 from atp_system import ATPSystem
-from pnc_formation import PNCFormationSystem
+from src.models.Model_6.ca_triphosphate_complex import CalciumTriphosphateFormation
 from posner_system import PosnerSystem
 from pH_dynamics import pHDynamics
 
@@ -95,7 +95,8 @@ class Model6QuantumSynapse:
             'calcium_peak': [],
             'atp_mean': [],
             'j_coupling_max': [],
-            'pnc_total': [],
+            'monomer_total': [],
+            'dimer_ct_total': [],
             'dimer_concentration': [],
             'trimer_concentration': [],
             'coherence_dimer': [],
@@ -138,7 +139,7 @@ class Model6QuantumSynapse:
         )
         logger.info("ATP system initialized")
         
-        self.pnc = PNCFormationSystem(
+        self.triphosphate = CalciumTriphosphateFormation(
             self.grid_shape, self.dx, self.params, template_positions
         )
         logger.info(f"PNC system: {len(template_positions)} template sites")
@@ -214,14 +215,14 @@ class Model6QuantumSynapse:
         self.pH.step(dt, atp_hydrolysis_rate, ca_influx, activity_field)
         pH_field = self.pH.get_pH()
         
-        # === STEP 4: PNC FORMATION ===
-        # Prenucleation clusters form from Ca + PO4
-        # Templates are always active (could add template dynamics later)
-        template_active = None  # Use defaults for now
-        
-        self.pnc.step(dt, ca_conc, phosphate, template_active)
-        pnc_total = self.pnc.get_pnc_concentration()
-        pnc_large = self.pnc.get_large_pncs()
+        # === STEP 4: CALCIUM TRIPHOSPHATE FORMATION ===
+        # Ca(HPO4)3^4- monomers form instantly via equilibrium
+        # Then dimerize to form quantum qubits
+        # No template_active parameter needed - templates built into system
+
+        self.triphosphate.step(dt, ca_conc, phosphate)
+        monomer_conc = self.triphosphate.get_monomer_concentration()
+        dimer_conc = self.triphosphate.get_dimer_concentration()
         
         # === STEP 5: DOPAMINE (if available) ===
         if self.dopamine is not None:
@@ -238,18 +239,16 @@ class Model6QuantumSynapse:
         else:
             dopamine_d2 = np.zeros(self.grid_shape)
         
-        # === STEP 6: POSNER FORMATION & QUANTUM COHERENCE ===
-        # PNCs convert to Posner molecules (Ca9(PO4)6)
-        # Then aggregate into dimers (2 Posners) or trimers (3 Posners)
-        # Quantum coherence emerges in formed structures
+        # === STEP 6: QUANTUM DIMER DYNAMICS ===
+        # Dimers [Ca(HPO4)3]2^8- are the quantum qubits (Agarwal et al. 2023)
+        # Track quantum coherence in these dimers
+        # Note: For now, pass dimer_conc to posner system
+        # TODO: Rename posner_system.py to quantum_dimer_system.py
         temperature = stimulus.get('temperature', self.params.environment.T)
-        
+
         self.posner.step(
-            dt, pnc_large, ca_conc, j_coupling, dopamine_d2, temperature
-        )
-        
-        # Update time
-        self.time += dt
+    dt, dimer_conc, ca_conc, j_coupling, dopamine_d2, temperature
+)
         
     def get_experimental_metrics(self) -> Dict[str, float]:
         """
@@ -260,7 +259,7 @@ class Model6QuantumSynapse:
         # Get metrics from each subsystem
         ca_metrics = self.calcium.get_experimental_metrics()
         atp_metrics = self.atp.get_experimental_metrics()
-        pnc_metrics = self.pnc.get_experimental_metrics()
+        triphosphate_metrics = self.triphosphate.get_experimental_metrics()
         posner_metrics = self.posner.get_experimental_metrics()
         pH_metrics = self.pH.get_experimental_metrics()
         
@@ -274,10 +273,11 @@ class Model6QuantumSynapse:
             'j_coupling_max_Hz': atp_metrics['j_coupling_max_Hz'],
             'j_coupling_mean_Hz': atp_metrics['j_coupling_mean_Hz'],
             
-            # PNC
-            'pnc_peak_nM': pnc_metrics['pnc_peak_nM'],
-            'pnc_total_nM': pnc_metrics['pnc_total_nM'],
-            'supersaturation_max': pnc_metrics['supersaturation_max'],
+            # Calcium Triphosphate (the correct chemistry!)
+            'monomer_peak_nM': triphosphate_metrics['monomer_peak_nM'],
+            'monomer_mean_nM': triphosphate_metrics['monomer_mean_nM'],
+            'dimer_peak_nM_ct': triphosphate_metrics['dimer_peak_nM'],  # From triphosphate
+            'dimer_mean_nM_ct': triphosphate_metrics['dimer_mean_nM'],
             
             # Posner
             'dimer_peak_nM': posner_metrics['dimer_peak_nM'],
@@ -317,7 +317,8 @@ class Model6QuantumSynapse:
         self.history['calcium_peak'].append(metrics['calcium_peak_uM'])
         self.history['atp_mean'].append(metrics['atp_mean_mM'])
         self.history['j_coupling_max'].append(metrics['j_coupling_max_Hz'])
-        self.history['pnc_total'].append(metrics['pnc_total_nM'])
+        self.history['monomer_total'].append(np.mean(monomer_conc))
+        self.history['dimer_ct_total'].append(np.mean(dimer_conc))
         self.history['dimer_concentration'].append(metrics['dimer_peak_nM'])
         self.history['trimer_concentration'].append(metrics['trimer_peak_nM'])
         self.history['coherence_dimer'].append(metrics['coherence_dimer_mean'])
@@ -361,7 +362,7 @@ class Model6QuantumSynapse:
             # Save final state fields
             state_group = f.create_group('final_state')
             state_group.create_dataset('calcium', data=self.calcium.get_concentration())
-            state_group.create_dataset('pnc', data=self.pnc.get_pnc_concentration())
+            state_group.create_dataset('ct_dimer', data=self.triphosphate.get_dimer_concentration())
             state_group.create_dataset('dimer', data=self.posner.get_dimer_concentration())
             state_group.create_dataset('trimer', data=self.posner.get_trimer_concentration())
             state_group.create_dataset('coherence_dimer', data=self.posner.get_coherence_dimer())
@@ -404,8 +405,7 @@ if __name__ == "__main__":
     print(f"  Calcium: {metrics['calcium_peak_uM']:.3f} μM")
     print(f"  ATP: {metrics['atp_mean_mM']:.2f} mM")
     print(f"  J-coupling: {metrics['j_coupling_max_Hz']:.1f} Hz")
-    print(f"  PNC: {metrics['pnc_peak_nM']:.2f} nM")
-    print(f"  Dimers: {metrics['dimer_peak_nM']:.3f} nM")
+    print(f"  Ca(HPO4)3 monomers: {metrics['monomer_peak_nM']:.2f} nM, dimers: {metrics['dimer_peak_nM_ct']:.2f} nM")
     print(f"  Coherence: {metrics['coherence_dimer_mean']:.3f}")
     
     print("\n" + "="*70)
