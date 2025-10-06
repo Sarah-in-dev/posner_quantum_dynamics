@@ -134,6 +134,9 @@ class pHBuffering:
         # Effective change reduced by buffer capacity
         # dpH = -d[H⁺] / (β * ln(10))
         
+        # SAFETY: Prevent negative or zero concentrations
+        h_conc = np.maximum(h_conc, 1e-12)  # ADD THIS LINE
+        
         # Back to pH
         pH_new = -np.log10(h_conc)
         

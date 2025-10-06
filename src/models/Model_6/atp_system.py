@@ -324,6 +324,9 @@ class PhosphateSpeciation:
         Args:
             pH: pH field
         """
+        # SAFETY: Clip pH to reasonable range to prevent nan
+        pH = np.clip(pH, 5.0, 9.0)  # Physiological range
+        
         # Convert pH to [H⁺]
         H_conc = 10**(-pH)
         

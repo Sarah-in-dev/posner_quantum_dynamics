@@ -28,7 +28,7 @@ from datetime import datetime
 from model6_parameters import Model6Parameters
 from calcium_system import CalciumSystem
 from atp_system import ATPSystem
-from src.models.Model_6.ca_triphosphate_complex import CalciumTriphosphateFormation
+from ca_triphosphate_complex import CalciumTriphosphateSystem
 from posner_system import PosnerSystem
 from pH_dynamics import pHDynamics
 
@@ -139,7 +139,7 @@ class Model6QuantumSynapse:
         )
         logger.info("ATP system initialized")
         
-        self.triphosphate = CalciumTriphosphateFormation(
+        self.triphosphate = CalciumTriphosphateSystem(
             self.grid_shape, self.dx, self.params, template_positions
         )
         logger.info(f"PNC system: {len(template_positions)} template sites")
@@ -317,8 +317,6 @@ class Model6QuantumSynapse:
         self.history['calcium_peak'].append(metrics['calcium_peak_uM'])
         self.history['atp_mean'].append(metrics['atp_mean_mM'])
         self.history['j_coupling_max'].append(metrics['j_coupling_max_Hz'])
-        self.history['monomer_total'].append(np.mean(monomer_conc))
-        self.history['dimer_ct_total'].append(np.mean(dimer_conc))
         self.history['dimer_concentration'].append(metrics['dimer_peak_nM'])
         self.history['trimer_concentration'].append(metrics['trimer_peak_nM'])
         self.history['coherence_dimer'].append(metrics['coherence_dimer_mean'])

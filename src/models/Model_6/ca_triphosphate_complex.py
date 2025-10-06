@@ -89,7 +89,7 @@ class CalciumTriphosphateDimerization:
         # k = 4π * D * R
         D_monomer = 1e-10  # m²/s (diffusion coefficient)
         R_monomer = 1e-9   # m (molecular radius ~1 nm)
-        k_smoluchowski = 4 * np.pi * D_monomer * R_monomer  # m³/s
+        k_smoluchowski = 4 * np.pi * D_monomer * R_monomer * 1000  # m³/s
         
         # Convert to concentration units: M⁻¹s⁻¹
         N_A = 6.022e23  # mol⁻¹
