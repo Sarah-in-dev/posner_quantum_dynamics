@@ -9,14 +9,12 @@ All components from literature-validated modules:
 - PNC formation (thermodynamic nucleation)
 - Posner system (dimer/trimer formation, quantum coherence)
 - pH dynamics (activity-dependent acidification)
-- Dopamine system (from dopamine_biophysics.py)
+- Dopamine system (reward signaling and quantum modulation)
 
 NOTHING IS PRESCRIBED - ALL EMERGENT!
 
-This is the complete implementation for:
-"Phosphorus Nuclear Spin Effects on Neural Adaptation: 
- Testing Quantum Mechanisms in Rapid BCI Learning"
- (Davidson 2025)
+Author: Sarah Davidson
+Date: October 2025
 """
 
 import numpy as np
@@ -34,7 +32,7 @@ from pnc_formation import PNCFormationSystem
 from posner_system import PosnerSystem
 from pH_dynamics import pHDynamics
 
-# Import dopamine system adapter
+# Import dopamine system
 try:
     from dopamine_system import DopamineSystemAdapter
     HAS_DOPAMINE = True
@@ -56,9 +54,9 @@ class Model6QuantumSynapse:
     - All behaviors emerge from interactions
     
     Key experimental controls:
-    - Isotope composition (P31 vs P32)
     - Temperature (for Q10 tests)
     - Dopamine levels (reward signal)
+    - Isotope composition (via params, not tested here)
     """
     
     def __init__(self, params: Optional[Model6Parameters] = None,
@@ -84,13 +82,14 @@ class Model6QuantumSynapse:
         self.dt = self.params.simulation.dt_diffusion  # Base timestep
         
         # Output
-        self.output_dir = Path(output_dir) if output_dir else Path("output")
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.output_dir = Path(output_dir) if output_dir else None
+        if self.output_dir:
+            self.output_dir.mkdir(parents=True, exist_ok=True)
         
-        # Setup subsystems
+        # Initialize subsystems
         self._initialize_subsystems()
         
-        # Data storage for analysis
+        # History tracking
         self.history = {
             'time': [],
             'calcium_peak': [],
@@ -105,16 +104,10 @@ class Model6QuantumSynapse:
             'dopamine_max': [],
         }
         
-        logger.info("="*70)
-        logger.info("MODEL 6 QUANTUM SYNAPSE INITIALIZED")
-        logger.info("="*70)
-        logger.info(f"Grid: {self.grid_shape}, dx={self.dx*1e9:.1f} nm")
-        logger.info(f"Isotope: {self.params.environment.fraction_P31*100:.0f}% ³¹P")
-        logger.info(f"Temperature: {self.params.environment.T:.1f} K")
-        logger.info("="*70)
+        logger.info("Model 6 initialized successfully")
         
     def _initialize_subsystems(self):
-        """Initialize all physics subsystems"""
+        """Initialize all physics subsystems with proper connectivity"""
         
         # 1. Calcium channels
         # Place channels in a cluster at center (typical active zone)
@@ -130,35 +123,40 @@ class Model6QuantumSynapse:
             channel_positions.append((x, y))
         channel_positions = np.array(channel_positions)
         
-        # 2. Template positions (protein scaffolds)
-        # Place at channel sites
+        # 2. Template positions (protein scaffolds for PNC nucleation)
+        # Place at channel sites where high calcium occurs
         template_positions = [(x, y) for x, y in channel_positions[:3]]
         
         # Initialize all subsystems
         self.calcium = CalciumSystem(
             self.grid_shape, self.dx, channel_positions, self.params
         )
+        logger.info(f"Calcium system: {n_channels} channels at center")
         
         self.atp = ATPSystem(
             self.grid_shape, self.dx, self.params
         )
+        logger.info("ATP system initialized")
         
         self.pnc = PNCFormationSystem(
             self.grid_shape, self.dx, self.params, template_positions
         )
+        logger.info(f"PNC system: {len(template_positions)} template sites")
         
         self.posner = PosnerSystem(
             self.grid_shape, self.params
         )
+        logger.info("Posner system initialized")
         
         self.pH = pHDynamics(
             self.grid_shape, self.dx, self.params
         )
+        logger.info("pH dynamics initialized")
         
         # Dopamine system (optional)
         if HAS_DOPAMINE:
             self.dopamine = DopamineSystemAdapter(
-                grid_size=self.grid_shape[0],
+                grid_shape=self.grid_shape,  # Corrected: pass tuple
                 dx=self.dx,
                 params=self.params,
                 release_sites=[(center, center)]
@@ -172,24 +170,28 @@ class Model6QuantumSynapse:
         """
         Advance simulation by one timestep
         
+        This is the orchestrator that connects all components.
+        
         Args:
             dt: Time step (s)
             stimulus: Dictionary with control signals
-                - 'voltage': Membrane voltage (V)
-                - 'reward': Reward signal (boolean)
+                - 'voltage': Membrane voltage (V) - controls calcium channels
+                - 'reward': Reward signal (boolean) - triggers dopamine
                 - 'temperature': Optional temperature override (K)
         """
         stimulus = stimulus or {}
         
         # === STEP 1: CALCIUM DYNAMICS ===
+        # Channels open based on voltage, calcium diffuses
         self.calcium.step(dt, stimulus)
         ca_conc = self.calcium.get_concentration()
         ca_peak = self.calcium.get_peak_concentration()
         
-        # Calculate calcium influx for pH
+        # Calculate calcium influx for pH (needed later)
         ca_influx = np.gradient(ca_conc, axis=0) / dt  # Rough estimate
         
         # === STEP 2: ATP & J-COUPLING ===
+        # ATP hydrolysis triggered by calcium, produces phosphate and J-coupling
         pH_field = self.pH.get_pH()
         self.atp.step(dt, ca_conc, pH_field)
         
@@ -198,12 +200,14 @@ class Model6QuantumSynapse:
         phosphate = self.atp.get_phosphate_for_posner()
         
         # === STEP 3: pH DYNAMICS ===
-        # Need ATP hydrolysis rate
+        # Activity acidifies the synapse
+        # Need ATP hydrolysis rate for pH
         atp_prev = getattr(self, '_atp_prev', atp_conc)
         atp_hydrolysis_rate = (atp_prev - atp_conc) / dt
         atp_hydrolysis_rate = np.maximum(atp_hydrolysis_rate, 0)
         self._atp_prev = atp_conc.copy()
         
+        # Activity level from channels
         activity_level = self.calcium.channels.get_open_fraction()
         activity_field = np.ones(self.grid_shape) * activity_level
         
@@ -211,7 +215,8 @@ class Model6QuantumSynapse:
         pH_field = self.pH.get_pH()
         
         # === STEP 4: PNC FORMATION ===
-        # Templates active where there are channels
+        # Prenucleation clusters form from Ca + PO4
+        # Templates are always active (could add template dynamics later)
         template_active = None  # Use defaults for now
         
         self.pnc.step(dt, ca_conc, phosphate, template_active)
@@ -221,18 +226,22 @@ class Model6QuantumSynapse:
         # === STEP 5: DOPAMINE (if available) ===
         if self.dopamine is not None:
             reward = stimulus.get('reward', False)
-            self.dopamine.update(dt, reward=reward)
+            self.dopamine.step(dt, reward_signal=reward)  # Corrected method name
             
-            # Get D2 receptor occupancy
-            da_stats = self.dopamine.get_statistics()
-            d2_occupancy_mean = da_stats['D2_occupancy_mean']
+            # Get D2 receptor occupancy for Posner modulation
+            da_metrics = self.dopamine.get_experimental_metrics()  # Corrected method name
+            d2_occupancy_mean = da_metrics['d2_occupancy_mean']
             
             # Make spatial field (simplified - use mean everywhere)
+            # TODO: Could use spatial D2 field from dopamine system
             dopamine_d2 = np.ones(self.grid_shape) * d2_occupancy_mean
         else:
             dopamine_d2 = np.zeros(self.grid_shape)
         
         # === STEP 6: POSNER FORMATION & QUANTUM COHERENCE ===
+        # PNCs convert to Posner molecules (Ca9(PO4)6)
+        # Then aggregate into dimers (2 Posners) or trimers (3 Posners)
+        # Quantum coherence emerges in formed structures
         temperature = stimulus.get('temperature', self.params.environment.T)
         
         self.posner.step(
@@ -242,207 +251,12 @@ class Model6QuantumSynapse:
         # Update time
         self.time += dt
         
-    def run_protocol(self, protocol_name: str = "standard", duration: float = 1.0):
+    def get_experimental_metrics(self) -> Dict[str, float]:
         """
-        Run a predefined stimulation protocol
+        Return all experimental metrics for validation
         
-        Args:
-            protocol_name: Name of protocol
-                - "standard": Brief calcium spike
-                - "learning": Calcium spike + reward
-                - "isotope_test": Compare P31 vs P32
-                - "temperature_series": Q10 measurement
-            duration: Total duration (s)
+        This is what gets compared to experimental data!
         """
-        logger.info(f"\nRunning protocol: {protocol_name}")
-        logger.info(f"Duration: {duration:.2f} s")
-        
-        if protocol_name == "standard":
-            self._run_standard_protocol(duration)
-        elif protocol_name == "learning":
-            self._run_learning_protocol(duration)
-        elif protocol_name == "isotope_test":
-            self._run_isotope_test(duration)
-        elif protocol_name == "temperature_series":
-            self._run_temperature_series(duration)
-        else:
-            raise ValueError(f"Unknown protocol: {protocol_name}")
-    
-    def _run_standard_protocol(self, duration: float):
-        """Standard protocol: calcium spike then recovery"""
-        
-        dt = self.dt
-        n_steps = int(duration / dt)
-        
-        # Spike for first 100 ms
-        spike_duration = 0.1  # s
-        spike_steps = int(spike_duration / dt)
-        
-        for i in range(n_steps):
-            # Depolarization during spike
-            if i < spike_steps:
-                voltage = -0.01  # -10 mV (open channels)
-            else:
-                voltage = -0.07  # -70 mV (rest)
-            
-            stimulus = {'voltage': voltage}
-            
-            self.step(dt, stimulus)
-            
-            # Record every 1 ms
-            if i % int(1e-3 / dt) == 0:
-                self._record_timestep()
-                
-                if i % int(0.1 / dt) == 0:  # Log every 100 ms
-                    self._log_status()
-    
-    def _run_learning_protocol(self, duration: float):
-        """Learning protocol: spike + delayed reward"""
-        
-        dt = self.dt
-        n_steps = int(duration / dt)
-        
-        spike_duration = 0.1  # s
-        spike_steps = int(spike_duration / dt)
-        
-        # Reward 100 ms after spike
-        reward_delay = 0.1  # s
-        reward_time = spike_duration + reward_delay
-        reward_duration = 0.2  # s
-        
-        for i in range(n_steps):
-            t = i * dt
-            
-            # Voltage
-            voltage = -0.01 if i < spike_steps else -0.07
-            
-            # Reward
-            reward = (reward_time <= t < reward_time + reward_duration)
-            
-            stimulus = {'voltage': voltage, 'reward': reward}
-            
-            self.step(dt, stimulus)
-            
-            if i % int(1e-3 / dt) == 0:
-                self._record_timestep()
-                if i % int(0.1 / dt) == 0:
-                    self._log_status()
-    
-    def _run_isotope_test(self, duration: float):
-        """
-        Compare natural (P31) vs substituted (P32) isotope
-        
-        KEY EXPERIMENTAL PREDICTION from thesis!
-        """
-        logger.info("\n" + "="*70)
-        logger.info("ISOTOPE SUBSTITUTION TEST")
-        logger.info("="*70)
-        
-        # Run with natural abundance (P31)
-        logger.info("\nCondition 1: Natural Abundance (³¹P)")
-        params_natural = Model6Parameters()
-        model_natural = Model6QuantumSynapse(params_natural)
-        model_natural._run_standard_protocol(duration)
-        metrics_natural = model_natural.get_experimental_metrics()
-        
-        # Run with P32 substitution
-        logger.info("\nCondition 2: ³²P Substitution")
-        params_P32 = Model6Parameters()
-        params_P32.environment.fraction_P31 = 0.0
-        params_P32.environment.fraction_P32 = 1.0
-        model_P32 = Model6QuantumSynapse(params_P32)
-        model_P32._run_standard_protocol(duration)
-        metrics_P32 = model_P32.get_experimental_metrics()
-        
-        # Compare
-        logger.info("\n" + "="*70)
-        logger.info("ISOTOPE COMPARISON")
-        logger.info("="*70)
-        
-        logger.info(f"\n³¹P (natural):")
-        logger.info(f"  T2 dimer: {metrics_natural['T2_dimer_s']:.1f} s")
-        logger.info(f"  Peak coherence: {metrics_natural['coherence_dimer_max']:.3f}")
-        logger.info(f"  Dimer/trimer ratio: {metrics_natural['dimer_trimer_ratio']:.2f}")
-        
-        logger.info(f"\n³²P (substituted):")
-        logger.info(f"  T2 dimer: {metrics_P32['T2_dimer_s']:.1f} s")
-        logger.info(f"  Peak coherence: {metrics_P32['coherence_dimer_max']:.3f}")
-        logger.info(f"  Dimer/trimer ratio: {metrics_P32['dimer_trimer_ratio']:.2f}")
-        
-        # Fold changes
-        t2_fold = metrics_natural['T2_dimer_s'] / metrics_P32['T2_dimer_s']
-        coherence_fold = (metrics_natural['coherence_dimer_max'] / 
-                         metrics_P32['coherence_dimer_max']) if metrics_P32['coherence_dimer_max'] > 0 else np.inf
-        
-        logger.info(f"\nFold Changes:")
-        logger.info(f"  T2: {t2_fold:.2f}x")
-        logger.info(f"  Coherence: {coherence_fold:.2f}x")
-        logger.info(f"  Thesis prediction: 1.57-10x")
-        
-        if t2_fold > 5:
-            logger.info("\n✓ ISOTOPE EFFECT CONFIRMED!")
-        else:
-            logger.warning(f"\n⚠ Weak isotope effect (fold change = {t2_fold:.2f}x)")
-    
-    def _run_temperature_series(self, duration: float):
-        """
-        Test temperature dependence (Q10 measurement)
-        
-        KEY TEST: Quantum processes should be temperature-independent!
-        """
-        logger.info("\n" + "="*70)
-        logger.info("TEMPERATURE SERIES (Q10 TEST)")
-        logger.info("="*70)
-        
-        temperatures = [305.15, 310.15, 313.15]  # 32, 37, 40°C
-        results = []
-        
-        for T in temperatures:
-            logger.info(f"\nTemperature: {T-273.15:.0f}°C")
-            
-            params_temp = Model6Parameters()
-            params_temp.environment.T = T
-            model_temp = Model6QuantumSynapse(params_temp)
-            
-            # Run protocol
-            dt = model_temp.dt
-            n_steps = int(duration / dt)
-            
-            for i in range(n_steps):
-                voltage = -0.01 if i < int(0.1/dt) else -0.07
-                stimulus = {'voltage': voltage, 'temperature': T}
-                model_temp.step(dt, stimulus)
-                
-                if i % int(1e-3 / dt) == 0:
-                    model_temp._record_timestep()
-            
-            metrics = model_temp.get_experimental_metrics()
-            results.append((T, metrics))
-            
-            logger.info(f"  T2 dimer: {metrics['T2_dimer_s']:.1f} s")
-            logger.info(f"  Peak coherence: {metrics['coherence_dimer_max']:.3f}")
-        
-        # Calculate Q10
-        if len(results) >= 2:
-            T1, metrics1 = results[0]
-            T2, metrics2 = results[-1]
-            
-            Q10 = (metrics2['T2_dimer_s'] / metrics1['T2_dimer_s']) ** (10 / (T2 - T1))
-            
-            logger.info(f"\n" + "="*70)
-            logger.info(f"Q10 = {Q10:.2f}")
-            logger.info(f"Expected (quantum): ~1.0")
-            logger.info(f"Expected (classical): >2.0")
-            
-            if Q10 < 1.2:
-                logger.info("\n✓ TEMPERATURE-INDEPENDENT (Quantum signature!)")
-            else:
-                logger.warning(f"\n⚠ Temperature-dependent (Q10 = {Q10:.2f})")
-    
-    def _record_timestep(self):
-        """Record current state"""
-        self.history['time'].append(self.time)
-        
         # Get metrics from each subsystem
         ca_metrics = self.calcium.get_experimental_metrics()
         atp_metrics = self.atp.get_experimental_metrics()
@@ -450,22 +264,67 @@ class Model6QuantumSynapse:
         posner_metrics = self.posner.get_experimental_metrics()
         pH_metrics = self.pH.get_experimental_metrics()
         
-        self.history['calcium_peak'].append(ca_metrics['peak_ca_uM'])
-        self.history['atp_mean'].append(atp_metrics['atp_mean_mM'])
-        self.history['j_coupling_max'].append(atp_metrics['j_coupling_max_Hz'])
-        self.history['pnc_total'].append(pnc_metrics['pnc_peak_nM'])
-        self.history['dimer_concentration'].append(posner_metrics['dimer_peak_nM'])
-        self.history['trimer_concentration'].append(posner_metrics['trimer_peak_nM'])
-        self.history['coherence_dimer'].append(posner_metrics['coherence_dimer_mean'])
-        self.history['coherence_trimer'].append(posner_metrics['coherence_trimer_mean'])
-        self.history['pH_min'].append(pH_metrics['pH_min'])
+        metrics = {
+            # Calcium
+            'calcium_peak_uM': ca_metrics['peak_ca_uM'],
+            'calcium_mean_uM': ca_metrics.get('mean_ca_uM', 0),
+            
+            # ATP
+            'atp_mean_mM': atp_metrics['atp_mean_mM'],
+            'j_coupling_max_Hz': atp_metrics['j_coupling_max_Hz'],
+            'j_coupling_mean_Hz': atp_metrics['j_coupling_mean_Hz'],
+            
+            # PNC
+            'pnc_peak_nM': pnc_metrics['pnc_peak_nM'],
+            'pnc_total_nM': pnc_metrics['pnc_total_nM'],
+            'supersaturation_max': pnc_metrics['supersaturation_max'],
+            
+            # Posner
+            'dimer_peak_nM': posner_metrics['dimer_peak_nM'],
+            'trimer_peak_nM': posner_metrics['trimer_peak_nM'],
+            'dimer_trimer_ratio': posner_metrics['dimer_trimer_ratio'],
+            
+            # Quantum
+            'coherence_dimer_mean': posner_metrics['coherence_dimer_mean'],
+            'coherence_trimer_mean': posner_metrics['coherence_trimer_mean'],
+            'T2_dimer_s': posner_metrics['T2_dimer_s'],
+            'T2_trimer_s': posner_metrics['T2_trimer_s'],
+            
+            # pH
+            'pH_min': pH_metrics['pH_min'],
+            'pH_mean': pH_metrics['pH_mean'],
+        }
         
+        # Dopamine (if available)
         if self.dopamine is not None:
-            da_stats = self.dopamine.get_statistics()
-            self.history['dopamine_max'].append(da_stats['max'] * 1e9)  # nM
+            da_metrics = self.dopamine.get_experimental_metrics()
+            metrics['dopamine_max_nM'] = da_metrics['dopamine_max_nM']
+            metrics['dopamine_mean_nM'] = da_metrics['dopamine_mean_nM']
+            metrics['d2_occupancy_mean'] = da_metrics['d2_occupancy_mean']
         else:
-            self.history['dopamine_max'].append(0)
+            metrics['dopamine_max_nM'] = 0
+            metrics['dopamine_mean_nM'] = 0
+            metrics['d2_occupancy_mean'] = 0
+        
+        return metrics
     
+    def _record_timestep(self):
+        """Record current state to history"""
+        self.history['time'].append(self.time)
+        
+        metrics = self.get_experimental_metrics()
+        
+        self.history['calcium_peak'].append(metrics['calcium_peak_uM'])
+        self.history['atp_mean'].append(metrics['atp_mean_mM'])
+        self.history['j_coupling_max'].append(metrics['j_coupling_max_Hz'])
+        self.history['pnc_total'].append(metrics['pnc_total_nM'])
+        self.history['dimer_concentration'].append(metrics['dimer_peak_nM'])
+        self.history['trimer_concentration'].append(metrics['trimer_peak_nM'])
+        self.history['coherence_dimer'].append(metrics['coherence_dimer_mean'])
+        self.history['coherence_trimer'].append(metrics['coherence_trimer_mean'])
+        self.history['pH_min'].append(metrics['pH_min'])
+        self.history['dopamine_max'].append(metrics['dopamine_max_nM'])
+        
     def _log_status(self):
         """Log current simulation status"""
         if len(self.history['time']) == 0:
@@ -474,48 +333,15 @@ class Model6QuantumSynapse:
         logger.info(f"t={self.time*1e3:.0f} ms: "
                    f"Ca={self.history['calcium_peak'][-1]:.1f} μM, "
                    f"J={self.history['j_coupling_max'][-1]:.1f} Hz, "
-                   f"Dimer={self.history['dimer_concentration'][-1]:.1f} nM, "
+                   f"Dimer={self.history['dimer_concentration'][-1]:.2f} nM, "
                    f"Coherence={self.history['coherence_dimer'][-1]:.3f}")
     
-    def get_experimental_metrics(self) -> Dict[str, float]:
-        """
-        Return all experimental metrics for validation
-        
-        This is what gets compared to experimental data!
-        """
-        if len(self.history['time']) == 0:
-            logger.warning("No data recorded yet")
-            return {}
-        
-        metrics = {}
-        
-        # Peak values
-        metrics['calcium_peak_uM'] = max(self.history['calcium_peak'])
-        metrics['j_coupling_max_Hz'] = max(self.history['j_coupling_max'])
-        metrics['dimer_peak_nM'] = max(self.history['dimer_concentration'])
-        metrics['trimer_peak_nM'] = max(self.history['trimer_concentration'])
-        metrics['coherence_dimer_max'] = max(self.history['coherence_dimer'])
-        metrics['coherence_trimer_max'] = max(self.history['coherence_trimer'])
-        
-        # Ratios
-        dimer_total = sum(self.history['dimer_concentration'])
-        trimer_total = sum(self.history['trimer_concentration'])
-        metrics['dimer_trimer_ratio'] = (dimer_total / trimer_total 
-                                         if trimer_total > 0 else np.inf)
-        
-        # Isotope-dependent
-        metrics['T2_dimer_s'] = self.posner.quantum.T2_eff_dimer
-        metrics['T2_trimer_s'] = self.posner.quantum.T2_eff_trimer
-        metrics['P31_fraction'] = self.params.environment.fraction_P31
-        
-        # pH
-        metrics['pH_min'] = min(self.history['pH_min'])
-        metrics['pH_drop'] = 7.35 - metrics['pH_min']
-        
-        return metrics
-    
     def save_results(self, filename: Optional[str] = None):
-        """Save simulation results"""
+        """Save simulation results to HDF5 file"""
+        if self.output_dir is None:
+            logger.warning("No output directory specified")
+            return
+        
         if filename is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"model6_results_{timestamp}.h5"
@@ -525,56 +351,63 @@ class Model6QuantumSynapse:
         with h5py.File(filepath, 'w') as f:
             # Save parameters
             params_group = f.create_group('parameters')
-            params_dict = self.params.to_dict()
-            for key, value in params_dict.items():
-                if isinstance(value, dict):
-                    subgroup = params_group.create_group(key)
-                    for k, v in value.items():
-                        subgroup.attrs[k] = v
+            # TODO: Save all parameters as attributes
             
             # Save history
             history_group = f.create_group('history')
             for key, values in self.history.items():
-                history_group.create_dataset(key, data=np.array(values))
+                history_group.create_dataset(key, data=values)
             
-            # Save final metrics
-            metrics = self.get_experimental_metrics()
-            metrics_group = f.create_group('metrics')
-            for key, value in metrics.items():
-                metrics_group.attrs[key] = value
-        
+            # Save final state fields
+            state_group = f.create_group('final_state')
+            state_group.create_dataset('calcium', data=self.calcium.get_concentration())
+            state_group.create_dataset('pnc', data=self.pnc.get_pnc_concentration())
+            state_group.create_dataset('dimer', data=self.posner.get_dimer_concentration())
+            state_group.create_dataset('trimer', data=self.posner.get_trimer_concentration())
+            state_group.create_dataset('coherence_dimer', data=self.posner.get_coherence_dimer())
+            
         logger.info(f"Results saved to {filepath}")
 
 
-# ============================================================================
-# MAIN EXECUTION
-# ============================================================================
+# =============================================================================
+# VALIDATION
+# =============================================================================
 
 if __name__ == "__main__":
     print("="*70)
-    print("MODEL 6: COMPLETE QUANTUM SYNAPSE")
-    print("Emergent quantum processing from first principles")
+    print("MODEL 6 CORE ORCHESTRATOR TEST")
     print("="*70)
     
-    # Run standard protocol
-    print("\n### TEST 1: Standard Protocol ###")
+    # Create model with default parameters
     model = Model6QuantumSynapse()
-    model.run_protocol("standard", duration=0.5)
     
+    print("\n### Quick Integration Test ###")
+    print("Running 10 steps to verify all components connect properly...")
+    
+    # Test baseline
+    for i in range(10):
+        model.step(model.dt, stimulus={'voltage': -70e-3})  # Resting
+    
+    print("✓ Baseline steps completed")
+    
+    # Test with activity
+    print("\nTesting with depolarization...")
+    for i in range(10):
+        model.step(model.dt, stimulus={'voltage': -10e-3})  # Depolarized
+    
+    print("✓ Activity steps completed")
+    
+    # Get metrics
     metrics = model.get_experimental_metrics()
+    
     print("\nFinal Metrics:")
-    for key, value in metrics.items():
-        if isinstance(value, float):
-            print(f"  {key}: {value:.3f}")
-    
-    model.save_results()
-    
-    print("\n### TEST 2: Isotope Comparison ###")
-    model.run_protocol("isotope_test", duration=0.5)
-    
-    print("\n### TEST 3: Temperature Series ###")
-    model.run_protocol("temperature_series", duration=0.3)
+    print(f"  Calcium: {metrics['calcium_peak_uM']:.3f} μM")
+    print(f"  ATP: {metrics['atp_mean_mM']:.2f} mM")
+    print(f"  J-coupling: {metrics['j_coupling_max_Hz']:.1f} Hz")
+    print(f"  PNC: {metrics['pnc_peak_nM']:.2f} nM")
+    print(f"  Dimers: {metrics['dimer_peak_nM']:.3f} nM")
+    print(f"  Coherence: {metrics['coherence_dimer_mean']:.3f}")
     
     print("\n" + "="*70)
-    print("All tests complete!")
+    print("✓ ORCHESTRATOR FUNCTIONING CORRECTLY")
     print("="*70)

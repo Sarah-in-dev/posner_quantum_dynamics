@@ -221,22 +221,23 @@ class DopamineSystemAdapter:
         return bias
     
     def get_experimental_metrics(self) -> Dict[str, float]:
+        
         """
         Return metrics for experimental validation
-        
+    
         Aligns with thesis measurements and literature values
         """
         if self.mode == "full_biophysics":
             # Get comprehensive stats from your module
             stats = self.dopamine_field.get_statistics()
-            
+        
             return {
-                'dopamine_mean_nM': stats['mean'] * 1e9,
-                'dopamine_max_nM': stats['max'] * 1e9,
-                'dopamine_peak_nM': stats['peak'] * 1e9,
-                'd2_occupancy_mean': stats['D2_occupancy_mean'],
-                'd2_occupancy_peak': stats['D2_occupancy_peak'],
-                'vesicles_released': stats['vesicles_released'],
+                'dopamine_mean_nM': stats.get('mean', 0) * 1e9,
+                'dopamine_max_nM': stats.get('max', 0) * 1e9,
+                'dopamine_peak_nM': stats.get('max', 0) * 1e9,
+                'd2_occupancy_mean': stats.get('D2_occupancy_mean', 0),
+                'd2_occupancy_peak': stats.get('D2_occupancy_peak', stats.get('D2_occupancy_mean', 0)),
+                'vesicles_released': stats.get('vesicles_released', 0),
                 'calcium_modulation_mean': np.mean(self.get_calcium_modulation()),
                 'dimer_bias_mean': np.mean(self.get_dimer_bias()),
             }
@@ -244,6 +245,7 @@ class DopamineSystemAdapter:
             return {
                 'dopamine_mean_nM': np.mean(self.dopamine_concentration) * 1e9,
                 'dopamine_max_nM': np.max(self.dopamine_concentration) * 1e9,
+                'dopamine_peak_nM': np.max(self.dopamine_concentration) * 1e9,
                 'd2_occupancy_mean': np.mean(self.d2_occupancy),
                 'd2_occupancy_peak': np.max(self.d2_occupancy),
                 'calcium_modulation_mean': np.mean(self.get_calcium_modulation()),

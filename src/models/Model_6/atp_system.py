@@ -119,46 +119,71 @@ class ATPHydrolysis:
         
         Exponential recovery toward baseline
         """
+        # FIXED: Only recover where ATP is below baseline
+        needs_recovery = self.atp < self.params.atp_concentration
+    
+        if not np.any(needs_recovery):
+            return  # Nothing to recover
+    
         # Recovery rate (first-order kinetics)
         # dATP/dt = (ATP_baseline - ATP) / τ
-        recovery_rate = (self.params.atp_concentration - self.atp) / self.params.atp_recovery_tau
-        
-        # Update ATP
-        delta_atp = recovery_rate * dt
+        recovery_rate = np.zeros_like(self.atp)
+        recovery_rate[needs_recovery] = ((self.params.atp_concentration - self.atp[needs_recovery]) / 
+                                      self.params.atp_recovery_tau)
+    
+        # Update ATP with stability limit
+        # CRITICAL: Limit step size to prevent overshooting
+        max_recovery = self.params.atp_concentration - self.atp
+        delta_atp = np.minimum(recovery_rate * dt, max_recovery)
+        delta_atp = np.maximum(delta_atp, 0)  # No negative recovery
+    
         self.atp += delta_atp
-        
+    
+        # Ensure we never exceed baseline
+        self.atp = np.minimum(self.atp, self.params.atp_concentration)
+    
         # ADP is converted back to ATP
         adp_consumed = np.minimum(delta_atp, self.adp)
         self.adp -= adp_consumed
-        
+        self.adp = np.maximum(self.adp, 0)  # No negative ADP
+    
         # Track total
         self.total_recovered += np.sum(delta_atp)
         
     def update_diffusion(self, dt: float):
         """
         ATP and ADP diffusion
-        
-        Estimated from Stokes-Einstein:
-        D = kT / (6πηr)
-        where r ~ 0.5 nm for ATP
-        
-        Result: D_ATP ~ 340 μm²/s = 340e-12 m²/s
+    
+        CRITICAL: Check CFL condition for numerical stability
+        CFL = D * dt / dx² < 0.5
         """
+        # CFL stability check
+        cfl = self.params.D_atp * dt / (self.dx ** 2)
+        if cfl > 0.5:
+            logger.warning(f"CFL condition violated: {cfl:.3f} > 0.5. Diffusion may be unstable!")
+            # Reduce effective dt
+            n_substeps = int(np.ceil(cfl / 0.25))
+            dt_substep = dt / n_substeps
+        else:
+            n_substeps = 1
+            dt_substep = dt
+    
         # Laplacian kernel (5-point stencil)
         laplacian_kernel = np.array([[0, 1, 0],
-                                     [1, -4, 1],
-                                     [0, 1, 0]]) / (self.dx**2)
+                                    [1, -4, 1],
+                                    [0, 1, 0]]) / (self.dx**2)
+    
+        for _ in range(n_substeps):
+            # ATP diffusion
+            laplacian_atp = ndimage.convolve(self.atp, laplacian_kernel, mode='constant', cval=self.params.atp_concentration)
+            self.atp += dt_substep * self.params.D_atp * laplacian_atp
         
-        # ATP diffusion
-        laplacian_atp = ndimage.convolve(self.atp, laplacian_kernel, mode='constant')
-        self.atp += dt * self.params.D_atp * laplacian_atp
-        
-        # ADP diffusion (same D as ATP, similar size)
-        laplacian_adp = ndimage.convolve(self.adp, laplacian_kernel, mode='constant')
-        self.adp += dt * self.params.D_atp * laplacian_adp
-        
-        # Ensure non-negative
-        self.atp = np.maximum(self.atp, 0)
+            # ADP diffusion (same D as ATP, similar size)
+            laplacian_adp = ndimage.convolve(self.adp, laplacian_kernel, mode='constant', cval=0)
+            self.adp += dt_substep * self.params.D_atp * laplacian_adp
+    
+        # Ensure non-negative and bounded
+        self.atp = np.clip(self.atp, 0, self.params.atp_concentration * 2)  # Allow 2x overshoot max
         self.adp = np.maximum(self.adp, 0)
 
 

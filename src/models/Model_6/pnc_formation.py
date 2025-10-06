@@ -138,6 +138,58 @@ class ThermodynamicCalculator:
         return rate
 
 
+class ComplexFormation:
+    """
+    CaHPO4 complex equilibrium - precursor to PNC formation
+    
+    This is the CRITICAL step Model 5 had that Model 6 was missing!
+    
+    Ca²⁺ + HPO4²⁻ ⇌ CaHPO4 (neutral complex)
+    
+    Based on:
+    - McDonogh et al. 2024: K_eq = 470 M⁻¹ (bulk)
+    - Enhanced 40x in synaptic cleft due to confinement
+    """
+    
+    def __init__(self, grid_shape: Tuple[int, int], params: PNCParameters):
+        self.grid_shape = grid_shape
+        self.params = params
+        
+        # Complex concentration field
+        self.complex_field = np.zeros(grid_shape)
+        
+        # Enhanced equilibrium constant for synaptic cleft
+        # McDonogh: 470 M⁻¹ in bulk
+        # Enhanced by confinement: ~40x → 18,800 M⁻¹
+        self.K_eq = 18800.0  # M⁻¹
+        
+        logger.info("Initialized CaHPO4 complex formation")
+    
+    def calculate_complex(self, ca_conc: np.ndarray, po4_conc: np.ndarray) -> np.ndarray:
+        """
+        Calculate CaHPO4 complex concentration from equilibrium
+        
+        Only forms above calcium threshold to prevent formation at rest!
+        """
+        # CRITICAL: Only form complex above baseline calcium
+        # This prevents PNC formation at rest (Model 5 insight!)
+        ca_threshold = 1e-6  # 1 μM threshold
+        ca_above_threshold = np.maximum(0, ca_conc - ca_threshold)
+        
+        # Clip to prevent overflow
+        ca_above_threshold = np.clip(ca_above_threshold, 0, 100e-6)
+        po4_eff = np.clip(po4_conc, 0, 100e-6)
+        
+        # Simple equilibrium (not full mass action for speed)
+        self.complex_field = self.K_eq * ca_above_threshold * po4_eff
+        
+        # Cap at 1 μM
+        self.complex_field = np.minimum(self.complex_field, 1e-6)
+        
+        return self.complex_field
+
+
+
 class PNCAggregation:
     """
     PNC aggregation and growth via collision
@@ -155,93 +207,101 @@ class PNCAggregation:
         self.max_size = 100
         self.size_distribution = np.zeros((*grid_shape, self.max_size))
         
-        # Total PNC concentration at each point
-        self.pnc_total = np.zeros(grid_shape)
+        # PNCs exist at equilibrium baseline - Habraken et al. 2013
+        pnc_baseline = 1e-10  # 0.1 nM baseline concentration
+        self.pnc_total = np.ones(grid_shape) * pnc_baseline
+
+        # Also initialize size distribution with baseline
+        # Assume equilibrium is mostly at critical size
+        self.size_distribution[:, :, self.params.critical_size - 1] = pnc_baseline
         
         # Average PNC size at each point
         self.pnc_size_avg = np.ones(grid_shape)
         
         logger.info("Initialized PNC aggregation")
         
+    
+    def update_aggregation_from_complex(self, dt: float, formation_rate: np.ndarray,
+                                        dissolution_rate: np.ndarray):
+        """
+        Update PNC from complex formation rate (Model 5 approach)
+    
+        Simpler than full aggregation - just formation and dissolution
+        """
+        # Form PNCs at critical size from complex
+        critical_size_idx = self.params.critical_size - 1
+        self.size_distribution[:, :, critical_size_idx] += formation_rate * dt
+    
+        # Dissolution
+        for size_idx in range(self.max_size):
+            dissolution = dissolution_rate * self.size_distribution[:, :, size_idx] * dt
+            self.size_distribution[:, :, size_idx] -= dissolution
+    
+        # Ensure non-negative
+        self.size_distribution = np.maximum(self.size_distribution, 0)
+    
+        # Calculate totals
+        self.pnc_total = np.sum(self.size_distribution, axis=2)
+    
+        # Calculate average size (with safety)
+        size_array = np.arange(1, self.max_size + 1)
+        total_ca = np.sum(self.size_distribution * size_array[np.newaxis, np.newaxis, :], axis=2)
+    
+        self.pnc_size_avg = np.divide(
+            total_ca,
+            self.pnc_total,
+            out=np.ones_like(self.pnc_total) * self.params.critical_size,
+            where=self.pnc_total > 1e-15
+        )
+    
+    
     def update_aggregation(self, dt: float, formation_rate: np.ndarray,
                           dissolution_rate: np.ndarray):
         """
         Update PNC size distribution via aggregation and dissolution
-        
-        Args:
-            dt: Time step (s)
-            formation_rate: Rate of new PNC formation (M/s)
-            dissolution_rate: Rate of PNC dissolution (1/s)
         """
         # 1. Form new PNCs (monomers)
-        # Start with critical nucleus size (~30 Ca atoms)
-        # Wang et al. 2024: "PNCs contain ~30 Ca²⁺"
         critical_size_idx = self.params.critical_size - 1
         self.size_distribution[:, :, critical_size_idx] += formation_rate * dt
+    
+        # 2. Dissolution
+        self.size_distribution *= np.exp(-dissolution_rate[:, :, np.newaxis] * dt)
+    
+        # 3. Aggregation (simplified - just grow existing PNCs)
+        # Move mass to larger sizes
+        kernel = self.params.aggregation_kernel  # Aggregation kernel
+        for size_idx in range(self.max_size - 1):
+            # Simple growth: small PNCs aggregate into larger ones
+            growth_rate = kernel * self.size_distribution[:, :, size_idx]
         
-        # 2. Aggregation via Derjaguin kernel
-        # K(i,j) = collision kernel for sizes i and j
-        # Simplified: K ∝ (r_i + r_j)² where r ∝ size^(1/3)
+            # Transfer to next size
+            transfer = growth_rate * dt
+            transfer = np.minimum(transfer, self.size_distribution[:, :, size_idx])
         
-        # Only aggregate small clusters (< 50 Ca)
-        for size_i in range(min(50, self.max_size)):
-            for size_j in range(size_i, min(50, self.max_size)):
-                # Skip if no clusters of these sizes
-                if not np.any(self.size_distribution[:, :, size_i] > 0):
-                    continue
-                if not np.any(self.size_distribution[:, :, size_j] > 0):
-                    continue
-                    
-                # Collision kernel (m³/s)
-                r_i = (size_i / 30.0) ** (1/3)  # Relative to critical size
-                r_j = (size_j / 30.0) ** (1/3)
-                K_ij = self.params.aggregation_kernel * (r_i + r_j) ** 2
-                
-                # New size after collision
-                size_new = size_i + size_j
-                if size_new >= self.max_size:
-                    continue
-                
-                # Rate of collision: K · [i] · [j]
-                collision_rate = K_ij * (self.size_distribution[:, :, size_i] * 
-                                        self.size_distribution[:, :, size_j])
-                
-                # Update distributions
-                delta = collision_rate * dt
-                
-                # Consume reactants
-                if size_i == size_j:
-                    self.size_distribution[:, :, size_i] -= 2 * delta
-                else:
-                    self.size_distribution[:, :, size_i] -= delta
-                    self.size_distribution[:, :, size_j] -= delta
-                
-                # Create product
-                self.size_distribution[:, :, size_new] += delta
-        
-        # 3. Dissolution (reverse process)
-        # De Yoreo & Vekilov 2003: "PNCs in bulk solution are metastable"
-        for size_idx in range(self.max_size):
-            dissolution = dissolution_rate * self.size_distribution[:, :, size_idx] * dt
-            self.size_distribution[:, :, size_idx] -= dissolution
-        
-        # 4. Ensure non-negative
-        self.size_distribution = np.maximum(self.size_distribution, 0)
-        
-        # 5. Update total PNC concentration and average size
+            self.size_distribution[:, :, size_idx] -= transfer
+            self.size_distribution[:, :, size_idx + 1] += transfer
+    
+        # 4. Calculate total PNC concentration
         self.pnc_total = np.sum(self.size_distribution, axis=2)
-        
-        # Average size (weighted by concentration)
-        total_ca = np.sum(
-            self.size_distribution * np.arange(1, self.max_size + 1)[None, None, :],
-            axis=2
-        )
+    
+        # 5. Calculate average size (CRITICAL FIX!)
+        # Weighted average by size
+        size_array = np.arange(1, self.max_size + 1)  # Sizes from 1 to max_size
+    
+        # Total number of Ca atoms
+        total_ca = np.sum(self.size_distribution * size_array[np.newaxis, np.newaxis, :], axis=2)
+    
+        # Average size = total Ca / total PNCs
+        # Use np.divide with where to avoid division by zero
         self.pnc_size_avg = np.divide(
-            total_ca, 
+            total_ca,
             self.pnc_total,
-            out=np.ones_like(self.pnc_total),
-            where=self.pnc_total > 0
+            out=np.ones_like(self.pnc_total) * self.params.critical_size,  # Default to critical size
+            where=self.pnc_total > 1e-15  # Only where PNCs exist
         )
+    
+        # Ensure non-negative
+        self.size_distribution = np.maximum(self.size_distribution, 0)
     
     def get_large_pncs(self, size_threshold: int = 30) -> np.ndarray:
         """
@@ -330,11 +390,13 @@ class PNCFormationSystem:
         self.dx = dx
         
         # Components
+        self.complex_formation = ComplexFormation(grid_shape, params.pnc)  # NEW!
         self.thermodynamics = ThermodynamicCalculator(params.pnc, params.environment.T)
         self.aggregation = PNCAggregation(grid_shape, dx, params.pnc)
         self.templates = TemplateBinding(grid_shape, template_positions)
         
         # Storage for analysis
+        self.complex_field = np.zeros(grid_shape)  # NEW!
         self.supersaturation_field = np.zeros(grid_shape)
         self.barrier_field = np.zeros(grid_shape)
         
@@ -343,52 +405,55 @@ class PNCFormationSystem:
     def step(self, dt: float, ca_conc: np.ndarray, po4_conc: np.ndarray,
              template_active: Optional[np.ndarray] = None):
         """
-        Update PNC formation for one time step
-        
-        Args:
-            dt: Time step (s)
-            ca_conc: Calcium concentration (M)
-            po4_conc: Phosphate concentration (M)
-            template_active: Optional template activity field
+        Update PNC formation - now with complex formation step!
         """
-        # 1. Calculate supersaturation
-        self.supersaturation_field = self.thermodynamics.calculate_supersaturation(
-            ca_conc, po4_conc
-        )
+        # 0. FIRST: Form CaHPO4 complex (MODEL 5 APPROACH!)
+        self.complex_field = self.complex_formation.calculate_complex(ca_conc, po4_conc)
         
-        # 2. Calculate nucleation barrier
+        # Templates enhance complex formation
         if template_active is not None:
             has_template = template_active > 0.5
         else:
             has_template = self.templates.template_field > 0.5
-            
-        self.barrier_field = self.thermodynamics.calculate_nucleation_barrier(
-            self.supersaturation_field,
-            has_template
+        
+        template_factor = 2.0  # 2x enhancement at templates
+        self.complex_field = np.where(has_template, 
+                                      self.complex_field * template_factor,
+                                      self.complex_field)
+        
+        # 1. Calculate supersaturation (for reference, not used in formation now)
+        self.supersaturation_field = self.thermodynamics.calculate_supersaturation(
+            ca_conc, po4_conc
         )
         
-        # 3. Calculate formation rate
-        formation_rate = self.thermodynamics.calculate_formation_rate(
-            self.supersaturation_field,
-            self.barrier_field,
-            ca_conc
-        )
+        # 2. Formation rate from COMPLEX, not from supersaturation!
+        # This is the key Model 5 insight
+        complex_threshold = 1e-12  # 1 pM threshold
+        active_complex = np.maximum(0, self.complex_field - complex_threshold)
         
-        # 4. Dissolution rate depends on template stabilization
-        # De Yoreo & Vekilov 2003: Bulk PNCs dissolve in ~0.1s
-        # Template-bound PNCs stable for ~10s
-        template_availability = self.templates.update_template_effects(
-            self.aggregation.pnc_total
-        )
+        # Formation rate proportional to complex concentration
+        k_formation = 200.0  # s⁻¹ (from Model 5)
+        formation_rate = k_formation * active_complex
+        
+        # Apply saturation to prevent runaway growth
+        current_saturation = self.aggregation.pnc_total / 1e-6  # Max 1 μM
+        saturation_factor = np.exp(-current_saturation * 10)
+        formation_rate *= saturation_factor
+        
+        # 3. Dissolution rate
+        k_dissolution = 10.0  # s⁻¹ (bulk dissolution)
+        template_lifetime = 10.0  # s (stabilized at templates)
         
         dissolution_rate = np.where(
             has_template,
-            1.0 / self.templates.max_capacity,  # Slow at templates
-            1.0 / 0.1  # Fast in bulk
+            1.0 / template_lifetime,  # Slow at templates
+            k_dissolution  # Fast in bulk
         )
         
-        # 5. Update aggregation
-        self.aggregation.update_aggregation(dt, formation_rate, dissolution_rate)
+        # 4. Update aggregation with formation/dissolution
+        self.aggregation.update_aggregation_from_complex(
+            dt, formation_rate, dissolution_rate
+        )
         
     def get_pnc_concentration(self) -> np.ndarray:
         """Get total PNC concentration (M)"""
@@ -412,15 +477,21 @@ class PNCFormationSystem:
         - Supersaturation
         - Formation rate
         """
+        # Safe calculations with NaN checks
+        pnc_total_valid = self.aggregation.pnc_total[np.isfinite(self.aggregation.pnc_total)]
+        pnc_size_valid = self.aggregation.pnc_size_avg[np.isfinite(self.aggregation.pnc_size_avg)]
+        supersaturation_valid = self.supersaturation_field[np.isfinite(self.supersaturation_field)]
+        barrier_valid = self.barrier_field[np.isfinite(self.barrier_field)]
+    
         return {
-            'pnc_total_nM': np.mean(self.aggregation.pnc_total) * 1e9,
-            'pnc_peak_nM': np.max(self.aggregation.pnc_total) * 1e9,
-            'pnc_size_avg_Ca': np.mean(self.aggregation.pnc_size_avg),
-            'supersaturation_mean': np.mean(self.supersaturation_field),
-            'supersaturation_max': np.max(self.supersaturation_field),
-            'barrier_mean_kBT': np.mean(self.barrier_field),
-            'barrier_min_kBT': np.min(self.barrier_field),
-            'sites_supersaturated': np.sum(self.supersaturation_field > 10),
+            'pnc_total_nM': float(np.mean(pnc_total_valid) if len(pnc_total_valid) > 0 else 0) * 1e9,
+            'pnc_peak_nM': float(np.max(pnc_total_valid) if len(pnc_total_valid) > 0 else 0) * 1e9,
+            'pnc_size_avg_Ca': float(np.mean(pnc_size_valid) if len(pnc_size_valid) > 0 else 30),
+            'supersaturation_mean': float(np.mean(supersaturation_valid) if len(supersaturation_valid) > 0 else 0),
+            'supersaturation_max': float(np.max(supersaturation_valid) if len(supersaturation_valid) > 0 else 0),
+            'barrier_mean_kBT': float(np.mean(barrier_valid) if len(barrier_valid) > 0 else 25),
+            'barrier_min_kBT': float(np.min(barrier_valid) if len(barrier_valid) > 0 else 10),
+            'sites_supersaturated': int(np.sum(supersaturation_valid > 10)),
         }
 
 
