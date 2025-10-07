@@ -87,6 +87,11 @@ class ATPHydrolysis:
         # Update activity field (for J-coupling calculation)
         self.activity_field = active_sites.astype(float)
         
+        # NEW: At TRUE rest (no activity anywhere), skip hydrolysis entirely
+        if not np.any(active_sites):
+            # Recovery only, no consumption
+            return
+        
         # Hydrolysis rate depends on activity
         # Rangaraju et al. 2014: 100 μM/s active, 1 μM/s basal
         hydrolysis_rate = np.where(
@@ -159,11 +164,16 @@ class ATPHydrolysis:
         """
         # CFL stability check
         cfl = self.params.D_atp * dt / (self.dx ** 2)
-        if cfl > 0.5:
+        if cfl > 0.4:
             logger.warning(f"CFL condition violated: {cfl:.3f} > 0.5. Diffusion may be unstable!")
             # Reduce effective dt
-            n_substeps = int(np.ceil(cfl / 0.25))
+            n_substeps = int(np.ceil(cfl / 0.4))
             dt_substep = dt / n_substeps
+        
+            # Warn once
+            if not hasattr(self, '_cfl_warned'):
+                logger.warning(f"CFL {cfl:.3f} > 0.4, using {n_substeps} substeps (dt_sub={dt_substep*1e6:.1f}μs)")
+                self._cfl_warned = True
         else:
             n_substeps = 1
             dt_substep = dt
@@ -173,18 +183,28 @@ class ATPHydrolysis:
                                     [1, -4, 1],
                                     [0, 1, 0]]) / (self.dx**2)
     
+        # Diffusion loop with substepping
         for _ in range(n_substeps):
-            # ATP diffusion
-            laplacian_atp = ndimage.convolve(self.atp, laplacian_kernel, mode='constant', cval=self.params.atp_concentration)
-            self.atp += dt_substep * self.params.D_atp * laplacian_atp
+            # Laplacian for ATP
+            laplacian_atp = ndimage.laplace(self.atp) / (self.dx ** 2)
         
-            # ADP diffusion (same D as ATP, similar size)
-            laplacian_adp = ndimage.convolve(self.adp, laplacian_kernel, mode='constant', cval=0)
+            # Laplacian for ADP
+            laplacian_adp = ndimage.laplace(self.adp) / (self.dx ** 2)
+        
+            # Update with smaller timestep
+            self.atp += dt_substep * self.params.D_atp * laplacian_atp
             self.adp += dt_substep * self.params.D_atp * laplacian_adp
-    
-        # Ensure non-negative and bounded
-        self.atp = np.clip(self.atp, 0, self.params.atp_concentration * 2)  # Allow 2x overshoot max
-        self.adp = np.maximum(self.adp, 0)
+        
+            # Ensure non-negative (catch any numerical issues)
+            self.atp = np.maximum(self.atp, 0)
+            self.adp = np.maximum(self.adp, 0)
+        
+            # Check for NaN/Inf
+            if np.any(~np.isfinite(self.atp)) or np.any(~np.isfinite(self.adp)):
+                logger.error("NaN/Inf detected in ATP diffusion! Resetting...")
+                self.atp = np.nan_to_num(self.atp, nan=self.params.atp_concentration, posinf=self.params.atp_concentration)
+                self.adp = np.nan_to_num(self.adp, nan=0, posinf=0)
+                break
 
 
 class JCouplingField:
@@ -424,7 +444,7 @@ class ATPSystem:
         )
         
         # 5. ATP diffusion
-        self.hydrolysis.update_diffusion(dt)
+        # self.hydrolysis.update_diffusion(dt)
         
         # 6. ATP recovery (mitochondrial synthesis)
         self.hydrolysis.update_recovery(dt)

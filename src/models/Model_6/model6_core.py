@@ -28,7 +28,7 @@ from datetime import datetime
 from model6_parameters import Model6Parameters
 from calcium_system import CalciumSystem
 from atp_system import ATPSystem
-from ca_triphosphate_complex import CalciumTriphosphateSystem
+from ca_triphosphate_complex import CaHPO4DimerSystem
 from posner_system import PosnerSystem
 from pH_dynamics import pHDynamics
 
@@ -139,10 +139,10 @@ class Model6QuantumSynapse:
         )
         logger.info("ATP system initialized")
         
-        self.triphosphate = CalciumTriphosphateSystem(
+        self.ca_phosphate = CaHPO4DimerSystem(
             self.grid_shape, self.dx, self.params, template_positions
         )
-        logger.info(f"PNC system: {len(template_positions)} template sites")
+        logger.info(f"Calcium phosphate system: {len(template_positions)} template sites")
         
         self.posner = PosnerSystem(
             self.grid_shape, self.params
@@ -220,9 +220,9 @@ class Model6QuantumSynapse:
         # Then dimerize to form quantum qubits
         # No template_active parameter needed - templates built into system
 
-        self.triphosphate.step(dt, ca_conc, phosphate)
-        monomer_conc = self.triphosphate.get_monomer_concentration()
-        dimer_conc = self.triphosphate.get_dimer_concentration()
+        self.ca_phosphate.step(dt, ca_conc, phosphate)
+        ion_pair_conc = self.ca_phosphate.get_ion_pair_concentration()
+        dimer_conc = self.ca_phosphate.get_dimer_concentration()
         
         # === STEP 5: DOPAMINE (if available) ===
         if self.dopamine is not None:
@@ -259,7 +259,7 @@ class Model6QuantumSynapse:
         # Get metrics from each subsystem
         ca_metrics = self.calcium.get_experimental_metrics()
         atp_metrics = self.atp.get_experimental_metrics()
-        triphosphate_metrics = self.triphosphate.get_experimental_metrics()
+        ca_phosphate_metrics = self.ca_phosphate.get_experimental_metrics()
         posner_metrics = self.posner.get_experimental_metrics()
         pH_metrics = self.pH.get_experimental_metrics()
         
@@ -274,10 +274,10 @@ class Model6QuantumSynapse:
             'j_coupling_mean_Hz': atp_metrics['j_coupling_mean_Hz'],
             
             # Calcium Triphosphate (the correct chemistry!)
-            'monomer_peak_nM': triphosphate_metrics['monomer_peak_nM'],
-            'monomer_mean_nM': triphosphate_metrics['monomer_mean_nM'],
-            'dimer_peak_nM_ct': triphosphate_metrics['dimer_peak_nM'],  # From triphosphate
-            'dimer_mean_nM_ct': triphosphate_metrics['dimer_mean_nM'],
+            'ion_pair_peak_nM': ca_phosphate_metrics['ion_pair_peak_nM'],
+            'ion_pair_mean_nM': ca_phosphate_metrics['ion_pair_mean_nM'],
+            'dimer_peak_nM_ct': ca_phosphate_metrics['dimer_peak_nM'],
+            'dimer_mean_nM_ct': ca_phosphate_metrics['dimer_mean_nM'],
             
             # Posner
             'dimer_peak_nM': posner_metrics['dimer_peak_nM'],
