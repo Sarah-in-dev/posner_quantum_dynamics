@@ -223,17 +223,14 @@ class QuantumCoherence:
         T2_dimer_eff *= temp_factor
         T2_trimer_eff *= temp_factor
         
-        # Coherence buildup where Posners exist
-        # Simple model: approach steady-state exponentially
-        tau_buildup = 0.1  # s (fast compared to T2)
+        # Initialize new dimers/trimers with full coherence
+        # This represents thermal equilibrium of nuclear spins
         
-        # Target coherence (1.0 = perfect)
-        target_dimer = np.where(dimer_conc > 0, 1.0, 0.0)
-        target_trimer = np.where(trimer_conc > 0, 1.0, 0.0)
-        
-        # Update with buildup and decay
-        self.coherence_dimer += (target_dimer - self.coherence_dimer) * (dt / tau_buildup)
-        self.coherence_trimer += (target_trimer - self.coherence_trimer) * (dt / tau_buildup)
+        newly_formed_dimers = (dimer_conc > 0) & (self.coherence_dimer == 0)
+        newly_formed_trimers = (trimer_conc > 0) & (self.coherence_trimer == 0)
+
+        self.coherence_dimer[newly_formed_dimers] = 1.0
+        self.coherence_trimer[newly_formed_trimers] = 1.0
         
         # Decoherence (only where coherence exists)
         decoherence_dimer = self.coherence_dimer * (dt / T2_dimer_eff)

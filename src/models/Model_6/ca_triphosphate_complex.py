@@ -152,7 +152,7 @@ class CalciumPhosphateDimerization:
         """
         # Effective rate with template enhancement
         # Templates provide 2D surface → 100-1000x enhancement
-        k_eff = self.k_base * (1.0 + template_enhancement)
+        k_eff = self.k_base * template_enhancement
     
         # Formation: SECOND ORDER (stepwise growth)
         # This is the rate-limiting step for cluster formation
@@ -205,8 +205,12 @@ class TemplateEffects:
         distance = ndimage.distance_transform_edt(1 - self.template_field)
         distance_nm = distance * 4.0  # Assuming 4nm grid spacing
         
-        # Exponential decay: 1000x at surface, 1x at >10nm
-        enhancement = 1000 * np.exp(-distance_nm / 3.0)
+        # SHARPER decay: 1000x at surface, 1x at ~5-8nm
+        # Decay length = 1.5 nm (tighter confinement to template surface)
+        enhancement = 1000 * np.exp(-distance_nm / 1.5)
+
+        # Only count enhancement > 10x as "template effect"
+        enhancement = np.where(enhancement > 10.0, enhancement, 1.0)
         
         return enhancement
 
@@ -283,7 +287,7 @@ class CaHPO4DimerSystem:
             'dimer_mean_nM': float(np.mean(self.dimer_concentration) * 1e9),
             'dimer_peak_nM': float(np.max(self.dimer_concentration) * 1e9),
             'dimer_at_templates_nM': float(
-                np.mean(self.dimer_concentration[self.templates.template_field > 0.5]) * 1e9
+                np.max(self.dimer_concentration[self.templates.template_field > 0.5]) * 1e9
                 if np.sum(self.templates.template_field) > 0 else 0
             ),
         }
