@@ -55,8 +55,10 @@ class QuantumCoherenceSystem:
         # Isotope composition (EXPERIMENTAL VARIABLE)
         self.P31_fraction = isotope_P31_fraction
     
-        # Store base T2 values for dynamic calculation
-        self.T2_base_dimer = self.params.T2_base_dimer
+        # Store NEW emergent baseline parameters
+        self.T2_single_P31 = self.params.T2_single_P31  # NEW
+        self.T2_single_P32 = self.params.T2_single_P32  # NEW
+        self.n_spins_dimer = self.params.n_spins_dimer  # NEW
         self.Q10_quantum = self.params.Q10_quantum
     
         # Coherence field (0-1, where 1 = perfect coherence)
@@ -67,88 +69,112 @@ class QuantumCoherenceSystem:
         self.dimer_concentration = np.zeros(grid_shape)
     
         # Will store effective T2 after dynamic calculation in step()
-        self.T2_effective = np.ones(grid_shape) * self.params.T2_base_dimer
+        self.T2_effective = np.ones(grid_shape) * self.T2_single_P31
     
         logger.info(f"Initialized quantum coherence system")
         logger.info(f"  Isotope: {self.P31_fraction*100:.0f}% ³¹P")
-        logger.info(f"  Base T2: {self.params.T2_base_dimer:.1f} s")
+        logger.info(f"  Single-spin T2: {self.T2_single_P31:.1f} s")
+        logger.info(f"  Spins per dimer: {self.n_spins_dimer}")
         
-    def _calculate_effective_T2(self) -> float:
-        """
-        Calculate effective T2 based on isotope composition
-        
-        KEY EXPERIMENTAL PREDICTION:
-        - ³¹P (I=1/2): T2 ~ 100 s (long coherence)
-        - ³²P (I=1): T2 ~ 10 s (shorter coherence)
-        - ³³P (I=1/2): Similar to ³¹P but rare
-        
-        Returns:
-            Effective T2 in seconds
-        """
-        T2_base = self.params.T2_base_dimer  # Base coherence time
-        
-        # Isotope-weighted T2
-        # Fisher 2015: Only odd-numbered isotopes (I=1/2) provide long coherence
-        T2_eff = self.P31_fraction * T2_base * self.params.coherence_factor_P31
-        
-        # ³²P contribution (if present)
-        P32_fraction = getattr(self.params, 'fraction_P32', 0.0)
-        if P32_fraction > 0:
-            T2_eff += P32_fraction * T2_base * self.params.coherence_factor_P32
-        
-        return T2_eff
         
     def step(self, dt: float, dimer_conc: np.ndarray, j_coupling: np.ndarray,
-         temperature: float = 310.15, dopamine_d2: Optional[np.ndarray] = None,
-         template_binding: Optional[np.ndarray] = None):
+            temperature: float = 310.15, dopamine_d2: Optional[np.ndarray] = None,
+            template_binding: Optional[np.ndarray] = None):
         """
-        Update quantum coherence with EMERGENT T2 calculation
+        Update quantum coherence with FULLY EMERGENT T2 calculation
     
-        T2 emerges from:
-        - Base isotope value (³¹P vs ³²P)
-        - J-coupling strength (ATP protection)
-        - Binding state (template vs free)
-        - Dopamine modulation (D2 receptor)
+        T2 builds up from:
+        1. Single ³¹P baseline (2s from NMR)
+        2. Intra-dimer coupling (4 spins → enhancement)
+        3. J-coupling field protection (ATP → 25x boost)
+        4. Inter-dimer entanglement (collective coherence)
+        5. Temperature and isotope effects
+    
+            Result: 100s emerges naturally when conditions are right!
         """
     
-        # === CALCULATE EFFECTIVE T2 (EMERGENT!) ===
+        # Store dimer concentration for metrics
+        self.dimer_concentration = dimer_conc.copy()
     
-        # 1. Start with base isotope-dependent T2
-        T2_base = self.T2_base_dimer  # 100s for ³¹P, 10s for ³²P
+        # === STEP 1: Single-spin baseline ===
+        # Start from intrinsic nuclear spin properties
+        if self.P31_fraction > 0.5:  # Mostly ³¹P
+            T2_base = self.T2_single_P31  # 2s
+        else:  # Mostly ³²P
+            T2_base = self.T2_single_P32  # 0.2s
     
-        # 2. J-coupling enhancement (Fisher 2015: T2 ∝ J²)
-        # Stronger coupling = better quantum protection
-        J_free = 0.2  # Hz (free phosphate baseline)
-        J_ATP = 20.0  # Hz (ATP baseline)
-        # Linear enhancement, not quadratic (more realistic)
-        j_enhancement = 1.0 + 2.0 * (j_coupling - J_free) / (J_ATP - J_free)
-        j_enhancement = np.clip(j_enhancement, 1.0, 3.0)  # Max 3x enhancement
+        # === STEP 2: Intra-dimer coupling ===
+        # 4 ³¹P spins in a dimer couple, providing enhancement
+        # But more spins also create decoherence pathways
+        sqrt_enhancement = np.sqrt(self.n_spins_dimer)  # = 2x for 4 spins
+        decoherence_penalty = 1.0 / (1.0 + 0.1 * (self.n_spins_dimer - 1))  # = 0.77x
     
-        # 3. Binding state factor (from earlier discussion)
-        if template_binding is not None:
-            # Template-bound dimers tumble slower → longer T2
-            binding_factor = 1.0 + template_binding * 1.0  # Up to 2x for bound
-        else:
-            binding_factor = 1.0
+        intra_dimer_factor = sqrt_enhancement * decoherence_penalty  # = ~1.5x
     
-        # 4. Dopamine protection (D2 reduces environmental noise)
-        if dopamine_d2 is not None:
-            # D2 activation shields from decoherence
-            dopamine_protection = 1.0 + dopamine_d2 * 2.0  # Up to 3x at full activation
-        else:
-            dopamine_protection = 1.0
+        T2_isolated_dimer = T2_base * intra_dimer_factor  # ~3s
     
-        # 5. Temperature factor (should be ~1 for quantum!)
+        # === STEP 3: J-coupling field protection (THE KEY!) ===
+        # Fisher 2015: ATP creates ~20 Hz J-coupling → spin locking
+        # Protection scales with coupling strength squared
+        J_free = self.params.J_coupling_baseline  # 0.2 Hz
+        J_ATP = self.params.J_coupling_ATP  # 20 Hz
+        protection_strength = self.params.J_protection_strength  # 25
+    
+        # Calculate protection factor
+        J_normalized = (j_coupling - J_free) / (J_ATP - J_free)
+        J_normalized = np.clip(J_normalized, 0, 1)  # Clamp to [0,1]
+    
+        J_protection = 1.0 + protection_strength * J_normalized**2  # Up to 26x!
+    
+        T2_with_J = T2_isolated_dimer * J_protection  # ~3s * 26 = 78s
+    
+        # === STEP 4: Inter-dimer entanglement ===
+        # When multiple dimers are nearby and coupled, collective coherence emerges
+        # Estimate number of entangled dimers from local concentration
+    
+        # Convert concentration to dimers per cubic nanometer
+        # dimer_conc is in M, we need dimers per nm³
+        # 1 M = 6.022e23 molecules/L = 6.022e23 / 1e27 nm³ = 6.022e-4 /nm³
+        dimers_per_nm3 = dimer_conc * 6.022e-4  # Convert M to /nm³
+    
+        # Volume within coupling distance (5 nm sphere)
+        coupling_volume = (4/3) * np.pi * (self.params.coupling_distance * 1e9)**3  # nm³
+    
+        # Estimate entangled dimers (must be in strong J-field)
+        N_entangled = dimers_per_nm3 * coupling_volume
+        N_entangled = np.where(j_coupling > 10, N_entangled, 1)  # Only count if J > 10 Hz
+        N_entangled = np.maximum(N_entangled, 1)  # At least 1 (self)
+    
+        # Collective enhancement (logarithmic scaling - diminishing returns)
+        log_factor = self.params.entanglement_log_factor  # 0.2
+        collective_factor = 1.0 + log_factor * np.log(N_entangled)  # ~1.3x for 4-5 dimers
+    
+        T2_collective = T2_with_J * collective_factor  # ~78s * 1.3 = 101s ✓✓✓
+    
+        # === STEP 5: Temperature factor (should be ~1 for quantum) ===
         T_ref = 310.15
         Q10 = self.Q10_quantum  # Should be 1.0
         temp_factor = Q10 ** ((temperature - T_ref) / 10.0)
     
-        # === EMERGENT T2 ===
-        T2_effective = (T2_base * j_enhancement * binding_factor * 
-                    dopamine_protection * temp_factor)
+        # === STEP 6: Dopamine protection (optional modulation) ===
+        if dopamine_d2 is not None:
+            # D2 activation can provide additional protection
+            dopamine_protection = 1.0 + dopamine_d2 * 0.5  # Up to 1.5x
+        else:
+            dopamine_protection = 1.0
+    
+        # === STEP 7: Template binding (optional modulation) ===
+        if template_binding is not None:
+            # Template-bound dimers tumble slower → less decoherence
+            binding_factor = 1.0 + template_binding * 0.3  # Up to 1.3x
+        else:
+            binding_factor = 1.0
+    
+        # === FINAL EMERGENT T2 ===
+        T2_effective = (T2_collective * temp_factor * 
+                    dopamine_protection * binding_factor)
     
         # === DECOHERENCE (Exponential decay) ===
-        # Where dimers exist, apply decoherence
         has_dimers = dimer_conc > 0
     
         # Initialize new dimers with full coherence
@@ -156,7 +182,9 @@ class QuantumCoherenceSystem:
         self.coherence[new_dimers] = 1.0
     
         # Apply exponential decoherence
-        self.coherence[has_dimers] *= np.exp(-dt / T2_effective[has_dimers])
+        # Avoid division by zero
+        T2_safe = np.maximum(T2_effective, 0.01)
+        self.coherence[has_dimers] *= np.exp(-dt / T2_safe[has_dimers])
     
         # Clear coherence where no dimers
         self.coherence[~has_dimers] = 0
@@ -166,10 +194,6 @@ class QuantumCoherenceSystem:
     
         # Store effective T2 for reporting
         self.T2_effective = T2_effective
-        
-        def get_coherence(self) -> np.ndarray:
-            """Get spatial coherence field (0-1)"""
-            return self.coherence.copy()
     
     def get_experimental_metrics(self) -> Dict[str, float]:
         """

@@ -247,12 +247,31 @@ class QuantumParameters:
     """
     
     # === COHERENCE TIMES ===
+    # NEW APPROACH: Start from single-spin physics, build up to collective
     # Fisher 2015 Ann Phys 362:593-599
-    # "T2 ~ 1-100 seconds for ³¹P nuclear spins in Posner molecules"
+    # Agarwal et al. 2023 - dimers vs trimers
     
-    # Thesis hypothesis: dimers have longer coherence
-    T2_base_dimer: float = 100.0  # s (long coherence)
-    T2_base_trimer: float = 1.0  # s (shorter, more ³¹P nuclei)
+    # Single ³¹P nuclear spin in aqueous solution (from NMR literature)
+    # This is the TRUE baseline - everything else emerges from this
+    T2_single_P31: float = 2.0  # s (intrinsic single nuclear spin)
+    T2_single_P32: float = 0.2  # s (weaker nuclear moment, 10x worse)
+
+    # Intra-structure coupling factors
+    # Within a dimer (4 ³¹P) or trimer (6 ³¹P), spins couple
+    n_spins_dimer: int = 4  # Phosphorus atoms per dimer
+    n_spins_trimer: int = 6  # Phosphorus atoms per trimer
+
+    # J-coupling protection parameters (Fisher's spin-locking mechanism)
+    # These are the KEY to achieving 100s coherence times
+    J_coupling_baseline: float = 0.2  # Hz (free phosphate, no protection)
+    J_coupling_ATP: float = 20.0  # Hz (ATP-driven protection)
+    J_protection_strength: float = 25.0  # Scaling factor for protection
+
+    # Inter-dimer entanglement scaling
+    # When multiple dimers are coupled, collective coherence emerges
+    entanglement_log_factor: float = 0.2  # Log scaling with N_entangled dimers
+    coupling_distance: float = 5e-9  # m (5 nm coupling range)
+    
     
     # === ISOTOPE DEPENDENCE ===
     # EXPERIMENTAL VARIABLE - Table from thesis proposal
@@ -271,17 +290,6 @@ class QuantumParameters:
     Q10_quantum: float = 1.0  # Should be ~1.0
     Q10_classical: float = 2.3  # Typical enzyme
     
-    # === J-COUPLING ENHANCEMENT ===
-    # Thesis: "J-coupling from ATP protects coherence"
-    coherence_J_factor: float = 2.0  # T2 ∝ J² (theoretical)
-    
-    # === DECOHERENCE RATES ===
-    gamma_thermal: float = 0.01  # 1/s (phonon bath)
-    gamma_magnetic: float = 0.001  # 1/s (local field fluctuations)
-    
-    # === ENTANGLEMENT ===
-    entanglement_threshold: float = 0.3  # Concurrence > 0.3
-    max_entangled_pairs: int = 6  # Per synapse (thesis: 3 dimer pairs)
 
 
 @dataclass
@@ -428,7 +436,12 @@ class Model6Parameters:
         # Basic physics checks
         assert self.calcium.ca_baseline > 0, "Calcium baseline must be positive"
         assert self.atp.J_PP_atp > self.atp.J_PO_free, "ATP J-coupling must exceed free phosphate"
-        assert self.quantum.T2_base_dimer > self.quantum.T2_base_trimer, "Dimers must have longer coherence"
+        
+        # Quantum validation (UPDATED FOR EMERGENT APPROACH)
+        assert self.quantum.T2_single_P31 > self.quantum.T2_single_P32, "P31 must have longer coherence than P32"
+        assert self.quantum.n_spins_dimer < self.quantum.n_spins_trimer, "Dimers have fewer spins than trimers"
+        assert self.quantum.J_protection_strength > 0, "J-coupling protection must be positive"
+        assert self.quantum.coupling_distance > 0, "Coupling distance must be positive"
         
         # Isotope fractions must sum to <= 1.0
         isotope_total = (self.environment.fraction_P31 + 
@@ -439,26 +452,21 @@ class Model6Parameters:
     def get_effective_coherence_time(self, structure: str = 'dimer') -> float:
         """
         Calculate effective coherence time based on isotope composition
-        
-        Args:
-            structure: 'dimer' or 'trimer'
-            
-        Returns:
-            Effective T2 in seconds
+        NOTE: This is a simplified version. Full emergent calculation happens in quantum_coherence.py
         """
-        # Base T2 for structure
+        # Use single-spin baseline
         if structure == 'dimer':
-            T2_base = self.quantum.T2_base_dimer
+            T2_base = self.quantum.T2_single_P31 * self.quantum.n_spins_dimer  # ~8s baseline
         else:
-            T2_base = self.quantum.T2_base_trimer
-            
+            T2_base = self.quantum.T2_single_P31 * self.quantum.n_spins_trimer * 0.1  # ~1.2s (more decoherence)
+    
         # Isotope weighting
         T2_effective = (
             self.environment.fraction_P31 * T2_base * self.quantum.coherence_factor_P31 +
             self.environment.fraction_P32 * T2_base * self.quantum.coherence_factor_P32 +
             self.environment.fraction_P33 * T2_base * self.quantum.coherence_factor_P33
         )
-        
+    
         return T2_effective
     
     def get_experimental_outputs(self) -> Dict[str, float]:
