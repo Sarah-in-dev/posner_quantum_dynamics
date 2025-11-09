@@ -1,0 +1,38 @@
+{
+  "test_name": "Calcium Dynamics - Spike Generation",
+  "test_number": "02",
+  "timestamp": "2025-11-09T07:10:16.757243",
+  "passed": false,
+  "tests_passed": [
+    "spike_amplitude",
+    "physiological_range",
+    "localization"
+  ],
+  "tests_failed": [
+    "recovery"
+  ],
+  "protocol": {
+    "baseline_ms": 20,
+    "stimulus_ms": 50,
+    "recovery_ms": 300,
+    "total_ms": 370,
+    "stimulus_voltage_mV": -10,
+    "rest_voltage_mV": -70
+  },
+  "parameters": {
+    "temperature_K": 310.15,
+    "P31_fraction": 1.0,
+    "n_channels": 50,
+    "grid_size": 100,
+    "dx_nm": 3.9999999999999996
+  },
+  "results": {
+    "baseline_ca_uM": 0.09999999999999999,
+    "peak_ca_uM": 4.532283349108715,
+    "peak_time_ms": 0.032999999999999995,
+    "recovery_ca_uM": 4.960716554423615,
+    "spike_amplitude_fold": 45.32283349108715,
+    "recovery_fraction": -0.09666196214667855,
+    "hotspot_fraction": 0.0004
+  }
+}

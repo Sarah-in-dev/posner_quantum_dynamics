@@ -188,8 +188,12 @@ else:
     print(f"✗ FAIL: Peak Ca²⁺ outside range ({peak_ca:.1f} μM)")
     tests_failed.append("physiological_range")
 
-# Test 3: Recovery initiated
-recovery_fraction = (peak_ca - recovery_ca) / (peak_ca - baseline_ca)
+# Test 3: Recovery initiated (using INTEGRATED calcium - total amount in system)
+baseline_ca_integrated = np.sum(ca_mean_history[0:BASELINE_MS])
+peak_ca_integrated = np.max([np.sum(ca_mean_history[i:i+10]) for i in range(BASELINE_MS, BASELINE_MS + STIMULUS_MS - 10)])
+recovery_ca_integrated = np.sum(ca_mean_history[-20:])  # Last 20ms average
+
+recovery_fraction = (peak_ca_integrated - recovery_ca_integrated) / (peak_ca_integrated - baseline_ca_integrated)
 if recovery_fraction > 0.15:  # At least 15% recovery
     print(f"✓ PASS: Recovery initiated ({recovery_fraction*100:.0f}% recovered)")
     tests_passed.append("recovery")

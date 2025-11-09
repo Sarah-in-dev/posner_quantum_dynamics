@@ -42,6 +42,10 @@ class pHSources:
         
         # H⁺ production rate field (M/s)
         self.h_production = np.zeros(grid_shape)
+
+        # Stochastic parameters
+        self.metabolic_noise_sigma = 0.15  # 15% variability in acid production
+        self.burst_probability = 0.05      # Probability of metabolic burst
         
         logger.info("Initialized pH sources")
         
@@ -49,38 +53,32 @@ class pHSources:
                                calcium_influx: np.ndarray,
                                activity: np.ndarray) -> np.ndarray:
         """
-        Calculate H⁺ production from neural activity
+        Calculate H⁺ production from neural activity with STOCHASTIC VARIABILITY
         
-        Sources:
-        1. ATP hydrolysis: ATP + H2O → ADP + Pi + H⁺
-        2. Lactic acid from glycolysis (during high activity)
-        3. Calcium buffering (minor)
-        
-        Chesler 2003:
-        "Action potentials produce ~0.5 pH unit drop"
-        "Mainly from metabolic acid production"
-        
-        Args:
-            atp_hydrolysis: ATP hydrolysis rate (M/s)
-            calcium_influx: Ca²⁺ influx (M/s)
-            activity: Activity level (0-1)
-            
-        Returns:
-            H⁺ production rate (M/s)
+        CHANGES (Nov 2025):
+        - Added metabolic noise (15% variability)
+        - Random burst events (lactate spikes)
+        - Local fluctuations in acid production
         """
-        # 1. From ATP hydrolysis
-        # Each ATP → 1 H⁺
-        h_from_atp = atp_hydrolysis
+        # 1. From ATP hydrolysis (with noise)
+        atp_noise = np.random.normal(1.0, self.metabolic_noise_sigma, self.grid_shape)
+        atp_noise = np.maximum(atp_noise, 0.1)  # Keep positive
+        h_from_atp = atp_hydrolysis * atp_noise
         
-        # 2. From lactic acid (glycolysis)
-        # Krishtal et al. 1987: "Major contributor during burst activity"
-        # Glucose → 2 Lactate + 2 H⁺
-        # Estimate: ~10 μM/s H⁺ during activity
-        h_from_lactate = activity * 10e-6  # M/s
+        # 2. From lactic acid (glycolysis) - with random bursts
+        # Base lactate production
+        h_from_lactate_base = activity * 10e-6  # M/s
         
-        # 3. From calcium buffering (minor)
-        # Ca²⁺ + Buffer-H → Ca-Buffer + H⁺
-        h_from_ca_buffering = calcium_influx * 0.1  # Small contribution
+        # Random burst events (glycolytic spikes)
+        burst_events = np.random.rand(*self.grid_shape) < (self.burst_probability * activity)
+        burst_contribution = np.where(burst_events, 5e-6, 0)  # 5 μM burst
+        
+        h_from_lactate = h_from_lactate_base + burst_contribution
+        
+        # 3. From calcium buffering (with noise)
+        ca_buffer_noise = np.random.normal(1.0, 0.2, self.grid_shape)
+        ca_buffer_noise = np.maximum(ca_buffer_noise, 0.1)
+        h_from_ca_buffering = calcium_influx * 0.1 * ca_buffer_noise
         
         # Total H⁺ production
         self.h_production = h_from_atp + h_from_lactate + h_from_ca_buffering
@@ -104,6 +102,9 @@ class pHBuffering:
         # Buffering capacity (dimensionless)
         # Chesler 2003: β ~ 20-40 mM per pH unit
         self.buffer_capacity = 30e-3  # M
+
+        # Stochastic parameters (ADDED Nov 2025)
+        self.buffer_noise_sigma = 0.1  # 10% variability in local buffering
         
         logger.info(f"Initialized pH buffering (capacity={self.buffer_capacity*1e3:.0f} mM)")
         
@@ -130,19 +131,22 @@ class pHBuffering:
         # Add produced H⁺
         h_conc += h_production * dt
         
-        # Apply buffering
-        # Effective change reduced by buffer capacity
-        # dpH = -d[H⁺] / (β * ln(10))
-        
         # SAFETY: Prevent negative or zero concentrations
-        h_conc = np.maximum(h_conc, 1e-12)  # ADD THIS LINE
+        h_conc = np.maximum(h_conc, 1e-12)
         
         # Back to pH
         pH_new = -np.log10(h_conc)
         
+        # Apply buffering with STOCHASTIC variability
+        # Local buffer capacity varies (protein crowding, local [HCO3-])
+        buffer_noise = np.random.normal(1.0, self.buffer_noise_sigma, self.grid_shape)
+        buffer_noise = np.maximum(buffer_noise, 0.5)  # Keep reasonable
+        
+        effective_buffer = self.buffer_capacity * buffer_noise
+        
         # Apply buffer capacity (reduces change)
         pH_change = pH_new - pH_current
-        pH_buffered = pH_current + pH_change / (1 + self.buffer_capacity / h_conc)
+        pH_buffered = pH_current + pH_change / (1 + effective_buffer / h_conc)
         
         return pH_buffered
 
@@ -163,34 +167,32 @@ class pHRecovery:
         # Recovery time constant
         # Makani & Chesler 2010: τ ~ 0.5 seconds
         self.tau_recovery = params.pH_recovery_tau
+
+        # Stochastic parameters
+        self.recovery_noise_sigma = 0.12  # 12% variability in recovery rate
         
         logger.info(f"Initialized pH recovery (τ={self.tau_recovery:.1f} s)")
         
     def apply_recovery(self, pH_current: np.ndarray, dt: float) -> np.ndarray:
         """
-        Apply pH recovery toward baseline
+        Apply pH recovery toward baseline with STOCHASTIC VARIABILITY
         
-        Mechanisms:
-        1. Na⁺/H⁺ exchangers (NHE)
-        2. HCO3⁻/Cl⁻ exchangers
-        3. Glial buffering (astrocytes)
-        
-        Makani & Chesler 2010:
-        "Recovery follows first-order kinetics"
-        "τ ~ 0.5 seconds in hippocampus"
-        
-        Args:
-            pH_current: Current pH
-            dt: Time step (s)
-            
-        Returns:
-            New pH after recovery
+        CHANGES (Nov 2025):
+        - Variable recovery rates (NHE/NBC transporter fluctuations)
+        - Spatial heterogeneity in recovery
         """
         # Exponential recovery toward baseline
         pH_baseline = self.params.pH_rest
         
+        # Recovery rate with stochastic variability
+        # Represents variable NHE/NBC activity, glial uptake
+        recovery_noise = np.random.normal(1.0, self.recovery_noise_sigma, self.grid_shape)
+        recovery_noise = np.maximum(recovery_noise, 0.3)  # Keep positive, allow slow recovery
+        
+        effective_tau = self.tau_recovery / recovery_noise
+        
         # Recovery rate
-        recovery_rate = (pH_baseline - pH_current) / self.tau_recovery
+        recovery_rate = (pH_baseline - pH_current) / effective_tau
         
         # Update pH
         pH_new = pH_current + recovery_rate * dt
@@ -269,6 +271,9 @@ class pHDynamics:
         # Track extremes for validation
         self.pH_min_reached = self.params.pH_rest
         self.pH_max_reached = self.params.pH_rest
+
+        # Stochastic local fluctuations
+        self.local_fluctuation_sigma = 0.02  # ~0.02 pH unit local noise
         
         logger.info("Initialized pH dynamics system")
         
@@ -296,6 +301,11 @@ class pHDynamics:
         
         # 4. Apply diffusion
         self.pH = self.diffusion.apply_diffusion(self.pH, dt)
+
+        # 4.5. Add stochastic local fluctuations
+        # Represents random ion flux, local metabolic variability
+        local_noise = np.random.normal(0, self.local_fluctuation_sigma, self.grid_shape)
+        self.pH += local_noise
         
         # 5. Constrain to reasonable range
         # Extreme values would be non-physiological

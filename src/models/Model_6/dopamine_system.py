@@ -111,6 +111,12 @@ class DopamineSystemAdapter:
         self.d2_occupancy = np.zeros(self.grid_shape)
         
         self.mode = "simplified"
+
+        # Stochastic parameters
+        self.vesicle_release_probability_base = 0.06  # Per action potential (Pothos 2000)
+        self.vesicle_content_mean = self.params.molecules_per_vesicle
+        self.vesicle_content_std = self.params.molecules_per_vesicle * 0.2  # 20% CV
+
         logger.warning("Using simplified dopamine model")
         
     def step(self, dt: float, reward_signal: bool = False):
@@ -126,23 +132,73 @@ class DopamineSystemAdapter:
             self.dopamine_field.update(dt, reward=reward_signal)
             
         else:
-            # Simplified model
+            # === STOCHASTIC SIMPLIFIED MODEL ===
+            
             if reward_signal:
-                # Phasic release at release sites
+                # STOCHASTIC vesicle release at release sites
                 for x, y in self.release_sites:
-                    self.dopamine_concentration[x, y] = self.params.dopamine_phasic_peak
+                    
+                    # 1. Probabilistic release events
+                    # Each vesicle has probability of releasing
+                    n_vesicles_available = self.params.vesicles_per_terminal
+                    
+                    # Poisson-like: each vesicle independently releases with probability p
+                    release_probability = self.vesicle_release_probability_base
+                    
+                    # Binomial: how many vesicles release?
+                    n_released = np.random.binomial(n_vesicles_available, release_probability)
+                    
+                    if n_released > 0:
+                        # 2. Variable vesicle content (gamma distribution)
+                        shape = (self.vesicle_content_mean / self.vesicle_content_std) ** 2
+                        scale = self.vesicle_content_std ** 2 / self.vesicle_content_mean
+                        
+                        # Total molecules released
+                        total_molecules = 0
+                        for _ in range(n_released):
+                            vesicle_content = np.random.gamma(shape, scale)
+                            total_molecules += vesicle_content
+                        
+                        # Convert to concentration (simplified - instant mixing in voxel)
+                        # Volume of one voxel: (dx)³
+                        voxel_volume = (self.dx ** 3)  # m³
+                        avogadro = 6.022e23
+                        
+                        # Concentration increase (M)
+                        delta_conc = (total_molecules / avogadro) / voxel_volume
+                        
+                        # Add to field
+                        self.dopamine_concentration[x, y] += delta_conc
             
-            # Simple decay toward tonic
+            # Simple decay toward tonic with stochastic noise
             tau_decay = 0.2  # s (Yavich et al. 2007)
-            self.dopamine_concentration += (
-                (self.params.dopamine_tonic - self.dopamine_concentration) * dt / tau_decay
+            
+            # Deterministic decay
+            decay_rate = (self.params.dopamine_tonic - self.dopamine_concentration) / tau_decay
+            
+            # Add uptake noise (DAT stochasticity)
+            uptake_noise = np.random.normal(1.0, 0.1, self.grid_shape)  # 10% variability
+            uptake_noise = np.maximum(uptake_noise, 0.1)  # Keep positive
+            
+            self.dopamine_concentration += decay_rate * dt * uptake_noise
+            
+            # Floor at zero
+            self.dopamine_concentration = np.maximum(self.dopamine_concentration, 0)
+            
+            # Update D2 occupancy with binding noise
+            # Hill equation with stochastic component
+            kd = self.params.d2_kd
+            
+            # Stochastic binding/unbinding
+            binding_noise = np.random.normal(1.0, 0.05, self.grid_shape)  # 5% binding noise
+            binding_noise = np.maximum(binding_noise, 0.5)
+            
+            self.d2_occupancy = (self.dopamine_concentration * binding_noise) / (
+                kd + self.dopamine_concentration * binding_noise
             )
             
-            # Update D2 occupancy
-            # Neves et al. 2002: Kd = 1.5 nM for high affinity state
-            self.d2_occupancy = self.dopamine_concentration / (
-                self.params.d2_kd + self.dopamine_concentration
-            )
+            # Clip to [0, 1]
+            self.d2_occupancy = np.clip(self.d2_occupancy, 0, 1)
     
     def get_dopamine_concentration(self) -> np.ndarray:
         """

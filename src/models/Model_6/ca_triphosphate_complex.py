@@ -140,41 +140,75 @@ class CalciumPhosphateDimerization:
         
         # Dissociation (very slow - dimers are stable)
         self.k_dissociation = 0.001  # s⁻¹
+
+        # Stochastic parameters
+        self.nucleation_probability = 0.01  # Probability per timestep at templates
+        self.dissolution_noise_sigma = 0.1  # Relative noise in dissolution
         
         logger.info(f"Initialized Ca₆(PO₄)₄ dimer aggregation (k_agg={self.k_base:.2e} M⁻¹s⁻¹)")
         
     def update_dimerization(self, dt: float, ion_pair_conc: np.ndarray,
-                        template_enhancement: np.ndarray,
-                        ca_conc: np.ndarray) -> None:
+                    template_enhancement: np.ndarray,
+                    ca_conc: np.ndarray) -> None:
         """
-        Update dimer concentration via STEPWISE aggregation
+        Update dimer concentration via STOCHASTIC aggregation
     
-        Growth is 2nd order (add one unit at a time), NOT 6th order!
-    
-        CaHPO₄ + CaHPO₄ → (CaHPO₄)₂
-        (CaHPO₄)₂ + CaHPO₄ → (CaHPO₄)₃
-        ... → Ca₆(PO₄)₄ dimer
-    
-        Effective rate for reaching hexamer: k_eff × [CaHPO₄]²
+        CHANGES (Nov 2025):
+        - Added probabilistic nucleation at templates
+        - Added stochastic aggregation events
+        - Added dissolution noise
         """
         # Effective rate with template enhancement
-        # Templates provide 2D surface → 100-1000x enhancement
         k_eff = self.k_base * template_enhancement
+
+        # === STOCHASTIC FORMATION ===
+        # Instead of deterministic rate, use probabilistic events
     
-        # Formation: SECOND ORDER (stepwise growth)
-        # This is the rate-limiting step for cluster formation
-        formation_rate = k_eff * (ion_pair_conc ** 2)
+        # 1. Calculate formation probability per voxel
+        # P = k_eff × [CaHPO₄]² × dt
+        formation_probability = k_eff * (ion_pair_conc ** 2) * dt
+        formation_probability = np.clip(formation_probability, 0, 1)  # Keep as probability
     
-        # Dissociation: first order
-        dissociation_rate = self.k_dissociation * self.dimer_concentration
+        # 2. Stochastic nucleation at high-enhancement sites (templates)
+        template_sites = template_enhancement > 100  # Strong template regions
+        nucleation_events = np.random.rand(*self.grid_shape) < (self.nucleation_probability * dt)
+        nucleation_events = nucleation_events & template_sites & (ion_pair_conc > 1e-6)  # Need substrate
     
+        # 3. Combine deterministic growth + stochastic nucleation
+        # Deterministic component (averaged behavior)
+        deterministic_formation = k_eff * (ion_pair_conc ** 2) * dt * 0.5  # Reduced weight
+    
+        # Stochastic component (random events)
+        random_roll = np.random.rand(*self.grid_shape)
+        stochastic_formation = np.where(
+            random_roll < formation_probability,
+            ion_pair_conc * 0.1,  # Each event forms ~10% of available substrate
+            0
+        )
+    
+        # Nucleation adds large burst at templates
+        nucleation_contribution = np.where(
+            nucleation_events,
+            1e-9,  # 1 nM burst per nucleation event
+            0
+        )
+    
+        total_formation = deterministic_formation + stochastic_formation + nucleation_contribution
+
+        # === STOCHASTIC DISSOCIATION ===
+        # Add noise to dissolution rate
+        dissolution_noise = 1.0 + np.random.normal(0, self.dissolution_noise_sigma, self.grid_shape)
+        dissolution_noise = np.maximum(dissolution_noise, 0.1)  # Keep positive
+    
+        dissociation_rate = self.k_dissociation * self.dimer_concentration * dissolution_noise
+
         # Update
-        d_dimer_dt = formation_rate - dissociation_rate
-        self.dimer_concentration += d_dimer_dt * dt
-    
+        d_dimer_dt = total_formation - dissociation_rate
+        self.dimer_concentration += d_dimer_dt
+
         # Physical limits
         self.dimer_concentration = np.maximum(self.dimer_concentration, 0)
-    
+
         # Stoichiometry: need 6 Ca per dimer
         max_dimer_from_ca = ca_conc / 6.0
         self.dimer_concentration = np.minimum(self.dimer_concentration, max_dimer_from_ca)

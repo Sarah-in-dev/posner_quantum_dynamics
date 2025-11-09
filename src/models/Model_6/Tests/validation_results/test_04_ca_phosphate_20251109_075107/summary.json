@@ -1,0 +1,38 @@
+{
+  "test_name": "Calcium Phosphate Formation (Burst Protocol)",
+  "test_number": "04",
+  "timestamp": "2025-11-09T07:51:10.512408",
+  "passed": true,
+  "tests_passed": [
+    "dimer_accumulation",
+    "progressive_accumulation",
+    "physiological_range",
+    "ion_pair_equilibrium",
+    "dimer_persistence"
+  ],
+  "tests_failed": [],
+  "protocol": {
+    "n_bursts": 5,
+    "burst_duration_ms": 30,
+    "inter_burst_ms": 150,
+    "burst_frequency_Hz": 5.555555555555555,
+    "total_ms": 1220
+  },
+  "results": {
+    "baseline_dimer_nM": 0.011720249750573975,
+    "peak_dimer_nM": 1345.039500928779,
+    "final_dimer_nM": 1345.039500928779,
+    "net_accumulation_nM": 1345.0277806790284,
+    "fold_increase": 114761.0169837173,
+    "fisher_prediction_nM": 741,
+    "fisher_ratio": 1.815168017447745,
+    "burst_gains": [
+      48.591096647259576,
+      171.57585884392446,
+      253.6967541515671,
+      467.1310520735764,
+      79.71093361335681
+    ],
+    "progressive_accumulation": true
+  }
+}

@@ -2,7 +2,7 @@
 TEST 01: Baseline State
 ================================================================================
 
-Date: 2025-11-08 10:40:32
+Date: 2025-11-09 07:08:08
 Duration: 100 ms
 Result: PASSED
 
@@ -15,11 +15,11 @@ Grid: 100x100, dx=4.0 nm
 FINAL STATE
 --------------------------------------------------------------------------------
 Calcium peak: 0.100 μM
-Calcium mean: 0.000 μM
+Calcium mean: 0.100 μM
 ATP: 2.50 mM
 J-coupling max: 14.3 Hz
 CaHPO₄ ion pairs: 47.0 nM
-Ca₆(PO₄)₄ dimers: 0.12 nM
+Ca₆(PO₄)₄ dimers: 0.06 nM
 
 VALIDATION CRITERIA
 --------------------------------------------------------------------------------
@@ -37,11 +37,12 @@ ATP mean ± std: 2.500 ± 0.0000 mM
 INTERPRETATION
 --------------------------------------------------------------------------------
 Model successfully maintains physiological resting conditions:
-- Calcium at ~100 nM (resting level)
-- ATP stores full (>2 mM)
+- Calcium at ~100 nM (resting level, with stochastic noise)
+- ATP stores full (>2 mM, with burst variability)
 - Minimal spontaneous complex formation
-- System stable with no drift
+- System stable with tolerable stochastic drift
 
+NOTE: Values vary run-to-run due to stochastic processes.
 This establishes the baseline for all subsequent tests.
 
 ================================================================================

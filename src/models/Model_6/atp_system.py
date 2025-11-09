@@ -63,25 +63,29 @@ class ATPHydrolysis:
         # Track total ATP consumed (for mass balance)
         self.total_consumed = 0.0
         self.total_recovered = 0.0
+
+        # Stochastic parameters
+        self.burst_probability = 0.02  # Probability of burst per active site per timestep
+        self.burst_size_mean = 5e-7    # Mean ATP consumed per burst (M)
+        self.burst_size_std = 1e-7     # Std dev in burst size
         
         logger.info(f"Initialized ATP hydrolysis system")
         
     def update_hydrolysis(self, dt: float, calcium: np.ndarray, 
                           activity_threshold: float = 1e-6):
         """
-        Hydrolyze ATP in regions of elevated calcium
+        Hydrolyze ATP in regions of elevated calcium via STOCHASTIC BURSTS
+        
+        CHANGES (Nov 2025):
+        - Added probabilistic burst events at active sites
+        - Variable burst sizes (Poisson-like)
+        - Maintains mean rate but adds realistic variability
         
         Rangaraju et al. 2014 Cell:
         "ATP consumption scales with calcium influx"
         "Each action potential consumes 4.7×10⁵ molecules"
-        
-        Args:
-            dt: Time step (s)
-            calcium: Calcium concentration field (M)
-            activity_threshold: Ca threshold for "active" sites (M = 1 μM)
         """
         # Active sites = where calcium is elevated
-        # This couples ATP consumption to neural activity
         active_sites = calcium > activity_threshold
         
         # Update activity field (for J-coupling calculation)
@@ -92,19 +96,33 @@ class ATPHydrolysis:
             # Recovery only, no consumption
             return
         
-        # Hydrolysis rate depends on activity
-        # Rangaraju et al. 2014: 100 μM/s active, 1 μM/s basal
-        hydrolysis_rate = np.where(
-            active_sites,
-            self.params.hydrolysis_rate_active,
-            self.params.hydrolysis_rate_basal
-        )
+        # === STOCHASTIC HYDROLYSIS BURSTS ===
         
-        # Amount hydrolyzed this timestep
-        delta_atp = hydrolysis_rate * dt
+        # 1. Baseline continuous hydrolysis (low rate, always present)
+        basal_rate = self.params.hydrolysis_rate_basal
+        basal_delta = basal_rate * dt
+        basal_delta = np.minimum(basal_delta, self.atp)
         
-        # Can't hydrolyze more than available
-        delta_atp = np.minimum(delta_atp, self.atp)
+        # 2. Stochastic burst events at active sites
+        # Probability of burst increases with calcium
+        burst_probability = self.burst_probability * dt * active_sites.astype(float)
+        
+        # Roll for burst events
+        burst_events = np.random.rand(*self.grid_shape) < burst_probability
+        
+        # Variable burst sizes (gamma distribution for realistic variability)
+        # Shape parameter controls variability
+        shape = (self.burst_size_mean / self.burst_size_std) ** 2
+        scale = self.burst_size_std ** 2 / self.burst_size_mean
+        
+        burst_sizes = np.random.gamma(shape, scale, self.grid_shape)
+        burst_delta = np.where(burst_events, burst_sizes, 0)
+        
+        # Can't consume more ATP than available
+        burst_delta = np.minimum(burst_delta, self.atp - basal_delta)
+        
+        # Total ATP consumed
+        delta_atp = basal_delta + burst_delta
         
         # Update ATP
         self.atp -= delta_atp
