@@ -1,22 +1,15 @@
 """
 Posner Molecule System for Model 6
 ===================================
-Formation of Posner molecules (Ca9(PO4)6) and their quantum states
+Formation of calcium phosphate clusters and quantum states
 
-CRITICAL: Dimer vs Trimer selection is EMERGENT!
-Based on local conditions (Ca, dopamine, J-coupling)
+CORRECTED NOMENCLATURE:
+- "Dimer" = Ca6(PO4)4 (4 ³¹P nuclei) → T2 ~ 100s
+- "Trimer" = Ca9(PO4)6 (6 ³¹P nuclei) → T2 ~ 1s
+- NOT aggregates of Posner molecules, but individual cluster sizes!
 
 Key Citations:
-- Yin et al. 2013 PNAS 110:21173-21178 (Posner structure)
-- Agarwal et al. 2023 "The Biological Qubit" (dimer vs trimer)
-- Fisher 2015 Ann Phys 362:593-599 (quantum coherence)
-- Model 5 findings (dopamine modulation)
-
-Key Insight:
-- Dimers (2 Posners, 4 ³¹P): Long coherence (~100s)
-- Trimers (3 Posners, 6 ³¹P): Short coherence (~1s)
-- Dopamine favors dimers via D2 receptor activation
-- This is the quantum switch for learning!
+- Agarwal et al. 2023 "The Biological Qubit" (cluster simulations)
 """
 
 import numpy as np
@@ -32,11 +25,11 @@ logger = logging.getLogger(__name__)
 
 class PosnerFormation:
     """
-    Posner molecule formation from PNCs
+    Calcium phosphate cluster formation
     
-    Based on:
-    - Yin et al. 2013 PNAS: Ca9(PO4)6 structure
-    - Aggregation kinetics
+    Forms two structures:
+    - Ca6(PO4)4 "dimers" (6 CaHPO4 aggregation, 4 P atoms)
+    - Ca9(PO4)6 "trimers" (9 CaHPO4 aggregation, 6 P atoms)
     """
     
     def __init__(self, grid_shape: Tuple[int, int], params: PosnerParameters):

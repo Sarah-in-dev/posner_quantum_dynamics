@@ -10,6 +10,13 @@ At pH 6-10, the dominant species is CaHPO₄⁰ (1:1 ion pair)
 
 Ca²⁺ + HPO₄²⁻ ⇌ [CaHPO₄]⁰
 
+Step 1: Ca²⁺ + HPO₄²⁻ ⇌ CaHPO₄⁰ (K=588 M⁻¹, instant)
+Step 2: 6 × CaHPO₄ → Ca₆(PO₄)₄ (k=1e6 M⁻¹s⁻¹, slow)
+         ↑ This is the "dimer" - 4 ³¹P nuclei!
+         
+Alternative: 9 × CaHPO₄ → Ca₉(PO₄)₆ ("trimer", 6 ³¹P nuclei)
+             ↑ Classical Posner, forms under different conditions
+
 Then these aggregate to form the clusters Habraken described:
 n × [CaHPO₄]⁰ → [Ca_n(HPO₄)_n] → Ca₆(PO₄)₄ (Agarwal's dimer)
 

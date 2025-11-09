@@ -6,11 +6,6 @@ All parameters are either:
 2. Derived from other parameters  
 3. Experimental control variables (clearly marked)
 
-NO FITTING. NO ARBITRARY FACTORS. ONLY PHYSICS.
-
-This parameter set supports the experimental design outlined in:
-"Phosphorus Nuclear Spin Effects on Neural Adaptation: Testing Quantum 
-Mechanisms in Rapid BCI Learning" (Davidson 2025)
 """
 
 import numpy as np
@@ -40,7 +35,7 @@ class SpatialParameters:
     cleft_width: float = 20e-9  # m (synaptic cleft)
     
     # Matsuzaki et al. 2004 Nature 429:761-766
-    spine_height: float = 1e-6  # m (1 μm typical)
+    spine_height: float = 1e-6  # m (1 μm typical) not currently used in model - needed for future extensions
     
     # Spatial resolution for numerical methods
     dx_min: float = 1e-9  # 1 nm minimum (near channels)
@@ -201,39 +196,47 @@ class PNCParameters:
 @dataclass
 class PosnerParameters:
     """
-    Posner molecule (Ca9(PO4)6) properties
-    Critical for quantum coherence!
+    Calcium phosphate cluster stoichiometry
+    
+    IMPORTANT: Agarwal et al. 2023 studied calcium phosphate CLUSTERS,
+    not aggregates of classical Posner molecules!
+    
+    "Dimer" and "trimer" refer to total P count, not number of Ca9(PO4)6 units.
     """
     
-    # === STOICHIOMETRY ===
-    # Yin et al. 2013 PNAS 110:21173-21178
-    # Definitive: Ca9(PO4)6
-    ca_per_posner: int = 9
-    po4_per_posner: int = 6
+    # === CLASSICAL POSNER (Yin et al. 2013) ===
+    # This is ONE structure, Ca9(PO4)6
+    classical_posner_ca: int = 9
+    classical_posner_po4: int = 6
+    classical_posner_P: int = 6  # Total phosphorus atoms
     
-    # === DIMER VS TRIMER ===
-    # Agarwal et al. 2023 "The Biological Qubit"
-    # Dimers have 4 ³¹P nuclei → long coherence
-    # Trimers have 6 ³¹P nuclei → short coherence
-    dimer_ca: int = 18  # 2 Posner molecules
-    trimer_ca: int = 27  # 3 Posner molecules
+    # === QUANTUM-RELEVANT STRUCTURES (Agarwal et al. 2023) ===
+    # These form in Model 6 from CaHPO4 aggregation
+    
+    # DIMER (long coherence)
+    dimer_formula: str = "Ca6(PO4)4"
+    dimer_ca: int = 6
+    dimer_po4: int = 4
+    dimer_P: int = 4  # ← THE KEY NUMBER for coherence!
+    dimer_from_ion_pairs: int = 6  # 6 × CaHPO4 → Ca6(PO4)4
+    
+    # TRIMER (short coherence) - same as classical Posner
+    trimer_formula: str = "Ca9(PO4)6"
+    trimer_ca: int = 9
+    trimer_po4: int = 6
+    trimer_P: int = 6
+    trimer_from_ion_pairs: int = 9  # 9 × CaHPO4 → Ca9(PO4)6
     
     # === FORMATION KINETICS ===
-    # Estimated from PNC aggregation
     pnc_to_posner_barrier: float = 5.0  # kBT
     formation_rate_constant: float = 1e6  # 1/s
     
     # === STRUCTURAL PROPERTIES ===
-    # Yin et al. 2013 PNAS (X-ray diffraction)
-    posner_radius: float = 0.65e-9  # m (6.5 Å)
-    
-    # CRITICAL: Lattice constant matches dopamine catechol!
-    # This may explain dopamine's quantum modulatory role
-    lattice_constant: float = 2.8e-9  # m
+    dimer_radius: float = 0.5e-9  # m (estimated)
+    trimer_radius: float = 0.65e-9  # m (classical Posner)
     
     # === DISSOLUTION ===
-    # Very stable once formed
-    dissolution_rate: float = 1e-7  # M/s
+    dissolution_rate: float = 1e-7  # M/s (slow under physiological conditions)
 
 
 @dataclass
@@ -436,8 +439,6 @@ class Model6Parameters:
     def get_effective_coherence_time(self, structure: str = 'dimer') -> float:
         """
         Calculate effective coherence time based on isotope composition
-        
-        This is a KEY EXPERIMENTAL PREDICTION!
         
         Args:
             structure: 'dimer' or 'trimer'

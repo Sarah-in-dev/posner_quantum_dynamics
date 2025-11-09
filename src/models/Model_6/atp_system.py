@@ -4,7 +4,7 @@ ATP System Module for Model 6
 Handles:
 - ATP hydrolysis (activity-dependent)
 - Phosphate release and speciation  
-- J-coupling field calculation (CRITICAL for quantum coherence!)
+- J-coupling field calculation (CRITICAL for quantum coherence)
 - Recovery of ATP pools
 
 Key insight: ATP provides the J-coupling that protects quantum states

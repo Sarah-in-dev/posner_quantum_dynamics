@@ -11,10 +11,6 @@ All components from literature-validated modules:
 - pH dynamics (activity-dependent acidification)
 - Dopamine system (reward signaling and quantum modulation)
 
-NOTHING IS PRESCRIBED - ALL EMERGENT!
-
-Author: Sarah Davidson
-Date: October 2025
 """
 
 import numpy as np
@@ -46,17 +42,7 @@ logger = logging.getLogger(__name__)
 
 class Model6QuantumSynapse:
     """
-    Complete emergent quantum synapse model
-    
-    Integrates all physics from first principles:
-    - No prescribed rates
-    - No arbitrary enhancement factors
-    - All behaviors emerge from interactions
-    
-    Key experimental controls:
-    - Temperature (for Q10 tests)
-    - Dopamine levels (reward signal)
-    - Isotope composition (via params, not tested here)
+    Complete quantum synapse model integrating all subsystems
     """
     
     def __init__(self, params: Optional[Model6Parameters] = None,
@@ -254,7 +240,6 @@ class Model6QuantumSynapse:
         """
         Return all experimental metrics for validation
         
-        This is what gets compared to experimental data!
         """
         # Get metrics from each subsystem
         ca_metrics = self.calcium.get_experimental_metrics()
