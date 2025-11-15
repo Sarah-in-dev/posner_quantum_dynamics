@@ -256,6 +256,9 @@ class QuantumParameters:
     T2_single_P31: float = 2.0  # s (intrinsic single nuclear spin)
     T2_single_P32: float = 0.2  # s (weaker nuclear moment, 10x worse)
 
+    
+
+
     # Intra-structure coupling factors
     # Within a dimer (4 ³¹P) or trimer (6 ³¹P), spins couple
     n_spins_dimer: int = 4  # Phosphorus atoms per dimer
@@ -283,6 +286,15 @@ class QuantumParameters:
     coherence_factor_P31: float = 1.0  # Reference
     coherence_factor_P32: float = 0.1  # 10-fold reduction (no nuclear spin)
     coherence_factor_P33: float = 0.5  # Intermediate (different gyromagnetic ratio)
+
+    # === PHYSICS-BASED DECOHERENCE PARAMETERS ===
+    # Dipolar relaxation (affects all isotopes, J-protected)
+    R_dipolar_baseline: float = 1.0 / 100.0  # s^-1 (from Agarwal 2023)
+
+    # Quadrupolar relaxation (only I>1/2, NOT J-protected)
+    EFG_phosphate: float = 1e21  # V/m^2 (electric field gradient in PO4)
+    tau_correlation: float = 1e-9  # s (correlation time for fluctuations)
+    Q_P32: float = 0.068e-28  # m^2 (quadrupole moment of P-32, in barn→m^2)
     
     # === TEMPERATURE DEPENDENCE ===
     # KEY PREDICTION: Quantum processes are temperature-independent!

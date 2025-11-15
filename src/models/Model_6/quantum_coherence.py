@@ -96,12 +96,45 @@ class QuantumCoherenceSystem:
         # Store dimer concentration for metrics
         self.dimer_concentration = dimer_conc.copy()
     
-        # === STEP 1: Single-spin baseline ===
-        # Start from intrinsic nuclear spin properties
-        if self.P31_fraction > 0.5:  # Mostly ³¹P
-            T2_base = self.T2_single_P31  # 2s
-        else:  # Mostly ³²P
-            T2_base = self.T2_single_P32  # 0.2s
+        # === STEP 1: Dipolar baseline (same for all isotopes) ===
+        # All phosphorus isotopes have dipolar relaxation
+        # This is the baseline WITHOUT quadrupolar effects
+        T2_dipolar = self.params.T2_single_P31  # 2s baseline
+
+        # === STEP 1b: Add quadrupolar relaxation for P-32 ===
+        # P-32 has I=1, so it has quadrupolar coupling to EFG
+        # This is an ADDITIONAL decoherence channel not present in P-31
+        P32_fraction = 1.0 - self.P31_fraction
+
+        if P32_fraction > 0:
+            # Quadrupolar relaxation rate
+            # From NMR: R_Q ~ (χ² τ_c) where χ ~ 5 MHz for phosphates
+            chi_MHz = 0.067  # Quadrupole coupling constant (from NMR literature)
+            tau_c_ns = 1.0  # Correlation time
+            R_quadrupolar = (chi_MHz * 1e6)**2 * (tau_c_ns * 1e-9)  # s^-1
+
+            # DEBUG - print once
+            if not hasattr(self, '_debug_printed'):
+                print(f"\n=== QUADRUPOLAR DEBUG ===")
+                print(f"P32_fraction: {P32_fraction}")
+                print(f"chi_MHz: {chi_MHz}")
+                print(f"R_quadrupolar: {R_quadrupolar:.2e} s^-1")
+                print(f"T2_dipolar: {T2_dipolar:.2f} s")
+                print(f"1/T2_dipolar: {1.0/T2_dipolar:.2e} s^-1")
+    
+            
+            # Total relaxation: 1/T2_total = 1/T2_dipolar + R_Q
+            R_total = (1.0 / T2_dipolar) + R_quadrupolar * P32_fraction
+            T2_base = 1.0 / R_total
+
+            if not hasattr(self, '_debug_printed'):
+                print(f"R_total: {R_total:.2e} s^-1")
+                print(f"T2_base: {T2_base:.2e} s")
+                print(f"=========================\n")
+                self._debug_printed = True
+
+        else:
+            T2_base = T2_dipolar
     
         # === STEP 2: Intra-dimer coupling ===
         # 4 ³¹P spins in a dimer couple, providing enhancement
