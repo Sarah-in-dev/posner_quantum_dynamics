@@ -196,6 +196,14 @@ class Model6QuantumSynapse:
         j_coupling = self.atp.get_j_coupling()
         atp_conc = self.atp.get_atp_concentration()
         phosphate = self.atp.get_phosphate_for_posner()
+
+        # EXPERIMENTAL OVERRIDE: Use fixed phosphate if set
+        if hasattr(self, '_override_phosphate'):
+            phosphate = self._override_phosphate
+
+        # DIAGNOSTIC: Check phosphate values
+        if np.random.rand() < 0.0001:
+            print(f"model6_core.step: phosphate = {np.mean(phosphate)*1e3:.2f} mM (mean), {np.max(phosphate)*1e3:.2f} mM (max)")
         
         # === STEP 3: pH DYNAMICS ===
         # Activity acidifies the synapse
@@ -262,6 +270,18 @@ class Model6QuantumSynapse:
             'ion_pair_mean_nM': ca_phosphate_metrics['ion_pair_mean_nM'],
             'dimer_peak_nM_ct': ca_phosphate_metrics['dimer_peak_nM'],
             'dimer_mean_nM_ct': ca_phosphate_metrics['dimer_mean_nM'],
+
+            'trimer_peak_nM_ct': ca_phosphate_metrics.get('trimer_peak_nM', 0),  
+            'trimer_mean_nM_ct': ca_phosphate_metrics.get('trimer_mean_nM', 0), 
+
+            'dimer_trimer_ratio': ca_phosphate_metrics.get('dimer_trimer_ratio', 0),  # ADD THIS LINE
+
+            # PNC metrics (NEW - from Turhan et al. 2024)
+            'pnc_peak_nM': ca_phosphate_metrics.get('pnc_peak_nM', 0),
+            'pnc_mean_nM': ca_phosphate_metrics.get('pnc_mean_nM', 0),
+            'pnc_binding_fraction': ca_phosphate_metrics.get('pnc_binding_fraction', 0),
+            'pnc_lifetime_mean_s': ca_phosphate_metrics.get('pnc_lifetime_mean_s', 0),
+            'pnc_lifetime_max_s': ca_phosphate_metrics.get('pnc_lifetime_max_s', 0),
             
             # Quantum Coherence (CHANGED - simpler metrics)
             'coherence_mean': quantum_metrics['coherence_mean'],

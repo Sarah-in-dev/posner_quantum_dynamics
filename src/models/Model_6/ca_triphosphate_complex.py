@@ -114,6 +114,20 @@ class CalciumPhosphateDimerization:
         
         # Dimer concentration field
         self.dimer_concentration = np.zeros(grid_shape)
+
+        # NEW: Trimer concentration field (for Ca/P selectivity testing)
+        self.trimer_concentration = np.zeros(grid_shape)
+        
+        # NEW: PNC concentration field (Turhan et al. 2024)
+        self.pnc_concentration = np.zeros(grid_shape)
+    
+        # NEW: PNC formation parameters
+        self.pnc_binding_fraction = 0.5  # 50% from Turhan 2024
+        self.n_ion_pairs_per_pnc = 3  # Ca(HPO₄)₃⁴⁻ structure
+    
+        # NEW: PNC lifetime tracking (optional, for diagnostics)
+        self.pnc_lifetime = np.zeros(grid_shape)
+        
         
         # Aggregation is diffusion-limited
         # BUT: 6 units must come together (higher order than 2)
@@ -133,9 +147,11 @@ class CalciumPhosphateDimerization:
         # where C₀ is a reference concentration (1 mM)
         # This gives concentration-dependent rate
         
-        # Use 2nd order rate with tuning factor for biological timescale
-        # Tuned to give ~1-10 nM in 100-200ms with μM ion pairs
-        self.k_base = 1e6  # M⁻¹s⁻¹ (tuned for biological timescale)
+        # Recalibrated for PNC aggregation (from spec doc)
+        # Target: 741 nM dimers in 100-200 ms with template enhancement
+        # [PNC] ~ few μM (from 50% binding)
+        # k_agg ≈ 8×10⁵ M⁻¹s⁻¹ for bulk aggregation
+        self.k_base = 8e5  # M⁻¹s⁻¹ (recalibrated for PNC aggregation)
         
         
         # Dissociation (very slow - dimers are stable)
@@ -147,42 +163,195 @@ class CalciumPhosphateDimerization:
         
         logger.info(f"Initialized Ca₆(PO₄)₄ dimer aggregation (k_agg={self.k_base:.2e} M⁻¹s⁻¹)")
         
-    def update_dimerization(self, dt: float, ion_pair_conc: np.ndarray,
-                    template_enhancement: np.ndarray,
-                    ca_conc: np.ndarray) -> None:
+    def calculate_pnc_equilibrium(self, 
+                                ion_pair_conc: np.ndarray,
+                                ca_conc: np.ndarray) -> np.ndarray:
         """
-        Update dimer concentration via STOCHASTIC aggregation
+        Calculate PNC concentration from fast equilibrium with ion pairs
     
-        CHANGES (Nov 2025):
-        - Added probabilistic nucleation at templates
-        - Added stochastic aggregation events
-        - Added dissolution noise
+        Based on Turhan et al. 2024:
+        - 50-57% of Ca binds into PNCs immediately
+        - Forms within milliseconds (treat as equilibrium)
+    
+        Reaction: n × CaHPO₄ ⇌ [Ca(HPO₄)₃]⁴⁻
+    
+        Args:
+            ion_pair_conc: CaHPO₄ concentration (M)
+            ca_conc: Total calcium concentration (M)
+    
+        Returns:
+            PNC concentration (M)
         """
-        # Effective rate with template enhancement
-        k_eff = self.k_base * template_enhancement
+        # Strategy: Use binding fraction to determine PNC concentration
+        # If 50% of Ca is in PNCs, then [Ca_PNC] = 0.5 × [Ca_total]
+    
+        # Each PNC contains 3 Ca atoms (from Ca(HPO₄)₃ structure)
+        # So [PNC] = [Ca_PNC] / 3 = 0.5 × [Ca_total] / 3
+    
+        ca_in_pncs = self.pnc_binding_fraction * ca_conc
+        pnc_conc = ca_in_pncs / 3.0  # 3 Ca per PNC
+    
+        # Physical limits
+        # Can't exceed ion pair concentration (stoichiometry)
+        max_pnc_from_ion_pairs = ion_pair_conc / self.n_ion_pairs_per_pnc
+        pnc_conc = np.minimum(pnc_conc, max_pnc_from_ion_pairs)
+    
+        # Can't exceed calcium availability
+        max_pnc_from_ca = ca_conc / 3.0
+        pnc_conc = np.minimum(pnc_conc, max_pnc_from_ca)
+    
+        return pnc_conc
+    
+    
+    def calculate_pnc_lifetime(self, ca_conc: np.ndarray, 
+                            po4_conc: np.ndarray) -> np.ndarray:
+        """
+        Calculate PNC lifetime as function of Ca/P ratio
+    
+        From Turhan et al. 2024:
+        χ = 0.50: τ = minutes
+        χ = 0.375: τ = tens of minutes    
+        χ = 0.25: τ = hours
+    
+        Also includes 17 kJ/mol dissociation barrier (Garcia 2019)
+    
+        Args:
+            ca_conc: Calcium concentration (M)
+            po4_conc: Phosphate concentration (M)
+    
+        Returns:
+            PNC lifetime (s)
+        """
+        # Calculate Ca/P ratio
+        ca_p_ratio = ca_conc / (po4_conc + 1e-10)  # Avoid division by zero
+    
+        # Empirical relationship from Turhan et al. 2024
+        # Lower Ca/P → longer lifetime
+        # τ ∝ 1 / χ^α (power law)
+    
+        # Fit to Turhan data:
+        # χ = 0.50 → τ = 60 s (minutes)
+        # χ = 0.25 → τ = 3600 s (hours)
+        # log(3600/60) = log(60) = 4.09
+        # log(0.5/0.25) = log(2) = 0.69
+        # α = 4.09 / 0.69 ≈ 6
+    
+        tau_reference = 60.0  # seconds at χ = 0.5
+        chi_reference = 0.5
+        alpha = 6.0
+    
+        tau = tau_reference * (chi_reference / ca_p_ratio)**alpha
+    
+        # Physical limits
+        tau = np.clip(tau, 60, 7200)  # 1 min to 2 hours
+    
+        return tau
+    
+    def calculate_dimer_fraction(self, ca_conc: np.ndarray,
+                                po4_conc: np.ndarray) -> np.ndarray:
+        """
+        Calculate fraction of aggregates that form dimers vs trimers
+    
+        From Garcia et al. 2019:
+        "Dimerization is favorable up to a Ca/HPO₄ ratio of 1:2"
+    
+        Interpretation:
+        - Ca/P < 0.5: Strongly favors dimers
+        - Ca/P ≈ 0.5: Transition region
+        - Ca/P > 0.5: Favors trimers (and larger)
+    
+        Args:
+            ca_conc: Calcium concentration (M)
+            po4_conc: Phosphate concentration (M)
+    
+        Returns:
+            Fraction forming dimers (0-1)
+        """
+        ca_p_ratio = ca_conc / (po4_conc + 1e-10)
+    
+        # Sigmoid centered at 0.5
+        # Steep transition (factor of 10 controls steepness)
+        dimer_fraction = 1.0 / (1.0 + np.exp(10 * (ca_p_ratio - 0.5)))
+    
+        return dimer_fraction
 
+
+    
+    def update_dimerization(self, 
+                        dt: float,
+                        ion_pair_conc: np.ndarray,
+                        template_enhancement: np.ndarray,
+                        ca_conc: np.ndarray,
+                        po4_conc: np.ndarray = None) -> None:
+        """
+        Update dimer concentration via TWO-STEP STOCHASTIC kinetics
+    
+        STEP 1: Fast PNC equilibrium (milliseconds)
+        CaHPO₄ ⇌ PNCs (treated as instantaneous)
+    
+        STEP 2: Slow aggregation (seconds, rate-limiting)
+        PNCs → Ca₆(PO₄)₄ dimers (template-enhanced, STOCHASTIC)
+    
+        Changes from old version:
+        - PNC concentration calculated from equilibrium (NEW)
+        - Aggregation uses PNC concentration, not ion pairs (NEW)
+        - Ca/P ratio controls dimer vs trimer formation (NEW)
+        - Template enhancement ONLY affects aggregation step
+        - Keeps stochastic nucleation and formation events (PRESERVED)
+        """
+    
+        # =====================================================================
+        # STEP 1: CALCULATE PNC CONCENTRATION (FAST EQUILIBRIUM)
+        # =====================================================================
+    
+        # PNCs form from ion pairs in milliseconds
+        # Treat as instantaneous equilibrium
+        self.pnc_concentration = self.calculate_pnc_equilibrium(
+            ion_pair_conc,
+            ca_conc
+        )
+    
+        # Validation: Check 50% binding (for diagnostics)
+        # ca_in_pncs = self.pnc_concentration * 3.0  # 3 Ca per PNC
+        # binding_fraction = ca_in_pncs / (ca_conc + 1e-12)
+        # This should be ~0.5 everywhere
+    
+        # =====================================================================
+        # STEP 2: SLOW PNC AGGREGATION (RATE-LIMITING, STOCHASTIC)
+        # =====================================================================
+    
+        # Template enhancement applies ONLY to aggregation
+        k_eff = self.k_base * template_enhancement
+    
         # === STOCHASTIC FORMATION ===
         # Instead of deterministic rate, use probabilistic events
     
         # 1. Calculate formation probability per voxel
-        # P = k_eff × [CaHPO₄]² × dt
-        formation_probability = k_eff * (ion_pair_conc ** 2) * dt
+        # NOW USES PNC CONCENTRATION (not ion pairs!)
+        formation_probability = k_eff * (self.pnc_concentration ** 2) * dt
         formation_probability = np.clip(formation_probability, 0, 1)  # Keep as probability
     
         # 2. Stochastic nucleation at high-enhancement sites (templates)
         template_sites = template_enhancement > 100  # Strong template regions
         nucleation_events = np.random.rand(*self.grid_shape) < (self.nucleation_probability * dt)
-        nucleation_events = nucleation_events & template_sites & (ion_pair_conc > 1e-6)  # Need substrate
+        nucleation_events = nucleation_events & template_sites & (self.pnc_concentration > 1e-7)  # Need PNC substrate
     
-        # 3. Combine deterministic growth + stochastic nucleation
-        # Deterministic component (averaged behavior)
-        deterministic_formation = k_eff * (ion_pair_conc ** 2) * dt * 0.5  # Reduced weight
+        # 3. Ca/P ratio determines dimer vs trimer formation
+        # If po4_conc not provided, assume all form dimers (backward compatibility)
+        if po4_conc is not None:
+            dimer_fraction = self.calculate_dimer_fraction(ca_conc, po4_conc)
+        else:
+            dimer_fraction = np.ones_like(ca_conc)
+    
+        # 4. Combine deterministic growth + stochastic nucleation
+        # Deterministic component (averaged behavior) - NOW USES PNCs
+        deterministic_formation = k_eff * (self.pnc_concentration ** 2) * dt * 0.5  # Reduced weight
     
         # Stochastic component (random events)
         random_roll = np.random.rand(*self.grid_shape)
         stochastic_formation = np.where(
             random_roll < formation_probability,
-            ion_pair_conc * 0.1,  # Each event forms ~10% of available substrate
+            self.pnc_concentration * 0.1,  # Each event forms ~10% of available PNC substrate
             0
         )
     
@@ -193,25 +362,92 @@ class CalciumPhosphateDimerization:
             0
         )
     
-        total_formation = deterministic_formation + stochastic_formation + nucleation_contribution
+        # Apply dimer fraction to split formation between dimers and trimers
+        dimer_formation = (deterministic_formation + stochastic_formation + nucleation_contribution) * dimer_fraction
+        trimer_formation = (deterministic_formation + stochastic_formation + nucleation_contribution) * (1 - dimer_fraction)
 
         # === STOCHASTIC DISSOCIATION ===
         # Add noise to dissolution rate
         dissolution_noise = 1.0 + np.random.normal(0, self.dissolution_noise_sigma, self.grid_shape)
         dissolution_noise = np.maximum(dissolution_noise, 0.1)  # Keep positive
-    
-        dissociation_rate = self.k_dissociation * self.dimer_concentration * dissolution_noise
 
-        # Update
-        d_dimer_dt = total_formation - dissociation_rate
+        dimer_dissociation = self.k_dissociation * self.dimer_concentration * dissolution_noise
+        trimer_dissociation = self.k_dissociation * 0.1 * self.trimer_concentration * dissolution_noise  # Trimers less stable
+
+        # Update both species
+        d_dimer_dt = dimer_formation - dimer_dissociation  # (you modified this earlier)
+        d_trimer_dt = trimer_formation - trimer_dissociation  # (you added this earlier)
+
         self.dimer_concentration += d_dimer_dt
+        self.trimer_concentration += d_trimer_dt
 
-        # Physical limits
+        # Physical limits  ← YOUR NEW CODE STARTS HERE
         self.dimer_concentration = np.maximum(self.dimer_concentration, 0)
+        self.trimer_concentration = np.maximum(self.trimer_concentration, 0)
 
-        # Stoichiometry: need 6 Ca per dimer
+        # Stoichiometry: need 6 Ca per dimer, 9 Ca per trimer
         max_dimer_from_ca = ca_conc / 6.0
+        max_trimer_from_ca = ca_conc / 9.0
         self.dimer_concentration = np.minimum(self.dimer_concentration, max_dimer_from_ca)
+        self.trimer_concentration = np.minimum(self.trimer_concentration, max_trimer_from_ca)
+
+    
+        # =====================================================================
+        # STEP 3: PNC LIFETIME TRACKING (OPTIONAL, FOR VALIDATION)
+        # =====================================================================
+    
+        if po4_conc is not None:
+            dimer_fraction = self.calculate_dimer_fraction(ca_conc, po4_conc)
+    
+            # DIAGNOSTIC: Print occasionally to see what's happening
+            if np.random.rand() < 0.0001:  # Print very rarely
+                mean_ca_p = np.mean(ca_conc / (po4_conc + 1e-10))
+                mean_df = np.mean(dimer_fraction)
+                min_df = np.min(dimer_fraction)
+                max_df = np.max(dimer_fraction)
+                print(f"DEBUG: Ca/P={mean_ca_p:.4f}, dimer_frac: mean={mean_df:.4f}, min={min_df:.4f}, max={max_df:.4f}")
+        else:
+            dimer_fraction = np.ones_like(ca_conc)
+
+
+    def get_pnc_metrics(self) -> Dict[str, float]:
+        """
+        Get PNC-specific metrics for validation
+    
+        Returns:
+            Dictionary with PNC statistics
+        """
+        ca_in_pncs = self.pnc_concentration * 3.0  # 3 Ca per PNC
+    
+        # Need to handle case where we don't have ca_total stored
+        # Use mean PNC concentration as proxy
+        total_ca_estimated = np.mean(ca_in_pncs) / 0.5  # Assume 50% binding
+    
+        return {
+            'pnc_peak_nM': float(np.max(self.pnc_concentration) * 1e9),
+            'pnc_mean_nM': float(np.mean(self.pnc_concentration) * 1e9),
+            'pnc_binding_fraction': 0.5,  # By design from Turhan 2024
+            'pnc_lifetime_mean_s': float(np.mean(self.pnc_lifetime)) if np.any(self.pnc_lifetime > 0) else 0,
+            'pnc_lifetime_max_s': float(np.max(self.pnc_lifetime)) if np.any(self.pnc_lifetime > 0) else 0,
+        }
+
+    def get_dimer_trimer_ratio(self) -> float:
+        """
+        Get ratio of dimers to trimers
+    
+        Returns:
+            Dimer/trimer ratio (currently only tracks dimers, so returns inf)
+        """
+        dimer_total = np.sum(self.dimer_concentration)
+        trimer_total = np.sum(self.trimer_concentration)
+    
+        if trimer_total > 0:
+            return dimer_total / trimer_total
+        elif dimer_total > 0:
+            return np.inf  # All dimers
+        else:
+            return 0.0
+
 
 
 class TemplateEffects:
@@ -296,17 +532,23 @@ class CaHPO4DimerSystem:
             ca_conc: Free calcium concentration (M)
             po4_conc: HPO₄²⁻ concentration (M) at pH 7.3
         """
+        # DIAGNOSTIC: Check what phosphate we're actually getting
+        if np.random.rand() < 0.0001:
+            print(f"CaHPO4DimerSystem.step: po4_conc = {np.mean(po4_conc)*1e3:.2f} mM (mean), {np.max(po4_conc)*1e3:.2f} mM (max)")
+        
+        
         # Step 1: CaHPO₄ ion pairs form instantly (equilibrium)
         self.ion_pair_concentration = self.ion_pair_formation.calculate_ion_pair_concentration(
             ca_conc, po4_conc
         )
         
-        # Step 2: Dimers form via 6-body aggregation (slow)
+        # Step 2: PNCs form (fast equilibrium), then aggregate to dimers (slow)
         self.dimerization.update_dimerization(
             dt,
             self.ion_pair_concentration,
             self.template_enhancement,
-            ca_conc
+            ca_conc,
+            po4_conc  # NEW: Pass phosphate for Ca/P ratio calculations
         )
         
         # Update reference
@@ -321,14 +563,22 @@ class CaHPO4DimerSystem:
         return self.dimer_concentration
     
     def get_experimental_metrics(self) -> Dict[str, float]:
-        """Return metrics in nM for validation"""
-        return {
+        """Return metrics in nM for validation (includes PNC data)"""
+        metrics = {
             'ion_pair_mean_nM': float(np.mean(self.ion_pair_concentration) * 1e9),
             'ion_pair_peak_nM': float(np.max(self.ion_pair_concentration) * 1e9),
             'dimer_mean_nM': float(np.mean(self.dimer_concentration) * 1e9),
             'dimer_peak_nM': float(np.max(self.dimer_concentration) * 1e9),
+            'trimer_mean_nM': float(np.mean(self.dimerization.trimer_concentration) * 1e9),  # NEW
+            'trimer_peak_nM': float(np.max(self.dimerization.trimer_concentration) * 1e9),  # NEW
+            'dimer_trimer_ratio': float(self.dimerization.get_dimer_trimer_ratio()),  # NEW
             'dimer_at_templates_nM': float(
                 np.max(self.dimer_concentration[self.templates.template_field > 0.5]) * 1e9
                 if np.sum(self.templates.template_field) > 0 else 0
             ),
         }
+    
+        # Add PNC metrics
+        metrics.update(self.dimerization.get_pnc_metrics())
+    
+        return metrics  # <-- Return AFTER adding PNC metrics
