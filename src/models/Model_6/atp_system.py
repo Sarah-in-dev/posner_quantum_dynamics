@@ -344,9 +344,15 @@ class PhosphateSpeciation:
     def __init__(self, grid_shape: Tuple[int, int], params: PhosphateParameters):
         self.grid_shape = grid_shape
         self.params = params
+
+        # POOL 1: Metabolic phosphate (from ATP, rapidly buffered)
+        self.phosphate_metabolic = np.zeros(grid_shape)
+    
+        # POOL 2: Structural phosphate (baseline, available for Posners)
+        self.phosphate_structural = np.ones(grid_shape) * params.phosphate_total
         
-        # Total phosphate (conserved)
-        self.phosphate_total = np.ones(grid_shape) * params.phosphate_total
+        # Total for pH buffering calculations
+        self.phosphate_total = self.phosphate_structural.copy()
         
         # Speciated forms
         self.H2PO4 = np.zeros(grid_shape)  # Monobasic
@@ -388,19 +394,38 @@ class PhosphateSpeciation:
         alpha2 = (H_conc * Ka1 * Ka2) / denom  # HPO4²⁻
         alpha3 = (Ka1 * Ka2 * Ka3) / denom  # PO4³⁻
         
-        # Calculate concentrations
-        self.H2PO4 = alpha1 * self.phosphate_total
-        self.HPO4 = alpha2 * self.phosphate_total
-        self.PO4 = alpha3 * self.phosphate_total
+        # Calculate concentrations FROM STRUCTURAL POOL ONLY
+        # Metabolic pool doesn't participate in Posner chemistry
+        self.H2PO4 = alpha1 * self.phosphate_structural
+        self.HPO4 = alpha2 * self.phosphate_structural
+        self.PO4 = alpha3 * self.phosphate_structural
         
-    def add_phosphate(self, source: np.ndarray):
+    def add_phosphate_from_atp(self, source: np.ndarray):
         """
-        Add released phosphate from ATP hydrolysis
-        
+        Add phosphate released from ATP hydrolysis
+    
+        Most goes to metabolic pool (protein binding, rapid cycling).
+        Small fraction enters structural pool (available for Posners).
+    
+        Literature basis:
+        - Cells actively prevent Ca-PO4 precipitation (toxic to metabolism)
+        - Most ATP-Pi is protein-bound or rapidly cycled
+        - Only "free" inorganic pool forms Posners
+    
         Args:
-            source: Phosphate to add (M)
+            source: Phosphate released from ATP (M)
         """
-        self.phosphate_total += source
+        # Get fraction parameter (default 10% if not set)
+        fraction = getattr(self.params, 'metabolic_to_structural_fraction', 0.10)
+    
+        # MOST goes to metabolic pool (90%)
+        self.phosphate_metabolic += source * (1 - fraction)
+    
+        # SMALL FRACTION enters structural pool (10%)
+        self.phosphate_structural += source * fraction
+    
+        # Update total for pH buffering (both pools contribute)
+        self.phosphate_total = self.phosphate_structural + self.phosphate_metabolic
     
     def get_posner_forming_species(self) -> np.ndarray:
         """
@@ -446,9 +471,9 @@ class ATPSystem:
         # 1. ATP hydrolysis (activity-dependent)
         self.hydrolysis.update_hydrolysis(dt, calcium)
         
-        # 2. Add released phosphate to pool
+        # 2. Add released phosphate to pool (splits between metabolic & structural)
         if np.any(self.hydrolysis.phosphate_released > 0):
-            self.phosphate.add_phosphate(self.hydrolysis.phosphate_released)
+            self.phosphate.add_phosphate_from_atp(self.hydrolysis.phosphate_released)
             self.hydrolysis.phosphate_released[:] = 0  # Reset
         
         # 3. Update phosphate speciation based on pH

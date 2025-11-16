@@ -140,6 +140,12 @@ class PhosphateParameters:
     # === TOTAL PHOSPHATE ===
     # Physiological range in neurons
     phosphate_total: float = 1e-3  # M (1 mM typical)
+
+    # === PHOSPHATE POOL PARTITIONING ===
+    # Fraction of ATP-released phosphate entering structural pool
+    # Literature: Most ATP-Pi is protein-bound or metabolically consumed
+    # Only "free" inorganic pool forms Posners
+    metabolic_to_structural_fraction: float = 0.02  
     
     # === DIFFUSION COEFFICIENTS ===
     # Li & Gregory 1974 Geochim Cosmochim Acta 38:703-714
