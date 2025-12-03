@@ -37,6 +37,15 @@ except ImportError:
     HAS_DOPAMINE = False
     logging.warning("dopamine_system not found - dopamine effects disabled")
 
+# EM coupling modules (optional)
+try:
+    from em_tryptophan_module import TryptophanSuperradianceModule
+    from em_coupling_module import EMCouplingModule
+    HAS_EM_COUPLING = True
+except ImportError:
+    HAS_EM_COUPLING = False
+    logging.info("EM coupling modules not found - running Model 6 baseline")
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -84,6 +93,23 @@ class Model6QuantumSynapse:
         # Initialize subsystems
         self._initialize_subsystems()
         
+        
+        # Initialize EM coupling (optional)
+        self.em_enabled = (self.params.em_coupling_enabled and HAS_EM_COUPLING)
+        
+        if self.em_enabled:
+            self.tryptophan = TryptophanSuperradianceModule(self.params)
+            self.em_coupling = EMCouplingModule(self.params)
+            logger.info("EM coupling ENABLED")
+        else:
+            self.tryptophan = None
+            self.em_coupling = None
+            logger.info("EM coupling DISABLED (Model 6 baseline)")
+        
+        # Track tryptophan count (changes with MT invasion)
+        self.n_tryptophans = self.params.tryptophan.n_trp_baseline
+        
+        
         # History tracking
         self.history = {
             'time': [],
@@ -96,6 +122,12 @@ class Model6QuantumSynapse:
             'pH_min': [],
             'dopamine_max': [],
         }
+
+        # Add to self.history dict (around line ~95):
+        if self.em_enabled:
+            self.history['trp_em_field'] = []
+            self.history['k_enhancement'] = []
+            self.history['collective_field_kT'] = []
         
         logger.info("Model 6 initialized successfully")
         
@@ -220,11 +252,63 @@ class Model6QuantumSynapse:
         self.pH.step(dt, atp_hydrolysis_rate, ca_influx, activity_field)
         pH_field = self.pH.get_pH()
         
+        # === EM COUPLING: FORWARD PATH (Tryptophan → Dimers) ===
+        if self.em_enabled:
+            # Calculate tryptophan state
+            # UV flux from ATP metabolism (proportional to hydrolysis)
+            metabolic_uv_flux = self.params.metabolic_uv.photon_flux_baseline
+            if activity_level > 0.1:  # During activity
+                metabolic_uv_flux *= self.params.metabolic_uv.flux_enhancement_active
+            
+            # Ca spike detection (for correlated bursts)
+            ca_spike_active = (activity_level > 0.5)
+            
+            # Update tryptophan superradiance
+            trp_state = self.tryptophan.update(
+                dt=dt,
+                photon_flux=metabolic_uv_flux,
+                n_tryptophans=self.n_tryptophans,
+                ca_spike_active=ca_spike_active
+            )
+            
+            em_field_trp = trp_state['output']['em_field_time_averaged']
+            
+            # Get baseline aggregation rate from ca_phosphate system
+            k_agg_baseline = self.ca_phosphate.k_aggregation
+            
+            # Calculate enhanced rate from EM coupling
+            coupling_state = self.em_coupling.update(
+                em_field_trp=em_field_trp,
+                n_coherent_dimers=0,  # Don't know yet, update after
+                k_agg_baseline=k_agg_baseline,
+                phosphate_fraction=np.mean(phosphate) / 0.001  # Normalize to 1 mM
+            )
+            
+            k_agg_enhanced = coupling_state['output']['k_agg_enhanced']
+            
+            # Store for history
+            self._em_field_trp = em_field_trp
+            self._k_enhancement = coupling_state['forward']['enhancement']
+        else:
+            k_agg_enhanced = self.ca_phosphate.k_aggregation  # Use baseline
+            self._em_field_trp = 0.0
+            self._k_enhancement = 1.0
+        
+        
+        
         # === STEP 4: CALCIUM PHOSPHATE DIMER FORMATION ===
         # Ca²⁺ + HPO₄²⁻ → CaHPO₄ (instant equilibrium)
         # 6 × CaHPO₄ → Ca₆(PO₄)₄ dimer (slow aggregation)
         # These are the quantum qubits (4 ³¹P nuclei)
-        self.ca_phosphate.step(dt, ca_conc, phosphate)
+        # Pass enhanced k_agg if EM coupling enabled
+        if self.em_enabled:
+            # Temporarily override aggregation rate
+            k_agg_original = self.ca_phosphate.k_aggregation
+            self.ca_phosphate.k_aggregation = k_agg_enhanced
+            self.ca_phosphate.step(dt, ca_conc, phosphate)
+            self.ca_phosphate.k_aggregation = k_agg_original  # Restore
+        else:
+            self.ca_phosphate.step(dt, ca_conc, phosphate)
         dimer_conc = self.ca_phosphate.get_dimer_concentration()
         
         # === STEP 5: DOPAMINE (if available) ===
@@ -238,6 +322,26 @@ class Model6QuantumSynapse:
         temperature = stimulus.get('temperature', self.params.environment.T)
         
         self.quantum.step(dt, dimer_conc, j_coupling, temperature)
+        
+        # === EM COUPLING: REVERSE PATH (Dimers → Proteins) ===
+        if self.em_enabled:
+            # Get number of coherent dimers from quantum system
+            n_coherent = self.quantum.get_n_coherent_dimers()
+            
+            # Calculate collective quantum field
+            coupling_state_reverse = self.em_coupling.update(
+                em_field_trp=self._em_field_trp,
+                n_coherent_dimers=n_coherent,
+                k_agg_baseline=self.ca_phosphate.k_aggregation,
+                phosphate_fraction=np.mean(phosphate) / 0.001
+            )
+            
+            protein_modulation_kT = coupling_state_reverse['output']['protein_modulation_kT']
+            
+            # Store for history
+            self._collective_field_kT = protein_modulation_kT
+        else:
+            self._collective_field_kT = 0.0
         
         # Update time
         self.time += dt
@@ -323,6 +427,49 @@ class Model6QuantumSynapse:
         
         if self.dopamine is not None:
             self.history['dopamine_max'].append(metrics['dopamine_max_nM'])
+
+        if self.em_enabled:
+            self.history['trp_em_field'].append(self._em_field_trp)
+            self.history['k_enhancement'].append(self._k_enhancement)
+            self.history['collective_field_kT'].append(self._collective_field_kT)
+    
+    
+    def set_microtubule_invasion(self, invaded: bool):
+        """
+        Set microtubule invasion state
+        
+        Updates tryptophan count when MT invades spine during plasticity
+        
+        Args:
+            invaded: True if microtubules have invaded
+        """
+        if invaded:
+            # MT invasion brings additional tryptophans
+            self.n_tryptophans = self.params.get_total_tryptophans(mt_invaded=True)
+        else:
+            # Just baseline PSD lattice
+            self.n_tryptophans = self.params.get_total_tryptophans(mt_invaded=False)
+        
+        if self.em_enabled:
+            logger.info(f"MT invasion: {invaded}, n_trp: {self.n_tryptophans}")
+    
+    def get_em_coupling_state(self) -> Dict:
+        """
+        Get current EM coupling state (if enabled)
+        
+        Returns:
+            dict with EM coupling diagnostics or empty dict if disabled
+        """
+        if not self.em_enabled:
+            return {}
+        
+        return {
+            'em_field_trp': self._em_field_trp,
+            'k_enhancement': self._k_enhancement,
+            'collective_field_kT': self._collective_field_kT,
+            'n_tryptophans': self.n_tryptophans
+        }
+    
     
     def save_results(self, filepath: Optional[str] = None):
         """
@@ -348,6 +495,7 @@ class Model6QuantumSynapse:
             hist_group = f.create_group('history')
             for key, values in self.history.items():
                 hist_group.create_dataset(key, data=values)
+             
             
             # Final state
             state_group = f.create_group('final_state')
@@ -355,6 +503,18 @@ class Model6QuantumSynapse:
             state_group.create_dataset('ion_pairs', data=self.ca_phosphate.get_ion_pair_concentration())
             state_group.create_dataset('dimers', data=self.ca_phosphate.get_dimer_concentration())
             state_group.create_dataset('coherence', data=self.quantum.get_coherence_field())
+
+            # EM coupling state (if enabled)
+            if self.em_enabled:
+                em_group = f.create_group('em_coupling')
+                em_group.attrs['enabled'] = True
+                em_group.attrs['n_tryptophans'] = self.n_tryptophans
+                em_group.attrs['trp_em_field_final'] = self._em_field_trp
+                em_group.attrs['k_enhancement_final'] = self._k_enhancement
+                em_group.attrs['collective_field_kT_final'] = self._collective_field_kT
+            else:
+                em_group = f.create_group('em_coupling')
+                em_group.attrs['enabled'] = False
             
         logger.info(f"Results saved to {filepath}")
 
