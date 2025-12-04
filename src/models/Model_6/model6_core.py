@@ -342,10 +342,34 @@ class Model6QuantumSynapse:
         
         # === EM COUPLING: REVERSE PATH (Dimers → Proteins) ===
         if self.em_enabled:
-            # Get number of coherent dimers from quantum system
-            # Count dimers with coherence > 0.5 as "quantum coherent"
+            
+            # Count actual dimers, not grid points
             coherent_mask = (self.quantum.coherence > 0.5) & (self.quantum.dimer_concentration > 0)
-            n_coherent = int(np.sum(coherent_mask))
+            coherent_dimer_conc = np.sum(self.quantum.dimer_concentration[coherent_mask])  # Sum concentrations
+            volume_per_voxel = (self.dx)**3  # m³
+            n_coherent = int(coherent_dimer_conc * volume_per_voxel * 6.022e23)  # Convert M to number
+            
+            
+        # === EM COUPLING: REVERSE PATH (Dimers → Proteins) ===
+        if self.em_enabled:
+            
+            # Count actual dimers, not grid points
+            coherent_mask = (self.quantum.coherence > 0.5) & (self.quantum.dimer_concentration > 0)
+            coherent_dimer_conc = np.sum(self.quantum.dimer_concentration[coherent_mask])  # Sum concentrations
+            volume_per_voxel = (self.dx)**3  # m³
+            n_coherent = int(coherent_dimer_conc * volume_per_voxel * 6.022e23)  # Convert M to number
+            
+            # === DEBUG - ADD THIS ===
+            if coherent_dimer_conc > 0 and self.time > 0.1:  # Only print after 100ms
+                print(f"\n=== COLLECTIVE FIELD DEBUG (t={self.time:.3f}s) ===")
+                print(f"Coherent voxels: {np.sum(coherent_mask)}")
+                print(f"Total coherent conc: {coherent_dimer_conc:.2e} M")
+                print(f"dx: {self.dx:.2e} m")
+                print(f"Volume per voxel: {volume_per_voxel:.2e} m³")
+                print(f"n_coherent molecules: {n_coherent}")
+                print(f"Min threshold: {self.params.em_coupling.n_dimer_min_detectable}")
+            # === END DEBUG ===
+            
             
             # Calculate collective quantum field
             coupling_state_reverse = self.em_coupling.update(
@@ -407,7 +431,7 @@ class Model6QuantumSynapse:
             'pnc_lifetime_max_s': ca_phosphate_metrics.get('pnc_lifetime_max_s', 0),
             
             # Quantum Coherence (CHANGED - simpler metrics)
-            'coherence_mean': quantum_metrics['coherence_mean'],
+            'coherence_dimer_mean': quantum_metrics['coherence_mean'],
             'coherence_std': quantum_metrics['coherence_std'],
             'coherence_peak': quantum_metrics['coherence_peak'],
             'T2_dimer_s': quantum_metrics['T2_dimer_s'],
@@ -421,9 +445,11 @@ class Model6QuantumSynapse:
         if self.em_enabled and len(self._em_field_history) > 0:
             metrics['trp_em_field_gv_m'] = np.max(self._em_field_history) / 1e9  # Peak field
             metrics['em_formation_enhancement'] = np.max(self._k_enhancement_history)
+            metrics['collective_field_kT'] = self._collective_field_kT  # ADD THIS LINE
         else:
             metrics['trp_em_field_gv_m'] = 0.0
             metrics['em_formation_enhancement'] = 1.0
+            metrics['collective_field_kT'] = 0.0  # ADD THIS LINE
         
         
         # Dopamine (if available)

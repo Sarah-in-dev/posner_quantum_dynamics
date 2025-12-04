@@ -157,9 +157,9 @@ class QuantumCoherenceSystem:
         J_normalized = (j_coupling - J_free) / (J_ATP - J_free)
         J_normalized = np.clip(J_normalized, 0, 1)  # Clamp to [0,1]
     
-        J_protection = 1.0 + protection_strength * J_normalized**2  # Up to 26x!
+        J_protection = 1.0 + protection_strength * J_normalized**2 * self.P31_fraction  # Up to 26x!
     
-        T2_with_J = T2_isolated_dimer * J_protection  # ~3s * 26 = 78s
+        T2_with_J = T2_isolated_dimer * J_protection
     
         # === STEP 4: Inter-dimer entanglement ===
         # When multiple dimers are nearby and coupled, collective coherence emerges
@@ -224,7 +224,17 @@ class QuantumCoherenceSystem:
     
         # Clip to [0, 1]
         self.coherence = np.clip(self.coherence, 0, 1)
-    
+
+        # === DEBUG: Print coherence statistics ===
+        if np.any(has_dimers):
+            print(f"\n=== COHERENCE DEBUG (t={dt:.6f}s) ===")
+            print(f"Dimers present: {np.sum(has_dimers)} locations")
+            print(f"New dimers: {np.sum(new_dimers)} locations")
+            print(f"Coherence range: [{np.min(self.coherence):.3f}, {np.max(self.coherence):.3f}]")
+            print(f"Coherence mean (where dimers): {np.mean(self.coherence[has_dimers]):.3f}")
+            print(f"T2_effective range: [{np.min(T2_effective[has_dimers]):.2f}, {np.max(T2_effective[has_dimers]):.2f}]s")
+            print(f"Decay factor (min): {np.exp(-dt / np.max(T2_effective[has_dimers])):.6f}")
+            print(f"=============================\n")    
         # Store effective T2 for reporting
         self.T2_effective = T2_effective
     
@@ -242,17 +252,17 @@ class QuantumCoherenceSystem:
         has_dimers = self.dimer_concentration > 0
         
         if np.any(has_dimers):
-            coherence_mean = np.mean(self.coherence[has_dimers])
-            coherence_std = np.std(self.coherence[has_dimers])
+            coherence_mean = float(np.mean(self.coherence[has_dimers]))
+            coherence_std = float(np.std(self.coherence[has_dimers]))
         else:
             coherence_mean = 0.0
             coherence_std = 0.0
         
         return {
             # Quantum metrics
-            'coherence_mean': float(np.mean(self.coherence)),  # CHANGE HERE
-            'coherence_peak': float(np.max(self.coherence)),   # CHANGE HERE
-            'coherence_std': float(np.std(self.coherence)),    # CHANGE HERE
+            'coherence_mean': coherence_mean,
+            'coherence_peak': float(np.max(self.coherence)),
+            'coherence_std': coherence_std,
             
             # T2 coherence time
             'T2_dimer_s': float(np.mean(self.T2_effective)),

@@ -139,7 +139,7 @@ class TryptophanDimerCoupling:
         # Use geometric averaging model
         # At 1 nm: full field, at 3 nm: 1/27 field
         # Effective averaging gives factor ~0.3
-        spatial_factor = 0.3
+        spatial_factor = 0.5
         
         enhancement_averaged = 1.0 + (enhancement_at_1nm - 1.0) * spatial_factor
         
