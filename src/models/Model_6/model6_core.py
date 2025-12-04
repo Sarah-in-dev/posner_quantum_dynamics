@@ -274,7 +274,7 @@ class Model6QuantumSynapse:
             em_field_trp = trp_state['output']['em_field_time_averaged']
             
             # Get baseline aggregation rate from ca_phosphate system
-            k_agg_baseline = self.ca_phosphate.k_aggregation
+            k_agg_baseline = self.ca_phosphate.dimerization.k_base
             
             # Calculate enhanced rate from EM coupling
             coupling_state = self.em_coupling.update(
@@ -290,7 +290,7 @@ class Model6QuantumSynapse:
             self._em_field_trp = em_field_trp
             self._k_enhancement = coupling_state['forward']['enhancement']
         else:
-            k_agg_enhanced = self.ca_phosphate.k_aggregation  # Use baseline
+            k_agg_enhanced = self.ca_phosphate.dimerization.k_base  # Use baseline
             self._em_field_trp = 0.0
             self._k_enhancement = 1.0
         
@@ -303,10 +303,10 @@ class Model6QuantumSynapse:
         # Pass enhanced k_agg if EM coupling enabled
         if self.em_enabled:
             # Temporarily override aggregation rate
-            k_agg_original = self.ca_phosphate.k_aggregation
-            self.ca_phosphate.k_aggregation = k_agg_enhanced
+            k_agg_original = self.ca_phosphate.dimerization.k_base
+            self.ca_phosphate.dimerization.k_base = k_agg_enhanced
             self.ca_phosphate.step(dt, ca_conc, phosphate)
-            self.ca_phosphate.k_aggregation = k_agg_original  # Restore
+            self.ca_phosphate.dimerization.k_base = k_agg_original  # Restore
         else:
             self.ca_phosphate.step(dt, ca_conc, phosphate)
         dimer_conc = self.ca_phosphate.get_dimer_concentration()
@@ -326,13 +326,15 @@ class Model6QuantumSynapse:
         # === EM COUPLING: REVERSE PATH (Dimers → Proteins) ===
         if self.em_enabled:
             # Get number of coherent dimers from quantum system
-            n_coherent = self.quantum.get_n_coherent_dimers()
+            # Count dimers with coherence > 0.5 as "quantum coherent"
+            coherent_mask = (self.quantum.coherence > 0.5) & (self.quantum.dimer_concentration > 0)
+            n_coherent = int(np.sum(coherent_mask))
             
             # Calculate collective quantum field
             coupling_state_reverse = self.em_coupling.update(
                 em_field_trp=self._em_field_trp,
                 n_coherent_dimers=n_coherent,
-                k_agg_baseline=self.ca_phosphate.k_aggregation,
+                k_agg_baseline=self.ca_phosphate.dimerization.k_base,
                 phosphate_fraction=np.mean(phosphate) / 0.001
             )
             

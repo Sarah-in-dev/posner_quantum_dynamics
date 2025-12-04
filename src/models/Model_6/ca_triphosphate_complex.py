@@ -11,7 +11,7 @@ At pH 6-10, the dominant species is CaHPO₄⁰ (1:1 ion pair)
 Ca²⁺ + HPO₄²⁻ ⇌ [CaHPO₄]⁰
 
 Step 1: Ca²⁺ + HPO₄²⁻ ⇌ CaHPO₄⁰ (K=588 M⁻¹, instant)
-Step 2: 6 × CaHPO₄ → Ca₆(PO₄)₄ (k=1e6 M⁻¹s⁻¹, slow)
+Step 2: 6 × CaHPO₄ → Ca₆(PO₄)₄ (k=8e5 M⁻¹s⁻¹, slow)
          ↑ This is the "dimer" - 4 ³¹P nuclei!
          
 Alternative: 9 × CaHPO₄ → Ca₉(PO₄)₆ ("trimer", 6 ³¹P nuclei)
@@ -372,7 +372,7 @@ class CalciumPhosphateDimerization:
         dissolution_noise = np.maximum(dissolution_noise, 0.1)  # Keep positive
 
         dimer_dissociation = self.k_dissociation * self.dimer_concentration * dissolution_noise
-        trimer_dissociation = self.k_dissociation * 0.1 * self.trimer_concentration * dissolution_noise  # Trimers less stable
+        trimer_dissociation = self.k_dissociation * 10.0 * self.trimer_concentration * dissolution_noise  # Trimers less stable
 
         # Update both species
         d_dimer_dt = dimer_formation - dimer_dissociation  # (you modified this earlier)
