@@ -495,7 +495,7 @@ class MetabolicUVParameters:
     internal_enhancement: float = 1e6
     # Single PSD area: π × (350 nm)² ≈ 3.8 × 10⁻⁹ cm²
     # Internal flux: 400 × 10⁶ × 3.8×10⁻⁹ ≈ 1.5 photons/s baseline
-    photon_flux_baseline: float = 1.5  # photons/s at single PSD
+    photon_flux_baseline: float = 20.0  # photons/s at single PSD
     
     # === ACTIVITY DEPENDENCE ===
     # Tang & Dai 2014: 3-10× enhancement during activity

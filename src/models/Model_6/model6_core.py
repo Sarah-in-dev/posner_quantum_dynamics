@@ -100,11 +100,17 @@ class Model6QuantumSynapse:
         if self.em_enabled:
             self.tryptophan = TryptophanSuperradianceModule(self.params)
             self.em_coupling = EMCouplingModule(self.params)
+            
             logger.info("EM coupling ENABLED")
         else:
             self.tryptophan = None
             self.em_coupling = None
             logger.info("EM coupling DISABLED (Model 6 baseline)")
+        
+        
+        self._em_field_history = []
+        self._k_enhancement_history = []
+        
         
         # Track tryptophan count (changes with MT invasion)
         self.n_tryptophans = self.params.tryptophan.n_trp_baseline
@@ -260,8 +266,16 @@ class Model6QuantumSynapse:
             if activity_level > 0.1:  # During activity
                 metabolic_uv_flux *= self.params.metabolic_uv.flux_enhancement_active
             
+            if self.params.metabolic_uv.external_uv_illumination:
+                wavelength = self.params.metabolic_uv.external_uv_wavelength
+                intensity = self.params.metabolic_uv.external_uv_intensity
+                h, c = 6.626e-34, 3e8
+                psd_area = 3.14159 * (350e-9)**2
+                external_flux = (intensity * psd_area) / (h * c / wavelength)
+                metabolic_uv_flux += external_flux
+
             # Ca spike detection (for correlated bursts)
-            ca_spike_active = (activity_level > 0.5)
+            ca_spike_active = (activity_level > 0.1)
             
             # Update tryptophan superradiance
             trp_state = self.tryptophan.update(
@@ -271,6 +285,7 @@ class Model6QuantumSynapse:
                 ca_spike_active=ca_spike_active
             )
             
+            # NOW we can use trp_state
             em_field_trp = trp_state['output']['em_field_time_averaged']
             
             # Get baseline aggregation rate from ca_phosphate system
@@ -281,20 +296,22 @@ class Model6QuantumSynapse:
                 em_field_trp=em_field_trp,
                 n_coherent_dimers=0,  # Don't know yet, update after
                 k_agg_baseline=k_agg_baseline,
-                phosphate_fraction=np.mean(phosphate) / 0.001  # Normalize to 1 mM
+                phosphate_fraction=np.mean(phosphate) / 0.001
             )
             
             k_agg_enhanced = coupling_state['output']['k_agg_enhanced']
             
-            # Store for history
+            # Store current values for this step
             self._em_field_trp = em_field_trp
             self._k_enhancement = coupling_state['forward']['enhancement']
+            
+            # TRACK HISTORY (inside the if block!)
+            self._em_field_history.append(em_field_trp)
+            self._k_enhancement_history.append(coupling_state['forward']['enhancement'])
         else:
-            k_agg_enhanced = self.ca_phosphate.dimerization.k_base  # Use baseline
+            k_agg_enhanced = self.ca_phosphate.dimerization.k_base
             self._em_field_trp = 0.0
             self._k_enhancement = 1.0
-        
-        
         
         # === STEP 4: CALCIUM PHOSPHATE DIMER FORMATION ===
         # Ca²⁺ + HPO₄²⁻ → CaHPO₄ (instant equilibrium)
@@ -399,6 +416,15 @@ class Model6QuantumSynapse:
             'pH_min': pH_metrics['pH_min'],
             'pH_mean': pH_metrics['pH_mean'],
         }
+        
+        # EM Coupling metrics
+        if self.em_enabled and len(self._em_field_history) > 0:
+            metrics['trp_em_field_gv_m'] = np.max(self._em_field_history) / 1e9  # Peak field
+            metrics['em_formation_enhancement'] = np.max(self._k_enhancement_history)
+        else:
+            metrics['trp_em_field_gv_m'] = 0.0
+            metrics['em_formation_enhancement'] = 1.0
+        
         
         # Dopamine (if available)
         if self.dopamine is not None:

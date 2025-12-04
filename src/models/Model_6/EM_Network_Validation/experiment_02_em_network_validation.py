@@ -168,11 +168,13 @@ def configure_parameters(n_synapses: int,
     
     # === ANESTHETIC CONFIGURATION ===
     if anesthetic:
+        print(f"[ANES DEBUG] Anesthetic applied: {params.tryptophan.anesthetic_applied}")
+        print(f"[ANES DEBUG] Blocking factor: {params.tryptophan.anesthetic_blocking_factor}")
+        
         # Blocks tryptophan coupling by 90%
-        params.tryptophan.anesthetic_present = True
-        params.tryptophan.anesthetic_blocking_fraction = 0.9
-    else:
-        params.tryptophan.anesthetic_present = False
+        params.tryptophan.anesthetic_applied = True
+        params.tryptophan.anesthetic_type = 'isoflurane'
+        params.tryptophan.anesthetic_blocking_factor = 0.9
     
     # === TEMPERATURE CONFIGURATION ===
     params.environment.T = temperature
@@ -227,6 +229,14 @@ def run_single_condition(n_synapses: int,
     
     # Collect comprehensive metrics from Model 6
     metrics = model.get_experimental_metrics()
+
+    print(f"\n[DIAG] Condition: N={n_synapses}, iso={isotope}, UV={uv_condition}, anes={anesthetic}")
+    print(f"  Dimers: {metrics.get('dimer_peak_nM_ct', 0):.0f} nM")
+    print(f"  EM field (Trp): {metrics.get('trp_em_field_gv_m', 0):.3f} GV/m")
+    print(f"  k_enhancement: {metrics.get('em_formation_enhancement', 1.0):.2f}×")
+    print(f"  Collective field: {metrics.get('collective_field_kT', 0):.1f} kT")
+    print(f"  T2: {metrics.get('T2_dimer_s', 0):.1f} s")
+    print(f"  Coherence: {metrics.get('coherence_dimer_mean', 0):.2f}")
     
     # Extract core metrics (these already contain isotope effects)
     dimer_peak = metrics.get('dimer_peak_nM_ct', 0)
@@ -251,13 +261,12 @@ def run_single_condition(n_synapses: int,
     integration_factor = min(T2_dimer / 100.0, 1.0)  # Saturates at 100s
     
     # Network coordination factor (0-1, threshold at 20 kT)
-    coordination_factor = min(collective_field_kT / 20.0, 1.0) if collective_field_kT > 0 else 0.0
-    
-    # Weights: substrate baseline (30%), quantum factors dominant (70%)
-    # This emphasizes isotope-dependent quantum effects
+    coordination_factor = min(collective_field_kT / 20.0, 1.0)
+
+    # Weight coordination factor heavily (it's the EM coupling effect)
+    # This makes isotope advantage come primarily from EM coupling
     quantum_contribution = (quality_factor + integration_factor + coordination_factor) / 3.0
     learning_rate = (0.3 * substrate_factor + 0.7 * quantum_contribution) * 10.0
-    
     # Temporal integration window (direct from Model 6)
     temporal_integration = T2_dimer
     
@@ -777,7 +786,7 @@ def create_summary_figure(results: List[Dict],
 
     # Handle missing 220nm (quick mode)
     if uv_analysis['enhancement_220nm'] is None:
-        uv_conditions = ['No UV', '280nm\n(Trp)']
+        uv_conditions = list(set([r['uv_condition'] for r in results])) 
         enhancements = [1.0, uv_analysis['enhancement_280nm']]
         colors_uv = ['gray', 'green']
         n_bars = 2
@@ -808,7 +817,7 @@ def create_summary_figure(results: List[Dict],
     p32_vals = [anesthetic_analysis['p32_control'],
                 anesthetic_analysis['p32_anesthetic']]
     
-    x = np.arange(len(conditions))
+    x = np.arange(len(uv_conditions))
     width = 0.35
     
     ax.bar(x - width/2, p31_vals, width, label='P31',

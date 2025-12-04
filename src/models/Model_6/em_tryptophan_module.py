@@ -587,16 +587,21 @@ class TryptophanSuperradianceModule:
             distance=1e-9  # 1 nm
         )
         U_instant_J, U_instant_kT = self.emission.calculate_energy_delivered(E_instant)
-        
+
         # === TIME-AVERAGED FIELD ===
+        # Calculate photons absorbed during spike
+        spike_duration = 0.05  # 50 ms
+        absorption_efficiency = 0.8  # 80%
+        n_photons_per_spike = photon_flux * spike_duration * absorption_efficiency
+
         time_avg_dict = self.time_average.calculate_time_averaged_field(
             E_instantaneous=E_instant,
             ca_spike_active=ca_spike_active,
-            n_photons_per_spike=5,  # Typical during spike
-            spike_duration=0.05,  # 50 ms
+            n_photons_per_spike=n_photons_per_spike,  # Now calculated from flux
+            spike_duration=spike_duration,
             total_duration=100.0  # 100 s plasticity window
         )
-        
+
         # === UPDATE STATE ===
         self.state = {
             'n_tryptophans': n_tryptophans,
@@ -636,7 +641,22 @@ class TryptophanSuperradianceModule:
             'state': self.state,
             'output': output
         }
-
+class TryptophanExcitation:
+    """Calculate excitation rate from photon flux"""
+    
+    def __init__(self, params):
+        self.absorption_efficiency = 0.8  # 80% from doc
+        self.burst_duration = 100e-15  # 100 fs
+    
+    def calculate_excitations_per_spike(self, photon_flux, spike_duration):
+        """
+        Calculate number of excitations during Ca spike
+        
+        Returns number of tryptophans excited during spike window
+        """
+        photons_per_spike = photon_flux * spike_duration
+        excitations = photons_per_spike * self.absorption_efficiency
+        return excitations
 
 # =============================================================================
 # TESTING / VALIDATION
