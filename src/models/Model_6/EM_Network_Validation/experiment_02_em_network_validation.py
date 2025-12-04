@@ -84,7 +84,7 @@ BURST_PROTOCOL = {
 }
 
 # Replicates for statistics
-N_REPLICATES = 5  # Balance between statistics and computation time
+N_REPLICATES = 20  # Balance between statistics and computation time
 
 # Output setup
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -168,13 +168,13 @@ def configure_parameters(n_synapses: int,
     
     # === ANESTHETIC CONFIGURATION ===
     if anesthetic:
-        print(f"[ANES DEBUG] Anesthetic applied: {params.tryptophan.anesthetic_applied}")
-        print(f"[ANES DEBUG] Blocking factor: {params.tryptophan.anesthetic_blocking_factor}")
-        
         # Blocks tryptophan coupling by 90%
         params.tryptophan.anesthetic_applied = True
         params.tryptophan.anesthetic_type = 'isoflurane'
         params.tryptophan.anesthetic_blocking_factor = 0.9
+        
+        print(f"[ANES DEBUG] Anesthetic applied: {params.tryptophan.anesthetic_applied}")
+        print(f"[ANES DEBUG] Blocking factor: {params.tryptophan.anesthetic_blocking_factor}")
     
     # === TEMPERATURE CONFIGURATION ===
     params.environment.T = temperature
@@ -189,12 +189,17 @@ def run_single_condition(n_synapses: int,
                          isotope: str,
                          uv_condition: str,
                          anesthetic: bool,
-                         temperature: float) -> Dict:
+                         temperature: float,
+                         replicate_seed: int = None) -> Dict:
     """
     Run model with specific experimental parameters
     
     Returns metrics dictionary
     """
+    
+    # Set seed for reproducibility
+    if replicate_seed is not None:
+        np.random.seed(replicate_seed)
     
     # Configure parameters
     params = configure_parameters(n_synapses, isotope, uv_condition, 
@@ -817,7 +822,7 @@ def create_summary_figure(results: List[Dict],
     p32_vals = [anesthetic_analysis['p32_control'],
                 anesthetic_analysis['p32_anesthetic']]
     
-    x = np.arange(len(uv_conditions))
+    x = np.arange(len(conditions))
     width = 0.35
     
     ax.bar(x - width/2, p31_vals, width, label='P31',
