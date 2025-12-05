@@ -340,35 +340,26 @@ class Model6QuantumSynapse:
         
         self.quantum.step(dt, dimer_conc, j_coupling, temperature)
         
-        # === EM COUPLING: REVERSE PATH (Dimers → Proteins) ===
-        if self.em_enabled:
-            
-            # Count actual dimers, not grid points
-            coherent_mask = (self.quantum.coherence > 0.5) & (self.quantum.dimer_concentration > 0)
-            coherent_dimer_conc = np.sum(self.quantum.dimer_concentration[coherent_mask])  # Sum concentrations
-            volume_per_voxel = (self.dx)**3  # m³
-            n_coherent = int(coherent_dimer_conc * volume_per_voxel * 6.022e23)  # Convert M to number
-            
             
         # === EM COUPLING: REVERSE PATH (Dimers → Proteins) ===
         if self.em_enabled:
-            
-            # Count actual dimers, not grid points
+            # Count coherent dimers
             coherent_mask = (self.quantum.coherence > 0.5) & (self.quantum.dimer_concentration > 0)
-            coherent_dimer_conc = np.sum(self.quantum.dimer_concentration[coherent_mask])  # Sum concentrations
-            volume_per_voxel = (self.dx)**3  # m³
-            n_coherent = int(coherent_dimer_conc * volume_per_voxel * 6.022e23)  # Convert M to number
             
-            # === DEBUG - ADD THIS ===
-            if coherent_dimer_conc > 0 and self.time > 0.1:  # Only print after 100ms
-                print(f"\n=== COLLECTIVE FIELD DEBUG (t={self.time:.3f}s) ===")
-                print(f"Coherent voxels: {np.sum(coherent_mask)}")
-                print(f"Total coherent conc: {coherent_dimer_conc:.2e} M")
-                print(f"dx: {self.dx:.2e} m")
-                print(f"Volume per voxel: {volume_per_voxel:.2e} m³")
-                print(f"n_coherent molecules: {n_coherent}")
-                print(f"Min threshold: {self.params.em_coupling.n_dimer_min_detectable}")
-            # === END DEBUG ===
+            # CORRECT: 2D grid with cleft height
+            cleft_width = 20e-9  # m
+            volume_per_voxel = (self.dx)**2 * cleft_width  # m³, NOT dx³
+            
+            # CORRECT: Sum molecules per voxel, not concentrations
+            n_coherent_single = np.sum(
+                self.quantum.dimer_concentration[coherent_mask] * volume_per_voxel * 6.022e23
+            )
+            
+            # CORRECT: Scale by number of synapses
+            if self.params.multi_synapse_enabled:
+                n_coherent = int(n_coherent_single * self.params.multi_synapse.n_synapses_default)
+            else:
+                n_coherent = int(n_coherent_single)
             
             
             # Calculate collective quantum field
