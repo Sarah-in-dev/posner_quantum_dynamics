@@ -1,7 +1,7 @@
 {
   "test_name": "Baseline State",
   "test_number": "01",
-  "timestamp": "2025-11-09T07:08:08.462139",
+  "timestamp": "2025-12-05T13:42:20.286159",
   "passed": true,
   "tests_passed": [
     "calcium_resting",
@@ -24,7 +24,7 @@
     "j_coupling_max_Hz": 14.342857142857143,
     "j_coupling_mean_Hz": 14.342857142857145,
     "ion_pair_peak_nM": 46.9943491928395,
-    "dimer_peak_nM": 0.05518486392639837
+    "dimer_peak_nM": 0.004871344567677448
   },
   "time_series_statistics": {
     "calcium_mean": 0.09999999999999998,

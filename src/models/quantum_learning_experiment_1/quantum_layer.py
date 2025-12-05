@@ -70,6 +70,14 @@ class QuantumCoherentLayer(nn.Module):
         self.register_buffer('time_since_formation', 
                            torch.zeros(1))
         
+        
+        # Mechanism: Continuous dimer/trimer populations
+        self.register_buffer('p_dimer', torch.tensor(0.5))
+        self.register_buffer('p_trimer', torch.tensor(0.5))
+        self.tau_formation = 20  # timesteps (~200ms in biology)
+        self.dopamine_sensitivity = 5.0  # Steepness of sigmoid
+        
+        
         # Current dopamine level
         self.dopamine_level = 0.0
         
@@ -94,15 +102,14 @@ class QuantumCoherentLayer(nn.Module):
         if dopamine_signal is not None:
             self.dopamine_level = dopamine_signal
         
-        # Determine effective coherence time based on dopamine
-        # High dopamine → dimer mode → long coherence
-        # Low dopamine → trimer mode → short coherence
-        if self.dopamine_level > 0.5:
-            T2_effective = self.T2_dimer
-            mode = 'dimer'
-        else:
-            T2_effective = self.T2_trimer
-            mode = 'trimer'
+        # Update dimer/trimer populations (continuous, not binary!)
+        self._update_populations()
+        
+        # Effective coherence is population-weighted average
+        T2_effective = float(self.p_dimer * self.T2_dimer + self.p_trimer * self.T2_trimer)
+        
+        # Mode for diagnostics
+        mode = 'dimer' if self.p_dimer > 0.5 else 'trimer'
         
         # ===================================================================
         # QUANTUM-INSPIRED PROCESSING
@@ -194,6 +201,8 @@ class QuantumCoherentLayer(nn.Module):
             'time_since_formation': self.time_since_formation.item(),
             'measurement_occurred': measurement_occurred,
             'mode': mode,
+            'p_dimer': float(self.p_dimer),
+            'p_trimer': float(self.p_trimer),
             'dopamine_level': self.dopamine_level,
             'path_amplitudes': self.coherence_amplitude[0].detach().cpu().numpy(),
             'n_active_paths': (self.coherence_amplitude[0] > 0.1).sum().item(),
@@ -236,7 +245,9 @@ class QuantumCoherentLayer(nn.Module):
         self.coherence_amplitude = torch.ones_like(self.coherence_amplitude)
         self.time_since_formation = torch.zeros_like(self.time_since_formation)
         self.dopamine_level = 0.0
-
+        # Reset populations to equilibrium
+        self.p_dimer.fill_(0.5)
+        self.p_trimer.fill_(0.5)
 
 class QuantumInspiredNetwork(nn.Module):
     """
@@ -273,6 +284,32 @@ class QuantumInspiredNetwork(nn.Module):
         # Output layer (classical)
         self.output_layer = nn.Linear(hidden_dim, output_dim)
         
+    def _update_populations(self):
+        """
+        Update dimer/trimer population fractions based on dopamine
+        
+        Biology: High dopamine (D2 activation) → reduced Ca²⁺ → favors dimers
+        Uses smooth sigmoid transition, not binary switch
+        """
+        # Target fractions from dopamine level
+        # High DA (0.8) → ~70% dimers
+        # Low DA (0.2) → ~30% dimers
+        target_p_dimer = 1.0 / (1.0 + np.exp(-self.dopamine_sensitivity * (self.dopamine_level - 0.5)))
+        target_p_trimer = 1.0 - target_p_dimer
+        
+        # Smooth transition (first-order kinetics)
+        alpha = 1.0 / self.tau_formation
+        self.p_dimer = self.p_dimer * (1 - alpha) + target_p_dimer * alpha
+        self.p_trimer = self.p_trimer * (1 - alpha) + target_p_trimer * alpha
+        
+        # Ensure normalization
+        total = self.p_dimer + self.p_trimer
+        self.p_dimer = self.p_dimer / total
+        self.p_trimer = self.p_trimer / total
+    
+    
+    
+    
     def forward(self, x: torch.Tensor, reward_signal: float = None) -> Tuple[torch.Tensor, list]:
         """
         Forward pass

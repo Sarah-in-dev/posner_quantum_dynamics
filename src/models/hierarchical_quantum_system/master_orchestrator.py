@@ -126,6 +126,7 @@ class SystemState:
     # Pathway 4: Dimers
     n_coherent_dimers: int = 0
     dimer_coherence: float = 0.0
+    dimer_concentration: float = 0.0
     
     # Pathway 5: Metabolic UV
     uv_photon_flux: float = 1000.0  # photons/s (baseline)
@@ -182,6 +183,8 @@ class HierarchicalQuantumOrchestrator:
                 self.params = self._create_mock_parameters()
         else:
             self.params = params
+        
+        self.experimental = {}
         
         # === INITIALIZE PATHWAYS ===
         # Import pathways (with graceful fallback for testing)
@@ -397,6 +400,10 @@ class HierarchicalQuantumOrchestrator:
         self.state.dimer_coherence += d_coh
         self.state.dimer_coherence = np.clip(self.state.dimer_coherence, 0, 1)
         
+        # After updating n_coherent_dimers
+        volume = 1e-18  # Approximate PSD volume (1 fL)
+        self.state.dimer_concentration = self.state.n_coherent_dimers / (volume * 6.022e23)
+        
         return {
             'n_coherent_dimers': self.state.n_coherent_dimers,
             'dimer_coherence': self.state.dimer_coherence,
@@ -576,6 +583,13 @@ class HierarchicalQuantumOrchestrator:
         
         # === CaMKII ENHANCEMENT ===
         # Quantum field reduces activation barrier
+
+        # Boltzmann constant (J/K)
+        k_B = 1.380649e-23
+        # Absolute temperature (Kelvin)
+        T = 310  # ~37°C, physiological temperature
+
+        kT = k_B * T
         total_field_energy = (self.state.reverse_modulation_kT + 
                              self.state.trp_em_field * 1e-10 / kT) * kT
         
@@ -680,6 +694,49 @@ class HierarchicalQuantumOrchestrator:
         """
         self.state.ca_concentration = concentration
         logger.info(f"Ca²⁺ spike: {concentration*1e6:.1f} µM at t={self.time:.1f} s")
+    
+    
+    def get_metrics(self) -> Dict:
+        """
+        Extract current metrics from all pathways
+        """
+        return {
+            # Pathway 1-2: CaMKII-Actin
+            'ca_concentration': self.state.ca_concentration,
+            'camkii_phosphorylation': self.state.camkii_phosphorylated,
+            'actin_reorganization': self.state.actin_reorganized,
+        
+            # Pathway 3: Microtubule
+            'mt_present': self.state.mt_present,  # Boolean, not level
+            'n_tryptophans': self.state.n_tryptophans,
+        
+            # Pathway 4: Dimers
+            'n_coherent_dimers': self.state.n_coherent_dimers,  # ADD THIS
+            'dimer_concentration': self.state.dimer_concentration,  # Molar
+            'dimer_coherence': self.state.dimer_coherence,  # 0-1
+        
+            # Pathway 5: UV
+            'uv_photon_rate': self.state.uv_photon_flux,
+        
+            # Pathway 6: Tryptophan
+            'trp_field_strength': self.state.trp_em_field,
+            'trp_excited_fraction': self.state.trp_excited_fraction,  # ADD THIS
+            'superradiance_enhancement': self.state.superradiance_enhancement,  # ADD THIS
+        
+            # Pathway 7: Coupling
+            'forward_coupling': self.state.forward_enhancement,
+            'reverse_modulation': self.state.reverse_modulation_kT,
+            'feedback_loop_gain': self.state.feedback_loop_gain,
+        
+            # Pathway 8: Proteins
+            'psd95_open_fraction': self.state.psd95_open,
+            'camkii_enhancement': self.state.camkii_enhancement,
+            'plasticity_gated': self.state.plasticity_gated,
+        
+            # System level
+            'bistable_state': self.state.bistable_state
+        }
+    
     
     def get_summary(self) -> Dict:
         """

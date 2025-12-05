@@ -21,6 +21,8 @@ import json
 from pathlib import Path
 from datetime import datetime
 import logging
+from typing import List
+from typing import Dict
 
 # Import protocols
 from experimental_protocols import (
@@ -51,7 +53,7 @@ class TestSuite:
     Organizes tests by priority and generates comprehensive report
     """
     
-    def __init__(self, output_dir: str = '/mnt/user-data/outputs/validation_results',
+    def __init__(self, output_dir: str = './validation_results',
                  quick_mode: bool = False):
         """
         Initialize test suite
@@ -411,7 +413,7 @@ def main():
     parser.add_argument('--quick', action='store_true',
                        help='Run abbreviated tests (faster, less comprehensive)')
     parser.add_argument('--output-dir', type=str,
-                       default='/mnt/user-data/outputs/validation_results',
+                       default='./validation_results',
                        help='Output directory for results')
     parser.add_argument('--phase', type=int, choices=[1, 2, 3],
                        help='Run only specified phase (1, 2, or 3)')

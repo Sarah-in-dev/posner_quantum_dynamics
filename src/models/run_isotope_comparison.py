@@ -5,7 +5,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from experiment_runner import ExperimentRunner
+from .experiment_runner import ExperimentRunner
 from config import get_config
 import matplotlib.pyplot as plt
 

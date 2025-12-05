@@ -2,7 +2,7 @@
 TEST 01: Baseline State
 ================================================================================
 
-Date: 2025-11-09 07:08:08
+Date: 2025-12-05 13:42:20
 Duration: 100 ms
 Result: PASSED
 
@@ -19,7 +19,7 @@ Calcium mean: 0.100 μM
 ATP: 2.50 mM
 J-coupling max: 14.3 Hz
 CaHPO₄ ion pairs: 47.0 nM
-Ca₆(PO₄)₄ dimers: 0.06 nM
+Ca₆(PO₄)₄ dimers: 0.00 nM
 
 VALIDATION CRITERIA
 --------------------------------------------------------------------------------

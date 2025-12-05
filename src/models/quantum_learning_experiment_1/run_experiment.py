@@ -21,9 +21,9 @@ from pathlib import Path
 # Add models directory to path
 sys.path.append(str(Path(__file__).parent / 'models'))
 
-from models.quantum_layer import QuantumInspiredNetwork
-from models.classical_network import ClassicalNetwork
-from models.task import ContextSwitchTask
+from quantum_layer import QuantumInspiredNetwork
+from classical_network import ClassicalNetwork
+from task import ContextSwitchTask
 
 
 def run_experiment(model, task, n_trials: int = 300, learning_rate: float = 0.001,

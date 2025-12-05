@@ -365,12 +365,14 @@ class CalciumPhosphateDimerParameters:
     pnc_size: int = 4  # ~4 ion pairs per PNC
     
     # === DIMER FORMATION ===
-    # Agarwal et al. 2023 Phys Rev Research 5:013107
-    # Ca6(PO4)4 structure: 2 PNCs → 1 dimer
-    
-    # Stoichiometry
-    pncs_per_dimer: int = 2
-    n_phosphorus_per_dimer: int = 4  # Four ³¹P nuclei
+    # Agarwal et al. 2023: Ca6(PO4)4 has optimal coherence
+    # Forms from 6 CaHPO4 ion pairs (or 2 PNCs of 3 ion pairs each)
+
+    # Stoichiometry (CORRECTED)
+    ion_pairs_per_dimer: int = 6  # 6 × CaHPO4 → Ca6(PO4)4
+    pncs_per_dimer: int = 2  # Or 2 PNCs if grouped
+    n_phosphorus_per_dimer: int = 4  # Four ³¹P nuclei ✓
+    n_calcium_per_dimer: int = 6  # Six Ca atoms
     
     # Formation kinetics
     k_dimer_formation: float = 1e-4  # M⁻¹s⁻¹

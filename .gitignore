@@ -47,3 +47,11 @@ notebooks/results/
 # Checkpoint files
 *.pkl
 checkpoints/
+
+
+# Add to .gitignore
+**/validation_results/
+**/test_results/
+*.png
+*.json
+*.txt
