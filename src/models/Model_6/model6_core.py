@@ -110,6 +110,7 @@ class Model6QuantumSynapse:
         
         self._em_field_history = []
         self._k_enhancement_history = []
+        self._collective_field_history = []
         
         
         # Track tryptophan count (changes with MT invasion)
@@ -343,21 +344,28 @@ class Model6QuantumSynapse:
             
         # === EM COUPLING: REVERSE PATH (Dimers → Proteins) ===
         if self.em_enabled:
-            # Count coherent dimers
-            coherent_mask = (self.quantum.coherence > 0.5) & (self.quantum.dimer_concentration > 0)
             
-            # CORRECT: 2D grid with cleft height
-            cleft_width = 20e-9  # m
-            volume_per_voxel = (self.dx)**2 * cleft_width  # m³, NOT dx³
-            
-            # CORRECT: Sum molecules per voxel, not concentrations
-            n_coherent_single = np.sum(
-                self.quantum.dimer_concentration[coherent_mask] * volume_per_voxel * 6.022e23
-            )
+            # Quantum processing happens at HIGH concentration sites
+            coherent_mask = self.quantum.coherence > 0.5
+            if np.sum(coherent_mask) > 0:
+                # Get peak concentration (where templates are)
+                peak_conc = np.max(self.quantum.dimer_concentration[coherent_mask])
+                
+                # Functional processing domain volume per template (~50nm radius sphere)
+                # Volume = (4/3)π(50e-9)³ = 5.2e-22 m³
+                processing_volume = 5.2e-22  # m³ per template
+                n_templates = 3  # Number of processing sites
+                
+                # Molecules per synapse
+                n_coherent_single = peak_conc * processing_volume * n_templates * 1000 * 6.022e23
+                
+            else:
+                n_coherent_single = 0.0
             
             # CORRECT: Scale by number of synapses
             if self.params.multi_synapse_enabled:
                 n_coherent = int(n_coherent_single * self.params.multi_synapse.n_synapses_default)
+
             else:
                 n_coherent = int(n_coherent_single)
             
@@ -374,6 +382,7 @@ class Model6QuantumSynapse:
             
             # Store for history
             self._collective_field_kT = protein_modulation_kT
+            self._collective_field_history.append(self._collective_field_kT)
         else:
             self._collective_field_kT = 0.0
         
@@ -433,10 +442,10 @@ class Model6QuantumSynapse:
         }
         
         # EM Coupling metrics
-        if self.em_enabled and len(self._em_field_history) > 0:
-            metrics['trp_em_field_gv_m'] = np.max(self._em_field_history) / 1e9  # Peak field
+        if self.em_enabled and len(self._em_field_history) > 0 and len(self._collective_field_history) > 0:
+            metrics['trp_em_field_gv_m'] = np.max(self._em_field_history) / 1e9
             metrics['em_formation_enhancement'] = np.max(self._k_enhancement_history)
-            metrics['collective_field_kT'] = self._collective_field_kT  # ADD THIS LINE
+            metrics['collective_field_kT'] = np.max(self._collective_field_history)
         else:
             metrics['trp_em_field_gv_m'] = 0.0
             metrics['em_formation_enhancement'] = 1.0

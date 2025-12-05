@@ -134,6 +134,9 @@ def configure_parameters(n_synapses: int,
         Configured parameter object
     """
     params = Model6Parameters()
+
+    # === SET TIMESTEP TO MATCH EXPERIMENT_01 ===
+    params.simulation.dt_diffusion = 1e-3  # 1 millisecond (so 30 steps = 30ms)
     
     # === ENABLE EM COUPLING (CRITICAL!) ===
     params.em_coupling_enabled = True
@@ -190,11 +193,22 @@ def run_single_condition(n_synapses: int,
                          uv_condition: str,
                          anesthetic: bool,
                          temperature: float,
-                         replicate_seed: int = None) -> Dict:
+                         replicate_seed: int = None,
+                         quick_mode: bool = False) -> Dict:
     """
     Run model with specific experimental parameters
     
-    Returns metrics dictionary
+    Args:
+        n_synapses: Number of synapses in network
+        isotope: '31P' (natural) or '32P' (spin-0 control)
+        uv_condition: 'normal', 'enhanced', or 'blocked'
+        anesthetic: Whether anesthetic disruption is applied
+        temperature: Temperature in Kelvin
+        replicate_seed: Random seed for reproducibility
+        quick_mode: If True, use reduced protocol for faster validation (~12x faster)
+    
+    Returns:
+        Dictionary of metrics
     """
     
     # Set seed for reproducibility
@@ -208,29 +222,68 @@ def run_single_condition(n_synapses: int,
     # Initialize model
     model = Model6QuantumSynapse(params=params)
     
-    # Run burst protocol
-    n_bursts = BURST_PROTOCOL['n_bursts']
-    burst_dur = BURST_PROTOCOL['burst_duration_ms']
-    inter_burst = BURST_PROTOCOL['inter_burst_interval_ms']
+    # Select protocol based on mode
+    if quick_mode:
+        # Reduced protocol for validation (~12x faster)
+        n_bursts = 3
+        burst_dur_ms = 10
+        inter_burst_ms = 50
+        baseline_steps = 10
+        recovery_steps = 100
+    else:
+        # Full physiological protocol
+        n_bursts = BURST_PROTOCOL['n_bursts']
+        burst_dur_ms = BURST_PROTOCOL['burst_duration_ms']
+        inter_burst_ms = BURST_PROTOCOL['inter_burst_interval_ms']
+        baseline_steps = 20
+        recovery_steps = 300
+
+    # Convert milliseconds to step counts
+    burst_dur_steps = int(burst_dur_ms * 1e-3 / model.dt)
+    inter_burst_steps = int(inter_burst_ms * 1e-3 / model.dt)
     
-    # Baseline
-    for _ in range(20):
+    # Calculate total steps for progress tracking
+    burst_phase_steps = n_bursts * burst_dur_steps + (n_bursts - 1) * inter_burst_steps
+    total_steps = baseline_steps + burst_phase_steps + recovery_steps
+    
+    # Progress tracking - only print every N steps
+    print_interval = max(total_steps // 10, 1000)  # ~10 progress updates
+    step_count = 0
+    
+    if quick_mode:
+        print(f"  [QUICK MODE] Running reduced protocol: {n_bursts} bursts × {burst_dur_ms}ms")
+
+    # === BASELINE PHASE ===
+    for _ in range(baseline_steps):
         model.step(model.dt, stimulus={'voltage': -70e-3})
-    
-    # Bursts
+        step_count += 1
+
+    # === BURST PROTOCOL ===
     for burst_num in range(n_bursts):
-        # Active phase (depolarization triggers everything)
-        for _ in range(burst_dur):
+        # Active phase (depolarization triggers calcium influx)
+        for step in range(burst_dur_steps):
             model.step(model.dt, stimulus={'voltage': -10e-3})
+            step_count += 1
+            
+            # Progress update
+            if step_count % print_interval == 0:
+                progress = 100 * step_count / total_steps
+                print(f"  Progress: {progress:.0f}% (burst {burst_num + 1}/{n_bursts})")
         
-        # Rest phase
+        # Rest phase (between bursts, not after last)
         if burst_num < n_bursts - 1:
-            for _ in range(inter_burst):
+            for step in range(inter_burst_steps):
                 model.step(model.dt, stimulus={'voltage': -70e-3})
-    
-    # Final recovery
-    for _ in range(300):
+                step_count += 1
+                
+                if step_count % print_interval == 0:
+                    progress = 100 * step_count / total_steps
+                    print(f"  Progress: {progress:.0f}% (inter-burst)")
+
+    # === FINAL RECOVERY ===
+    for _ in range(recovery_steps):
         model.step(model.dt, stimulus={'voltage': -70e-3})
+        step_count += 1
     
     # Collect comprehensive metrics from Model 6
     metrics = model.get_experimental_metrics()
@@ -253,9 +306,6 @@ def run_single_condition(n_synapses: int,
     em_enhancement = metrics.get('em_formation_enhancement', 1.0)
     
     # === LEARNING RATE: Use Model 6's actual physics ===
-    # Uses weighted combination of isotope-dependent factors
-    # More robust than pure multiplication (avoids zero-out)
-    
     # Substrate factor (normalized to 0-1)
     substrate_factor = min(dimer_peak / 1000.0, 1.0)  # Saturates at 1000 nM
     
@@ -269,9 +319,9 @@ def run_single_condition(n_synapses: int,
     coordination_factor = min(collective_field_kT / 20.0, 1.0)
 
     # Weight coordination factor heavily (it's the EM coupling effect)
-    # This makes isotope advantage come primarily from EM coupling
     quantum_contribution = (quality_factor + integration_factor + coordination_factor) / 3.0
     learning_rate = (0.3 * substrate_factor + 0.7 * quantum_contribution) * 10.0
+    
     # Temporal integration window (direct from Model 6)
     temporal_integration = T2_dimer
     
@@ -285,6 +335,7 @@ def run_single_condition(n_synapses: int,
         'uv_condition': uv_condition,
         'anesthetic': anesthetic,
         'temperature': temperature,
+        'quick_mode': quick_mode,
         
         # Core dimer metrics
         'dimer_peak_nM': dimer_peak,
@@ -314,7 +365,8 @@ def run_condition_with_replicates(n_synapses: int,
                                   uv_condition: str,
                                   anesthetic: bool,
                                   temperature: float,
-                                  n_replicates: int = N_REPLICATES) -> Dict:
+                                  n_replicates: int = N_REPLICATES,
+                                  quick_mode: bool = False) -> Dict:
     """
     Run condition N times with different random seeds
     
@@ -403,7 +455,7 @@ def run_full_factorial(quick_mode: bool = False):
               end='')
         
         # Run with replicates
-        result = run_condition_with_replicates(**condition)
+        result = run_condition_with_replicates(**condition, quick_mode=quick_mode)
         results.append(result)
         
         # Report key metric
@@ -822,7 +874,7 @@ def create_summary_figure(results: List[Dict],
     p32_vals = [anesthetic_analysis['p32_control'],
                 anesthetic_analysis['p32_anesthetic']]
     
-    x = np.arange(len(conditions))
+    x = np.arange(len(uv_conditions))
     width = 0.35
     
     ax.bar(x - width/2, p31_vals, width, label='P31',
@@ -831,7 +883,7 @@ def create_summary_figure(results: List[Dict],
            color='orange', alpha=0.7, edgecolor='black', linewidth=2)
     
     ax.set_xticks(x)
-    ax.set_xticklabels(conditions, fontsize=10)
+    ax.set_xticklabels(uv_conditions, fontsize=10)
     ax.set_ylabel('Learning Rate (a.u.)', fontsize=11, fontweight='bold')
     ax.set_title('F. Anesthetic Disruption', fontsize=12, fontweight='bold')
     ax.legend()
