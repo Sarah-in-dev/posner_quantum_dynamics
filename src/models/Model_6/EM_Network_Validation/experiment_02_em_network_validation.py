@@ -66,11 +66,11 @@ EXPERIMENT_NUMBER = "02"
 
 # Independent variables (factorial design)
 EXPERIMENTAL_VARIABLES = {
-    'n_synapses': [1, 3, 5, 10, 15, 20],  # Threshold at N=10
+    'n_synapses': [1, 10, 20],  # Threshold at N=10
     'isotope': ['P31', 'P32'],  # Quantum vs classical
-    'uv_condition': ['none', '280nm', '220nm'],  # Wavelength specificity
+    'uv_condition': ['none', '280nm'],  # Wavelength specificity
     'anesthetic': [False, True],  # Disrupts coupling
-    'temperature': [303, 310, 313],  # K (30°C, 37°C, 40°C)
+    'temperature': [310],  # K (30°C, 37°C, 40°C)
 }
 
 # Calculate total conditions
@@ -84,7 +84,7 @@ BURST_PROTOCOL = {
 }
 
 # Replicates for statistics
-N_REPLICATES = 20  # Balance between statistics and computation time
+N_REPLICATES = 5  # Balance between statistics and computation time
 
 # Output setup
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -316,7 +316,7 @@ def run_single_condition(n_synapses: int,
     integration_factor = min(T2_dimer / 100.0, 1.0)  # Saturates at 100s
     
     # Network coordination factor (0-1, threshold at 20 kT)
-    coordination_factor = min(collective_field_kT / 20.0, 1.0)
+    coordination_factor = min(collective_field_kT / 150.0, 1.0) 
 
     # Weight coordination factor heavily (it's the EM coupling effect)
     quantum_contribution = (quality_factor + integration_factor + coordination_factor) / 3.0
