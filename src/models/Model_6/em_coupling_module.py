@@ -33,6 +33,9 @@ import numpy as np
 from typing import Dict, Tuple, Optional
 import logging
 
+# ADD THIS:
+from trp_coordinates_1jff import get_ring_centers, get_dipole_directions
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -139,7 +142,7 @@ class TryptophanDimerCoupling:
         # Use geometric averaging model
         # At 1 nm: full field, at 3 nm: 1/27 field
         # Effective averaging gives factor ~0.3
-        spatial_factor = 0.5
+        spatial_factor = self._calculate_spatial_averaging()
         
         enhancement_averaged = 1.0 + (enhancement_at_1nm - 1.0) * spatial_factor
         
@@ -182,6 +185,40 @@ class TryptophanDimerCoupling:
         }
         
         return k_enhanced, details
+
+    def _calculate_spatial_averaging(self):
+        """
+        Calculate actual field averaging from real tryptophan geometry.
+        
+        Field from each tryptophan falls as 1/r³. 
+        Average over all 8 tryptophans at their actual positions.
+        Dimer formation sites are ~2-3 nm from tryptophan network.
+        
+        Returns:
+            float: Spatial averaging factor (replaces hardcoded 0.5)
+        """
+        # Get real positions from PDB 1JFF (in Ångströms)
+        trp_positions = get_ring_centers()  # (8, 3) array
+        
+        # Convert to nm
+        trp_nm = trp_positions / 10.0
+        
+        # Assume dimer formation sites at 2-3 nm from network center
+        # (near calcium channels and template proteins)
+        formation_distance_nm = 2.5
+        
+        # Calculate 1/r³ weighted average
+        total_field = 0.0
+        for trp_pos in trp_nm:
+            r = np.linalg.norm(trp_pos - np.mean(trp_nm, axis=0))
+            r_effective = max(formation_distance_nm, r)  # Sites at ~2.5nm
+            total_field += 1.0 / (r_effective**3)
+        
+        # Normalize to reference (field at 1nm from single dipole)
+        reference = 1.0 / (1.0**3)
+        spatial_factor = total_field / (8.0 * reference)
+        
+        return spatial_factor
 
 
 # =============================================================================

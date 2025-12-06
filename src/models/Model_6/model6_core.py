@@ -445,7 +445,12 @@ class Model6QuantumSynapse:
         if self.em_enabled and len(self._em_field_history) > 0 and len(self._collective_field_history) > 0:
             metrics['trp_em_field_gv_m'] = np.max(self._em_field_history) / 1e9
             metrics['em_formation_enhancement'] = np.max(self._k_enhancement_history)
-            metrics['collective_field_kT'] = np.max(self._collective_field_history)
+            # Use last 30% of simulation (after transients settled)
+            steady_state_start = int(len(self._collective_field_history) * 0.7)
+            if steady_state_start < len(self._collective_field_history):
+                metrics['collective_field_kT'] = np.mean(self._collective_field_history[steady_state_start:])
+            else:
+                metrics['collective_field_kT'] = self._collective_field_kT  # Fallback to current
         else:
             metrics['trp_em_field_gv_m'] = 0.0
             metrics['em_formation_enhancement'] = 1.0
