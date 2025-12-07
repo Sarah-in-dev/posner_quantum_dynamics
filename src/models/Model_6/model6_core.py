@@ -41,6 +41,7 @@ except ImportError:
 try:
     from em_tryptophan_module import TryptophanSuperradianceModule
     from em_coupling_module import EMCouplingModule
+    from local_dimer_tubulin_coupling import LocalDimerTubulinCoupling, NetworkModulationIntegrator
     HAS_EM_COUPLING = True
 except ImportError:
     HAS_EM_COUPLING = False
@@ -100,11 +101,17 @@ class Model6QuantumSynapse:
         if self.em_enabled:
             self.tryptophan = TryptophanSuperradianceModule(self.params)
             self.em_coupling = EMCouplingModule(self.params)
+            self.local_dimer_coupling = LocalDimerTubulinCoupling()
+            self.network_integrator = NetworkModulationIntegrator()
+            self._network_modulation = 0.0
             
             logger.info("EM coupling ENABLED")
         else:
             self.tryptophan = None
             self.em_coupling = None
+            self.local_dimer_coupling = None
+            self.network_integrator = None
+            self._network_modulation = 0.0
             logger.info("EM coupling DISABLED (Model 6 baseline)")
         
         
@@ -278,16 +285,59 @@ class Model6QuantumSynapse:
             # Ca spike detection (for correlated bursts)
             ca_spike_active = (activity_level > 0.1)
             
-            # Update tryptophan superradiance
+            # Ca spike detection (for correlated bursts)
+            ca_spike_active = (activity_level > 0.1)
+            
+            # === CALCULATE NETWORK MODULATION FROM DIMERS ===
+            if hasattr(self, 'quantum') and hasattr(self.quantum, 'dimer_concentration'):
+                coherent_mask = (self.quantum.coherence > 0.5) & (self.quantum.dimer_concentration > 0)
+                
+                if np.any(coherent_mask):
+                    # Use PEAK concentration at template sites (not sum across grid)
+                    peak_conc = np.max(self.quantum.dimer_concentration[coherent_mask])
+                    
+                    # Processing volume per template (~50nm radius sphere)
+                    processing_volume_m3 = 5.2e-22  # m³
+                    processing_volume_L = processing_volume_m3 * 1000
+                    n_templates = 3
+                    
+                    # Dimers at processing sites
+                    n_dimers_single = peak_conc * processing_volume_L * n_templates * 6.022e23
+                else:
+                    n_dimers_single = 0.0
+                
+                if np.any(coherent_mask):
+                    mean_coherence = float(np.mean(self.quantum.coherence[coherent_mask]))
+                else:
+                    mean_coherence = 0.0
+            else:
+                n_dimers_single = 0.0
+                mean_coherence = 0.0
+            
+            # Local dimer-tubulin coupling
+            local_mod = self.local_dimer_coupling.calculate_local_modulation(
+                n_dimers=n_dimers_single,
+                mean_coherence=mean_coherence
+            )
+            
+            # Integrate across synapses
+            n_synapses = self.params.multi_synapse.n_synapses_default if self.params.multi_synapse_enabled else 1
+            synapse_modulations = [local_mod['modulation_strength']] * n_synapses
+            network_result = self.network_integrator.integrate_network(synapse_modulations)
+            self._network_modulation = network_result['total_modulation']
+            
+            # Update tryptophan superradiance WITH network modulation
             trp_state = self.tryptophan.update(
                 dt=dt,
                 photon_flux=metabolic_uv_flux,
                 n_tryptophans=self.n_tryptophans,
-                ca_spike_active=ca_spike_active
+                ca_spike_active=ca_spike_active,
+                network_modulation=self._network_modulation
             )
             
             # NOW we can use trp_state
             em_field_trp = trp_state['output']['em_field_time_averaged']
+            self._collective_field_kT = trp_state['output']['collective_field_kT']
             
             # Get baseline aggregation rate from ca_phosphate system
             k_agg_baseline = self.ca_phosphate.dimerization.k_base
@@ -313,6 +363,8 @@ class Model6QuantumSynapse:
             k_agg_enhanced = self.ca_phosphate.dimerization.k_base
             self._em_field_trp = 0.0
             self._k_enhancement = 1.0
+            self._collective_field_kT = 0.0
+            self._network_modulation = 0.0
         
         # === STEP 4: CALCIUM PHOSPHATE DIMER FORMATION ===
         # Ca²⁺ + HPO₄²⁻ → CaHPO₄ (instant equilibrium)
@@ -343,48 +395,11 @@ class Model6QuantumSynapse:
         
             
         # === EM COUPLING: REVERSE PATH (Dimers → Proteins) ===
+        # NOTE: collective_field_kT now comes from tryptophan module (cascade architecture)
+        # The old DimerProteinCoupling calculation is replaced by:
+        #   dimers → local_dimer_coupling → network_integrator → tryptophan module → collective_field
         if self.em_enabled:
-            
-            # Quantum processing happens at HIGH concentration sites
-            coherent_mask = self.quantum.coherence > 0.5
-            if np.sum(coherent_mask) > 0:
-                # Get peak concentration (where templates are)
-                peak_conc = np.max(self.quantum.dimer_concentration[coherent_mask])
-                
-                # Functional processing domain volume per template (~50nm radius sphere)
-                # Volume = (4/3)π(50e-9)³ = 5.2e-22 m³
-                processing_volume = 5.2e-22  # m³ per template
-                n_templates = 3  # Number of processing sites
-                
-                # Molecules per synapse
-                n_coherent_single = peak_conc * processing_volume * n_templates * 1000 * 6.022e23
-                
-            else:
-                n_coherent_single = 0.0
-            
-            # CORRECT: Scale by number of synapses
-            if self.params.multi_synapse_enabled:
-                n_coherent = int(n_coherent_single * self.params.multi_synapse.n_synapses_default)
-
-            else:
-                n_coherent = int(n_coherent_single)
-            
-            
-            # Calculate collective quantum field
-            coupling_state_reverse = self.em_coupling.update(
-                em_field_trp=self._em_field_trp,
-                n_coherent_dimers=n_coherent,
-                k_agg_baseline=self.ca_phosphate.dimerization.k_base,
-                phosphate_fraction=np.mean(phosphate) / 0.001
-            )
-            
-            protein_modulation_kT = coupling_state_reverse['output']['protein_modulation_kT']
-            
-            # Store for history
-            self._collective_field_kT = protein_modulation_kT
             self._collective_field_history.append(self._collective_field_kT)
-        else:
-            self._collective_field_kT = 0.0
         
         # Update time
         self.time += dt

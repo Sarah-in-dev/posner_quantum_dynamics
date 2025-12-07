@@ -358,7 +358,7 @@ class CalciumPhosphateDimerization:
         # Nucleation adds large burst at templates
         nucleation_contribution = np.where(
             nucleation_events,
-            1e-9,  # 1 nM burst per nucleation event
+            1e-10,  # 0.1 nM burst per nucleation event (reduced for stability)
             0
         )
     

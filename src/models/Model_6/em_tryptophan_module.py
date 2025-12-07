@@ -549,7 +549,8 @@ class TryptophanSuperradianceModule:
                dt: float,
                photon_flux: float,
                n_tryptophans: int,
-               ca_spike_active: bool = False) -> Dict:
+               ca_spike_active: bool = False,
+               network_modulation: float = 0.0) -> Dict:
         """
         Update tryptophan superradiance state
         
@@ -580,6 +581,27 @@ class TryptophanSuperradianceModule:
         # === COLLECTIVE PROPERTIES ===
         mu_collective = self.collective.calculate_collective_dipole(n_tryptophans)
         enhancement = self.collective.calculate_enhancement_factor(n_tryptophans)
+        
+        # === NETWORK MODULATION FROM DIMER-TUBULIN CASCADE ===
+        superradiance_threshold = 5.0
+        
+        if network_modulation >= superradiance_threshold:
+            excess = network_modulation - superradiance_threshold
+            modulation_enhancement = min(1.5 + excess * 0.2, 3.0)
+            network_state = 'suprathreshold'
+            above_threshold = True
+        elif network_modulation >= 1.0:
+            fraction = network_modulation / superradiance_threshold
+            modulation_enhancement = 1.0 + fraction * 0.5
+            network_state = 'threshold'
+            above_threshold = False
+        else:
+            modulation_enhancement = 1.0
+            network_state = 'subthreshold'
+            above_threshold = False
+        
+        mu_collective = mu_collective * modulation_enhancement
+        enhancement = enhancement * modulation_enhancement
         
         # === INSTANTANEOUS EMISSION ===
         E_instant = self.emission.calculate_instantaneous_field(
@@ -616,11 +638,29 @@ class TryptophanSuperradianceModule:
         }
         
         # === OUTPUT FOR OTHER MODULES ===
+        if above_threshold:
+            # Superradiance active - field at physics-based maximum
+            # Base field from Kurian: √N collective dipole → 20 kT at 1nm
+            base_kT = 20.0
+            
+            # Small enhancement for being well above threshold (±20% max)
+            # Excess modulation → more robust/stable, not stronger field
+            excess = (network_modulation - superradiance_threshold) / superradiance_threshold
+            variation = 1.0 + 0.1 * min(excess, 2.0)  # caps at 1.2×
+            collective_field_kT = base_kT * variation  # Max ~24 kT
+        else:
+            # Below threshold: partial field, scaling toward threshold
+            collective_field_kT = time_avg_dict['energy_kT'] * (network_modulation / superradiance_threshold) if superradiance_threshold > 0 else 0.0
+        
         output = {
             'em_field_time_averaged': time_avg_dict['time_averaged_field'],  # V/m
             'energy_modulation_kT': time_avg_dict['energy_kT'],  # kT
             'enhancement_factor': enhancement,  # For validation
-            'superradiance_active': (n_tryptophans > 0 and coherence_ok)
+            'superradiance_active': (n_tryptophans > 0 and coherence_ok),
+            'collective_field_kT': collective_field_kT,
+            'network_modulation': network_modulation,
+            'network_state': network_state,
+            'above_threshold': above_threshold
         }
         
         return {
