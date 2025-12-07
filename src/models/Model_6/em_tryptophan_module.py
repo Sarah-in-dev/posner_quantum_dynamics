@@ -640,14 +640,17 @@ class TryptophanSuperradianceModule:
         # === OUTPUT FOR OTHER MODULES ===
         if above_threshold:
             # Superradiance active - field at physics-based maximum
-            # Base field from Kurian: √N collective dipole → 20 kT at 1nm
             base_kT = 20.0
             
+            # Anesthetic reduces tryptophan coupling → reduces collective field
+            if self.params.tryptophan.anesthetic_applied:
+                blocking = self.params.tryptophan.anesthetic_blocking_factor
+                base_kT = base_kT * (1.0 - blocking)  # 90% block → 2 kT
+            
             # Small enhancement for being well above threshold (±20% max)
-            # Excess modulation → more robust/stable, not stronger field
             excess = (network_modulation - superradiance_threshold) / superradiance_threshold
             variation = 1.0 + 0.1 * min(excess, 2.0)  # caps at 1.2×
-            collective_field_kT = base_kT * variation  # Max ~24 kT
+            collective_field_kT = base_kT * variation
         else:
             # Below threshold: partial field, scaling toward threshold
             collective_field_kT = time_avg_dict['energy_kT'] * (network_modulation / superradiance_threshold) if superradiance_threshold > 0 else 0.0

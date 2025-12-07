@@ -94,7 +94,7 @@ EXPERIMENTS = {
 
 # Burst protocol (validated in cascade tests)
 BURST_PROTOCOL = {
-    'n_bursts': 5,
+    'n_bursts': 20,
     'burst_duration_ms': 30,
     'inter_burst_interval_ms': 150,
     'baseline_steps': 20,
@@ -517,7 +517,7 @@ def run_experiment_D() -> Dict:
     """
     Quantify EM feedback loop: compare dimer counts with EM ON vs OFF.
     
-    Prediction: EM ON produces 1.3-1.5× more dimers than EM OFF.
+    Runs PAIRED comparisons (OFF then ON for each rep) to match test_feedback_loop.py
     """
     print("\n" + "="*80)
     print("EXPERIMENT D: FEEDBACK QUANTIFICATION")
@@ -528,28 +528,40 @@ def run_experiment_D() -> Dict:
     
     results = {'em_off': [], 'em_on': []}
     
-    for em_enabled in [False, True]:
-        key = 'em_on' if em_enabled else 'em_off'
-        print(f"\n  EM {'ON' if em_enabled else 'OFF'} ({n_reps} replicates)...")
+    for rep in range(n_reps):
+        seed = 42 + rep
+        print(f"\n  Pair {rep+1}/{n_reps} (seed={seed})...")
         
-        for rep in range(n_reps):
-            # Use DIFFERENT seeds for EM ON vs OFF (learned from feedback_loop test)
-            seed = 42 + rep if not em_enabled else 100 + rep
-            np.random.seed(seed)
-            
-            params = configure_parameters(
-                n_synapses=10,
-                isotope='P31',
-                em_enabled=em_enabled,
-            )
-            
-            result = run_condition(params, f"{key}_rep{rep}")
-            result['em_enabled'] = em_enabled
-            result['replicate'] = rep
-            results[key].append(result)
-            
-            print(f"    Rep {rep+1}: dimers={result['dimer_peak_nM']:.0f}nM, "
-                  f"k_enh={result['k_enhancement_mean']:.2f}×")
+        # --- EM OFF ---
+        np.random.seed(seed)
+        
+        params_off = configure_parameters(
+            n_synapses=10,
+            isotope='P31',
+            em_enabled=False,
+        )
+        
+        result_off = run_condition(params_off, f"em_off_rep{rep}")
+        result_off['em_enabled'] = False
+        result_off['replicate'] = rep
+        results['em_off'].append(result_off)
+        
+        # --- EM ON (don't reset seed - continues from EM OFF) ---
+        params_on = configure_parameters(
+            n_synapses=10,
+            isotope='P31',
+            em_enabled=True,
+        )
+        
+        result_on = run_condition(params_on, f"em_on_rep{rep}")
+        result_on['em_enabled'] = True
+        result_on['replicate'] = rep
+        results['em_on'].append(result_on)
+        
+        # Report paired result
+        pair_enh = result_on['dimer_peak_nM'] / result_off['dimer_peak_nM'] if result_off['dimer_peak_nM'] > 0 else 0
+        print(f"    OFF: {result_off['dimer_peak_nM']:.0f}nM, ON: {result_on['dimer_peak_nM']:.0f}nM, "
+              f"Enhancement: {pair_enh:.2f}×, k_enh: {result_on.get('k_enhancement_mean', 1.0):.2f}×")
     
     # === ANALYSIS ===
     print("\n--- Analysis ---")
@@ -560,7 +572,7 @@ def run_experiment_D() -> Dict:
     on_std = np.std([r['dimer_peak_nM'] for r in results['em_on']])
     
     enhancement = on_dimers / off_dimers if off_dimers > 0 else 0
-    k_enh_mean = np.mean([r['k_enhancement_mean'] for r in results['em_on']])
+    k_enh_mean = np.mean([r.get('k_enhancement_mean', 1.0) for r in results['em_on']])
     
     print(f"\n  EM OFF: {off_dimers:.0f} ± {off_std:.0f} nM")
     print(f"  EM ON:  {on_dimers:.0f} ± {on_std:.0f} nM")
@@ -575,12 +587,12 @@ def run_experiment_D() -> Dict:
     return {
         'results': results,
         'summary': {
-            'em_off_dimers_mean': off_dimers,
-            'em_off_dimers_std': off_std,
-            'em_on_dimers_mean': on_dimers,
-            'em_on_dimers_std': on_std,
-            'dimer_enhancement': enhancement,
-            'k_enhancement_mean': k_enh_mean,
+            'em_off_dimers_mean': float(off_dimers),
+            'em_off_dimers_std': float(off_std),
+            'em_on_dimers_mean': float(on_dimers),
+            'em_on_dimers_std': float(on_std),
+            'dimer_enhancement': float(enhancement),
+            'k_enhancement_mean': float(k_enh_mean),
         }
     }
 
@@ -756,28 +768,31 @@ def run_all_experiments():
     all_results = {
         'experiment_A': {
             'name': 'Isotope Comparison',
-            'summary': exp_a['summary'],
-            'passed': a_pass,
+            'summary': {k: float(v) if isinstance(v, (np.floating, np.integer)) else v 
+                       for k, v in exp_a['summary'].items()},
+            'passed': bool(a_pass),
         },
         'experiment_B': {
             'name': 'Synapse Threshold',
-            'threshold_n': exp_b['threshold_n'],
-            'passed': b_pass,
+            'threshold_n': int(exp_b['threshold_n']),
+            'passed': bool(b_pass),
         },
         'experiment_C': {
             'name': 'Anesthetic Disruption',
-            'summary': exp_c['summary'],
-            'passed': c_pass,
+            'summary': {k: float(v) if isinstance(v, (np.floating, np.integer)) else v 
+                       for k, v in exp_c['summary'].items()},
+            'passed': bool(c_pass),
         },
         'experiment_D': {
             'name': 'Feedback Enhancement',
-            'summary': exp_d['summary'],
-            'passed': d_pass,
+            'summary': exp_d['summary'],  # Already converted to float in run_experiment_D
+            'passed': bool(d_pass),
         },
         'overall': {
-            'passed': n_passed,
-            'total': n_total,
-            'success_criteria': SUCCESS_CRITERIA,
+            'passed': int(n_passed),
+            'total': int(n_total),
+            'success_criteria': {k: list(v) if isinstance(v, tuple) else v 
+                                for k, v in SUCCESS_CRITERIA.items()},
         }
     }
     
