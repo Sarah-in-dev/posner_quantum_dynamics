@@ -768,8 +768,9 @@ def run_all_experiments():
     all_results = {
         'experiment_A': {
             'name': 'Isotope Comparison',
-            'summary': {k: float(v) if isinstance(v, (np.floating, np.integer)) else v 
-                       for k, v in exp_a['summary'].items()},
+            'summary': {k: (float(v) if isinstance(v, (np.floating, np.integer)) 
+                            else (bool(v) if isinstance(v, np.bool_) else v))
+                        for k, v in exp_a['summary'].items()},
             'passed': bool(a_pass),
         },
         'experiment_B': {
@@ -779,8 +780,9 @@ def run_all_experiments():
         },
         'experiment_C': {
             'name': 'Anesthetic Disruption',
-            'summary': {k: float(v) if isinstance(v, (np.floating, np.integer)) else v 
-                       for k, v in exp_c['summary'].items()},
+            'summary': {k: (float(v) if isinstance(v, (np.floating, np.integer)) 
+                            else (bool(v) if isinstance(v, np.bool_) else v))
+                        for k, v in exp_c['summary'].items()},
             'passed': bool(c_pass),
         },
         'experiment_D': {

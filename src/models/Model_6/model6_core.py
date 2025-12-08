@@ -28,6 +28,8 @@ from atp_system import ATPSystem
 from ca_triphosphate_complex import CaHPO4DimerSystem
 from quantum_coherence import QuantumCoherenceSystem  # CHANGED from posner_system
 from pH_dynamics import pHDynamics
+from camkii_module import CaMKIIModule
+from spine_plasticity_module import SpinePlasticityModule
 
 # Import dopamine system
 try:
@@ -122,7 +124,10 @@ class Model6QuantumSynapse:
         
         # Track tryptophan count (changes with MT invasion)
         self.n_tryptophans = self.params.tryptophan.n_trp_baseline
-        
+
+        self.camkii = CaMKIIModule()
+        self.spine_plasticity = SpinePlasticityModule()
+        logger.info("CaMKII and spine plasticity modules initialized")
         
         # History tracking
         self.history = {
@@ -135,6 +140,11 @@ class Model6QuantumSynapse:
             'coherence_mean': [],
             'pH_min': [],
             'dopamine_max': [],
+            # Add to self.history dict:
+            'molecular_memory': [],
+            'spine_volume': [],
+            'AMPAR_count': [],
+            'synaptic_strength': [],
         }
 
         # Add to self.history dict (around line ~95):
@@ -339,6 +349,16 @@ class Model6QuantumSynapse:
             em_field_trp = trp_state['output']['em_field_time_averaged']
             self._collective_field_kT = trp_state['output']['collective_field_kT']
             
+            # === PLASTICITY CASCADE ===
+            # Get calcium for CaMKII (peak value in μM)
+            calcium_uM = float(np.max(ca_conc)) * 1e6  # Convert M to μM
+            
+            # CaMKII: quantum field → molecular memory
+            camkii_state = self.camkii.step(dt, calcium_uM, self._collective_field_kT)
+            
+            # Spine plasticity: molecular memory → structural changes
+            spine_state = self.spine_plasticity.step(dt, camkii_state['molecular_memory'], calcium_uM)
+            
             # Get baseline aggregation rate from ca_phosphate system
             k_agg_baseline = self.ca_phosphate.dimerization.k_base
             
@@ -365,6 +385,11 @@ class Model6QuantumSynapse:
             self._k_enhancement = 1.0
             self._collective_field_kT = 0.0
             self._network_modulation = 0.0
+
+            # Still run plasticity with zero quantum field (classical case)
+            calcium_uM = float(np.max(ca_conc)) * 1e6
+            camkii_state = self.camkii.step(dt, calcium_uM, 0.0)
+            spine_state = self.spine_plasticity.step(dt, camkii_state['molecular_memory'], calcium_uM)
         
         # === STEP 4: CALCIUM PHOSPHATE DIMER FORMATION ===
         # Ca²⁺ + HPO₄²⁻ → CaHPO₄ (instant equilibrium)
@@ -454,6 +479,14 @@ class Model6QuantumSynapse:
             # pH
             'pH_min': pH_metrics['pH_min'],
             'pH_mean': pH_metrics['pH_mean'],
+
+            # Plasticity metrics
+            'molecular_memory': self.camkii.molecular_memory,
+            'pT286_fraction': self.camkii.pT286,
+            'spine_volume_fold': self.spine_plasticity.spine_volume,
+            'AMPAR_count': self.spine_plasticity.AMPAR_count,
+            'synaptic_strength': self.spine_plasticity.get_synaptic_strength(),
+            'plasticity_phase': self.spine_plasticity.phase,
         }
         
         # EM Coupling metrics
@@ -498,6 +531,12 @@ class Model6QuantumSynapse:
         self.history['dimer_ct_total'].append(metrics['dimer_peak_nM_ct'])
         self.history['coherence_mean'].append(metrics['coherence_mean'])
         self.history['pH_min'].append(metrics['pH_min'])
+
+        # Add to history recording section:
+        self.history['molecular_memory'].append(self.camkii.molecular_memory)
+        self.history['spine_volume'].append(self.spine_plasticity.spine_volume)
+        self.history['AMPAR_count'].append(self.spine_plasticity.AMPAR_count)
+        self.history['synaptic_strength'].append(self.spine_plasticity.get_synaptic_strength())
         
         if self.dopamine is not None:
             self.history['dopamine_max'].append(metrics['dopamine_max_nM'])
