@@ -57,8 +57,8 @@ class ActinParameters:
     Transition: Dynamic → Stable via cofilin inhibition (LIMK pathway)
     """
     # Pool baselines (relative units, normalized so total = 1.0 at rest)
-    dynamic_pool_baseline: float = 0.6   # 60% of actin is dynamic at rest
-    stable_pool_baseline: float = 0.4    # 40% is stable
+    dynamic_pool_baseline: float = 0.85  # 85% of actin is dynamic at rest (Honkura 2008)
+    stable_pool_baseline: float = 0.15   # 15% is stable (Honkura 2008)
     
     # Polymerization (Arp2/3 mediated, calcium/CaMKII dependent)
     # Bosch et al. 2014: maximal polymerization ~2x baseline in first 2 min
@@ -77,6 +77,9 @@ class ActinParameters:
     # Destabilization (slow return to baseline)
     k_destabilization: float = 0.001     # s⁻¹, stable→dynamic (very slow)
 
+    # Chemical Langevin noise (Bhalla lab modeling convention)
+    # Noise amplitude scales as √(rate × dt) for molecular reactions
+    stochastic: bool = True              # Enable Chemical Langevin noise
 
 @dataclass  
 class SpineVolumeParameters:
@@ -106,6 +109,10 @@ class SpineVolumeParameters:
     tau_transient: float = 60.0          # seconds, Matsuzaki fast phase
     tau_volume_follow_actin: float = 5.0 # seconds, volume tracks actin
 
+    # Thermal membrane fluctuations
+    # From fluctuation-dissipation: σ_V/V ~ √(kT/κA) ~ 0.01-0.02 per √s
+    stochastic: bool = True
+    thermal_fluctuation_amplitude: float = 0.015  # Fractional noise per √second
 
 @dataclass
 class AMPARParameters:
@@ -138,7 +145,8 @@ class AMPARParameters:
     # Saturation
     max_AMPAR_ratio: float = 3.0         # Can't exceed 3x baseline
 
-
+    # Stochastic trafficking (Bhalla 2014: individual receptor events)
+    stochastic: bool = True              # Enable Poisson trafficking events
 @dataclass
 class SpinePlasticityParameters:
     """Combined parameters for spine plasticity module"""
@@ -177,6 +185,9 @@ class SpinePlasticityModule:
             params: SpinePlasticityParameters (uses defaults if None)
         """
         self.params = params or SpinePlasticityParameters()
+
+        # Use numpy's modern Generator for better statistical properties
+        self.rng = np.random.default_rng()
         
         # State variables
         self._initialize_state()
@@ -251,58 +262,77 @@ class SpinePlasticityModule:
         
     def _update_actin(self, dt: float, molecular_memory: float, calcium_uM: float):
         """
-        Update actin pool dynamics
+        Update actin pool dynamics with Chemical Langevin noise
         
         Based on Bosch et al. 2014:
             - High calcium/CaMKII → polymerization (new actin)
             - CaMKII → LIMK → cofilin inhibition → stabilization
             - Without activity → slow depolymerization/destabilization
+        
+        Stochastic: Chemical Langevin equation for molecular reaction noise
+            σ = √(rate × dt) for each flux term
         """
         p = self.params.actin
         
         # Polymerization rate (calcium and CaMKII dependent)
-        # Uses Hill function for cooperative activation
         calcium_factor = calcium_uM**2 / (p.K_calcium_poly**2 + calcium_uM**2)
         memory_factor = molecular_memory / (p.K_camkii_poly + molecular_memory)
         k_poly = p.k_polymerization_max * calcium_factor * memory_factor
         
         # Depolymerization (baseline rate, reduced by memory)
-        # CaMKII inhibits cofilin via LIMK
         cofilin_activity = 1.0 / (1.0 + molecular_memory / 0.3)
         k_depoly = p.k_depolymerization * cofilin_activity
         
         # Stabilization rate (memory dependent)
-        # High CaMKII activity drives dynamic → stable conversion
         k_stab = p.k_stabilization_max * molecular_memory / (p.K_memory_stab + molecular_memory)
         
         # Destabilization (slow baseline return)
         k_destab = p.k_destabilization
         
-        # Differential equations
-        # dA_dynamic/dt = polymerization - depolymerization - stabilization + destabilization
-        d_dynamic = (k_poly - k_depoly * self.actin_dynamic 
-                     - k_stab * self.actin_dynamic 
-                     + k_destab * self.actin_stable)
+        # Calculate fluxes (molecules per second, normalized units)
+        flux_poly = k_poly
+        flux_depoly = k_depoly * self.actin_dynamic
+        flux_stab = k_stab * self.actin_dynamic
+        flux_destab = k_destab * self.actin_stable
         
-        # dA_stable/dt = stabilization - destabilization
-        d_stable = k_stab * self.actin_dynamic - k_destab * self.actin_stable
+        # Deterministic changes
+        d_dynamic = (flux_poly - flux_depoly - flux_stab + flux_destab) * dt
+        d_stable = (flux_stab - flux_destab) * dt
+        
+        # Chemical Langevin noise: σ = √(flux × dt) for each reaction
+        if p.stochastic:
+            # Each flux contributes independent noise
+            # Sign follows direction of flux contribution to each pool
+            noise_poly = np.sqrt(abs(flux_poly) * dt) * self.rng.standard_normal()
+            noise_depoly = np.sqrt(abs(flux_depoly) * dt) * self.rng.standard_normal()
+            noise_stab = np.sqrt(abs(flux_stab) * dt) * self.rng.standard_normal()
+            noise_destab = np.sqrt(abs(flux_destab) * dt) * self.rng.standard_normal()
+            
+            # Add noise to dynamic pool
+            d_dynamic += noise_poly - noise_depoly - noise_stab + noise_destab
+            
+            # Add noise to stable pool (stabilization in, destabilization out)
+            d_stable += noise_stab - noise_destab
         
         # Update with bounds
-        self.actin_dynamic = max(0.1, self.actin_dynamic + d_dynamic * dt)
-        self.actin_stable = max(0.1, self.actin_stable + d_stable * dt)
+        self.actin_dynamic = max(0.1, self.actin_dynamic + d_dynamic)
+        self.actin_stable = max(0.1, self.actin_stable + d_stable)
         self.actin_total = self.actin_dynamic + self.actin_stable
         
     def _update_volume(self, dt: float):
         """
-        Update spine volume based on actin content
+        Update spine volume based on actin content with thermal fluctuations
         
         Matsuzaki et al. 2004: Volume tracks actin with τ ~ 5-60s
+        
+        Stochastic: Thermal membrane fluctuations from fluctuation-dissipation theorem
+            σ_V/V ~ √(kT / κA) where κ is membrane bending modulus, A is area
+            For dendritic spines: ~1-2% fluctuation amplitude per √second
         """
         p = self.params.volume
         
         # Target volume from actin content
-        # V_target = (total_actin / baseline_actin)^scaling
-        baseline_actin = p.baseline_volume  # At baseline, actin = 1.0
+        baseline_actin = p.baseline_volume
         target_volume = (self.actin_total / baseline_actin) ** p.actin_volume_scaling
         
         # Clamp to physiological limits
@@ -310,48 +340,80 @@ class SpinePlasticityModule:
         
         # Volume follows actin with timescale
         tau = p.tau_volume_follow_actin
-        dV = (target_volume - self.spine_volume) / tau
+        dV = (target_volume - self.spine_volume) / tau * dt
         
-        self.spine_volume = self.spine_volume + dV * dt
+        # Thermal membrane fluctuations
+        if p.stochastic:
+            # Fluctuation-dissipation: noise amplitude ~ √(kT/κ) 
+            # Empirically ~1.5% of volume per √second for spine membranes
+            thermal_noise = (p.thermal_fluctuation_amplitude * self.spine_volume 
+                            * np.sqrt(dt) * self.rng.standard_normal())
+            dV += thermal_noise
+        
+        # Update with bounds
+        self.spine_volume = np.clip(self.spine_volume + dV, 
+                                    p.min_volume_ratio, p.max_enlargement_ratio)
         
     def _update_AMPAR(self, dt: float, molecular_memory: float):
         """
-        Update AMPAR trafficking
+        Update AMPAR trafficking with Poisson stochastic events
         
         Three pathways:
-            1. Lateral diffusion: extrasynaptic → synaptic (fast)
-            2. Exocytosis: intracellular → surface (slow)
-            3. Endocytosis: surface → intracellular (constitutive)
+            1. Lateral diffusion: extrasynaptic → synaptic (fast, τ ~ 5s)
+            2. Exocytosis: intracellular → surface (slow, τ ~ 120s)
+            3. Endocytosis: surface → intracellular (constitutive, τ ~ 60s)
+        
+        Stochastic: Individual receptor insertion/removal as Poisson events
+            n_events ~ Poisson(λ) where λ = rate × pool_size × dt
         """
         p = self.params.ampar
         
         # Available slots (proportional to spine volume)
         max_slots = self.spine_volume * p.AMPAR_per_unit_volume * p.max_AMPAR_ratio
-        available_slots = max_slots - self.AMPAR_surface
+        available_slots = max(0, max_slots - self.AMPAR_surface)
         
-        # Lateral diffusion (fast, activity-dependent)
-        # Extrasynaptic AMPARs diffuse into enlarged spine
+        # Calculate rates
         k_lat = p.k_lateral_diffusion * (1.0 + molecular_memory / p.K_memory_lat)
-        # Assume large extrasynaptic pool, rate limited by slots
-        lateral_flux = k_lat * available_slots * 0.1  # 10% of slots available per tau
-        
-        # Exocytosis (slow, strongly activity-dependent)
         k_exo = p.k_exocytosis * (1.0 + 2.0 * molecular_memory / p.K_memory_exo)
-        exocytosis_flux = k_exo * self.AMPAR_reserve
+        k_endo = p.k_endocytosis
         
-        # Endocytosis (constitutive removal)
-        endocytosis_flux = p.k_endocytosis * self.AMPAR_surface
+        if p.stochastic:
+            # Poisson events for discrete receptor trafficking
+            # λ = rate × pool_size × dt (expected events per timestep)
+            
+            # Lateral diffusion: limited by available slots
+            # Assume extrasynaptic pool is large, rate limited by slot availability
+            lambda_lateral = k_lat * available_slots * 0.1 * dt
+            n_lateral = self.rng.poisson(max(0, lambda_lateral))
+            
+            # Exocytosis: from reserve pool
+            lambda_exo = k_exo * self.AMPAR_reserve * dt
+            n_exo = self.rng.poisson(max(0, lambda_exo))
+            
+            # Endocytosis: from surface pool
+            lambda_endo = k_endo * self.AMPAR_surface * dt
+            n_endo = self.rng.poisson(max(0, lambda_endo))
+            
+            # Update surface pool (discrete changes)
+            d_surface = float(n_lateral + n_exo - n_endo)
+            
+            # Update reserve pool
+            d_reserve = float(-n_exo) + float(n_endo) * 0.5 + 0.01 * p.baseline_AMPAR * dt
+            
+        else:
+            # Deterministic (original behavior)
+            lateral_flux = k_lat * available_slots * 0.1
+            exocytosis_flux = k_exo * self.AMPAR_reserve
+            endocytosis_flux = k_endo * self.AMPAR_surface
+            
+            d_surface = (lateral_flux + exocytosis_flux - endocytosis_flux) * dt
+            d_reserve = (-exocytosis_flux + endocytosis_flux * 0.5 + 0.01 * p.baseline_AMPAR) * dt
         
-        # Update surface pool
-        d_surface = lateral_flux + exocytosis_flux - endocytosis_flux
-        self.AMPAR_surface = np.clip(self.AMPAR_surface + d_surface * dt, 
-                                      0.1, max_slots)
+        # Apply updates with bounds
+        self.AMPAR_surface = np.clip(self.AMPAR_surface + d_surface, 0.1, max_slots)
+        self.AMPAR_reserve = max(0.1, self.AMPAR_reserve + d_reserve)
         
-        # Update reserve pool (replenished from synthesis, simplified)
-        d_reserve = -exocytosis_flux + endocytosis_flux * 0.5 + 0.01 * p.baseline_AMPAR
-        self.AMPAR_reserve = max(0.1, self.AMPAR_reserve + d_reserve * dt)
-        
-        # Total functional AMPAR count (what matters for synaptic strength)
+        # Total functional AMPAR count
         self.AMPAR_count = self.AMPAR_surface
         
     def _update_phase(self, dt: float):
