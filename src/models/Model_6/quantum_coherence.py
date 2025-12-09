@@ -214,10 +214,19 @@ class QuantumCoherenceSystem:
         new_dimers = has_dimers & (self.coherence == 0)
         self.coherence[new_dimers] = 1.0
     
-        # Apply exponential decoherence
-        # Avoid division by zero
+        # Apply exponential decoherence with Chemical Langevin noise
         T2_safe = np.maximum(T2_effective, 0.01)
-        self.coherence[has_dimers] *= np.exp(-dt / T2_safe[has_dimers])
+        decay_rate = dt / T2_safe[has_dimers]
+
+        # Add stochastic noise - variance proportional to decay rate
+        noise_amplitude = 0.05  # 5% noise coefficient
+        noise = noise_amplitude * np.sqrt(decay_rate) * np.random.standard_normal(np.sum(has_dimers))
+
+        # Apply decay with noise (multiplicative)
+        self.coherence[has_dimers] *= np.exp(-decay_rate) * (1.0 + noise)
+
+        # Clip to valid range
+        self.coherence = np.clip(self.coherence, 0.0, 1.0)
     
         # Clear coherence where no dimers
         self.coherence[~has_dimers] = 0
@@ -225,34 +234,22 @@ class QuantumCoherenceSystem:
         # Clip to [0, 1]
         self.coherence = np.clip(self.coherence, 0, 1)
 
-        # === DEBUG: Print coherence statistics ===
-        if np.any(has_dimers):
-            print(f"\n=== COHERENCE DEBUG (t={dt:.6f}s) ===")
-            print(f"Dimers present: {np.sum(has_dimers)} locations")
-            print(f"New dimers: {np.sum(new_dimers)} locations")
-            print(f"Coherence range: [{np.min(self.coherence):.3f}, {np.max(self.coherence):.3f}]")
-            print(f"Coherence mean (where dimers): {np.mean(self.coherence[has_dimers]):.3f}")
-            print(f"T2_effective range: [{np.min(T2_effective[has_dimers]):.2f}, {np.max(T2_effective[has_dimers]):.2f}]s")
-            print(f"Decay factor (min): {np.exp(-dt / np.max(T2_effective[has_dimers])):.6f}")
-            print(f"=============================\n")    
         # Store effective T2 for reporting
         self.T2_effective = T2_effective
     
     def get_experimental_metrics(self) -> Dict[str, float]:
         """
         Return experimental metrics for validation
-        
-        Returns metrics aligned with experimental measurements:
-        - Mean coherence (where dimers exist)
-        - Coherence decay rate
-        - Effective T2 time
-        - Isotope composition
+       
         """
         # Only compute statistics where dimers exist
         has_dimers = self.dimer_concentration > 0
         
         if np.any(has_dimers):
             coherence_mean = float(np.mean(self.coherence[has_dimers]))
+            # Add aggregate stochasticity (not averaged out)
+            coherence_mean *= (1.0 + 0.03 * np.random.standard_normal())
+            coherence_mean = np.clip(coherence_mean, 0.0, 1.0)
             coherence_std = float(np.std(self.coherence[has_dimers]))
         else:
             coherence_mean = 0.0

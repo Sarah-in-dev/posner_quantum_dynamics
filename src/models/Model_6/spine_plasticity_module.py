@@ -143,7 +143,7 @@ class AMPARParameters:
     K_memory_lat: float = 0.2            # molecular_memory EC50 for lateral diff
     
     # Saturation
-    max_AMPAR_ratio: float = 3.0         # Can't exceed 3x baseline
+    max_AMPAR_ratio: float = 1.0         # Slots scale linearly with volume
 
     # Stochastic trafficking (Bhalla 2014: individual receptor events)
     stochastic: bool = True              # Enable Poisson trafficking events

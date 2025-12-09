@@ -30,6 +30,7 @@ from quantum_coherence import QuantumCoherenceSystem  # CHANGED from posner_syst
 from pH_dynamics import pHDynamics
 from camkii_module import CaMKIIModule
 from spine_plasticity_module import SpinePlasticityModule
+from eligibility_trace import EligibilityTraceModule
 
 # Import dopamine system
 try:
@@ -128,6 +129,8 @@ class Model6QuantumSynapse:
         self.camkii = CaMKIIModule()
         self.spine_plasticity = SpinePlasticityModule()
         logger.info("CaMKII and spine plasticity modules initialized")
+
+        self.eligibility = EligibilityTraceModule()
         
         # History tracking
         self.history = {
@@ -145,6 +148,8 @@ class Model6QuantumSynapse:
             'spine_volume': [],
             'AMPAR_count': [],
             'synaptic_strength': [],
+            'eligibility': [],
+            'plasticity_gate': [],
         }
 
         # Add to self.history dict (around line ~95):
@@ -276,6 +281,8 @@ class Model6QuantumSynapse:
         self.pH.step(dt, atp_hydrolysis_rate, ca_influx, activity_field)
         pH_field = self.pH.get_pH()
         
+        collective_field_kT = 0.0  # Default
+        
         # === EM COUPLING: FORWARD PATH (Tryptophan → Dimers) ===
         if self.em_enabled:
             # Calculate tryptophan state
@@ -349,14 +356,33 @@ class Model6QuantumSynapse:
             em_field_trp = trp_state['output']['em_field_time_averaged']
             self._collective_field_kT = trp_state['output']['collective_field_kT']
             
-            # === PLASTICITY CASCADE ===
-            # Get calcium for CaMKII (peak value in μM)
-            calcium_uM = float(np.max(ca_conc)) * 1e6  # Convert M to μM
             
-            # CaMKII: quantum field → molecular memory
-            camkii_state = self.camkii.step(dt, calcium_uM, self._collective_field_kT)
+            # === PLASTICITY CASCADE (eligibility-gated) ===
+            calcium_uM = float(np.max(ca_conc)) * 1e6
+
+            # Use locked eligibility if set, otherwise calculate from current coherence
+            if hasattr(self, '_locked_eligibility') and self._locked_eligibility is not None:
+                eligibility = self._locked_eligibility
+            else:
+                eligibility = self.quantum.get_experimental_metrics()['coherence_mean']
+            plateau = stimulus.get('plateau_potential', False)
+
+            # Gate opens if eligibility > threshold AND plateau present
+            eligibility_threshold = 0.3
+            plasticity_gate = (eligibility > eligibility_threshold) and plateau
+
+            self._current_eligibility = eligibility
+            self._plasticity_gate = plasticity_gate
             
-            # Spine plasticity: molecular memory → structural changes
+            
+            if plasticity_gate:
+                # Gate is open = eligibility above threshold, give fixed quantum boost
+                reference_field_kT = 30.0  # Standard quantum enhancement when eligible
+                camkii_state = self.camkii.step(dt, calcium_uM, reference_field_kT)
+            else:
+                camkii_state = self.camkii.step(dt, calcium_uM, 0.0)
+
+            # Spine plasticity ALWAYS receives CaMKII signal (for homeostasis)
             spine_state = self.spine_plasticity.step(dt, camkii_state['molecular_memory'], calcium_uM)
             
             # Get baseline aggregation rate from ca_phosphate system
@@ -386,10 +412,23 @@ class Model6QuantumSynapse:
             self._collective_field_kT = 0.0
             self._network_modulation = 0.0
 
-            # Still run plasticity with zero quantum field (classical case)
             calcium_uM = float(np.max(ca_conc)) * 1e6
+            
+            # Eligibility gating
+            dimer_conc_nM = float(np.max(self.ca_phosphate.get_dimer_concentration()) * 1e9)
+            dimer_count = int(dimer_conc_nM * 0.006)
+            coherence = self.quantum.get_experimental_metrics()['coherence_mean']
+            plateau = stimulus.get('plateau_potential', False)
+            
+            elig_state = self.eligibility.step(dt, dimer_count, coherence, plateau, calcium_uM)
+            
+            # CaMKII runs, but spine plasticity only gets memory signal if gate is open
             camkii_state = self.camkii.step(dt, calcium_uM, 0.0)
-            spine_state = self.spine_plasticity.step(dt, camkii_state['molecular_memory'], calcium_uM)
+            
+            if elig_state['plasticity_gate']:
+                spine_state = self.spine_plasticity.step(dt, camkii_state['molecular_memory'], calcium_uM)
+            else:
+                spine_state = self.spine_plasticity.step(dt, 0.0, calcium_uM)  # No memory signal
         
         # === STEP 4: CALCIUM PHOSPHATE DIMER FORMATION ===
         # Ca²⁺ + HPO₄²⁻ → CaHPO₄ (instant equilibrium)
@@ -518,6 +557,20 @@ class Model6QuantumSynapse:
         
         return metrics
     
+    
+    def get_eligibility(self):
+        """Return current eligibility (= coherence)"""
+        return getattr(self, '_current_eligibility', 0.0)
+    
+    def set_locked_eligibility(self, value):
+        """Lock eligibility to a fixed value for the duration of an experiment"""
+        self._locked_eligibility = value
+        
+    def clear_locked_eligibility(self):
+        """Clear locked eligibility, return to dynamic calculation"""
+        self._locked_eligibility = None
+
+    
     def _record_timestep(self):
         """Record current state to history"""
         self.history['time'].append(self.time)
@@ -537,6 +590,9 @@ class Model6QuantumSynapse:
         self.history['spine_volume'].append(self.spine_plasticity.spine_volume)
         self.history['AMPAR_count'].append(self.spine_plasticity.AMPAR_count)
         self.history['synaptic_strength'].append(self.spine_plasticity.get_synaptic_strength())
+
+        self.history['eligibility'].append(self.eligibility.get_eligibility())
+        self.history['plasticity_gate'].append(self.eligibility.state.plasticity_gate)
         
         if self.dopamine is not None:
             self.history['dopamine_max'].append(metrics['dopamine_max_nM'])
