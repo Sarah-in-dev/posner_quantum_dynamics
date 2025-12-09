@@ -238,7 +238,7 @@ class CaMKIIModule:
         self._update_CaCaM(dt, calcium_uM, calmodulin_nM)
         
         # 2. Calculate effective barrier (quantum field reduces electrostatic)
-        self._calculate_effective_barrier(quantum_field_kT)
+        self._update_CaCaM(dt, calcium_uM, calmodulin_nM, quantum_field_kT)
         
         # 3. Update T286 phosphorylation (barrier-dependent)
         self._update_T286(dt)
@@ -254,14 +254,13 @@ class CaMKIIModule:
         
         return self.get_state()
         
-    def _update_CaCaM(self, dt: float, calcium_uM: float, calmodulin_nM: float):
+    def _update_CaCaM(self, dt: float, calcium_uM: float, calmodulin_nM: float,
+                      quantum_field_kT: float = 0.0):
         """
         Update Ca2+/CaM binding to CaMKII with Chemical Langevin noise
         
         Calmodulin requires 4 Ca2+ ions for full activation (Hill = 4)
-        
-        Stochastic: Chemical Langevin for molecular binding/unbinding
-            σ = √(rate × dt) for each flux term
+        Quantum field accelerates activation by reducing 3.7 kT barrier (40% electrostatic)
         """
         p = self.params.kinetics
         
@@ -289,6 +288,15 @@ class CaMKIIModule:
         self.CaCaM_bound = np.clip(self.CaCaM_bound + d_bound, 0.0, 1.0)
         
         # Active CaMKII follows CaCaM binding with fast kinetics
+        # QUANTUM EFFECT: Field reduces activation barrier (3.7 kT, 40% electrostatic = 1.48 kT)
+        activation_barrier_electrostatic = 1.48  # kT (3.7 × 0.4)
+        barrier_reduction = min(quantum_field_kT * 0.1, activation_barrier_electrostatic)
+        tau_effective = p.tau_fast / np.exp(barrier_reduction)
+        
+        target_active = self.CaCaM_bound
+        d_active = (target_active - self.CaMKII_active) / tau_effective * dt
+        
+        
         target_active = self.CaCaM_bound
         tau = p.tau_fast
         d_active = (target_active - self.CaMKII_active) / tau * dt

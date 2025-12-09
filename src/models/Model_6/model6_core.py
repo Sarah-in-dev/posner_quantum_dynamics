@@ -377,7 +377,7 @@ class Model6QuantumSynapse:
             
             if plasticity_gate:
                 # Gate is open = eligibility above threshold, give fixed quantum boost
-                reference_field_kT = 30.0  # Standard quantum enhancement when eligible
+                reference_field_kT = 30.0 * eligibility # Standard quantum enhancement when eligible
                 camkii_state = self.camkii.step(dt, calcium_uM, reference_field_kT)
             else:
                 camkii_state = self.camkii.step(dt, calcium_uM, 0.0)

@@ -111,13 +111,24 @@ def run_single_trial(delay_s: float, isotope: str = 'P31', verbose: bool = False
     # Measure strength right before plateau (new baseline for this measurement)
     pre_plateau_strength = model.spine_plasticity.get_synaptic_strength()
     
+    print(f"\n=== PRE-PLATEAU DIAGNOSTICS (delay={delay_s}s) ===")
+    print(f"  eligibility_before_plateau: {eligibility_before_plateau:.4f}")
+    print(f"  Gate will open: {eligibility_before_plateau > 0.3}")
+    print(f"  CaMKII state: pT286={model.camkii.pT286:.4f}, memory={model.camkii.molecular_memory:.4f}")
+    print(f"  Spine state: volume={model.spine_plasticity.spine_volume:.4f}, AMPAR={model.spine_plasticity.AMPAR_count:.1f}")
+    print(f"  Actin: dynamic={model.spine_plasticity.actin_dynamic:.4f}, stable={model.spine_plasticity.actin_stable:.4f}")
+    
+    
+    
     # === PHASE 3: Plateau potential (300 ms) ===
     # Dendritic calcium spike - the instructive signal
     if verbose:
         print(f"  Phase 3: Plateau potential...")
     
     plasticity_triggered = False
-    for _ in range(300):  # 300 ms
+    gate_open_count = 0  # Initialize counter
+    
+    for i in range(300):  # 300 ms - use i not _
         stimulus = {
             'voltage': -20e-3,  # Plateau depolarization
             'activity_level': 0.5,
@@ -125,8 +136,22 @@ def run_single_trial(delay_s: float, isotope: str = 'P31', verbose: bool = False
         }
         model.step(dt, stimulus)
         
-        if model._plasticity_gate:
-            plasticity_triggered = True
+        if i % 100 == 0:  # Every 100ms
+            print(f"    Plateau t={i}ms: gate={model._plasticity_gate}, "
+                  f"Ca={model.calcium.get_mean_concentration()*1e6:.2f}µM, "
+                  f"CaCaM={model.camkii.CaCaM_bound:.4f}, "
+                  f"barrier={model.camkii.effective_barrier_kT:.1f}kT, "
+                  f"rate_enh={model.camkii.rate_enhancement:.1f}x, "
+                  f"pT286={model.camkii.pT286:.4f}")
+            if hasattr(model, '_plasticity_gate') and model._plasticity_gate:
+                    gate_open_count += 1
+    
+    # These should be OUTSIDE the loop (dedented)
+    print(f"  Gate open for {gate_open_count}/300 timesteps")
+    print(f"\n=== POST-PLATEAU (delay={delay_s}s) ===")
+    print(f"  CaMKII: pT286={model.camkii.pT286:.4f}, memory={model.camkii.molecular_memory:.4f}")
+    print(f"  Spine: volume={model.spine_plasticity.spine_volume:.4f}, AMPAR={model.spine_plasticity.AMPAR_count:.1f}")
+    print(f"  Strength change so far: {(model.spine_plasticity.get_synaptic_strength() - 1.0)*100:.2f}%")
     
     # === PHASE 4: Recovery (1 s) ===
     if verbose:
