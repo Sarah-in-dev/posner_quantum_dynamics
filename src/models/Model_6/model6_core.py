@@ -31,6 +31,7 @@ from pH_dynamics import pHDynamics
 from camkii_module import CaMKIIModule
 from spine_plasticity_module import SpinePlasticityModule
 from eligibility_trace import EligibilityTraceModule
+from ddsc_module import DDSCSystem, DDSCParameters
 
 # Import dopamine system
 try:
@@ -131,6 +132,7 @@ class Model6QuantumSynapse:
         logger.info("CaMKII and spine plasticity modules initialized")
 
         self.eligibility = EligibilityTraceModule()
+        self.ddsc = DDSCSystem(DDSCParameters())
         
         # History tracking
         self.history = {
@@ -375,16 +377,23 @@ class Model6QuantumSynapse:
             self._plasticity_gate = plasticity_gate
             
             
-            if plasticity_gate:
-                # Gate is open = eligibility above threshold, give fixed quantum boost
-                reference_field_kT = 30.0 * eligibility # Standard quantum enhancement when eligible
-                camkii_state = self.camkii.step(dt, calcium_uM, reference_field_kT)
-            else:
-                camkii_state = self.camkii.step(dt, calcium_uM, 0.0)
+            # Field exists whenever dimers are coherent (not just during plateau)
+            reference_field_kT = 30.0 * eligibility
 
-            # Spine plasticity ALWAYS receives CaMKII signal (for homeostasis)
-            spine_state = self.spine_plasticity.step(dt, camkii_state['molecular_memory'], calcium_uM)
-            
+            if plasticity_gate:
+                # Gate open: full CaMKII activation + spine modulation
+                camkii_state = self.camkii.step(dt, calcium_uM, reference_field_kT)
+                spine_state = self.spine_plasticity.step(
+                    dt, camkii_state['molecular_memory'], calcium_uM,
+                    quantum_field_kT=reference_field_kT
+                )
+            else:
+                # Gate closed: no CaMKII drive, but field still protects actin
+                camkii_state = self.camkii.step(dt, calcium_uM, 0.0)
+                spine_state = self.spine_plasticity.step(
+                    dt, 0.0, calcium_uM, 
+                    quantum_field_kT=reference_field_kT  # Field persists!
+                )
             # Get baseline aggregation rate from ca_phosphate system
             k_agg_baseline = self.ca_phosphate.dimerization.k_base
             
@@ -428,7 +437,12 @@ class Model6QuantumSynapse:
             if elig_state['plasticity_gate']:
                 spine_state = self.spine_plasticity.step(dt, camkii_state['molecular_memory'], calcium_uM)
             else:
-                spine_state = self.spine_plasticity.step(dt, 0.0, calcium_uM)  # No memory signal
+                # Gate closed: no CaMKII drive, no field protection
+                camkii_state = self.camkii.step(dt, calcium_uM, 0.0)
+                spine_state = self.spine_plasticity.step(
+                    dt, 0.0, calcium_uM, 
+                    quantum_field_kT=reference_field_kT
+                )
         
         # === STEP 4: CALCIUM PHOSPHATE DIMER FORMATION ===
         # Ca²⁺ + HPO₄²⁻ → CaHPO₄ (instant equilibrium)

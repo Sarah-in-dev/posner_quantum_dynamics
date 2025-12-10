@@ -235,10 +235,10 @@ class CaMKIIModule:
         self.time += dt
         
         # 1. Calculate Ca2+/CaM activation
-        self._update_CaCaM(dt, calcium_uM, calmodulin_nM)
+        self._update_CaCaM(dt, calcium_uM, calmodulin_nM, quantum_field_kT)
         
         # 2. Calculate effective barrier (quantum field reduces electrostatic)
-        self._update_CaCaM(dt, calcium_uM, calmodulin_nM, quantum_field_kT)
+        self._calculate_effective_barrier(quantum_field_kT)
         
         # 3. Update T286 phosphorylation (barrier-dependent)
         self._update_T286(dt)
@@ -295,11 +295,6 @@ class CaMKIIModule:
         
         target_active = self.CaCaM_bound
         d_active = (target_active - self.CaMKII_active) / tau_effective * dt
-        
-        
-        target_active = self.CaCaM_bound
-        tau = p.tau_fast
-        d_active = (target_active - self.CaMKII_active) / tau * dt
         
         # Add fluctuations to activation dynamics
         if p.stochastic:

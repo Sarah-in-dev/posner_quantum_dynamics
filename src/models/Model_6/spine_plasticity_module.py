@@ -77,9 +77,30 @@ class ActinParameters:
     # Destabilization (slow return to baseline)
     k_destabilization: float = 0.001     # s⁻¹, stable→dynamic (very slow)
 
+    # Quantum coupling - barrier modulation
+    # Arp2/3 conformational barrier ~8 kT, ~30% electrostatic
+    barrier_polymerization_kT: float = 8.0
+    barrier_electrostatic_fraction_poly: float = 0.30
+    
+    # Cofilin binding barrier ~5 kT, ~25% electrostatic  
+    barrier_depolymerization_kT: float = 5.0
+    barrier_electrostatic_fraction_depoly: float = 0.25
+    
+    # LIMK-cofilin barrier ~6 kT, ~35% electrostatic
+    barrier_stabilization_kT: float = 6.0
+    barrier_electrostatic_fraction_stab: float = 0.35
+    
+    # Coupling efficiency (same as CaMKII)
+    quantum_coupling_efficiency: float = 0.1
+
+    # Baseline polymerization (maintains homeostasis at rest)
+    # At equilibrium: k_poly_baseline = k_depoly × dynamic_pool_baseline
+    # 0.05 × 0.85 = 0.0425
+    k_polymerization_baseline: float = 0.0425
+    
     # Chemical Langevin noise (Bhalla lab modeling convention)
     # Noise amplitude scales as √(rate × dt) for molecular reactions
-    stochastic: bool = True              # Enable Chemical Langevin noise
+    stochastic: bool = False              # Enable Chemical Langevin noise
 
 @dataclass  
 class SpineVolumeParameters:
@@ -146,7 +167,7 @@ class AMPARParameters:
     max_AMPAR_ratio: float = 1.0         # Slots scale linearly with volume
 
     # Stochastic trafficking (Bhalla 2014: individual receptor events)
-    stochastic: bool = True              # Enable Poisson trafficking events
+    stochastic: bool = False              # Enable Poisson trafficking events
 @dataclass
 class SpinePlasticityParameters:
     """Combined parameters for spine plasticity module"""
@@ -229,7 +250,8 @@ class SpinePlasticityModule:
         self.AMPAR_surface = p.ampar.baseline_AMPAR  # Surface pool
         self.AMPAR_reserve = p.ampar.baseline_AMPAR * 0.5  # Intracellular reserve
         
-    def step(self, dt: float, molecular_memory: float, calcium_uM: float) -> Dict:
+    def step(self, dt: float, molecular_memory: float, calcium_uM: float, 
+             quantum_field_kT: float = 0.0) -> Dict:
         """
         Advance spine plasticity by one timestep
         
@@ -244,13 +266,13 @@ class SpinePlasticityModule:
         self.time += dt
         
         # 1. Update actin dynamics
-        self._update_actin(dt, molecular_memory, calcium_uM)
+        self._update_actin(dt, molecular_memory, calcium_uM, quantum_field_kT)
         
         # 2. Update spine volume (follows actin)
         self._update_volume(dt)
         
         # 3. Update AMPAR trafficking
-        self._update_AMPAR(dt, molecular_memory)
+        self._update_AMPAR(dt, molecular_memory, quantum_field_kT)
         
         # 4. Update phase
         self._update_phase(dt)
@@ -260,7 +282,8 @@ class SpinePlasticityModule:
         
         return self.get_state()
         
-    def _update_actin(self, dt: float, molecular_memory: float, calcium_uM: float):
+    def _update_actin(self, dt: float, molecular_memory: float, calcium_uM: float,
+                      quantum_field_kT: float = 0.0):
         """
         Update actin pool dynamics with Chemical Langevin noise
         
@@ -274,17 +297,51 @@ class SpinePlasticityModule:
         """
         p = self.params.actin
         
-        # Polymerization rate (calcium and CaMKII dependent)
+        
+        # === QUANTUM RATE ENHANCEMENT ===
+        # Field reduces electrostatic barriers, accelerating rates
+        
+        # Polymerization enhancement (Arp2/3)
+        barrier_elec_poly = p.barrier_polymerization_kT * p.barrier_electrostatic_fraction_poly
+        reduction_poly = min(quantum_field_kT * p.quantum_coupling_efficiency, barrier_elec_poly)
+        rate_enhance_poly = np.exp(reduction_poly)
+
+        # === QUANTUM CONFORMATIONAL BIAS ===
+        # Field biases protein equilibria toward active conformations
+        # This is thermodynamic (equilibrium shift), not just kinetic (rate)
+        field_conformational_bias = quantum_field_kT / 30.0  # Normalize to 0-1
+        
+        # Combined drive: CaMKII pathway + direct field effect on Arp2/3
+        effective_drive = molecular_memory + field_conformational_bias * 0.1
+        
+        # Use effective_drive for memory_factor
+        memory_factor = effective_drive / (p.K_camkii_poly + effective_drive)
+        
+        # Depolymerization enhancement (cofilin) - NOTE: we might NOT want to enhance this
+        # Or enhance it less, since cofilin is inhibited during LTP
+        barrier_elec_depoly = p.barrier_depolymerization_kT * p.barrier_electrostatic_fraction_depoly
+        reduction_depoly = min(quantum_field_kT * p.quantum_coupling_efficiency * 0.3, barrier_elec_depoly)
+        rate_enhance_depoly = np.exp(reduction_depoly)  # Smaller enhancement
+        
+        # Stabilization enhancement (LIMK pathway)
+        barrier_elec_stab = p.barrier_stabilization_kT * p.barrier_electrostatic_fraction_stab
+        reduction_stab = min(quantum_field_kT * p.quantum_coupling_efficiency, barrier_elec_stab)
+        rate_enhance_stab = np.exp(reduction_stab)
+        
+        
+        # Polymerization rate - baseline + activity-dependent component
+        # Baseline maintains homeostasis at rest
+        # Activity (calcium + quantum field) drives increase above baseline
         calcium_factor = calcium_uM**2 / (p.K_calcium_poly**2 + calcium_uM**2)
-        memory_factor = molecular_memory / (p.K_camkii_poly + molecular_memory)
-        k_poly = p.k_polymerization_max * calcium_factor * memory_factor
+        k_poly_activity = p.k_polymerization_max * calcium_factor * memory_factor * rate_enhance_poly
+        k_poly = p.k_polymerization_baseline + k_poly_activity
         
-        # Depolymerization (baseline rate, reduced by memory)
-        cofilin_activity = 1.0 / (1.0 + molecular_memory / 0.3)
-        k_depoly = p.k_depolymerization * cofilin_activity
-        
-        # Stabilization rate (memory dependent)
-        k_stab = p.k_stabilization_max * molecular_memory / (p.K_memory_stab + molecular_memory)
+        # Depolymerization (cofilin-mediated) - inhibited by quantum field
+        cofilin_activity = 1.0 / (1.0 + effective_drive / 0.3)
+        k_depoly = p.k_depolymerization * cofilin_activity * rate_enhance_depoly
+
+        # Stabilization rate (memory dependent) - QUANTUM ENHANCED
+        k_stab = p.k_stabilization_max * effective_drive / (p.K_memory_stab + effective_drive) * rate_enhance_stab
         
         # Destabilization (slow baseline return)
         k_destab = p.k_destabilization
@@ -354,7 +411,7 @@ class SpinePlasticityModule:
         self.spine_volume = np.clip(self.spine_volume + dV, 
                                     p.min_volume_ratio, p.max_enlargement_ratio)
         
-    def _update_AMPAR(self, dt: float, molecular_memory: float):
+    def _update_AMPAR(self, dt: float, molecular_memory: float, quantum_field_kT: float = 0.0):
         """
         Update AMPAR trafficking with Poisson stochastic events
         
@@ -368,14 +425,19 @@ class SpinePlasticityModule:
         """
         p = self.params.ampar
         
+        # === QUANTUM FIELD EFFECT ON TRAFFICKING ===
+        # Field biases trafficking machinery toward insertion/retention
+        field_bias = quantum_field_kT / 30.0  # Normalize to 0-1
+        effective_drive = molecular_memory + field_bias * 0.1
+        
         # Available slots (proportional to spine volume)
         max_slots = self.spine_volume * p.AMPAR_per_unit_volume * p.max_AMPAR_ratio
         available_slots = max(0, max_slots - self.AMPAR_surface)
         
-        # Calculate rates
-        k_lat = p.k_lateral_diffusion * (1.0 + molecular_memory / p.K_memory_lat)
-        k_exo = p.k_exocytosis * (1.0 + 2.0 * molecular_memory / p.K_memory_exo)
-        k_endo = p.k_endocytosis
+        # Calculate rates - quantum field enhances insertion, inhibits removal
+        k_lat = p.k_lateral_diffusion * (1.0 + effective_drive / p.K_memory_lat)
+        k_exo = p.k_exocytosis * (1.0 + 2.0 * effective_drive / p.K_memory_exo)
+        k_endo = p.k_endocytosis / (1.0 + effective_drive)  # Field INHIBITS removal
         
         if p.stochastic:
             # Poisson events for discrete receptor trafficking

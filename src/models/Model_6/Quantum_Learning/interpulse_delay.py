@@ -1,402 +1,255 @@
 """
-Interpulse Delay Experiment - Model 6 Integration
-==================================================
+interpulse_delay_v2.py - Corrected interpulse delay experiment
 
-Tests the quantum eligibility trace prediction using the full Model 6 synapse.
-
-Protocol:
-    1. Presynaptic burst (creates dimers, establishes eligibility)
-    2. Variable delay (eligibility decays with T2)
-    3. Plateau potential (converts eligibility → plasticity)
-    4. Measure final synaptic strength
-
-Key prediction: Half-decay delay should match T2
-    - P31: ~47 seconds
-    - P32: ~0.21 seconds
+Measures plasticity at appropriate timescales (minutes, not seconds)
+to capture DDSC-driven structural changes.
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Dict, List, Optional
-import sys
-import json
-import pandas as pd
-from datetime import datetime
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+from model6_core import QuantumSynapseModel
+from typing import List, Tuple
 
-from model6_core import Model6QuantumSynapse
-from model6_parameters import Model6Parameters
-from eligibility_trace import PhosphorusIsotope
+# Experimental parameters
+P31_DELAYS = [5, 15, 30, 45, 60, 90]  # seconds
+P32_DELAYS = [0.1, 0.3, 0.5, 1.0, 2.0]  # seconds (all should fail threshold)
+
+# Measurement timepoints (post-plateau)
+MEASUREMENT_TIMES = [30, 120, 300, 1200]  # 30s, 2min, 5min, 20min
+
+# Protocol timing
+STIM_DURATION = 0.2  # 200ms
+PLATEAU_DURATION = 0.3  # 300ms
 
 
-def run_single_trial(delay_s: float, isotope: str = 'P31', verbose: bool = False) -> Dict:
+def run_single_trial(
+    delay: float,
+    measurement_time: float,
+    isotope: str = 'P31',
+    verbose: bool = False
+) -> dict:
     """
-    Run single interpulse delay trial
+    Run single trial of interpulse delay experiment.
     
-    Args:
-        delay_s: Delay between presynaptic burst and plateau (seconds)
-        isotope: 'P31' or 'P32'
-        verbose: Print progress
-        
-    Returns:
-        Dict with trial results
+    Protocol:
+    1. Stimulation (200ms) - creates dimers, establishes eligibility
+    2. Delay (variable) - eligibility decays
+    3. Plateau (300ms) - checks eligibility, triggers DDSC if above threshold
+    4. Wait (measurement_time) - DDSC drives structural changes
+    5. Measure - record final plasticity state
     """
-    # Initialize model
-    params = Model6Parameters()
-    params.em_coupling_enabled = True
-    model = Model6QuantumSynapse(params)
+    # Initialize model with appropriate isotope
+    T2 = 67.6 if isotope == 'P31' else 0.3
+    model = QuantumSynapseModel(T2=T2)
     
-    # Set isotope
-    if isotope == 'P32':
-        model.quantum.P31_fraction = 0.0  # 100% P32
-    else:
-        model.quantum.P31_fraction = 1.0  # 100% P31
+    # Phase 1: Stimulation
+    model.apply_stimulation(duration=STIM_DURATION)
     
-    dt = 0.001  # 1 ms timestep
+    # Record initial state
+    initial_strength = model.get_synaptic_strength()
     
-    # Record baseline
-    baseline_strength = model.spine_plasticity.get_synaptic_strength()
+    # Phase 2: Delay (eligibility decaying)
+    model.run(duration=delay)
+    eligibility_at_plateau = model.quantum_state.get_eligibility()
     
-    # === PHASE 1: Presynaptic burst (30 ms) ===
-    # High activity creates calcium spike → dimers → eligibility
-    if verbose:
-        print(f"  Phase 1: Presynaptic burst...")
+    # Phase 3: Plateau (check gate, trigger DDSC)
+    gate_opened = model.apply_plateau(current_time=model.time)
+    model.run(duration=PLATEAU_DURATION)
     
-    for _ in range(30):  # 30 ms
-        stimulus = {
-            'voltage': -10e-3,  # Depolarized
-            'activity_level': 1.0,
-            'plateau_potential': False
-        }
-        model.step(dt, stimulus)
+    # Phase 4: Wait for structural changes
+    model.run(duration=measurement_time)
     
-    eligibility_after_burst = model.eligibility.get_eligibility()
+    # Phase 5: Measure
+    final_strength = model.get_synaptic_strength()
+    plasticity = (final_strength - initial_strength) / initial_strength * 100
     
-    # === PHASE 2: Delay period ===
-    # Resting state, eligibility decays
-    if verbose:
-        print(f"  Phase 2: Delay ({delay_s}s)...")
-    
-    n_delay_steps = int(delay_s / dt)
-    for _ in range(n_delay_steps):
-        stimulus = {
-            'voltage': -70e-3,  # Resting
-            'activity_level': 0.0,
-            'plateau_potential': False
-        }
-        model.step(dt, stimulus)
-    
-    eligibility_before_plateau = model.get_eligibility()
-
-    # Lock this eligibility value for the plateau phase
-    model.set_locked_eligibility(eligibility_before_plateau)
-
-    # === RESET CaMKII BEFORE PLATEAU ===
-    # Isolates eligibility trace effect - only coherence differs between delays
-    model.camkii.pT286 = 0.0
-    model.camkii.CaCaM_bound = 0.0
-    model.camkii.CaMKII_active = 0.0
-    model.camkii.GluN2B_bound = 0.0
-    model.camkii.molecular_memory = 0.0
-
-    # Reset spine to baseline before plateau
-    model.spine_plasticity.AMPAR_count = model.spine_plasticity.params.ampar.baseline_AMPAR
-    model.spine_plasticity.AMPAR_surface = model.spine_plasticity.params.ampar.baseline_AMPAR
-    model.spine_plasticity.spine_volume = 1.0
-    model.spine_plasticity.actin_dynamic = model.spine_plasticity.params.actin.dynamic_pool_baseline
-    model.spine_plasticity.actin_stable = model.spine_plasticity.params.actin.stable_pool_baseline
-
-
-    # Measure strength right before plateau (new baseline for this measurement)
-    pre_plateau_strength = model.spine_plasticity.get_synaptic_strength()
-    
-    print(f"\n=== PRE-PLATEAU DIAGNOSTICS (delay={delay_s}s) ===")
-    print(f"  eligibility_before_plateau: {eligibility_before_plateau:.4f}")
-    print(f"  Gate will open: {eligibility_before_plateau > 0.3}")
-    print(f"  CaMKII state: pT286={model.camkii.pT286:.4f}, memory={model.camkii.molecular_memory:.4f}")
-    print(f"  Spine state: volume={model.spine_plasticity.spine_volume:.4f}, AMPAR={model.spine_plasticity.AMPAR_count:.1f}")
-    print(f"  Actin: dynamic={model.spine_plasticity.actin_dynamic:.4f}, stable={model.spine_plasticity.actin_stable:.4f}")
-    
-    
-    
-    # === PHASE 3: Plateau potential (300 ms) ===
-    # Dendritic calcium spike - the instructive signal
-    if verbose:
-        print(f"  Phase 3: Plateau potential...")
-    
-    plasticity_triggered = False
-    gate_open_count = 0  # Initialize counter
-    
-    for i in range(300):  # 300 ms - use i not _
-        stimulus = {
-            'voltage': -20e-3,  # Plateau depolarization
-            'activity_level': 0.5,
-            'plateau_potential': True  # THIS IS THE KEY
-        }
-        model.step(dt, stimulus)
-        
-        if i % 100 == 0:  # Every 100ms
-            print(f"    Plateau t={i}ms: gate={model._plasticity_gate}, "
-                  f"Ca={model.calcium.get_mean_concentration()*1e6:.2f}µM, "
-                  f"CaCaM={model.camkii.CaCaM_bound:.4f}, "
-                  f"barrier={model.camkii.effective_barrier_kT:.1f}kT, "
-                  f"rate_enh={model.camkii.rate_enhancement:.1f}x, "
-                  f"pT286={model.camkii.pT286:.4f}")
-            if hasattr(model, '_plasticity_gate') and model._plasticity_gate:
-                    gate_open_count += 1
-    
-    # These should be OUTSIDE the loop (dedented)
-    print(f"  Gate open for {gate_open_count}/300 timesteps")
-    print(f"\n=== POST-PLATEAU (delay={delay_s}s) ===")
-    print(f"  CaMKII: pT286={model.camkii.pT286:.4f}, memory={model.camkii.molecular_memory:.4f}")
-    print(f"  Spine: volume={model.spine_plasticity.spine_volume:.4f}, AMPAR={model.spine_plasticity.AMPAR_count:.1f}")
-    print(f"  Strength change so far: {(model.spine_plasticity.get_synaptic_strength() - 1.0)*100:.2f}%")
-    
-    # === PHASE 4: Recovery (1 s) ===
-    if verbose:
-        print(f"  Phase 4: Recovery...")
-    
-    for _ in range(1000):
-        stimulus = {
-            'voltage': -70e-3,
-            'activity_level': 0.0,
-            'plateau_potential': False
-        }
-        model.step(dt, stimulus)
-    
-    final_strength = model.spine_plasticity.get_synaptic_strength()
-    
-    return {
-        'delay_s': delay_s,
+    # Collect results
+    result = {
+        'delay': delay,
+        'measurement_time': measurement_time,
         'isotope': isotope,
-        'baseline_strength': baseline_strength,
-        'pre_plateau_strength': pre_plateau_strength,
+        'eligibility_at_plateau': eligibility_at_plateau,
+        'gate_opened': gate_opened,
+        'initial_strength': initial_strength,
         'final_strength': final_strength,
-        'strength_change': final_strength - baseline_strength,
-        'normalized_change': (final_strength - baseline_strength) / baseline_strength,
-        'eligibility_after_burst': eligibility_after_burst,
-        'eligibility_before_plateau': eligibility_before_plateau,
-        'plasticity_triggered': plasticity_triggered,
-        'T2': model.quantum.get_experimental_metrics()['T2_dimer_s'],
+        'plasticity_percent': plasticity,
+        'ddsc_state': model.ddsc.get_state()
     }
+    
+    if verbose:
+        print(f"\n=== Trial: {isotope}, delay={delay}s, measure={measurement_time}s ===")
+        print(f"  Eligibility at plateau: {eligibility_at_plateau:.3f}")
+        print(f"  Gate opened: {gate_opened}")
+        print(f"  Integrated DDSC: {result['ddsc_state']['integrated_ddsc']:.2f}")
+        print(f"  Structural drive: {result['ddsc_state']['structural_drive']:.3f}")
+        print(f"  Plasticity: {plasticity:+.1f}%")
+    
+    return result
 
 
-def run_delay_sweep(isotope: str, delays: List[float], n_trials: int = 1, verbose: bool = True) -> List[Dict]:
+def run_timeseries_experiment(
+    delays: List[float],
+    measurement_times: List[float],
+    isotope: str = 'P31',
+    n_trials: int = 1
+) -> List[dict]:
     """
-    Run sweep across multiple delays
+    Run full experiment matrix: delays × measurement_times × trials
     """
     results = []
     
-    if verbose:
-        print(f"\n{'='*60}")
-        print(f"Running {isotope} delay sweep")
-        print(f"T2 = {67.6 if isotope == 'P31' else 0.3} s")
-        print(f"{'='*60}")
-    
-    for i, delay in enumerate(delays):
-        for trial in range(n_trials):
-            if verbose:
-                print(f"\nDelay {delay}s, trial {trial+1}/{n_trials}")
-            
-            result = run_single_trial(delay, isotope, verbose=False)
-            result['trial'] = trial
-            results.append(result)
-            
-            if verbose:
-                print(f"  Eligibility at plateau: {result['eligibility_before_plateau']:.3f}")
-                print(f"  Strength change: {result['normalized_change']*100:.1f}%")
+    for delay in delays:
+        for mtime in measurement_times:
+            for trial in range(n_trials):
+                result = run_single_trial(
+                    delay=delay,
+                    measurement_time=mtime,
+                    isotope=isotope,
+                    verbose=(trial == 0)  # Print first trial only
+                )
+                result['trial'] = trial
+                results.append(result)
     
     return results
 
 
-def analyze_results(results: List[Dict]) -> Dict:
+def plot_results(p31_results: List[dict], p32_results: List[dict]):
     """
-    Analyze delay sweep results
+    Create publication-quality figure showing:
+    A) Plasticity vs measurement time for different delays (P31)
+    B) Final plasticity vs delay (comparing P31 vs P32)
+    C) Eligibility decay curves for reference
     """
-    import pandas as pd
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     
-    # Convert to dataframe for easy grouping
-    df = pd.DataFrame(results)
+    # Panel A: Plasticity accumulation over time (P31 only)
+    ax = axes[0, 0]
+    delays_to_plot = [5, 30, 60]
+    colors = plt.cm.viridis(np.linspace(0.2, 0.8, len(delays_to_plot)))
     
-    # Group by delay and average
-    grouped = df.groupby('delay_s').agg({
-        'eligibility_before_plateau': ['mean', 'std'],
-        'normalized_change': ['mean', 'std'],
-    }).reset_index()
+    for delay, color in zip(delays_to_plot, colors):
+        subset = [r for r in p31_results if r['delay'] == delay]
+        times = [r['measurement_time'] / 60 for r in subset]  # Convert to minutes
+        plasticity = [r['plasticity_percent'] for r in subset]
+        ax.plot(times, plasticity, 'o-', color=color, label=f'delay={delay}s', linewidth=2, markersize=8)
     
-    delays = grouped['delay_s'].values
-    eligibilities = grouped['eligibility_before_plateau']['mean'].values
-    eligibility_std = grouped['eligibility_before_plateau']['std'].values
-    strength_changes = grouped['normalized_change']['mean'].values
+    ax.set_xlabel('Measurement Time (minutes)', fontsize=12)
+    ax.set_ylabel('Plasticity (%)', fontsize=12)
+    ax.set_title('A. Plasticity Accumulation (³¹P)', fontsize=14)
+    ax.legend()
+    ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5)
+    ax.set_xlim(0, 25)
     
-    # Find half-decay point
-    if eligibilities[0] > 0:
-        half_target = 0.5 * eligibilities[0]
-        below_half = np.where(eligibilities < half_target)[0]
-        if len(below_half) > 0 and below_half[0] > 0:
-            idx = below_half[0]
-            d1, d2 = delays[idx-1], delays[idx]
-            e1, e2 = eligibilities[idx-1], eligibilities[idx]
-            half_decay_delay = d1 + (half_target - e1) * (d2 - d1) / (e2 - e1)
-        else:
-            half_decay_delay = np.nan
-    else:
-        half_decay_delay = np.nan
+    # Panel B: Final plasticity vs delay (P31 vs P32)
+    ax = axes[0, 1]
     
-    return {
-        'delays': delays,
-        'eligibilities': eligibilities,
-        'eligibility_std': eligibility_std,
-        'strength_changes': strength_changes,
-        'half_decay_delay': half_decay_delay,
-        'T2': results[0]['T2'],
-        'isotope': results[0]['isotope'],
-    }
-
-
-def plot_comparison(p31_analysis: Dict, p32_analysis: Dict, save_path: str = None):
-    """
-    Create publication figure comparing P31 vs P32
-    """
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    # P31 at 20 min measurement
+    p31_final = [r for r in p31_results if r['measurement_time'] == 1200]
+    p31_delays = [r['delay'] for r in p31_final]
+    p31_plasticity = [r['plasticity_percent'] for r in p31_final]
+    ax.plot(p31_delays, p31_plasticity, 'o-', color='blue', label='³¹P', linewidth=2, markersize=8)
     
-    # === Panel A: Eligibility decay ===
-    ax1 = axes[0]
+    # P32 at 20 min measurement
+    p32_final = [r for r in p32_results if r['measurement_time'] == 1200]
+    p32_delays = [r['delay'] for r in p32_final]
+    p32_plasticity = [r['plasticity_percent'] for r in p32_final]
+    ax.plot(p32_delays, p32_plasticity, 's--', color='red', label='³²P', linewidth=2, markersize=8)
     
-    # P31 data
-    ax1.semilogy(p31_analysis['delays'], p31_analysis['eligibilities'],
-                'o-', color='#2E86AB', markersize=8, linewidth=2, label='³¹P (T₂=67.6s)')
+    ax.set_xlabel('Interpulse Delay (s)', fontsize=12)
+    ax.set_ylabel('Plasticity at 20 min (%)', fontsize=12)
+    ax.set_title('B. Isotope Comparison', fontsize=14)
+    ax.legend()
+    ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5)
     
-    # P31 theory
-    t = np.linspace(0, 120, 100)
-    e0 = p31_analysis['eligibilities'][0]
-    ax1.semilogy(t, e0 * np.exp(-t/67.6), '--', color='#2E86AB', alpha=0.5)
+    # Panel C: Eligibility at plateau vs delay
+    ax = axes[1, 0]
     
-    # P32 inset
-    ax1_inset = ax1.inset_axes([0.55, 0.55, 0.4, 0.4])
-    ax1_inset.semilogy(p32_analysis['delays'], p32_analysis['eligibilities'],
-                      's-', color='#E94F37', markersize=6, linewidth=2)
-    t_p32 = np.linspace(0, 2, 50)
-    e0_p32 = p32_analysis['eligibilities'][0]
-    ax1_inset.semilogy(t_p32, e0_p32 * np.exp(-t_p32/0.3), '--', color='#E94F37', alpha=0.5)
-    ax1_inset.set_xlabel('Delay (s)', fontsize=9)
-    ax1_inset.set_ylabel('Eligibility', fontsize=9)
-    ax1_inset.set_title('³²P (T₂=0.3s)', fontsize=9)
-    ax1_inset.axhline(0.3, color='gray', linestyle=':', alpha=0.5)
+    p31_elig = [r['eligibility_at_plateau'] for r in p31_final]
+    ax.plot(p31_delays, p31_elig, 'o-', color='blue', label='³¹P', linewidth=2, markersize=8)
     
-    ax1.set_xlabel('Interpulse Delay (s)', fontsize=12)
-    ax1.set_ylabel('Eligibility Level', fontsize=12)
-    ax1.set_title('A. Eligibility Trace Decay', fontsize=14)
-    ax1.axhline(0.3, color='gray', linestyle=':', alpha=0.5, label='Threshold')
-    ax1.legend(loc='lower left')
-    ax1.set_xlim(0, 125)
-    ax1.set_ylim(0.01, 1)
-    ax1.grid(True, alpha=0.3)
+    p32_elig = [r['eligibility_at_plateau'] for r in p32_final]
+    ax.plot(p32_delays, p32_elig, 's--', color='red', label='³²P', linewidth=2, markersize=8)
     
-    # === Panel B: Synaptic strength change ===
-    ax2 = axes[1]
+    ax.axhline(y=0.3, color='green', linestyle=':', label='Threshold', linewidth=2)
+    ax.set_xlabel('Interpulse Delay (s)', fontsize=12)
+    ax.set_ylabel('Eligibility at Plateau', fontsize=12)
+    ax.set_title('C. Eligibility Decay', fontsize=14)
+    ax.legend()
+    ax.set_ylim(0, 1.1)
     
-    ax2.bar(p31_analysis['delays'] - 2, p31_analysis['strength_changes'] * 100,
-           width=4, color='#2E86AB', alpha=0.8, label='³¹P')
+    # Panel D: DDSC profiles for different eligibility levels
+    ax = axes[1, 1]
     
-    ax2.set_xlabel('Interpulse Delay (s)', fontsize=12)
-    ax2.set_ylabel('Synaptic Strength Change (%)', fontsize=12)
-    ax2.set_title('B. Plasticity vs Delay', fontsize=14)
-    ax2.axhline(0, color='black', linewidth=0.5)
-    ax2.legend()
-    ax2.grid(True, alpha=0.3, axis='y')
+    # Theoretical DDSC curves
+    t = np.linspace(0, 300, 1000)
+    tau_rise, tau_decay = 15.0, 50.0
     
-    # Summary text
-    summary = (
-        f"³¹P half-decay: {p31_analysis['half_decay_delay']:.1f}s "
-        f"(expected: {67.6 * np.log(2):.1f}s)\n"
-        f"³²P half-decay: {p32_analysis['half_decay_delay']:.2f}s "
-        f"(expected: {0.3 * np.log(2):.2f}s)"
-    )
-    fig.text(0.5, 0.02, summary, ha='center', fontsize=10,
-            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+    for elig, color, label in [(0.9, 'darkgreen', 'High elig (0.9)'),
+                                (0.5, 'orange', 'Med elig (0.5)'),
+                                (0.25, 'gray', 'Low elig (0.25)')]:
+        ddsc = elig * (1 - np.exp(-t/tau_rise)) * np.exp(-t/tau_decay)
+        ax.plot(t/60, ddsc, color=color, label=label, linewidth=2)
+    
+    ax.set_xlabel('Time After Plateau (minutes)', fontsize=12)
+    ax.set_ylabel('DDSC Activation', fontsize=12)
+    ax.set_title('D. DDSC Dynamics', fontsize=14)
+    ax.legend()
+    ax.axvline(x=35/60, color='gray', linestyle=':', alpha=0.5)
+    ax.text(35/60 + 0.1, 0.5, 'Peak ~35s', fontsize=10, alpha=0.7)
     
     plt.tight_layout()
-    plt.subplots_adjust(bottom=0.15)
-    
-    if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        print(f"Figure saved: {save_path}")
+    plt.savefig('interpulse_delay_results_v2.png', dpi=150, bbox_inches='tight')
+    plt.show()
     
     return fig
 
 
 def main():
-    """Run the full experiment"""
+    print("=" * 60)
+    print("INTERPULSE DELAY EXPERIMENT v2")
+    print("Corrected timescales with DDSC integration")
+    print("=" * 60)
     
-    print("="*60)
-    print("INTERPULSE DELAY EXPERIMENT - MODEL 6")
-    print("="*60)
+    # Run P31 experiments
+    print("\n>>> Running ³¹P experiments...")
+    p31_results = run_timeseries_experiment(
+        delays=P31_DELAYS,
+        measurement_times=MEASUREMENT_TIMES,
+        isotope='P31',
+        n_trials=1
+    )
     
-    # P31 delays (long range - eligibility persists)
-    delays_p31 = [5, 30, 60]
-    n_trials = 1 # Average over trials
+    # Run P32 experiments
+    print("\n>>> Running ³²P experiments...")
+    p32_results = run_timeseries_experiment(
+        delays=P32_DELAYS,
+        measurement_times=MEASUREMENT_TIMES,
+        isotope='P32',
+        n_trials=1
+    )
     
-    # P32 delays (short range - eligibility collapses fast)
-    delays_p32 = [0.1, 0.3, 0.5]
+    # Summary statistics
+    print("\n" + "=" * 60)
+    print("SUMMARY: Final Plasticity at 20 minutes")
+    print("=" * 60)
     
-    # Run P31
-    results_p31 = run_delay_sweep('P31', delays_p31, n_trials=1)
-    analysis_p31 = analyze_results(results_p31)
+    print("\n³¹P Results:")
+    print(f"{'Delay (s)':<12} {'Eligibility':<12} {'Gate':<8} {'Plasticity':<12}")
+    print("-" * 44)
+    for r in [r for r in p31_results if r['measurement_time'] == 1200]:
+        print(f"{r['delay']:<12} {r['eligibility_at_plateau']:<12.3f} {str(r['gate_opened']):<8} {r['plasticity_percent']:+.1f}%")
     
-    # Run P32
-    results_p32 = run_delay_sweep('P32', delays_p32, n_trials=1)
-    analysis_p32 = analyze_results(results_p32)
+    print("\n³²P Results:")
+    print(f"{'Delay (s)':<12} {'Eligibility':<12} {'Gate':<8} {'Plasticity':<12}")
+    print("-" * 44)
+    for r in [r for r in p32_results if r['measurement_time'] == 1200]:
+        print(f"{r['delay']:<12} {r['eligibility_at_plateau']:<12.3f} {str(r['gate_opened']):<8} {r['plasticity_percent']:+.1f}%")
     
-    # Print key results
-    print("\n" + "="*60)
-    print("KEY RESULTS")
-    print("="*60)
-    print(f"\n³¹P (quantum coherent):")
-    print(f"  Half-decay delay: {analysis_p31['half_decay_delay']:.1f} s")
-    print(f"  Expected (T₂ × ln2): {67.6 * np.log(2):.1f} s")
+    # Generate plots
+    print("\n>>> Generating figures...")
+    plot_results(p31_results, p32_results)
     
-    print(f"\n³²P (control):")
-    print(f"  Half-decay delay: {analysis_p32['half_decay_delay']:.2f} s")
-    print(f"  Expected (T₂ × ln2): {0.3 * np.log(2):.2f} s")
-    
-    ratio = analysis_p31['half_decay_delay'] / analysis_p32['half_decay_delay']
-    print(f"\nRatio (P31/P32): {ratio:.0f}x")
-    print(f"Expected ratio: {67.6/0.3:.0f}x")
-    
-    # Save results
-    output_dir = Path(__file__).parent
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
-    # Save figure
-    fig_path = output_dir / f"interpulse_delay_experiment_{timestamp}.png"
-    fig = plot_comparison(analysis_p31, analysis_p32, save_path=str(fig_path))
-    
-    # Save data
-    data_path = output_dir / f"interpulse_delay_experiment_{timestamp}.json"
-
-    results_dict = {
-        'p31_delays': analysis_p31['delays'].tolist(),
-        'p31_eligibilities': analysis_p31['eligibilities'].tolist(),
-        'p31_strength_changes': analysis_p31['strength_changes'].tolist(),
-        'p31_half_decay': float(analysis_p31['half_decay_delay']) if not np.isnan(analysis_p31['half_decay_delay']) else None,
-        'p31_T2': float(analysis_p31['T2']),
-        'p32_delays': analysis_p32['delays'].tolist(),
-        'p32_eligibilities': analysis_p32['eligibilities'].tolist(),
-        'p32_strength_changes': analysis_p32['strength_changes'].tolist(),
-        'p32_half_decay': float(analysis_p32['half_decay_delay']) if not np.isnan(analysis_p32['half_decay_delay']) else None,
-        'p32_T2': float(analysis_p32['T2']),
-    }
-
-    with open(data_path, 'w') as f:
-        json.dump(results_dict, f, indent=2)
-    
-    plt.show()
-    
-    print("\n✓ Experiment complete")
-    
-    return analysis_p31, analysis_p32
+    print("\n>>> Done!")
 
 
 if __name__ == "__main__":
