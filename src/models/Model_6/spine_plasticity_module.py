@@ -250,29 +250,36 @@ class SpinePlasticityModule:
         self.AMPAR_surface = p.ampar.baseline_AMPAR  # Surface pool
         self.AMPAR_reserve = p.ampar.baseline_AMPAR * 0.5  # Intracellular reserve
         
-    def step(self, dt: float, molecular_memory: float, calcium_uM: float, 
+    def step(self, dt: float, structural_drive: float = 0.0, calcium: float = 0.1,
+             molecular_memory: float = None, calcium_uM: float = None,
              quantum_field_kT: float = 0.0) -> Dict:
         """
-        Advance spine plasticity by one timestep
+        Advance spine plasticity by one timestep.
+        
+        HANDOFF MODEL: structural_drive (0-1) from DDSC sets the TARGET state.
+        Actin/AMPAR approach targets over minutes (classical consolidation).
         
         Args:
             dt: Timestep in seconds
-            molecular_memory: CaMKII activation state (pT286 × GluN2B, range 0-1)
-            calcium_uM: Local calcium concentration in μM
-            
-        Returns:
-            Dict with current state metrics
+            structural_drive: 0-1 from integrated DDSC (the instructive signal)
+            calcium: Current calcium concentration in μM
+            molecular_memory: DEPRECATED - use structural_drive
+            calcium_uM: DEPRECATED alias for calcium
         """
+        # Handle deprecated parameters
+        if calcium_uM is not None:
+            calcium = calcium_uM
+
         self.time += dt
         
-        # 1. Update actin dynamics
-        self._update_actin(dt, molecular_memory, calcium_uM, quantum_field_kT)
+        # 1. Update actin dynamics (driven by structural_drive)
+        self._update_actin(dt, structural_drive, calcium, quantum_field_kT)
         
         # 2. Update spine volume (follows actin)
         self._update_volume(dt)
         
-        # 3. Update AMPAR trafficking
-        self._update_AMPAR(dt, molecular_memory, quantum_field_kT)
+        # 3. Update AMPAR trafficking (driven by structural_drive)
+        self._update_AMPAR(dt, structural_drive, quantum_field_kT)
         
         # 4. Update phase
         self._update_phase(dt)
@@ -282,99 +289,59 @@ class SpinePlasticityModule:
         
         return self.get_state()
         
-    def _update_actin(self, dt: float, molecular_memory: float, calcium_uM: float,
+    def _update_actin(self, dt: float, structural_drive: float, calcium: float,
                       quantum_field_kT: float = 0.0):
         """
-        Update actin pool dynamics with Chemical Langevin noise
+        Update actin based on DDSC-derived structural drive.
         
-        Based on Bosch et al. 2014:
-            - High calcium/CaMKII → polymerization (new actin)
-            - CaMKII → LIMK → cofilin inhibition → stabilization
-            - Without activity → slow depolymerization/destabilization
+        HANDOFF MODEL:
+        - structural_drive (0-1) determines the TARGET F-actin level
+        - Actin approaches this target over minutes (tau ~3 min)
+        - This is CLASSICAL consolidation, not direct quantum effects
         
-        Stochastic: Chemical Langevin equation for molecular reaction noise
-            σ = √(rate × dt) for each flux term
+        Args:
+            structural_drive: 0-1 value from integrated DDSC (saturating)
+                - 0 = no DDSC triggered, no structural change
+                - 1 = maximal DDSC integration, maximal structural change
+            calcium: Current calcium (for baseline homeostasis only)
+            quantum_field_kT: DEPRECATED - structural_drive replaces this
         """
         p = self.params.actin
         
+        # Baseline homeostasis: slight tendency toward baseline
+        baseline_total = p.dynamic_pool_baseline + p.stable_pool_baseline
         
-        # === QUANTUM RATE ENHANCEMENT ===
-        # Field reduces electrostatic barriers, accelerating rates
+        # DDSC-driven target: structural_drive sets how much enlargement
+        # max_expansion could be ~2.0 (for 3x total at full drive)
+        max_expansion = 2.0
+        target_actin_total = baseline_total * (1.0 + structural_drive * max_expansion)
         
-        # Polymerization enhancement (Arp2/3)
-        barrier_elec_poly = p.barrier_polymerization_kT * p.barrier_electrostatic_fraction_poly
-        reduction_poly = min(quantum_field_kT * p.quantum_coupling_efficiency, barrier_elec_poly)
-        rate_enhance_poly = np.exp(reduction_poly)
-
-        # === QUANTUM CONFORMATIONAL BIAS ===
-        # Field biases protein equilibria toward active conformations
-        # This is thermodynamic (equilibrium shift), not just kinetic (rate)
-        field_conformational_bias = quantum_field_kT / 30.0  # Normalize to 0-1
+        # Approach target with time constant (~3 minutes for structural changes)
+        tau_structural = 180.0  # seconds
         
-        # Combined drive: CaMKII pathway + direct field effect on Arp2/3
-        effective_drive = molecular_memory + field_conformational_bias * 0.1
+        approach_rate = (target_actin_total - self.actin_total) / tau_structural
         
-        # Use effective_drive for memory_factor
-        memory_factor = effective_drive / (p.K_camkii_poly + effective_drive)
+        # Apply change
+        self.actin_total += approach_rate * dt
         
-        # Depolymerization enhancement (cofilin) - NOTE: we might NOT want to enhance this
-        # Or enhance it less, since cofilin is inhibited during LTP
-        barrier_elec_depoly = p.barrier_depolymerization_kT * p.barrier_electrostatic_fraction_depoly
-        reduction_depoly = min(quantum_field_kT * p.quantum_coupling_efficiency * 0.3, barrier_elec_depoly)
-        rate_enhance_depoly = np.exp(reduction_depoly)  # Smaller enhancement
+        # Distribute between dynamic and stable pools
+        # During consolidation, stable fraction increases
+        stable_fraction_target = 0.15 + 0.35 * structural_drive  # 15% → 50%
+        tau_stabilization = 300.0  # 5 minutes for stabilization
         
-        # Stabilization enhancement (LIMK pathway)
-        barrier_elec_stab = p.barrier_stabilization_kT * p.barrier_electrostatic_fraction_stab
-        reduction_stab = min(quantum_field_kT * p.quantum_coupling_efficiency, barrier_elec_stab)
-        rate_enhance_stab = np.exp(reduction_stab)
+        current_stable_fraction = self.actin_stable / max(0.01, self.actin_total)
+        stable_approach = (stable_fraction_target - current_stable_fraction) / tau_stabilization
         
+        new_stable_fraction = current_stable_fraction + stable_approach * dt
+        new_stable_fraction = np.clip(new_stable_fraction, 0.1, 0.6)
         
-        # Polymerization rate - baseline + activity-dependent component
-        # Baseline maintains homeostasis at rest
-        # Activity (calcium + quantum field) drives increase above baseline
-        calcium_factor = calcium_uM**2 / (p.K_calcium_poly**2 + calcium_uM**2)
-        k_poly_activity = p.k_polymerization_max * calcium_factor * memory_factor * rate_enhance_poly
-        k_poly = p.k_polymerization_baseline + k_poly_activity
+        self.actin_stable = self.actin_total * new_stable_fraction
+        self.actin_dynamic = self.actin_total * (1.0 - new_stable_fraction)
         
-        # Depolymerization (cofilin-mediated) - inhibited by quantum field
-        cofilin_activity = 1.0 / (1.0 + effective_drive / 0.3)
-        k_depoly = p.k_depolymerization * cofilin_activity * rate_enhance_depoly
-
-        # Stabilization rate (memory dependent) - QUANTUM ENHANCED
-        k_stab = p.k_stabilization_max * effective_drive / (p.K_memory_stab + effective_drive) * rate_enhance_stab
-        
-        # Destabilization (slow baseline return)
-        k_destab = p.k_destabilization
-        
-        # Calculate fluxes (molecules per second, normalized units)
-        flux_poly = k_poly
-        flux_depoly = k_depoly * self.actin_dynamic
-        flux_stab = k_stab * self.actin_dynamic
-        flux_destab = k_destab * self.actin_stable
-        
-        # Deterministic changes
-        d_dynamic = (flux_poly - flux_depoly - flux_stab + flux_destab) * dt
-        d_stable = (flux_stab - flux_destab) * dt
-        
-        # Chemical Langevin noise: σ = √(flux × dt) for each reaction
-        if p.stochastic:
-            # Each flux contributes independent noise
-            # Sign follows direction of flux contribution to each pool
-            noise_poly = np.sqrt(abs(flux_poly) * dt) * self.rng.standard_normal()
-            noise_depoly = np.sqrt(abs(flux_depoly) * dt) * self.rng.standard_normal()
-            noise_stab = np.sqrt(abs(flux_stab) * dt) * self.rng.standard_normal()
-            noise_destab = np.sqrt(abs(flux_destab) * dt) * self.rng.standard_normal()
-            
-            # Add noise to dynamic pool
-            d_dynamic += noise_poly - noise_depoly - noise_stab + noise_destab
-            
-            # Add noise to stable pool (stabilization in, destabilization out)
-            d_stable += noise_stab - noise_destab
-        
-        # Update with bounds
-        self.actin_dynamic = max(0.1, self.actin_dynamic + d_dynamic)
-        self.actin_stable = max(0.1, self.actin_stable + d_stable)
-        self.actin_total = self.actin_dynamic + self.actin_stable
+        # Bounds
+        self.actin_total = np.clip(self.actin_total, 0.5, 3.0)
+        self.actin_stable = np.clip(self.actin_stable, 0.05, 1.8)
+        self.actin_dynamic = np.clip(self.actin_dynamic, 0.2, 1.5)
         
     def _update_volume(self, dt: float):
         """
@@ -411,72 +378,39 @@ class SpinePlasticityModule:
         self.spine_volume = np.clip(self.spine_volume + dV, 
                                     p.min_volume_ratio, p.max_enlargement_ratio)
         
-    def _update_AMPAR(self, dt: float, molecular_memory: float, quantum_field_kT: float = 0.0):
+    def _update_AMPAR(self, dt: float, structural_drive: float,
+                      quantum_field_kT: float = 0.0):
         """
-        Update AMPAR trafficking with Poisson stochastic events
+        Update AMPAR count based on DDSC-derived structural drive.
         
-        Three pathways:
-            1. Lateral diffusion: extrasynaptic → synaptic (fast, τ ~ 5s)
-            2. Exocytosis: intracellular → surface (slow, τ ~ 120s)
-            3. Endocytosis: surface → intracellular (constitutive, τ ~ 60s)
+        HANDOFF MODEL:
+        - AMPAR insertion follows spine volume expansion with slight lag
+        - Target AMPAR scales with structural_drive
+        - AMPARs approach target over ~5 minutes (slower than actin)
         
-        Stochastic: Individual receptor insertion/removal as Poisson events
-            n_events ~ Poisson(λ) where λ = rate × pool_size × dt
+        Args:
+            structural_drive: 0-1 from DDSC integration
+            quantum_field_kT: DEPRECATED
         """
         p = self.params.ampar
         
-        # === QUANTUM FIELD EFFECT ON TRAFFICKING ===
-        # Field biases trafficking machinery toward insertion/retention
-        field_bias = quantum_field_kT / 30.0  # Normalize to 0-1
-        effective_drive = molecular_memory + field_bias * 0.1
+        # Target AMPAR scales with structural drive
+        max_ampar_increase = 2.0  # Up to 3x baseline at full drive
+        target_ampar = p.baseline_AMPAR * (1.0 + structural_drive * max_ampar_increase)
         
-        # Available slots (proportional to spine volume)
-        max_slots = self.spine_volume * p.AMPAR_per_unit_volume * p.max_AMPAR_ratio
-        available_slots = max(0, max_slots - self.AMPAR_surface)
+        # Approach target (slower than actin - AMPARs follow structure)
+        tau_ampar = 300.0  # 5 minutes
         
-        # Calculate rates - quantum field enhances insertion, inhibits removal
-        k_lat = p.k_lateral_diffusion * (1.0 + effective_drive / p.K_memory_lat)
-        k_exo = p.k_exocytosis * (1.0 + 2.0 * effective_drive / p.K_memory_exo)
-        k_endo = p.k_endocytosis / (1.0 + effective_drive)  # Field INHIBITS removal
+        approach_rate = (target_ampar - self.AMPAR_count) / tau_ampar
         
-        if p.stochastic:
-            # Poisson events for discrete receptor trafficking
-            # λ = rate × pool_size × dt (expected events per timestep)
-            
-            # Lateral diffusion: limited by available slots
-            # Assume extrasynaptic pool is large, rate limited by slot availability
-            lambda_lateral = k_lat * available_slots * 0.1 * dt
-            n_lateral = self.rng.poisson(max(0, lambda_lateral))
-            
-            # Exocytosis: from reserve pool
-            lambda_exo = k_exo * self.AMPAR_reserve * dt
-            n_exo = self.rng.poisson(max(0, lambda_exo))
-            
-            # Endocytosis: from surface pool
-            lambda_endo = k_endo * self.AMPAR_surface * dt
-            n_endo = self.rng.poisson(max(0, lambda_endo))
-            
-            # Update surface pool (discrete changes)
-            d_surface = float(n_lateral + n_exo - n_endo)
-            
-            # Update reserve pool
-            d_reserve = float(-n_exo) + float(n_endo) * 0.5 + 0.01 * p.baseline_AMPAR * dt
-            
-        else:
-            # Deterministic (original behavior)
-            lateral_flux = k_lat * available_slots * 0.1
-            exocytosis_flux = k_exo * self.AMPAR_reserve
-            endocytosis_flux = k_endo * self.AMPAR_surface
-            
-            d_surface = (lateral_flux + exocytosis_flux - endocytosis_flux) * dt
-            d_reserve = (-exocytosis_flux + endocytosis_flux * 0.5 + 0.01 * p.baseline_AMPAR) * dt
+        self.AMPAR_count += approach_rate * dt
+        self.AMPAR_surface = self.AMPAR_count  # Simplified: surface = total
         
-        # Apply updates with bounds
-        self.AMPAR_surface = np.clip(self.AMPAR_surface + d_surface, 0.1, max_slots)
-        self.AMPAR_reserve = max(0.1, self.AMPAR_reserve + d_reserve)
-        
-        # Total functional AMPAR count
-        self.AMPAR_count = self.AMPAR_surface
+        # Bounds
+        self.AMPAR_count = np.clip(self.AMPAR_count, 
+                                    p.baseline_AMPAR * 0.5,
+                                    p.baseline_AMPAR * 3.0)
+        self.AMPAR_surface = self.AMPAR_count
         
     def _update_phase(self, dt: float):
         """

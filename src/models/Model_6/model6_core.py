@@ -152,6 +152,8 @@ class Model6QuantumSynapse:
             'synaptic_strength': [],
             'eligibility': [],
             'plasticity_gate': [],
+            'structural_drive': [],
+            'ddsc_current': [],
         }
 
         # Add to self.history dict (around line ~95):
@@ -265,8 +267,8 @@ class Model6QuantumSynapse:
             phosphate = self._override_phosphate
 
         # DIAGNOSTIC: Check phosphate values
-        if np.random.rand() < 0.0001:
-            print(f"model6_core.step: phosphate = {np.mean(phosphate)*1e3:.2f} mM (mean), {np.max(phosphate)*1e3:.2f} mM (max)")
+        # if np.random.rand() < 0.0001:
+            # print(f"model6_core.step: phosphate = {np.mean(phosphate)*1e3:.2f} mM (mean), {np.max(phosphate)*1e3:.2f} mM (max)")
         
         # === STEP 3: pH DYNAMICS ===
         # Activity acidifies the synapse
@@ -429,20 +431,29 @@ class Model6QuantumSynapse:
             coherence = self.quantum.get_experimental_metrics()['coherence_mean']
             plateau = stimulus.get('plateau_potential', False)
             
-            elig_state = self.eligibility.step(dt, dimer_count, coherence, plateau, calcium_uM)
+            # Get current eligibility (decays with T2)
+            eligibility = coherence  # Coherence IS the eligibility
             
-            # CaMKII runs, but spine plasticity only gets memory signal if gate is open
+            # Check if plateau should trigger DDSC
+            if plateau:
+                self.ddsc.check_trigger(eligibility, self.time)
+            
+            # Update DDSC if triggered (integrates over time)
+            if self.ddsc.triggered:
+                self.ddsc.integrate(self.time, dt)
+            
+            # Get structural drive from DDSC (saturating 0-1)
+            structural_drive = self.ddsc.get_structural_drive()
+            
+            # CaMKII still runs for molecular_memory tracking
             camkii_state = self.camkii.step(dt, calcium_uM, 0.0)
             
-            if elig_state['plasticity_gate']:
-                spine_state = self.spine_plasticity.step(dt, camkii_state['molecular_memory'], calcium_uM)
-            else:
-                # Gate closed: no CaMKII drive, no field protection
-                camkii_state = self.camkii.step(dt, calcium_uM, 0.0)
-                spine_state = self.spine_plasticity.step(
-                    dt, 0.0, calcium_uM, 
-                    quantum_field_kT=reference_field_kT
-                )
+            # Spine plasticity driven by DDSC structural_drive, NOT direct quantum field
+            spine_state = self.spine_plasticity.step(
+                dt, 
+                structural_drive=structural_drive,
+                calcium=calcium_uM
+            )
         
         # === STEP 4: CALCIUM PHOSPHATE DIMER FORMATION ===
         # Ca²⁺ + HPO₄²⁻ → CaHPO₄ (instant equilibrium)
@@ -607,6 +618,9 @@ class Model6QuantumSynapse:
 
         self.history['eligibility'].append(self.eligibility.get_eligibility())
         self.history['plasticity_gate'].append(self.eligibility.state.plasticity_gate)
+
+        self.history['structural_drive'].append(self.ddsc.get_structural_drive())
+        self.history['ddsc_current'].append(self.ddsc.current_ddsc)
         
         if self.dopamine is not None:
             self.history['dopamine_max'].append(metrics['dopamine_max_nM'])

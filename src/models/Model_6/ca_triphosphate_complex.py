@@ -405,7 +405,7 @@ class CalciumPhosphateDimerization:
                 mean_df = np.mean(dimer_fraction)
                 min_df = np.min(dimer_fraction)
                 max_df = np.max(dimer_fraction)
-                print(f"DEBUG: Ca/P={mean_ca_p:.4f}, dimer_frac: mean={mean_df:.4f}, min={min_df:.4f}, max={max_df:.4f}")
+                # print(f"DEBUG: Ca/P={mean_ca_p:.4f}, dimer_frac: mean={mean_df:.4f}, min={min_df:.4f}, max={max_df:.4f}")
         else:
             dimer_fraction = np.ones_like(ca_conc)
 
@@ -533,8 +533,8 @@ class CaHPO4DimerSystem:
             po4_conc: HPO₄²⁻ concentration (M) at pH 7.3
         """
         # DIAGNOSTIC: Check what phosphate we're actually getting
-        if np.random.rand() < 0.0001:
-            print(f"CaHPO4DimerSystem.step: po4_conc = {np.mean(po4_conc)*1e3:.2f} mM (mean), {np.max(po4_conc)*1e3:.2f} mM (max)")
+        #if np.random.rand() < 0.0001:
+            #print(f"CaHPO4DimerSystem.step: po4_conc = {np.mean(po4_conc)*1e3:.2f} mM (mean), {np.max(po4_conc)*1e3:.2f} mM (max)")
         
         
         # Step 1: CaHPO₄ ion pairs form instantly (equilibrium)
