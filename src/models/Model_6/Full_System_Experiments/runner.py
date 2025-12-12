@@ -125,15 +125,33 @@ def measure_state(model, time: float, phase: str) -> SystemState:
     
     
     # === QUANTUM SYSTEM 2: Dimers ===
-    # Single synapse dimer count from model
-    single_synapse_dimers = getattr(model, '_previous_dimer_count', 0.0)
-
-    # Scale by network size
-    n_synapses = model.params.multi_synapse.n_synapses_default
+    # Single synapse dimer concentration from model (in nM)
+    dimer_conc_nM = getattr(model, '_previous_dimer_count', 0.0)
+    
+    # Convert concentration to molecule count per synapse
+    # Spine volume ≈ 0.1 µm³ = 1e-16 L
+    # n = C × V × N_A where C in M, V in L
+    spine_volume_L = 1e-16
+    N_A = 6.022e23
+    dimers_per_synapse = dimer_conc_nM * 1e-9 * spine_volume_L * N_A
+    
+    # Network parameters
+    if hasattr(model.params, 'multi_synapse') and hasattr(model.params.multi_synapse, 'n_synapses_default'):
+        n_synapses = model.params.multi_synapse.n_synapses_default
+    else:
+        n_synapses = 1
     coupling_factor = getattr(model, '_spatial_coupling_factor', 1.0)
-
-    # Network dimer count = single × N × cooperative coupling
-    state.dimer_count = single_synapse_dimers * n_synapses * coupling_factor
+    
+    # Total coherent dimers in network
+    # Coupling factor accounts for spatial clustering benefits
+    total_network_dimers = dimers_per_synapse * n_synapses * coupling_factor
+    
+    # Store all metrics
+    state.dimer_conc_nM = dimer_conc_nM
+    state.dimers_per_synapse = dimers_per_synapse
+    state.total_network_dimers = total_network_dimers
+    state.dimer_count = total_network_dimers  # Legacy compatibility
+    
     state.dimer_coherence = getattr(model, '_previous_coherence', 0.0)
     state.eligibility = getattr(model, '_current_eligibility', 0.0)
     state.network_modulation = getattr(model, '_network_modulation', 0.0)

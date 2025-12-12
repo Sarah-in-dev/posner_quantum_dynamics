@@ -335,6 +335,7 @@ def experiment_anesthetic(config: ExperimentConfig,
         summary[conc] = {
             'field': compute_summary_statistics([t.peak_values.get('peak_em_field', 0) for t in label_trials]),
             'dimers': compute_summary_statistics([t.peak_values.get('peak_dimers', 0) for t in label_trials]),
+            'committed': compute_summary_statistics([t.peak_values.get('committed_level', 0) for t in label_trials]),
             'strength': compute_summary_statistics([t.peak_values.get('final_strength', 1) for t in label_trials]),
         }
         
@@ -409,13 +410,17 @@ def experiment_stim_intensity(config: ExperimentConfig,
         summary[v] = {
             'dimers': compute_summary_statistics([t.peak_values.get('peak_dimers', 0) for t in v_trials]),
             'eligibility': compute_summary_statistics([t.peak_values.get('peak_eligibility', 0) for t in v_trials]),
+            'committed': compute_summary_statistics([t.peak_values.get('committed_level', 0) for t in v_trials]),
+            'field': compute_summary_statistics([t.peak_values.get('peak_em_field', 0) for t in v_trials]),
             'strength': compute_summary_statistics([t.peak_values.get('final_strength', 1) for t in v_trials]),
         }
         
         if verbose:
             s = summary[v]
-            print(f"  {v:4d} mV: Dimers={s['dimers']['mean']:.1f}, Strength={s['strength']['mean']:.2f}×")
-    
+            print(f"  {v:4d} mV: Dimers={s['dimers']['mean']:.1f}, "
+                  f"Committed={s['committed']['mean']:.2f}, "
+                  f"Eligibility={s['eligibility']['mean']:.2f}")
+            
     result.summary_stats = summary
     
     # Fit sigmoid

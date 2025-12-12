@@ -142,7 +142,10 @@ class SystemState:
     superradiance_active: bool = False
     
     # === QUANTUM SYSTEM 2: Calcium Phosphate Dimers ===
-    dimer_count: float = 0.0
+    dimer_conc_nM: float = 0.0           # Concentration per synapse (nM)
+    dimers_per_synapse: float = 0.0      # Molecule count per synapse (~5)
+    total_network_dimers: float = 0.0    # Total molecules in network
+    dimer_count: float = 0.0             # Legacy (= total_network_dimers)
     dimer_coherence: float = 0.0
     eligibility: float = 0.0
     network_modulation: float = 0.0
