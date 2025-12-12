@@ -383,10 +383,10 @@ class SpinePlasticityModule:
         """
         Update AMPAR count based on DDSC-derived structural drive.
         
-        HANDOFF MODEL:
-        - AMPAR insertion follows spine volume expansion with slight lag
-        - Target AMPAR scales with structural_drive
-        - AMPARs approach target over ~5 minutes (slower than actin)
+        BIOLOGICALLY REALISTIC TIMING (Royal Society, Bhalla 2014):
+        - PSD unchanged at 5-30 min despite maximal potentiation
+        - PSD increases visible at 2 hours
+        - AMPAR trafficking has ~30 min onset delay, ~1 hour tau
         
         Args:
             structural_drive: 0-1 from DDSC integration
@@ -394,22 +394,35 @@ class SpinePlasticityModule:
         """
         p = self.params.ampar
         
+        # Store structural_drive for projected_strength calculation
+        self._current_structural_drive = structural_drive
+        
+        # AMPAR changes don't begin until ~30 min after structural drive
+        # (PSD assembly requires prior spine structural remodeling)
+        ampar_onset_delay = 1800.0  # 30 minutes
+        
+        if self.time < ampar_onset_delay:
+            # No AMPAR changes yet - stay at baseline
+            # (Spine volume can change, but AMPAR count doesn't)
+            return
+        
+        # After onset delay: slow AMPAR accumulation
+        # Literature: full expression takes ~2 hours
+        tau_ampar = 3600.0  # 1 hour
+        
         # Target AMPAR scales with structural drive
-        max_ampar_increase = 2.0  # Up to 3x baseline at full drive
+        max_ampar_increase = 0.35  # 35% max increase (literature-based)
         target_ampar = p.baseline_AMPAR * (1.0 + structural_drive * max_ampar_increase)
         
-        # Approach target (slower than actin - AMPARs follow structure)
-        tau_ampar = 300.0  # 5 minutes
-        
+        # Exponential approach to target
         approach_rate = (target_ampar - self.AMPAR_count) / tau_ampar
-        
         self.AMPAR_count += approach_rate * dt
-        self.AMPAR_surface = self.AMPAR_count  # Simplified: surface = total
+        self.AMPAR_surface = self.AMPAR_count
         
         # Bounds
         self.AMPAR_count = np.clip(self.AMPAR_count, 
                                     p.baseline_AMPAR * 0.5,
-                                    p.baseline_AMPAR * 3.0)
+                                    p.baseline_AMPAR * 1.5)
         self.AMPAR_surface = self.AMPAR_count
         
     def _update_phase(self, dt: float):
@@ -477,6 +490,24 @@ class SpinePlasticityModule:
         This is what electrophysiology measures (EPSP amplitude)
         """
         return self.AMPAR_count / self.params.ampar.baseline_AMPAR
+    
+    
+    def get_projected_strength(self) -> float:
+        """
+        Project final synaptic strength from current structural drive.
+        
+        This allows validation of quantum gating without running 2-hour
+        simulations. Based on literature showing ~35% max LTP increase.
+        
+        Returns:
+            Projected final strength (1.0 = baseline, 1.35 = max LTP)
+        """
+        structural_drive = getattr(self, '_current_structural_drive', 0.0)
+        max_strength_increase = 0.35  # 35% max from literature
+        
+        projected = 1.0 + structural_drive * max_strength_increase
+        return projected
+    
     
     def is_potentiated(self) -> bool:
         """Check if spine is in potentiated state (LTP)"""

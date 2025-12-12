@@ -616,13 +616,51 @@ class TryptophanSuperradianceModule:
         absorption_efficiency = 0.8  # 80%
         n_photons_per_spike = photon_flux * spike_duration * absorption_efficiency
 
-        time_avg_dict = self.time_average.calculate_time_averaged_field(
-            E_instantaneous=E_instant,
-            ca_spike_active=ca_spike_active,
-            n_photons_per_spike=n_photons_per_spike,  # Now calculated from flux
-            spike_duration=spike_duration,
-            total_duration=100.0  # 100 s plasticity window
-        )
+        # Check if external UV is being applied
+        external_uv_active = (hasattr(self.params, 'metabolic_uv') and 
+                              self.params.metabolic_uv.external_uv_illumination and
+                              self.params.metabolic_uv.external_uv_intensity > 0)
+
+        if external_uv_active:
+            # External UV provides CONTINUOUS excitation (not spike-dependent)
+            # Calculate steady-state time-averaged field from external UV
+            external_intensity = self.params.metabolic_uv.external_uv_intensity
+            
+            # Higher external UV → stronger continuous field
+            # Scale: 1 mW/m² gives ~2x metabolic baseline
+            uv_enhancement = 1.0 + (external_intensity / 1e-3) * 1.0  # 1 mW → 2x
+            uv_enhancement = min(uv_enhancement, 5.0)  # Cap at 5x
+            
+            # Continuous field (doesn't depend on ca_spike_active)
+            base_field = E_instant * 0.1  # 10% of instantaneous as continuous baseline
+            E_time_averaged = base_field * uv_enhancement
+            
+            # Energy in kT
+            e = 1.602e-19
+            q = 2 * e
+            d = 1.5e-10
+            k_B = 1.381e-23
+            T = 310.0
+            U_kT = (q * E_time_averaged * d) / (k_B * T)
+            
+            time_avg_dict = {
+                'instantaneous_field': E_instant,
+                'spike_peak_field': E_instant if ca_spike_active else 0.0,
+                'time_averaged_field': E_time_averaged,
+                'energy_kT': U_kT,
+                'during_spike': ca_spike_active,
+                'duty_cycle': 1.0 if external_uv_active else 0.0025,
+                'external_uv_enhancement': uv_enhancement
+            }
+        else:
+            # Metabolic UV only - spike-dependent
+            time_avg_dict = self.time_average.calculate_time_averaged_field(
+                E_instantaneous=E_instant,
+                ca_spike_active=ca_spike_active,
+                n_photons_per_spike=n_photons_per_spike,
+                spike_duration=spike_duration,
+                total_duration=100.0
+            )
 
         # === UPDATE STATE ===
         self.state = {
@@ -638,22 +676,31 @@ class TryptophanSuperradianceModule:
         }
         
         # === OUTPUT FOR OTHER MODULES ===
-        if above_threshold:
-            # Superradiance active - field at physics-based maximum
-            base_kT = 20.0
+        # Q1 (Tryptophan field) is STRUCTURAL - depends on n_tryptophans and anesthetic
+        # External UV can ENHANCE the field (more excitations → stronger emission)
+        
+        n_trp_threshold = 100  # Minimum for collective field
+        
+        if n_tryptophans >= n_trp_threshold:
+            # Base field scales with sqrt(N), normalized to 22 kT at 1200 trp
+            base_kT = 22.0 * np.sqrt(n_tryptophans / 1200.0)
+            base_kT = min(base_kT, 25.0)  # Cap at 25 kT
             
-            # Anesthetic reduces tryptophan coupling → reduces collective field
+            # Anesthetic reduces tryptophan coupling
             if self.params.tryptophan.anesthetic_applied:
                 blocking = self.params.tryptophan.anesthetic_blocking_factor
-                base_kT = base_kT * (1.0 - blocking)  # 90% block → 2 kT
+                base_kT = base_kT * (1.0 - blocking)
             
-            # Small enhancement for being well above threshold (±20% max)
-            excess = (network_modulation - superradiance_threshold) / superradiance_threshold
-            variation = 1.0 + 0.1 * min(excess, 2.0)  # caps at 1.2×
-            collective_field_kT = base_kT * variation
+            # External UV enhances the effective field (more excitation events)
+            if external_uv_active:
+                uv_field_boost = time_avg_dict.get('external_uv_enhancement', 1.0)
+                # UV boosts field moderately (not full multiplication - diminishing returns)
+                base_kT = base_kT * (1.0 + 0.3 * (uv_field_boost - 1.0))
+                base_kT = min(base_kT, 30.0)  # Cap with UV boost
+            
+            collective_field_kT = base_kT
         else:
-            # Below threshold: partial field, scaling toward threshold
-            collective_field_kT = time_avg_dict['energy_kT'] * (network_modulation / superradiance_threshold) if superradiance_threshold > 0 else 0.0
+            collective_field_kT = 0.0
         
         output = {
             'em_field_time_averaged': time_avg_dict['time_averaged_field'],  # V/m

@@ -92,10 +92,11 @@ class CalciumChannels:
             # Voltage-dependent activation (simplified)
             # Full model would use Hodgkin-Huxley m³h kinetics
             V_threshold = -0.050  # -50 mV
-            V_half = -0.020  # -20 mV
+            V_half = -0.030  # -30 mV (shifted for better IO curve range)
+            V_slope = 0.012  # 12 mV slope (gentler for graded response)
             
-            # Boltzmann activation
-            P_open_voltage = 1.0 / (1.0 + np.exp(-(voltage - V_half) / 0.005))
+            # Boltzmann activation - gentler slope for graded IO curve
+            P_open_voltage = 1.0 / (1.0 + np.exp(-(voltage - V_half) / V_slope))
             
             # Modulate rates
             alpha_eff = self.alpha * P_open_voltage

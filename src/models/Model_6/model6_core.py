@@ -408,7 +408,7 @@ class Model6QuantumSynapse:
                 reward = stimulus.get('reward', False)
                 self.dopamine.step(dt, reward_signal=reward)
             
-            # --- PHASE 9: PLASTICITY GATE (Eligibility + Dopamine READ) ---
+            # --- PHASE 9: PLASTICITY GATE (Eligibility + Dopamine + Calcium + Q1 Field) ---
             calcium_uM = float(np.max(ca_conc)) * 1e6
             
             # Eligibility IS coherence (the quantum memory)
@@ -417,16 +417,18 @@ class Model6QuantumSynapse:
             else:
                 eligibility = self.quantum.get_experimental_metrics()['coherence_mean']
             
-            # THREE-FACTOR RULE: Eligibility + Dopamine + Calcium
+            # FOUR-FACTOR RULE: Eligibility + Dopamine + Calcium + Q1 Field
             eligibility_threshold = 0.3
             calcium_threshold_uM = 0.5  # Need some calcium elevation
+            field_threshold_kT = 10.0   # Need sufficient Q1 field for CaMKII assistance
             
             eligibility_present = (eligibility > eligibility_threshold)
             dopamine_read = self._dopamine_above_read_threshold()
             calcium_elevated = (calcium_uM > calcium_threshold_uM)
+            field_sufficient = (self._collective_field_kT > field_threshold_kT)
             
-            # Gate opens when ALL THREE conditions met
-            plasticity_gate = eligibility_present and dopamine_read and calcium_elevated
+            # Gate opens when ALL FOUR conditions met
+            plasticity_gate = eligibility_present and dopamine_read and calcium_elevated and field_sufficient
             
             self._current_eligibility = eligibility
             self._plasticity_gate = plasticity_gate
