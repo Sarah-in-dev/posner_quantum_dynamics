@@ -106,6 +106,8 @@ class CalciumParameters:
     pump_vmax: float = 50e-6  # M/s (PMCA + NCX combined)
     pump_km: float = 0.5e-6  # M
 
+    # NMDA blocker flag (APV/AP5)
+    nmda_blocked: bool = False
 
 @dataclass
 class ATPParameters:

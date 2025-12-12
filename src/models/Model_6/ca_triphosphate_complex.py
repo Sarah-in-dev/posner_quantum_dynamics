@@ -399,13 +399,6 @@ class CalciumPhosphateDimerization:
         if po4_conc is not None:
             dimer_fraction = self.calculate_dimer_fraction(ca_conc, po4_conc)
     
-            # DIAGNOSTIC: Print occasionally to see what's happening
-            if np.random.rand() < 0.0001:  # Print very rarely
-                mean_ca_p = np.mean(ca_conc / (po4_conc + 1e-10))
-                mean_df = np.mean(dimer_fraction)
-                min_df = np.min(dimer_fraction)
-                max_df = np.max(dimer_fraction)
-                # print(f"DEBUG: Ca/P={mean_ca_p:.4f}, dimer_frac: mean={mean_df:.4f}, min={min_df:.4f}, max={max_df:.4f}")
         else:
             dimer_fraction = np.ones_like(ca_conc)
 
@@ -561,6 +554,62 @@ class CaHPO4DimerSystem:
     def get_dimer_concentration(self) -> np.ndarray:
         """Get Ca₆(PO₄)₄ concentration (M) - the quantum qubit!"""
         return self.dimer_concentration
+    
+    
+    def set_n_templates(self, n_templates: int):
+        """
+        Update number of template sites (for plasticity feedback)
+        
+        As spine grows, more scaffold proteins become available,
+        providing more nucleation sites for dimer formation.
+        
+        Args:
+            n_templates: New number of template sites (typically 3-10)
+        """
+        n_templates = max(1, min(n_templates, 15))  # Clamp to reasonable range
+        
+        # Get current template count
+        current_count = int(np.sum(self.templates.template_field))
+        
+        if n_templates == current_count:
+            return  # No change needed
+        
+        # Get grid center (where channels are)
+        center = self.grid_shape[0] // 2
+        
+        if n_templates > current_count:
+            # Add more templates near center
+            added = 0
+            radius = 1
+            while added < (n_templates - current_count) and radius < 10:
+                for dx in range(-radius, radius + 1):
+                    for dy in range(-radius, radius + 1):
+                        x, y = center + dx, center + dy
+                        if 0 <= x < self.grid_shape[0] and 0 <= y < self.grid_shape[1]:
+                            if self.templates.template_field[x, y] == 0:
+                                self.templates.template_field[x, y] = 1.0
+                                added += 1
+                                if added >= (n_templates - current_count):
+                                    break
+                    if added >= (n_templates - current_count):
+                        break
+                radius += 1
+        else:
+            # Remove templates (furthest from center first)
+            positions = np.argwhere(self.templates.template_field > 0)
+            if len(positions) > 0:
+                # Sort by distance from center (furthest first)
+                distances = np.sqrt((positions[:, 0] - center)**2 + (positions[:, 1] - center)**2)
+                sorted_idx = np.argsort(-distances)  # Descending
+                
+                to_remove = current_count - n_templates
+                for i in range(min(to_remove, len(sorted_idx))):
+                    x, y = positions[sorted_idx[i]]
+                    self.templates.template_field[x, y] = 0.0
+        
+        # Recalculate enhancement field
+        self.template_enhancement = self.templates.calculate_surface_enhancement()
+    
     
     def get_experimental_metrics(self) -> Dict[str, float]:
         """Return metrics in nM for validation (includes PNC data)"""

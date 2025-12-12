@@ -82,6 +82,12 @@ class CalciumChannels:
             At rest, voltage ~ -70 mV
             Channels activate above -50 mV threshold
         """
+        # APV blocks NMDA - force all channels closed
+        if getattr(self.params, 'nmda_blocked', False):
+            self.state[:] = False
+            self.current[:] = 0.0
+            return
+            
         if voltage is not None:
             # Voltage-dependent activation (simplified)
             # Full model would use Hodgkin-Huxley m³h kinetics
@@ -140,10 +146,10 @@ class CalciumChannels:
         z = 2  # Ca²⁺ valence
         F = 96485  # Faraday constant (C/mol)
         
-        # Volume element
-        # Zuber et al. 2005: cleft width = 20 nm
-        dV = dx * dx * self.params.channel_open_time * 1e-9  # m³ (effective volume)
-        
+        # Voxel height from cleft width (Zuber et al. 2005: 20 nm)
+        dz = 20e-9  # m
+        dV = dx * dx * dz  # m³ (true voxel volume)
+
         for i in range(self.n_channels):
             if self.state[i]:
                 x, y = self.positions[i]

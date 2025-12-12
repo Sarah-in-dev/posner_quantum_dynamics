@@ -162,6 +162,22 @@ class Model6QuantumSynapse:
             self.history['k_enhancement'] = []
             self.history['collective_field_kT'] = []
         
+        
+        # === FEEDBACK STATE TRACKING ===
+        # For closed-loop dynamics
+        self._k_agg_for_next_step = None  # Enhanced rate prepared by EM coupling
+        self._previous_dimer_count = 0.0
+        self._previous_coherence = 0.0
+        self._collective_field_kT = 0.0
+
+        # Dopamine as READ signal
+        self._dopamine_read_threshold_nM = 50.0  # Phasic burst detection
+
+        # CaMKII commitment (once set, locked)
+        self._camkii_committed = False
+        self._committed_memory_level = 0.0
+        
+        
         logger.info("Model 6 initialized successfully")
         
     def _initialize_subsystems(self):
@@ -287,12 +303,63 @@ class Model6QuantumSynapse:
         
         collective_field_kT = 0.0  # Default
         
-        # === EM COUPLING: FORWARD PATH (Tryptophan → Dimers) ===
+        # === EM COUPLING: COMPLETE CLOSED-LOOP ARCHITECTURE ===
         if self.em_enabled:
-            # Calculate tryptophan state
-            # UV flux from ATP metabolism (proportional to hydrolysis)
+            
+            # --- PHASE 1: DIMER FORMATION (using previous step's enhanced k_agg) ---
+            # This MUST happen first so we know how many dimers exist
+            
+            if self._k_agg_for_next_step is not None:
+                k_agg_to_use = self._k_agg_for_next_step
+            else:
+                k_agg_to_use = self.ca_phosphate.dimerization.k_base
+            
+            # Form dimers with the prepared enhancement
+            k_agg_original = self.ca_phosphate.dimerization.k_base
+            self.ca_phosphate.dimerization.k_base = k_agg_to_use
+            self.ca_phosphate.step(dt, ca_conc, phosphate)
+            self.ca_phosphate.dimerization.k_base = k_agg_original  # Restore
+            
+            dimer_conc = self.ca_phosphate.get_dimer_concentration()
+            
+            # --- PHASE 2: QUANTUM COHERENCE OF DIMERS ---
+            temperature = stimulus.get('temperature', self.params.environment.T)
+            self.quantum.step(dt, dimer_conc, j_coupling, temperature)
+            
+            # --- PHASE 3: CALCULATE DIMER COUNT AND COHERENCE ---
+            coherent_mask = (self.quantum.coherence > 0.5) & (self.quantum.dimer_concentration > 0)
+            
+            if np.any(coherent_mask):
+                peak_conc = np.max(self.quantum.dimer_concentration[coherent_mask])
+                processing_volume_m3 = 5.2e-22  # ~50nm radius sphere
+                processing_volume_L = processing_volume_m3 * 1000
+                n_templates = int(np.sum(self.ca_phosphate.templates.template_field)) 
+                n_dimers_single = peak_conc * processing_volume_L * n_templates * 6.022e23
+                mean_coherence = float(np.mean(self.quantum.coherence[coherent_mask]))
+            else:
+                n_dimers_single = 0.0
+                mean_coherence = 0.0
+            
+            # Store for tracking
+            self._previous_dimer_count = n_dimers_single
+            self._previous_coherence = mean_coherence
+            
+            # --- PHASE 4: LOCAL DIMER → TUBULIN COUPLING ---
+            local_mod = self.local_dimer_coupling.calculate_local_modulation(
+                n_dimers=n_dimers_single,
+                mean_coherence=mean_coherence
+            )
+            
+            # --- PHASE 5: NETWORK INTEGRATION (multi-synapse) ---
+            n_synapses = self.params.multi_synapse.n_synapses_default if self.params.multi_synapse_enabled else 1
+            synapse_modulations = [local_mod['modulation_strength']] * n_synapses
+            network_result = self.network_integrator.integrate_network(synapse_modulations)
+            self._network_modulation = network_result['total_modulation']
+            
+            # --- PHASE 6: TRYPTOPHAN SUPERRADIANCE (receives dimer feedback) ---
             metabolic_uv_flux = self.params.metabolic_uv.photon_flux_baseline
-            if activity_level > 0.1:  # During activity
+            activity_level = self.calcium.channels.get_open_fraction()
+            if activity_level > 0.1:
                 metabolic_uv_flux *= self.params.metabolic_uv.flux_enhancement_active
             
             if self.params.metabolic_uv.external_uv_illumination:
@@ -302,193 +369,165 @@ class Model6QuantumSynapse:
                 psd_area = 3.14159 * (350e-9)**2
                 external_flux = (intensity * psd_area) / (h * c / wavelength)
                 metabolic_uv_flux += external_flux
-
-            # Ca spike detection (for correlated bursts)
+            
             ca_spike_active = (activity_level > 0.1)
             
-            # Ca spike detection (for correlated bursts)
-            ca_spike_active = (activity_level > 0.1)
-            
-            # === CALCULATE NETWORK MODULATION FROM DIMERS ===
-            if hasattr(self, 'quantum') and hasattr(self.quantum, 'dimer_concentration'):
-                coherent_mask = (self.quantum.coherence > 0.5) & (self.quantum.dimer_concentration > 0)
-                
-                if np.any(coherent_mask):
-                    # Use PEAK concentration at template sites (not sum across grid)
-                    peak_conc = np.max(self.quantum.dimer_concentration[coherent_mask])
-                    
-                    # Processing volume per template (~50nm radius sphere)
-                    processing_volume_m3 = 5.2e-22  # m³
-                    processing_volume_L = processing_volume_m3 * 1000
-                    n_templates = 3
-                    
-                    # Dimers at processing sites
-                    n_dimers_single = peak_conc * processing_volume_L * n_templates * 6.022e23
-                else:
-                    n_dimers_single = 0.0
-                
-                if np.any(coherent_mask):
-                    mean_coherence = float(np.mean(self.quantum.coherence[coherent_mask]))
-                else:
-                    mean_coherence = 0.0
-            else:
-                n_dimers_single = 0.0
-                mean_coherence = 0.0
-            
-            # Local dimer-tubulin coupling
-            local_mod = self.local_dimer_coupling.calculate_local_modulation(
-                n_dimers=n_dimers_single,
-                mean_coherence=mean_coherence
-            )
-            
-            # Integrate across synapses
-            n_synapses = self.params.multi_synapse.n_synapses_default if self.params.multi_synapse_enabled else 1
-            synapse_modulations = [local_mod['modulation_strength']] * n_synapses
-            network_result = self.network_integrator.integrate_network(synapse_modulations)
-            self._network_modulation = network_result['total_modulation']
-            
-            # Update tryptophan superradiance WITH network modulation
             trp_state = self.tryptophan.update(
                 dt=dt,
                 photon_flux=metabolic_uv_flux,
                 n_tryptophans=self.n_tryptophans,
                 ca_spike_active=ca_spike_active,
-                network_modulation=self._network_modulation
+                network_modulation=self._network_modulation  # REVERSE COUPLING
             )
             
-            # NOW we can use trp_state
             em_field_trp = trp_state['output']['em_field_time_averaged']
             self._collective_field_kT = trp_state['output']['collective_field_kT']
             
-            
-            # === PLASTICITY CASCADE (eligibility-gated) ===
-            calcium_uM = float(np.max(ca_conc)) * 1e6
-
-            # Use locked eligibility if set, otherwise calculate from current coherence
-            if hasattr(self, '_locked_eligibility') and self._locked_eligibility is not None:
-                eligibility = self._locked_eligibility
-            else:
-                eligibility = self.quantum.get_experimental_metrics()['coherence_mean']
-            plateau = stimulus.get('plateau_potential', False)
-
-            # Gate opens if eligibility > threshold AND plateau present
-            eligibility_threshold = 0.3
-            plasticity_gate = (eligibility > eligibility_threshold) and plateau
-
-            self._current_eligibility = eligibility
-            self._plasticity_gate = plasticity_gate
-            
-            
-            # Field exists whenever dimers are coherent (not just during plateau)
-            reference_field_kT = 30.0 * eligibility
-
-            if plasticity_gate:
-                # Gate open: full CaMKII activation + spine modulation
-                camkii_state = self.camkii.step(dt, calcium_uM, reference_field_kT)
-                spine_state = self.spine_plasticity.step(
-                    dt, camkii_state['molecular_memory'], calcium_uM,
-                    quantum_field_kT=reference_field_kT
-                )
-            else:
-                # Gate closed: no CaMKII drive, but field still protects actin
-                camkii_state = self.camkii.step(dt, calcium_uM, 0.0)
-                spine_state = self.spine_plasticity.step(
-                    dt, 0.0, calcium_uM, 
-                    quantum_field_kT=reference_field_kT  # Field persists!
-                )
-            # Get baseline aggregation rate from ca_phosphate system
+            # --- PHASE 7: PREPARE k_agg FOR NEXT TIMESTEP (forward coupling) ---
             k_agg_baseline = self.ca_phosphate.dimerization.k_base
             
-            # Calculate enhanced rate from EM coupling
             coupling_state = self.em_coupling.update(
                 em_field_trp=em_field_trp,
-                n_coherent_dimers=0,  # Don't know yet, update after
+                n_coherent_dimers=n_dimers_single,  # NOW we know this!
                 k_agg_baseline=k_agg_baseline,
                 phosphate_fraction=np.mean(phosphate) / 0.001
             )
             
-            k_agg_enhanced = coupling_state['output']['k_agg_enhanced']
+            # Store for NEXT timestep (this is the feedback delay)
+            self._k_agg_for_next_step = coupling_state['output']['k_agg_enhanced']
             
-            # Store current values for this step
+            # Track for diagnostics
             self._em_field_trp = em_field_trp
             self._k_enhancement = coupling_state['forward']['enhancement']
-            
-            # TRACK HISTORY (inside the if block!)
             self._em_field_history.append(em_field_trp)
             self._k_enhancement_history.append(coupling_state['forward']['enhancement'])
+            self._collective_field_history.append(self._collective_field_kT)
+            
+            # --- PHASE 8: DOPAMINE UPDATE ---
+            if self.dopamine is not None:
+                reward = stimulus.get('reward', False)
+                self.dopamine.step(dt, reward_signal=reward)
+            
+            # --- PHASE 9: PLASTICITY GATE (Eligibility + Dopamine READ) ---
+            calcium_uM = float(np.max(ca_conc)) * 1e6
+            
+            # Eligibility IS coherence (the quantum memory)
+            if hasattr(self, '_locked_eligibility') and self._locked_eligibility is not None:
+                eligibility = self._locked_eligibility
+            else:
+                eligibility = self.quantum.get_experimental_metrics()['coherence_mean']
+            
+            # THREE-FACTOR RULE: Eligibility + Dopamine + Calcium
+            eligibility_threshold = 0.3
+            calcium_threshold_uM = 0.5  # Need some calcium elevation
+            
+            eligibility_present = (eligibility > eligibility_threshold)
+            dopamine_read = self._dopamine_above_read_threshold()
+            calcium_elevated = (calcium_uM > calcium_threshold_uM)
+            
+            # Gate opens when ALL THREE conditions met
+            plasticity_gate = eligibility_present and dopamine_read and calcium_elevated
+            
+            self._current_eligibility = eligibility
+            self._plasticity_gate = plasticity_gate
+            
+            # --- PHASE 10: CaMKII WITH COMMITMENT LOCKING ---
+            # Use ACTUAL collective field from dimer ensemble (not prescribed!)
+            reference_field_kT = self._collective_field_kT
+            
+            if plasticity_gate and not self._camkii_committed:
+                # COMMITMENT: Lock in the current eligibility level
+                self._camkii_committed = True
+                self._committed_memory_level = eligibility
+                
+                # CaMKII activates with field assistance
+                camkii_state = self.camkii.step(dt, calcium_uM, reference_field_kT)
+                
+            elif self._camkii_committed:
+                # Already committed - classical cascade continues
+                # Field no longer matters, commitment is locked
+                camkii_state = self.camkii.step(dt, calcium_uM, 0.0)
+                
+            else:
+                # Gate closed, no commitment
+                camkii_state = self.camkii.step(dt, calcium_uM, 0.0)
+            
+            # --- PHASE 11: SPINE PLASTICITY ---
+            if self._camkii_committed:
+                # Drive toward committed level
+                spine_state = self.spine_plasticity.step(
+                    dt, 
+                    self._committed_memory_level,  # Target from commitment
+                    calcium_uM,
+                    quantum_field_kT=reference_field_kT
+                )
+            else:
+                # No commitment - field still protects existing structure
+                spine_state = self.spine_plasticity.step(
+                    dt, 0.0, calcium_uM,
+                    quantum_field_kT=reference_field_kT
+                )
+            
+            # --- PHASE 12: TEMPLATE FEEDBACK (threshold behavior) ---
+            spine_volume = self.spine_plasticity.spine_volume
+            baseline_templates = 3
+            
+            # Threshold-based template increase
+            if spine_volume > 1.5:  # Major growth (50%+)
+                new_templates = 6  # Double the sites
+            elif spine_volume > 1.25:  # Moderate growth (25%+)
+                new_templates = 5
+            else:
+                new_templates = baseline_templates  # No change below threshold
+            
+            self.ca_phosphate.set_n_templates(new_templates)
+        
         else:
-            k_agg_enhanced = self.ca_phosphate.dimerization.k_base
+            # === NON-EM PATH ===
             self._em_field_trp = 0.0
             self._k_enhancement = 1.0
             self._collective_field_kT = 0.0
             self._network_modulation = 0.0
-
+            
+            # Dimer formation (no EM enhancement)
+            self.ca_phosphate.step(dt, ca_conc, phosphate)
+            dimer_conc = self.ca_phosphate.get_dimer_concentration()
+            
+            # Quantum coherence tracking
+            temperature = stimulus.get('temperature', self.params.environment.T)
+            self.quantum.step(dt, dimer_conc, j_coupling, temperature)
+            
+            # Dopamine update
+            if self.dopamine is not None:
+                reward = stimulus.get('reward', False)
+                self.dopamine.step(dt, reward_signal=reward)
+            
             calcium_uM = float(np.max(ca_conc)) * 1e6
             
-            # Eligibility gating
-            dimer_conc_nM = float(np.max(self.ca_phosphate.get_dimer_concentration()) * 1e9)
-            dimer_count = int(dimer_conc_nM * 0.006)
+            # Eligibility from coherence
             coherence = self.quantum.get_experimental_metrics()['coherence_mean']
             plateau = stimulus.get('plateau_potential', False)
             
-            # Get current eligibility (decays with T2)
-            eligibility = coherence  # Coherence IS the eligibility
-            
             # Check if plateau should trigger DDSC
             if plateau:
-                self.ddsc.check_trigger(eligibility, self.time)
+                self.ddsc.check_trigger(coherence, self.time)
             
-            # Update DDSC if triggered (integrates over time)
+            # Update DDSC if triggered
             if self.ddsc.triggered:
                 self.ddsc.integrate(self.time, dt)
             
-            # Get structural drive from DDSC (saturating 0-1)
+            # Get structural drive from DDSC
             structural_drive = self.ddsc.get_structural_drive()
             
-            # CaMKII still runs for molecular_memory tracking
+            # CaMKII (no quantum field in non-EM path)
             camkii_state = self.camkii.step(dt, calcium_uM, 0.0)
             
-            # Spine plasticity driven by DDSC structural_drive, NOT direct quantum field
+            # Spine plasticity driven by DDSC
             spine_state = self.spine_plasticity.step(
                 dt, 
                 structural_drive=structural_drive,
                 calcium=calcium_uM
             )
-        
-        # === STEP 4: CALCIUM PHOSPHATE DIMER FORMATION ===
-        # Ca²⁺ + HPO₄²⁻ → CaHPO₄ (instant equilibrium)
-        # 6 × CaHPO₄ → Ca₆(PO₄)₄ dimer (slow aggregation)
-        # These are the quantum qubits (4 ³¹P nuclei)
-        # Pass enhanced k_agg if EM coupling enabled
-        if self.em_enabled:
-            # Temporarily override aggregation rate
-            k_agg_original = self.ca_phosphate.dimerization.k_base
-            self.ca_phosphate.dimerization.k_base = k_agg_enhanced
-            self.ca_phosphate.step(dt, ca_conc, phosphate)
-            self.ca_phosphate.dimerization.k_base = k_agg_original  # Restore
-        else:
-            self.ca_phosphate.step(dt, ca_conc, phosphate)
-        dimer_conc = self.ca_phosphate.get_dimer_concentration()
-        
-        # === STEP 5: DOPAMINE (if available) ===
-        if self.dopamine is not None:
-            reward = stimulus.get('reward', False)
-            self.dopamine.step(dt, reward_signal=reward)
-        
-        # === STEP 6: QUANTUM COHERENCE TRACKING ===
-        # CRITICAL FIX: Pass dimer_conc (from ca_phosphate), NOT pnc_large!
-        # The quantum system ONLY tracks coherence, it doesn't create dimers
-        temperature = stimulus.get('temperature', self.params.environment.T)
-        
-        self.quantum.step(dt, dimer_conc, j_coupling, temperature)
-        
-            
-        # === EM COUPLING: REVERSE PATH (Dimers → Proteins) ===
-        # NOTE: collective_field_kT now comes from tryptophan module (cascade architecture)
-        # The old DimerProteinCoupling calculation is replaced by:
-        #   dimers → local_dimer_coupling → network_integrator → tryptophan module → collective_field
-        if self.em_enabled:
-            self._collective_field_history.append(self._collective_field_kT)
         
         # Update time
         self.time += dt
@@ -649,6 +688,28 @@ class Model6QuantumSynapse:
         
         if self.em_enabled:
             logger.info(f"MT invasion: {invaded}, n_trp: {self.n_tryptophans}")
+    
+    
+    def _dopamine_above_read_threshold(self) -> bool:
+        """
+        Check if dopamine is above the READ threshold (phasic burst)
+        
+        This is the signal that "reads" the eligibility trace and
+        triggers CaMKII commitment. NOT the same as D2 modulation
+        of dimer formation.
+        
+        Returns:
+            True if phasic dopamine burst detected (>50 nM)
+        """
+        if self.dopamine is None:
+            return False
+        
+        # Get current dopamine concentration
+        da_conc = self.dopamine.get_dopamine_concentration()
+        da_max_nM = float(np.max(da_conc)) * 1e9  # Convert to nM
+        
+        return da_max_nM > self._dopamine_read_threshold_nM
+    
     
     def get_em_coupling_state(self) -> Dict:
         """

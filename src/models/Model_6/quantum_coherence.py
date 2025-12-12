@@ -112,16 +112,6 @@ class QuantumCoherenceSystem:
             chi_MHz = 0.067  # Quadrupole coupling constant (from NMR literature)
             tau_c_ns = 1.0  # Correlation time
             R_quadrupolar = (chi_MHz * 1e6)**2 * (tau_c_ns * 1e-9)  # s^-1
-
-            # DEBUG - print once
-            if not hasattr(self, '_debug_printed'):
-                print(f"\n=== QUADRUPOLAR DEBUG ===")
-                print(f"P32_fraction: {P32_fraction}")
-                print(f"chi_MHz: {chi_MHz}")
-                print(f"R_quadrupolar: {R_quadrupolar:.2e} s^-1")
-                print(f"T2_dipolar: {T2_dipolar:.2f} s")
-                print(f"1/T2_dipolar: {1.0/T2_dipolar:.2e} s^-1")
-    
             
             # Total relaxation: 1/T2_total = 1/T2_dipolar + R_Q
             R_total = (1.0 / T2_dipolar) + R_quadrupolar * P32_fraction
