@@ -46,7 +46,7 @@ def configure_model(condition: ExperimentCondition):
     # === Core Settings ===
     params.em_coupling_enabled = True
     params.multi_synapse_enabled = True
-    params.simulation.dt_diffusion = 1e-3
+    params.simulation.dt_diffusion = 1e-4
     
     # === Network Architecture ===
     params.multi_synapse.n_synapses_default = condition.n_synapses

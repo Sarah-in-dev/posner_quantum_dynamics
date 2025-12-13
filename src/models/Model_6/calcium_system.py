@@ -25,6 +25,7 @@ from typing import Tuple, List, Dict, Optional
 import logging
 
 from model6_parameters import Model6Parameters, CalciumParameters
+from implicit_diffusion import update_diffusion_implicit
 
 logger = logging.getLogger(__name__)
 
@@ -246,40 +247,12 @@ class CalciumDiffusion:
         self.ca_bound = np.maximum(self.ca_bound, 0)
         
     def update_diffusion(self, dt: float):
-        """
-        Diffusion of free and buffered calcium
+        """Implicit ADI diffusion - stable at any timestep"""
+        # Skip expensive diffusion if calcium is at rest
+        if np.max(self.ca_free) < 0.2e-6:
+            return
         
-        Uses subcycling with capped substeps to maintain nanodomain structure
-        while staying reasonably stable.
-        """
-        # Calculate buffer capacity κ_s at each point
-        kappa_s = (self.params.buffer_concentration * self.params.buffer_kd / 
-                (self.ca_free + self.params.buffer_kd)**2)
-        
-        # Effective diffusion coefficient
-        D_eff = self.params.D_ca / (1 + kappa_s)
-        D_max = np.max(D_eff)
-        
-        # CFL stability condition
-        dt_stable = 0.25 * self.dx**2 / D_max
-        n_substeps_ideal = int(np.ceil(dt / dt_stable))
-        
-        # CAP substeps to preserve nanodomain structure
-        # Too many substeps = complete equilibration = no nanodomains
-        # ~100 substeps gives reasonable spreading while preserving gradients
-        n_substeps = min(n_substeps_ideal, 100)
-        dt_sub = dt / n_substeps
-        
-        # Laplacian kernel
-        laplacian_kernel = np.array([[0, 1, 0],
-                                    [1, -4, 1],
-                                    [0, 1, 0]]) / (self.dx**2)
-        
-        # Subcycle
-        for _ in range(n_substeps):
-            laplacian = ndimage.convolve(self.ca_free, laplacian_kernel, mode='constant')
-            self.ca_free += dt_sub * D_eff * laplacian
-            self.ca_free = np.maximum(self.ca_free, 0)
+        update_diffusion_implicit(self, dt)
             
     def add_flux(self, flux: np.ndarray, dt: float):
         """
