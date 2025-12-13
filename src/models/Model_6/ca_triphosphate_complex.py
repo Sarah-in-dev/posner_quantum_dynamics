@@ -366,6 +366,15 @@ class CalciumPhosphateDimerization:
         dimer_formation = (deterministic_formation + stochastic_formation + nucleation_contribution) * dimer_fraction
         trimer_formation = (deterministic_formation + stochastic_formation + nucleation_contribution) * (1 - dimer_fraction)
 
+        # === CALCIUM-DEPENDENT SCALING (Fix for voltage sensitivity) ===
+        # Scale formation by calcium level to create proper IO curve
+        # Without this, template enhancement causes saturation at any calcium level
+        ca_peak_uM = np.max(ca_conc) * 1e6  # Convert to μM
+        ca_half_max_uM = 8.0  # Half-maximal calcium (tune for IO curve steepness)
+        calcium_scaling = ca_peak_uM / (ca_half_max_uM + ca_peak_uM)  # Michaelis-Menten
+        dimer_formation = dimer_formation * calcium_scaling
+        trimer_formation = trimer_formation * calcium_scaling
+
         # === STOCHASTIC DISSOCIATION ===
         # Add noise to dissolution rate
         dissolution_noise = 1.0 + np.random.normal(0, self.dissolution_noise_sigma, self.grid_shape)

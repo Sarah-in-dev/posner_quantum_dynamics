@@ -41,8 +41,6 @@ Fisher 2015 - Ann Phys 362:593-602
 Agarwal et al. 2023 - Phys Rev Research 5:013107
     Dimer coherence ~100s, quantum field modulation 20-40 kT
     
-Davidson 2025 - The Quantum Synapse
-    Two-layer architecture: tryptophan OS + dimer applications
 """
 
 import numpy as np

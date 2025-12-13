@@ -388,6 +388,7 @@ def experiment_stim_intensity(config: ExperimentConfig,
             n_synapses=10,
             mt_invaded=True,
             stim_voltage_mV=v,
+            stim_duration_s=0.05,
             consolidation_duration_s=config.consolidation_duration
         ))
     

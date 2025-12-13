@@ -421,26 +421,40 @@ class Model6QuantumSynapse:
             eligibility_threshold = 0.3
             calcium_threshold_uM = 0.5  # Need some calcium elevation
             field_threshold_kT = 10.0   # Need sufficient Q1 field for CaMKII assistance
-            
+            dimer_threshold = 30  # Need ~30-50 network dimers for collective effects
+
+            # Calculate total network dimers
+            n_synapses = self.params.multi_synapse.n_synapses_default if self.params.multi_synapse_enabled else 1
+            coupling_factor = getattr(self, '_spatial_coupling_factor', 1.0)
+            total_network_dimers = self._previous_dimer_count
+
+
             eligibility_present = (eligibility > eligibility_threshold)
             dopamine_read = self._dopamine_above_read_threshold()
             calcium_elevated = (calcium_uM > calcium_threshold_uM)
             field_sufficient = (self._collective_field_kT > field_threshold_kT)
-            
+            dimers_sufficient = (total_network_dimers >= dimer_threshold)
+
             # Gate opens when ALL FOUR conditions met
             plasticity_gate = eligibility_present and dopamine_read and calcium_elevated and field_sufficient
             
             self._current_eligibility = eligibility
             self._plasticity_gate = plasticity_gate
+            self._total_network_dimers = total_network_dimers
             
             # --- PHASE 10: CaMKII WITH COMMITMENT LOCKING ---
             # Use ACTUAL collective field from dimer ensemble (not prescribed!)
             reference_field_kT = self._collective_field_kT
-            
+
             if plasticity_gate and not self._camkii_committed:
                 # COMMITMENT: Lock in the current eligibility level
                 self._camkii_committed = True
-                self._committed_memory_level = eligibility
+                
+                # Commitment level scales with network dimers (Option C fix)
+                # This creates graded response: more dimers = stronger commitment
+                dimer_threshold_for_full = 50.0  # Full commitment at 50+ network dimers
+                dimer_scaling = min(1.0, self._total_network_dimers / dimer_threshold_for_full)
+                self._committed_memory_level = eligibility * dimer_scaling
                 
                 # CaMKII activates with field assistance
                 camkii_state = self.camkii.step(dt, calcium_uM, reference_field_kT)

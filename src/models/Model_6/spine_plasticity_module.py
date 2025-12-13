@@ -28,8 +28,6 @@ LITERATURE SOURCES:
     - Choquet & Bhalla 2025 (EMBO J): AMPAR trafficking review
     - Tang & bhalla 2017: Spine volume-strength relationship
 
-Author: Model 6 Development
-Date: December 2025
 """
 
 import numpy as np

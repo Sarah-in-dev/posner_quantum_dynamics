@@ -27,6 +27,8 @@ sys.path.insert(0, str(MODEL6_PATH))
 from model6_core import Model6QuantumSynapse
 from model6_parameters import Model6Parameters
 
+from multi_synapse_network import MultiSynapseNetwork
+
 # =============================================================================
 # MODEL CONFIGURATION
 # =============================================================================
@@ -88,25 +90,37 @@ def configure_model(condition: ExperimentCondition):
     else:
         model.set_microtubule_invasion(condition.mt_invaded)
     
-    # Spatial pattern affects network coupling
-    if condition.n_synapses > 1:
-        positions = generate_synapse_positions(
-            condition.n_synapses,
-            condition.spatial_pattern,
-            condition.synapse_spacing_um
-        )
-        distances = compute_distance_matrix(positions)
-        coupling_factor = compute_network_coupling_factor(distances)
-        
-        # Store for later use
-        model._spatial_positions = positions
-        model._spatial_distances = distances
-        model._spatial_coupling_factor = coupling_factor
+    # === SINGLE SYNAPSE ===
+    if condition.n_synapses == 1:
+        return model
     
-    return model
+    # === MULTI-SYNAPSE NETWORK ===
+    # Create network with N independent Model6 instances
+    network = MultiSynapseNetwork(
+        n_synapses=condition.n_synapses,
+        spacing_um=condition.synapse_spacing_um,
+        pattern=condition.spatial_pattern,
+        field_threshold_kT=20.0
+    )
+    
+    # Initialize with the same params we configured
+    network.initialize(Model6QuantumSynapse, params)
+    
+    # Apply condition settings to all synapses
+    if condition.nocodazole_applied:
+        for synapse in network.synapses:
+            synapse.set_microtubule_invasion(False)
+            synapse.n_tryptophans = 50
+    else:
+        network.set_microtubule_invasion(condition.mt_invaded)
+    
+    # Mark that this is a network (for run_protocol to detect)
+    network._is_network = True
+    
+    return network
 
 
-def measure_state(model, time: float, phase: str) -> SystemState:
+def measure_state(model, time: float, phase: str, network=None) -> SystemState:
     """
     Capture complete system state from model
     
@@ -191,6 +205,28 @@ def measure_state(model, time: float, phase: str) -> SystemState:
         state.n_templates = int(np.sum(model.ca_phosphate.templates.template_field))
     state.template_feedback_active = state.n_templates > 3
     
+    # === NETWORK OVERRIDES ===
+    if network is not None:
+        # Aggregate dimer counts from all synapses
+        dimer_counts = [getattr(s, '_previous_dimer_count', 0) for s in network.synapses]
+        state.dimer_count = sum(dimer_counts)
+        state.total_network_dimers = sum(dimer_counts)
+        
+        # Mean coherence weighted by dimers
+        coherences = [getattr(s, '_previous_coherence', 0) for s in network.synapses]
+        if state.dimer_count > 0:
+            state.dimer_coherence = sum(c * d for c, d in zip(coherences, dimer_counts)) / state.dimer_count
+        
+        # Mean eligibility
+        eligibilities = [getattr(s, '_current_eligibility', 0) for s in network.synapses]
+        state.eligibility = np.mean(eligibilities)
+        
+        # Synaptic strength scales with commitment
+        if state.committed:
+            state.synaptic_strength = 1.0 + 0.5 * state.committed_level  # Up to 1.5x
+        else:
+            state.synaptic_strength = 1.0
+    
     return state
 
 
@@ -217,9 +253,19 @@ def run_protocol(condition: ExperimentCondition,
     
     start_time = time.time()
     
-    # Configure model
-    model = configure_model(condition)
+    # Configure model (may return single model or network)
+    model_or_network = configure_model(condition)
     dt = config.dt
+    
+    # Detect if this is a network
+    is_network = getattr(model_or_network, '_is_network', False)
+    
+    if is_network:
+        network = model_or_network
+        model = network.synapses[0]  # Reference synapse for single-model properties
+    else:
+        network = None
+        model = model_or_network
     
     # Initialize result
     result = TrialResult(condition=condition, trial_id=trial_id)
@@ -242,7 +288,10 @@ def run_protocol(condition: ExperimentCondition,
         print(f"  Phase 1: Baseline ({config.baseline_duration}s)")
     
     for i in range(n_steps):
-        model.step(dt, {'voltage': -70e-3, 'reward': False})
+        if is_network:
+            network.step(dt, {'voltage': -70e-3, 'reward': False})
+        else:
+            model.step(dt, {'voltage': -70e-3, 'reward': False})
         
         if step % config.record_interval == 0:
             record("baseline")
@@ -250,7 +299,7 @@ def run_protocol(condition: ExperimentCondition,
         t += dt
         step += 1
     
-    result.baseline = measure_state(model, t, "baseline")
+    result.baseline = measure_state(model, t, "baseline", network=network)
     
     # =========================================================================
     # PHASE 2: STIMULATION
@@ -268,7 +317,10 @@ def run_protocol(condition: ExperimentCondition,
         else:
             voltage = condition.stim_voltage_mV * 1e-3
         
-        model.step(dt, {'voltage': voltage, 'reward': False})
+        if is_network:
+            network.step(dt, {'voltage': voltage, 'reward': False})
+        else:
+            model.step(dt, {'voltage': voltage, 'reward': False})
         
         if step % config.record_interval == 0:
             record("stimulation")
@@ -276,7 +328,7 @@ def run_protocol(condition: ExperimentCondition,
         t += dt
         step += 1
     
-    result.post_stim = measure_state(model, t, "post_stim")
+    result.post_stim = measure_state(model, t, "post_stim", network=network)
     
     if verbose:
         print(f"    Dimers: {result.post_stim.dimer_count:.1f}")
@@ -292,7 +344,10 @@ def run_protocol(condition: ExperimentCondition,
             print(f"  Phase 3: Delay ({condition.dopamine_delay_s}s)")
         
         for i in range(n_steps):
-            model.step(dt, {'voltage': -70e-3, 'reward': False})
+            if is_network:
+                network.step(dt, {'voltage': -70e-3, 'reward': False})
+            else:
+                model.step(dt, {'voltage': -70e-3, 'reward': False})
             
             # Record less frequently during long delays
             interval = config.record_interval * (10 if condition.dopamine_delay_s > 10 else 1)
@@ -302,7 +357,7 @@ def run_protocol(condition: ExperimentCondition,
             t += dt
             step += 1
     
-    result.pre_dopamine = measure_state(model, t, "pre_dopamine")
+    result.pre_dopamine = measure_state(model, t, "pre_dopamine", network=network)
     
     # =========================================================================
     # PHASE 4: DOPAMINE READ
@@ -314,7 +369,10 @@ def run_protocol(condition: ExperimentCondition,
         print(f"  Phase 4: Dopamine READ ({da_duration}s)")
     
     for i in range(n_steps):
-        model.step(dt, {'voltage': -70e-3, 'reward': True})
+        if is_network:
+            network.step(dt, {'voltage': -70e-3, 'reward': True})
+        else:
+            model.step(dt, {'voltage': -70e-3, 'reward': True})
         
         if step % config.record_interval == 0:
             record("dopamine")
@@ -322,7 +380,7 @@ def run_protocol(condition: ExperimentCondition,
         t += dt
         step += 1
     
-    result.post_dopamine = measure_state(model, t, "post_dopamine")
+    result.post_dopamine = measure_state(model, t, "post_dopamine", network=network)
     
     if verbose:
         print(f"    Committed: {result.post_dopamine.committed}")
@@ -338,7 +396,10 @@ def run_protocol(condition: ExperimentCondition,
         print(f"  Phase 5: Consolidation ({consol_duration}s)")
     
     for i in range(n_steps):
-        model.step(dt, {'voltage': -70e-3, 'reward': False})
+        if is_network:
+            network.step(dt, {'voltage': -70e-3, 'reward': False})
+        else:
+            model.step(dt, {'voltage': -70e-3, 'reward': False})
         
         # Record infrequently during consolidation
         if step % (config.record_interval * 100) == 0:
@@ -347,7 +408,7 @@ def run_protocol(condition: ExperimentCondition,
         t += dt
         step += 1
     
-    result.final = measure_state(model, t, "final")
+    result.final = measure_state(model, t, "final", network=network)
     
     if verbose:
         print(f"\n  === FINAL STATE ===")
