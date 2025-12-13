@@ -68,6 +68,233 @@ class NetworkState:
     network_commitment_level: float = 0.0
     synapse_states: List[SynapseState] = field(default_factory=list)
 
+class NetworkEntanglementTracker:
+    """
+    Tracks entanglement ACROSS synapses in a multi-synapse network
+    
+    Physics basis (Fisher 2015):
+    - Entanglement from shared ATP hydrolysis pool
+    - Nearby synapses share dendritic J-coupling environment
+    - Coupling decays with inter-synapse distance
+    
+    This replaces the naive sum of per-synapse entangled counts
+    with true network-level entanglement tracking.
+    """
+    
+    def __init__(self, coupling_length_um: float = 5.0, 
+                 j_coupling_threshold: float = 5.0,
+                 coherence_threshold: float = 0.3):
+        self.coupling_length_um = coupling_length_um
+        self.j_coupling_threshold = j_coupling_threshold
+        self.coherence_threshold = coherence_threshold
+        
+        # Network state
+        self.all_dimers = []  # List of (dimer, synapse_idx, synapse_pos)
+        self.entanglement_bonds = set()  # (global_id_i, global_id_j)
+        
+    def collect_dimers(self, synapses: List, positions: np.ndarray):
+        """
+        Collect all dimers from all synapses with position info
+        
+        Parameters
+        ----------
+        synapses : List[Model6QuantumSynapse]
+            All synapse models in network
+        positions : np.ndarray
+            Synapse positions in microns, shape (n_synapses, 3)
+        """
+        self.all_dimers = []
+        global_id = 0
+        
+        for syn_idx, synapse in enumerate(synapses):
+            if not hasattr(synapse, 'dimer_particles'):
+                continue
+                
+            particle_system = synapse.dimer_particles
+            synapse_pos = positions[syn_idx]
+            
+            for dimer in particle_system.dimers:
+                self.all_dimers.append({
+                    'global_id': global_id,
+                    'dimer': dimer,
+                    'synapse_idx': syn_idx,
+                    'synapse_pos_um': synapse_pos,
+                    'local_j': dimer.local_j_coupling,
+                    'coherence': dimer.coherence
+                })
+                global_id += 1
+    
+    def step(self, dt: float, synapses: List, positions: np.ndarray) -> dict:
+        """
+        Update network-level entanglement
+        
+        Returns
+        -------
+        dict with network metrics
+        """
+        # Collect current dimers from all synapses
+        self.collect_dimers(synapses, positions)
+        
+        n = len(self.all_dimers)
+        if n < 2:
+            return {
+                'n_total_dimers': n,
+                'n_entangled_network': n if n == 1 else 0,
+                'n_bonds': 0,
+                'f_entangled': 0.0
+            }
+        
+        # Update entanglement bonds
+        self._update_entanglement(dt)
+        
+        # Find largest connected cluster
+        largest_cluster = self._find_largest_cluster()
+        
+        # Compute fraction
+        entangled_ids = set()
+        for bond in self.entanglement_bonds:
+            entangled_ids.add(bond[0])
+            entangled_ids.add(bond[1])
+        
+        f_entangled = len(entangled_ids) / n if n > 0 else 0.0
+        
+        return {
+            'n_total_dimers': n,
+            'n_entangled_network': len(largest_cluster),
+            'n_bonds': len(self.entanglement_bonds),
+            'f_entangled': f_entangled
+        }
+    
+    def _update_entanglement(self, dt: float):
+        """
+        Update pairwise entanglement with cross-synapse coupling
+        """
+        k_entangle = 0.5  # Base rate
+        
+        # Clean up bonds for dimers that no longer exist
+        current_ids = {d['global_id'] for d in self.all_dimers}
+        self.entanglement_bonds = {b for b in self.entanglement_bonds 
+                                    if b[0] in current_ids and b[1] in current_ids}
+        
+        n = len(self.all_dimers)
+        
+        for i in range(n):
+            for j in range(i + 1, n):
+                d_i = self.all_dimers[i]
+                d_j = self.all_dimers[j]
+                
+                # Skip if either below coherence threshold
+                if (d_i['coherence'] < self.coherence_threshold or
+                    d_j['coherence'] < self.coherence_threshold):
+                    self._remove_bond(d_i['global_id'], d_j['global_id'])
+                    continue
+                
+                # Calculate coupling strength
+                j_coupling_factor = self._calculate_coupling(d_i, d_j)
+                
+                if j_coupling_factor < 0.1:
+                    # Too weak to maintain entanglement
+                    self._remove_bond(d_i['global_id'], d_j['global_id'])
+                    continue
+                
+                # Coherence factor
+                coherence_factor = d_i['coherence'] * d_j['coherence']
+                
+                # Effective rate
+                k_eff = k_entangle * j_coupling_factor * coherence_factor
+                
+                # Check current bond status
+                bond_exists = self._has_bond(d_i['global_id'], d_j['global_id'])
+                
+                if not bond_exists:
+                    # Try to form bond
+                    p_entangle = 1 - np.exp(-k_eff * dt)
+                    if np.random.random() < p_entangle:
+                        self._add_bond(d_i['global_id'], d_j['global_id'])
+                else:
+                    # Check for disentanglement
+                    k_disentangle = 0.1 * (1 - j_coupling_factor * coherence_factor)
+                    p_disentangle = 1 - np.exp(-k_disentangle * dt)
+                    if np.random.random() < p_disentangle:
+                        self._remove_bond(d_i['global_id'], d_j['global_id'])
+    
+    def _calculate_coupling(self, d_i: dict, d_j: dict) -> float:
+        """
+        Calculate effective coupling between two dimers
+        
+        Same synapse: use J-coupling directly
+        Different synapses: J-coupling × distance decay
+        """
+        j_local_i = d_i['local_j']
+        j_local_j = d_j['local_j']
+        
+        # Both need sufficient J-coupling
+        if j_local_i < self.j_coupling_threshold or j_local_j < self.j_coupling_threshold:
+            return 0.0
+        
+        j_factor = min(j_local_i, j_local_j) / 20.0  # Normalize
+        
+        if d_i['synapse_idx'] == d_j['synapse_idx']:
+            # Same synapse - full coupling
+            return j_factor
+        else:
+            # Different synapses - distance-dependent
+            dist_um = np.linalg.norm(d_i['synapse_pos_um'] - d_j['synapse_pos_um'])
+            
+            # Exponential decay with distance
+            # At coupling_length_um, factor = 1/e ≈ 0.37
+            spatial_factor = np.exp(-dist_um / self.coupling_length_um)
+            
+            return j_factor * spatial_factor
+    
+    def _find_largest_cluster(self) -> set:
+        """
+        Find largest connected component using union-find
+        """
+        if not self.all_dimers:
+            return set()
+        
+        # Union-find
+        parent = {d['global_id']: d['global_id'] for d in self.all_dimers}
+        
+        def find(x):
+            if parent[x] != x:
+                parent[x] = find(parent[x])
+            return parent[x]
+        
+        def union(x, y):
+            px, py = find(x), find(y)
+            if px != py:
+                parent[px] = py
+        
+        # Union all bonded pairs
+        for id_i, id_j in self.entanglement_bonds:
+            union(id_i, id_j)
+        
+        # Group by root
+        clusters = {}
+        for d in self.all_dimers:
+            root = find(d['global_id'])
+            if root not in clusters:
+                clusters[root] = set()
+            clusters[root].add(d['global_id'])
+        
+        # Return largest
+        if not clusters:
+            return set()
+        return max(clusters.values(), key=len)
+    
+    def _has_bond(self, id_i: int, id_j: int) -> bool:
+        key = (min(id_i, id_j), max(id_i, id_j))
+        return key in self.entanglement_bonds
+    
+    def _add_bond(self, id_i: int, id_j: int):
+        key = (min(id_i, id_j), max(id_i, id_j))
+        self.entanglement_bonds.add(key)
+    
+    def _remove_bond(self, id_i: int, id_j: int):
+        key = (min(id_i, id_j), max(id_i, id_j))
+        self.entanglement_bonds.discard(key)
 
 class MultiSynapseNetwork:
     """
@@ -122,6 +349,11 @@ class MultiSynapseNetwork:
         self.network_committed = False
         self.network_commitment_level = 0.0
         self.time = 0.0
+        
+        # Network-level entanglement tracking
+        self.entanglement_tracker = NetworkEntanglementTracker(
+            coupling_length_um=coupling_length_um
+        )
         
         # History
         self.history = {
@@ -276,6 +508,11 @@ class MultiSynapseNetwork:
             )
             synapse_states.append(state)
         
+        # Update network-level entanglement
+        self._network_entanglement = self.entanglement_tracker.step(
+            dt, self.synapses, self.positions
+        )
+        
         # Compute network-level quantities
         network_state = self._compute_network_state(synapse_states)
         
@@ -330,20 +567,20 @@ class MultiSynapseNetwork:
         # For N=50, coherence=0.85: √(0.3 × 42.5) × 6.6 = 23.6 kT ✓
         
         U_single_kT = 6.6  # From Fisher 2015
-        f_ent = 0.3  # Entanglement fraction
+    
+        # Get TRUE entangled network size from cross-synapse tracker
+        # This replaces the prescribed f_ent = 0.3 with emergent entanglement
+        if hasattr(self, '_network_entanglement') and self._network_entanglement:
+            n_entangled = self._network_entanglement['n_entangled_network']
+        else:
+            n_entangled = 0
         
-        # Effective coherent dimers = total × mean_coherence
-        N_coherent = total_dimers * mean_coherence if mean_coherence > 0 else 0
-        
-        # Collective threshold: need ~50 dimers for entanglement network
-        # Below threshold: individual dimers, no collective field
-        # At/above threshold: collective quantum state, field scales with √N
+        # Collective threshold: need ~35 entangled dimers for network effects
         N_collective_threshold = 35.0
         
-        if N_coherent >= N_collective_threshold:
+        if n_entangled >= N_collective_threshold:
             # Collective quantum state - field from entangled network
-            # Only count dimers above threshold for √N enhancement
-            network_field = U_single_kT * np.sqrt(f_ent * N_coherent)
+            network_field = U_single_kT * np.sqrt(n_entangled)
         else:
             # Below threshold - no collective field
             network_field = 0.0

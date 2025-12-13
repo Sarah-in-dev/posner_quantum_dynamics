@@ -564,6 +564,17 @@ class CaHPO4DimerSystem:
         """Get Ca₆(PO₄)₄ concentration (M) - the quantum qubit!"""
         return self.dimer_concentration
     
+    def get_formation_rate_field(self) -> np.ndarray:
+        """
+        Get dimer formation rate field for particle system
+        
+        Returns formation rate in M/s at each grid point
+        """
+        # Formation rate = k_eff × [PNC]²
+        # This is what feeds the particle birth process
+        k_eff = self.dimerization.k_base * self.template_enhancement
+        formation_rate = k_eff * (self.dimerization.pnc_concentration ** 2)
+        return formation_rate
     
     def set_n_templates(self, n_templates: int):
         """

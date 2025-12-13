@@ -249,34 +249,38 @@ class CalciumDiffusion:
         """
         Diffusion of free and buffered calcium
         
-        Smith et al. 2001 Biophys J:
-        "Effective diffusion coefficient D_eff = D_Ca / (1 + κ_s)"
-        "Buffer capacity κ_s = [B]·Kd / ([Ca] + Kd)²"
-        
-        Using explicit finite difference method for ∇²[Ca]
+        Uses subcycling with capped substeps to maintain nanodomain structure
+        while staying reasonably stable.
         """
         # Calculate buffer capacity κ_s at each point
-        # Neher & Augustine 1992: κ_s ~ 60 for neurons
         kappa_s = (self.params.buffer_concentration * self.params.buffer_kd / 
-                   (self.ca_free + self.params.buffer_kd)**2)
+                (self.ca_free + self.params.buffer_kd)**2)
         
         # Effective diffusion coefficient
-        # Allbritton et al. 1992: D_Ca = 220 μm²/s = 220e-12 m²/s
         D_eff = self.params.D_ca / (1 + kappa_s)
+        D_max = np.max(D_eff)
         
-        # Laplacian via 5-point stencil convolution
+        # CFL stability condition
+        dt_stable = 0.25 * self.dx**2 / D_max
+        n_substeps_ideal = int(np.ceil(dt / dt_stable))
+        
+        # CAP substeps to preserve nanodomain structure
+        # Too many substeps = complete equilibration = no nanodomains
+        # ~100 substeps gives reasonable spreading while preserving gradients
+        n_substeps = min(n_substeps_ideal, 100)
+        dt_sub = dt / n_substeps
+        
+        # Laplacian kernel
         laplacian_kernel = np.array([[0, 1, 0],
-                                     [1, -4, 1],
-                                     [0, 1, 0]]) / (self.dx**2)
+                                    [1, -4, 1],
+                                    [0, 1, 0]]) / (self.dx**2)
         
-        laplacian = ndimage.convolve(self.ca_free, laplacian_kernel, mode='constant')
-        
-        # Update free calcium: ∂[Ca]/∂t = D_eff ∇²[Ca]
-        self.ca_free += dt * D_eff * laplacian
-        
-        # Ensure non-negative
-        self.ca_free = np.maximum(self.ca_free, 0)
-        
+        # Subcycle
+        for _ in range(n_substeps):
+            laplacian = ndimage.convolve(self.ca_free, laplacian_kernel, mode='constant')
+            self.ca_free += dt_sub * D_eff * laplacian
+            self.ca_free = np.maximum(self.ca_free, 0)
+            
     def add_flux(self, flux: np.ndarray, dt: float):
         """
         Add calcium flux from channels

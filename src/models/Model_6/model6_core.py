@@ -33,6 +33,8 @@ from spine_plasticity_module import SpinePlasticityModule
 from eligibility_trace import EligibilityTraceModule
 from ddsc_module import DDSCSystem, DDSCParameters
 
+from dimer_particles import DimerParticleSystem
+
 # Import dopamine system
 try:
     from dopamine_system import DopamineSystemAdapter
@@ -133,6 +135,14 @@ class Model6QuantumSynapse:
 
         self.eligibility = EligibilityTraceModule()
         self.ddsc = DDSCSystem(DDSCParameters())
+
+        # Particle-based dimer tracking with emergent entanglement
+        self.dimer_particles = DimerParticleSystem(
+            params=self.params,
+            grid_shape=self.grid_shape,
+            dx=self.dx
+        )
+        logger.info("Dimer particle system initialized (emergent entanglement)")
         
         # History tracking
         self.history = {
@@ -154,6 +164,9 @@ class Model6QuantumSynapse:
             'plasticity_gate': [],
             'structural_drive': [],
             'ddsc_current': [],
+            'n_entangled_network': [],
+            'f_entangled': [],
+            'n_entanglement_bonds': [],
         }
 
         # Add to self.history dict (around line ~95):
@@ -326,27 +339,35 @@ class Model6QuantumSynapse:
             temperature = stimulus.get('temperature', self.params.environment.T)
             self.quantum.step(dt, dimer_conc, j_coupling, temperature)
             
-            # --- PHASE 3: CALCULATE DIMER COUNT AND COHERENCE ---
-            coherent_mask = (self.quantum.coherence > 0.5) & (self.quantum.dimer_concentration > 0)
+            # --- PHASE 3: PARTICLE-BASED DIMER TRACKING WITH EMERGENT ENTANGLEMENT ---
+            # Get formation rate from ca_phosphate system
+            formation_rate_field = self.ca_phosphate.get_formation_rate_field()
             
-            if np.any(coherent_mask):
-                peak_conc = np.max(self.quantum.dimer_concentration[coherent_mask])
-                processing_volume_m3 = 5.2e-22  # ~50nm radius sphere
-                processing_volume_L = processing_volume_m3 * 1000
-                n_templates = int(np.sum(self.ca_phosphate.templates.template_field)) 
-                n_dimers_single = peak_conc * processing_volume_L * n_templates * 6.022e23
-                mean_coherence = float(np.mean(self.quantum.coherence[coherent_mask]))
-            else:
-                n_dimers_single = 0.0
-                mean_coherence = 0.0
+            # Step particle system - this handles birth, death, coherence, entanglement
+            particle_metrics = self.dimer_particles.step(
+                dt=dt,
+                formation_rate_field=formation_rate_field,
+                template_field=self.ca_phosphate.templates.template_field,
+                calcium_field=ca_conc,
+                j_coupling_field=j_coupling
+            )
             
-            # Store for tracking
-            self._previous_dimer_count = n_dimers_single
+            # EMERGENT metrics replace prescribed ones
+            n_dimers_total = particle_metrics['n_dimers']
+            n_entangled_network = particle_metrics['largest_cluster']  # KEY: entangled network size
+            mean_coherence = particle_metrics['mean_coherence']
+            f_entangled = particle_metrics['f_entangled']
+            
+            # Store for tracking - use ENTANGLED count for network effects
+            self._previous_dimer_count = n_entangled_network  # Changed from total to entangled
             self._previous_coherence = mean_coherence
+            self._n_dimers_total = n_dimers_total
+            self._n_entangled_network = n_entangled_network
+            self._f_entangled = f_entangled
             
             # --- PHASE 4: LOCAL DIMER → TUBULIN COUPLING ---
             local_mod = self.local_dimer_coupling.calculate_local_modulation(
-                n_dimers=n_dimers_single,
+                n_dimers=n_dimers_total,  # Changed from n_dimers_single
                 mean_coherence=mean_coherence
             )
             
@@ -388,7 +409,7 @@ class Model6QuantumSynapse:
             
             coupling_state = self.em_coupling.update(
                 em_field_trp=em_field_trp,
-                n_coherent_dimers=n_dimers_single,  # NOW we know this!
+                n_coherent_dimers=n_entangled_network,  # Changed: use entangled network size
                 k_agg_baseline=k_agg_baseline,
                 phosphate_fraction=np.mean(phosphate) / 0.001
             )
