@@ -112,95 +112,86 @@ class DimerParticleSystem:
     # BIRTH/DEATH PROCESSES
     # =========================================================================
     
-    def step_formation(self, dt: float, formation_rate_field: np.ndarray,
-                       template_field: np.ndarray) -> int:
+    def step_population(self, dt: float, dimer_concentration: np.ndarray,
+                        template_field: np.ndarray) -> dict:
         """
-        Stochastic dimer formation from concentration field
+        Adjust particle population to track concentration field
         
-        Converts continuous formation rate to discrete birth events
+        Physics:
+        - Chemistry determines HOW MANY dimers exist (fast equilibrium)
+        - Particle system tracks WHICH ONES and their quantum state
+        - Birth/death maintains population, coherence evolves with T2
+        - Hysteresis prevents rapid turnover from concentration noise
         """
-        # Total formation rate (integrate over grid)
-        # formation_rate_field is in M/s, need to convert to particles/s
-        volume_per_voxel = (self.dx ** 3) * 1000  # Liters
+        # Calculate target particle count from concentration
+        grid_volume_L = (self.grid_shape[0] * self.dx) * (self.grid_shape[1] * self.dx) * 20e-9 * 1000
         N_A = 6.022e23
         
-        particles_per_s = formation_rate_field * volume_per_voxel * N_A
-        total_rate = np.sum(particles_per_s)
+        peak_conc = np.max(dimer_concentration)
+        target_count = int(round(peak_conc * grid_volume_L * N_A))
         
-        # Expected births this timestep
-        expected_births = total_rate * dt
+        current_count = len(self.dimers)
+        n_births = 0
+        n_deaths = 0
         
-        # Poisson sampling
-        n_births = np.random.poisson(expected_births)
+        # Hysteresis: only adjust if difference > 1 particle
+        # This prevents rapid turnover from concentration noise
+        difference = target_count - current_count
         
-        # Cap to avoid explosion
-        n_births = min(n_births, 10)
-        
-        # Sample positions for new dimers
-        if n_births > 0 and total_rate > 0:
-            # Probability distribution over grid
-            prob = particles_per_s.flatten() / total_rate
+        # --- BIRTH: Add particles if significantly below target ---
+        if difference >= 2:
+            n_to_add = difference - 1  # Leave buffer
             
-            for _ in range(n_births):
-                # Sample grid position
-                idx = np.random.choice(len(prob), p=prob)
-                grid_pos = np.unravel_index(idx, self.grid_shape)
+            conc_weighted = dimer_concentration * (1 + template_field * 10)
+            total_weight = np.sum(conc_weighted)
+            
+            if total_weight > 0:
+                prob = conc_weighted.flatten() / total_weight
                 
-                # Convert to physical position (with jitter within voxel)
-                pos_nm = np.array([
-                    (grid_pos[0] + np.random.random()) * self.dx_nm,
-                    (grid_pos[1] + np.random.random()) * self.dx_nm,
-                    np.random.random() * self.dx_nm  # Z within single layer
-                ])
-                
-                # Check template binding
-                template_bound = template_field[grid_pos] > 50
-                
-                # Create dimer
-                dimer = Dimer(
-                    id=self.next_id,
-                    position=pos_nm,
-                    birth_time=self.time,
-                    coherence=1.0,
-                    template_bound=template_bound
-                )
-                
-                self.dimers.append(dimer)
-                self.next_id += 1
+                for _ in range(n_to_add):
+                    idx = np.random.choice(len(prob), p=prob)
+                    grid_pos = np.unravel_index(idx, self.grid_shape)
+                    
+                    pos_nm = np.array([
+                        (grid_pos[0] + np.random.random()) * self.dx_nm,
+                        (grid_pos[1] + np.random.random()) * self.dx_nm,
+                        np.random.random() * 20.0
+                    ])
+                    
+                    template_bound = template_field[grid_pos] > 0.5
+                    
+                    dimer = Dimer(
+                        id=self.next_id,
+                        position=pos_nm,
+                        birth_time=self.time,
+                        coherence=1.0,
+                        template_bound=template_bound
+                    )
+                    
+                    self.dimers.append(dimer)
+                    self.next_id += 1
+                    n_births += 1
         
-        return n_births
+        # --- DEATH: Remove particles if significantly above target ---
+        elif difference <= -2:
+            n_to_remove = abs(difference) - 1  # Leave buffer
+            
+            sorted_dimers = sorted(self.dimers, key=lambda d: d.coherence)
+            
+            for i in range(min(n_to_remove, len(sorted_dimers))):
+                dimer = sorted_dimers[i]
+                self.dimers.remove(dimer)
+                self._remove_all_bonds_for_dimer(dimer.id)
+                n_deaths += 1
+        
+        return {'n_births': n_births, 'n_deaths': n_deaths}
     
-    def step_dissolution(self, dt: float, calcium_field: np.ndarray) -> int:
-        """
-        Stochastic dimer dissolution
-        """
-        to_remove = []
-        
-        for dimer in self.dimers:
-            # Base dissolution rate
-            k = self.k_dissolution
-            
-            # Template binding protects
-            if dimer.template_bound:
-                k *= 0.1  # 10× more stable
-            
-            # Low calcium slightly increases dissolution
-            # (thermodynamic drive toward ions)
-            grid_pos = self._position_to_grid(dimer.position)
-            local_ca = calcium_field[grid_pos]
-            if local_ca < 1e-6:  # Below 1 µM
-                k *= 1.5
-            
-            # Stochastic death
-            p_dissolve = 1 - np.exp(-k * dt)
-            if np.random.random() < p_dissolve:
-                to_remove.append(dimer)
-        
-        # Remove dissolved dimers
-        for dimer in to_remove:
-            self._remove_dimer(dimer)
-        
-        return len(to_remove)
+    def _remove_all_bonds_for_dimer(self, dimer_id: int):
+        """Remove all entanglement bonds involving a specific dimer"""
+        to_remove = [bond for bond in self.entanglement_bonds 
+                    if bond.dimer_i == dimer_id or bond.dimer_j == dimer_id]
+        for bond in to_remove:
+            self.entanglement_bonds.discard(bond)
     
     def _remove_dimer(self, dimer: Dimer):
         """Remove dimer and its entanglement bonds"""
@@ -242,7 +233,7 @@ class DimerParticleSystem:
             
             # Exponential decay with noise
             decay = np.exp(-dt / T2_eff)
-            noise = 1.0 + 0.02 * np.random.randn()  # 2% noise
+            noise = 1.0 + 0.02 * np.sqrt(dt) * np.random.randn()  # 2% noise per second
             
             dimer.coherence *= decay * noise
             dimer.coherence = np.clip(dimer.coherence, 0, 1)
@@ -415,30 +406,40 @@ class DimerParticleSystem:
     # =========================================================================
     
     def step(self, dt: float, 
-             formation_rate_field: np.ndarray,
+             dimer_concentration: np.ndarray,
              template_field: np.ndarray,
              calcium_field: np.ndarray,
              j_coupling_field: np.ndarray) -> dict:
         """
         Main simulation step
+        
+        Parameters
+        ----------
+        dimer_concentration : np.ndarray
+            Dimer concentration field (M) from ca_triphosphate
+        template_field : np.ndarray
+            Template enhancement field
+        calcium_field : np.ndarray
+            Calcium concentration (M) - for future use
+        j_coupling_field : np.ndarray
+            J-coupling field (Hz) from ATP system
         """
-        # 1. Formation (birth)
-        n_born = self.step_formation(dt, formation_rate_field, template_field)
-        
-        # 2. Dissolution (death)
-        n_died = self.step_dissolution(dt, calcium_field)
-        
-        # 3. Coherence decay
-        self.step_coherence(dt, j_coupling_field)
-        
-        # 4. Entanglement dynamics (the expensive part, but still cheap)
-        self.step_entanglement(dt)
-        
-        # 5. Update time
+        # 1. Update time first
         self.time += dt
         
-        # 6. Metrics
+        # 2. Population: birth/death to track concentration (FAST chemistry)
+        pop_result = self.step_population(dt, dimer_concentration, template_field)
+        
+        # 3. Coherence: T2 decay for each particle (SLOW quantum)
+        self.step_coherence(dt, j_coupling_field)
+        
+        # 4. Entanglement: update bonds based on coherence and J-coupling (EMERGENT)
+        self.step_entanglement(dt)
+        
+        # 5. Metrics
         metrics = self.get_network_metrics()
+        metrics['n_births'] = pop_result['n_births']
+        metrics['n_deaths'] = pop_result['n_deaths']
         
         # Record history
         self.history['time'].append(self.time)
@@ -469,7 +470,8 @@ class DimerParticleSystem:
             field[grid_pos] += 1
         
         # Convert count to concentration (M)
-        volume_per_voxel = (self.dx ** 3) * 1000  # Liters
+        cleft_height = 20e-9  # 20nm - Zuber et al. 2005
+        volume_per_voxel = (self.dx ** 2) * cleft_height * 1000  # Liters
         N_A = 6.022e23
         field = field / (volume_per_voxel * N_A)
         

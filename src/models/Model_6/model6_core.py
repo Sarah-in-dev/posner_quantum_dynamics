@@ -23,8 +23,8 @@ import h5py
 from datetime import datetime
 
 from model6_parameters import Model6Parameters
-from calcium_system import CalciumSystem
-# from analytical_calcium_system import AnalyticalCalciumSystem as CalciumSystem
+# from calcium_system import CalciumSystem
+from analytical_calcium_system import AnalyticalCalciumSystem as CalciumSystem
 from atp_system import ATPSystem
 from ca_triphosphate_complex import CaHPO4DimerSystem
 from quantum_coherence import QuantumCoherenceSystem  # CHANGED from posner_system
@@ -341,13 +341,13 @@ class Model6QuantumSynapse:
             self.quantum.step(dt, dimer_conc, j_coupling, temperature)
             
             # --- PHASE 3: PARTICLE-BASED DIMER TRACKING WITH EMERGENT ENTANGLEMENT ---
-            # Get formation rate from ca_phosphate system
-            formation_rate_field = self.ca_phosphate.get_formation_rate_field()
+            # Get dimer concentration from ca_phosphate system
+            dimer_concentration = self.ca_phosphate.get_dimer_concentration()
             
-            # Step particle system - this handles birth, death, coherence, entanglement
+            # Step particle system - this handles population, coherence, entanglement
             particle_metrics = self.dimer_particles.step(
                 dt=dt,
-                formation_rate_field=formation_rate_field,
+                dimer_concentration=dimer_concentration,
                 template_field=self.ca_phosphate.templates.template_field,
                 calcium_field=ca_conc,
                 j_coupling_field=j_coupling

@@ -117,11 +117,6 @@ class QuantumCoherenceSystem:
             R_total = (1.0 / T2_dipolar) + R_quadrupolar * P32_fraction
             T2_base = 1.0 / R_total
 
-            if not hasattr(self, '_debug_printed'):
-                print(f"R_total: {R_total:.2e} s^-1")
-                print(f"T2_base: {T2_base:.2e} s")
-                print(f"=========================\n")
-                self._debug_printed = True
 
         else:
             T2_base = T2_dipolar

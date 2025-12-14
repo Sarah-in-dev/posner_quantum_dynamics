@@ -495,16 +495,19 @@ class MultiSynapseNetwork:
             # (In future, could have synapse-specific stimuli)
             synapse.step(dt, stimulus)
             
-            # Collect state
+            # Get actual metrics from synapse
+            metrics = synapse.get_experimental_metrics()
+            
+            # Collect state - USE THE METRICS
             state = SynapseState(
                 position_um=self.positions[i],
-                dimer_count=getattr(synapse, '_previous_dimer_count', 0.0),
-                coherence=getattr(synapse, '_previous_coherence', 0.0),
+                dimer_count=metrics.get('dimer_peak_nM_ct', 0.0) or metrics.get('dimer_peak_nM', 0.0),
+                coherence=metrics.get('coherence_dimer_mean', 0.0),
                 collective_field_kT=getattr(synapse, '_collective_field_kT', 0.0),
                 eligibility=getattr(synapse, '_current_eligibility', 0.0),
                 committed=getattr(synapse, '_camkii_committed', False),
                 committed_level=getattr(synapse, '_committed_memory_level', 0.0),
-                calcium_peak_uM=synapse.calcium.get_peak_concentration() * 1e6
+                calcium_peak_uM=metrics.get('calcium_peak_uM', 0.0)
             )
             synapse_states.append(state)
         
@@ -578,9 +581,31 @@ class MultiSynapseNetwork:
         # Collective threshold: need ~35 entangled dimers for network effects
         N_collective_threshold = 35.0
         
+        # Get TRUE entangled network from cross-synapse tracker
+        if hasattr(self, '_network_entanglement') and self._network_entanglement:
+            n_entangled = self._network_entanglement['n_entangled_network']
+            n_bonds = self._network_entanglement['n_bonds']
+        else:
+            n_entangled = 0
+            n_bonds = 0
+        
+        # Collective threshold: need dimers to form network
+        N_collective_threshold = 35.0
+        
         if n_entangled >= N_collective_threshold:
-            # Collective quantum state - field from entangled network
-            network_field = U_single_kT * np.sqrt(n_entangled)
+            # EMERGENT entanglement fraction from actual bond structure
+            # f_ent = bonds / possible_pairs
+            n_possible_pairs = n_entangled * (n_entangled - 1) // 2
+            if n_possible_pairs > 0:
+                f_ent_emergent = n_bonds / n_possible_pairs
+            else:
+                f_ent_emergent = 0.0
+            
+            # Effective entangled count = f_ent × N
+            effective_N = f_ent_emergent * n_entangled
+            
+            # Field from collective quantum state
+            network_field = U_single_kT * np.sqrt(effective_N)
         else:
             # Below threshold - no collective field
             network_field = 0.0

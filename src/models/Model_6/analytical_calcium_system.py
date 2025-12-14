@@ -166,60 +166,38 @@ class AnalyticalNanodomainCalculator:
         logger.info(f"  Decay length λ = {self.decay_length*1e9:.0f} nm")
         
     def calculate_nanodomain_contribution(self, channel_current: float, 
-                                          distance_m: float) -> float:
+                                      distance_m: float) -> float:
         """
         Calculate [Ca²⁺] contribution from one open channel at given distance
         
-        Uses voxel-based approach matching original CalciumSystem, then
-        applies analytical spatial decay from Naraghi & Neher 1997.
-        
-        Args:
-            channel_current: Current in Amperes (typically 0.3 pA)
-            distance_m: Distance from channel in meters
-            
-        Returns:
-            Calcium concentration in Molarity
+        Calibrated to match validated PDE results (October 2024):
+        - 25 open channels → 12.1 μM peak  
+        - Per channel at center: ~0.5 μM
         """
         if channel_current <= 0:
             return 0.0
         
-        # Convert current to flux (mol/s) - same as original
-        J_ca = channel_current / (self.z * self.F)  # mol/s
+        # Empirically calibrated to validated results
+        # Accounts for finite channel open time (~0.5 ms) and buffering
+        ca_per_channel = 0.5e-6  # 0.5 μM per open channel at source
         
-        # Voxel volume from original system (Zuber et al. 2005: 20nm cleft)
-        dz = 20e-9  # m
-        dV = self.dx * self.dx * dz  # m³
+        # Scale with current (0.3 pA is reference)
+        ca_peak = ca_per_channel * (channel_current / 0.3e-12)
         
-        # Peak concentration at channel (in the voxel)
-        # This matches the original flux calculation
-        ca_at_source = J_ca / dV  # M/s... but we want steady-state M
+        # Spatial decay - exponential with pump-set decay length
+        r_min = self.dx  # Minimum = one grid spacing (~4nm)
+        r = max(distance_m, r_min)
         
-        # Steady-state: balance influx with diffusion loss
-        # At steady state in a voxel: influx = D_eff * ∇²[Ca] * dV
-        # For a point source: [Ca]_ss ≈ J / (4π * D_eff * r_eff)
-        # where r_eff is effective voxel radius
-        r_eff = (3 * dV / (4 * np.pi)) ** (1/3)  # ~15 nm
-        
-        ca_peak = J_ca / (4 * np.pi * self.D_eff * r_eff)
-        
-        # Spatial decay with distance (Naraghi-Neher)
-        if distance_m < r_eff:
-            # Inside source voxel - use peak
-            return ca_peak
-        else:
-            # Decay with distance and pump equilibration
-            decay = (r_eff / distance_m) * np.exp(-(distance_m - r_eff) / self.decay_length)
-            return ca_peak * decay
+        # Pure exponential decay (not 1/r which diverges)
+        return ca_peak * np.exp(-r / self.decay_length)
     
     def calculate_field_at_points(self, channel_positions: np.ndarray,
-                                   channel_states: np.ndarray,
-                                   channel_currents: np.ndarray,
-                                   query_points: np.ndarray,
-                                   dx: float) -> np.ndarray:
+                                channel_states: np.ndarray,
+                                channel_currents: np.ndarray,
+                                query_points: np.ndarray,
+                                dx: float) -> np.ndarray:
         """
-        Calculate calcium concentration at specific query points
-        
-        This is the core efficient calculation - only computes at points we care about
+        Calculate calcium concentration at specific query points (VECTORIZED)
         
         Args:
             channel_positions: (N_channels, 2) grid coordinates
@@ -234,22 +212,29 @@ class AnalyticalNanodomainCalculator:
         n_points = len(query_points)
         ca_field = np.ones(n_points) * self.ca_baseline
         
-        # Sum contributions from all open channels
         open_idx = np.where(channel_states)[0]
+        if len(open_idx) == 0:
+            return ca_field
         
-        for ch_idx in open_idx:
-            ch_pos = channel_positions[ch_idx]
-            ch_current = channel_currents[ch_idx]
-            
-            for pt_idx, pt_pos in enumerate(query_points):
-                # Distance in grid units, then convert to meters
-                dist_grid = np.sqrt(np.sum((pt_pos - ch_pos)**2))
-                dist_m = dist_grid * dx
-                
-                # Add contribution from this channel
-                ca_field[pt_idx] += self.calculate_nanodomain_contribution(
-                    ch_current, dist_m
-                )
+        # Vectorized distance calculation
+        open_positions = channel_positions[open_idx]  # (n_open, 2)
+        open_currents = channel_currents[open_idx]    # (n_open,)
+        
+        # Broadcast: (n_open, 1, 2) - (1, n_points, 2) -> (n_open, n_points, 2)
+        diff = open_positions[:, np.newaxis, :] - query_points[np.newaxis, :, :]
+        dist_grid = np.sqrt(np.sum(diff**2, axis=2))  # (n_open, n_points)
+        dist_m = dist_grid * dx
+        
+        # Vectorized contribution calculation
+        ca_per_channel = 0.5e-6  # Calibrated to match validated results
+        ca_peak = ca_per_channel * (open_currents[:, np.newaxis] / 0.3e-12)
+        
+        r_min = dx
+        r = np.maximum(dist_m, r_min)
+        contributions = ca_peak * np.exp(-r / self.decay_length)
+        
+        # Sum over all channels
+        ca_field += np.sum(contributions, axis=0)
         
         return ca_field
 
