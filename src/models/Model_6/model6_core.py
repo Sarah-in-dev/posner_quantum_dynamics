@@ -24,6 +24,7 @@ from datetime import datetime
 
 from model6_parameters import Model6Parameters
 from calcium_system import CalciumSystem
+# from analytical_calcium_system import AnalyticalCalciumSystem as CalciumSystem
 from atp_system import ATPSystem
 from ca_triphosphate_complex import CaHPO4DimerSystem
 from quantum_coherence import QuantumCoherenceSystem  # CHANGED from posner_system
