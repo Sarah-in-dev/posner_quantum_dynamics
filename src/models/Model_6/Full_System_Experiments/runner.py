@@ -343,9 +343,13 @@ def run_protocol(condition: ExperimentCondition,
         if verbose:
             print(f"  Phase 3: Delay ({condition.dopamine_delay_s}s)")
         
-        for i in range(n_steps):
+        # Use coarse timesteps during consolidation (10ms instead of 1ms)
+        dt_coarse = dt * 10  # 10ms steps
+        n_steps_coarse = int(consol_duration / dt_coarse)
+
+        for i in range(n_steps_coarse):
             if is_network:
-                network.step(dt, {'voltage': -70e-3, 'reward': False})
+                network.step(dt_coarse, {'voltage': -70e-3, 'reward': False})
             else:
                 model.step(dt, {'voltage': -70e-3, 'reward': False})
             
@@ -395,9 +399,13 @@ def run_protocol(condition: ExperimentCondition,
     if verbose:
         print(f"  Phase 5: Consolidation ({consol_duration}s)")
     
-    for i in range(n_steps):
+    # Use coarse timesteps during consolidation (10ms instead of 1ms)
+    dt_coarse = dt * 10  # 10ms steps
+    n_steps_coarse = int(consol_duration / dt_coarse)
+
+    for i in range(n_steps_coarse):
         if is_network:
-            network.step(dt, {'voltage': -70e-3, 'reward': False})
+            network.step(dt_coarse, {'voltage': -70e-3, 'reward': False})
         else:
             model.step(dt, {'voltage': -70e-3, 'reward': False})
         
