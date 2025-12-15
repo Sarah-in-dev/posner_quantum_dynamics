@@ -335,33 +335,32 @@ def run_protocol(condition: ExperimentCondition,
         print(f"    Eligibility: {result.post_stim.eligibility:.3f}")
     
     # =========================================================================
+    # =========================================================================
     # PHASE 3: DELAY (if any)
     # =========================================================================
     if condition.dopamine_delay_s > 0:
-        n_steps = int(condition.dopamine_delay_s / dt)
+        delay_duration = condition.dopamine_delay_s
         
         if verbose:
-            print(f"  Phase 3: Delay ({condition.dopamine_delay_s}s)")
+            print(f"  Phase 3: Delay ({delay_duration}s)")
         
-        # Use coarse timesteps during consolidation (10ms instead of 1ms)
+        # Use coarse timesteps during delay (10ms instead of 1ms)
         dt_coarse = dt * 10  # 10ms steps
-        n_steps_coarse = int(consol_duration / dt_coarse)
+        n_steps_coarse = int(delay_duration / dt_coarse)
 
         for i in range(n_steps_coarse):
             if is_network:
                 network.step(dt_coarse, {'voltage': -70e-3, 'reward': False})
             else:
-                model.step(dt, {'voltage': -70e-3, 'reward': False})
+                model.step(dt_coarse, {'voltage': -70e-3, 'reward': False})
             
             # Record less frequently during long delays
-            interval = config.record_interval * (10 if condition.dopamine_delay_s > 10 else 1)
+            interval = config.record_interval * 10
             if step % interval == 0:
                 record("delay")
             
-            t += dt
+            t += dt_coarse  # Also fix: should be dt_coarse, not dt
             step += 1
-    
-    result.pre_dopamine = measure_state(model, t, "pre_dopamine", network=network)
     
     # =========================================================================
     # PHASE 4: DOPAMINE READ
@@ -413,7 +412,7 @@ def run_protocol(condition: ExperimentCondition,
         if step % (config.record_interval * 100) == 0:
             record("consolidation")
         
-        t += dt
+        t += dt_coarse  # Not dt
         step += 1
     
     result.final = measure_state(model, t, "final", network=network)
