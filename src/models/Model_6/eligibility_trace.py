@@ -36,44 +36,30 @@ class EligibilityTraceParameters:
     """
     Parameters for eligibility trace dynamics
     
-    All timing parameters derived from literature or Model 6 calculations.
-    No arbitrary fitting factors.
+    NOTE: T2 is NOT prescribed here - it comes from quantum_coherence system
+    which calculates emergent T2 from physics.
     """
     
-    # === T2 Coherence Times (from Model 6 + Agarwal et al. 2023) ===
-    T2_P31: float = 67.6      # seconds - ³¹P nuclear spin coherence
-    T2_P32: float = 0.3       # seconds - ³²P (quadrupolar relaxation)
-    
     # === Dimer Thresholds ===
-    dimer_threshold_min: int = 3      # Minimum dimers to create trace
-    dimer_saturation: int = 10        # Dimers for maximum eligibility
-    coherence_threshold: float = 0.5  # Minimum coherence for quantum effect
+    dimer_threshold_min: int = 3
+    dimer_saturation: int = 10
+    coherence_threshold: float = 0.5
     
     # === Eligibility Thresholds ===
-    eligibility_threshold: float = 0.3   # Minimum to convert → plasticity
-    eligibility_floor: float = 0.1       # Below this, clear the trace
+    eligibility_threshold: float = 0.3
+    eligibility_floor: float = 0.1
     
     # === Plateau Potential Parameters ===
-    # From Grienberger et al. 2014
-    plateau_duration_typical: float = 0.250  # 250 ms typical duration
-    plateau_calcium_threshold: float = 2.0   # µM - elevated Ca²⁺ during plateau
+    plateau_duration_typical: float = 0.250
+    plateau_calcium_threshold: float = 2.0
     
     # === Weight Change Scaling ===
-    # Direction determined by timing relative to plateau
-    ltp_scale: float = 1.0    # Scaling for potentiation
-    ltd_scale: float = 0.5    # Scaling for depression (typically weaker)
+    ltp_scale: float = 1.0
+    ltd_scale: float = 0.5
     
     # === Isotope Selection ===
     isotope: PhosphorusIsotope = PhosphorusIsotope.P31
     
-    @property
-    def T2(self) -> float:
-        """Get T2 for current isotope"""
-        if self.isotope == PhosphorusIsotope.P31:
-            return self.T2_P31
-        else:
-            return self.T2_P32
-
 
 @dataclass
 class EligibilityState:
@@ -93,7 +79,7 @@ class EligibilityState:
     last_dimer_count: int = 0
     last_coherence: float = 0.0
     decay_rate: float = 0.0            # Current decay rate (1/s)
-
+    T2_current: float = 67.0           # Current T2 from quantum_coherence (s)
 
 class EligibilityTraceModule:
     """
@@ -158,40 +144,34 @@ class EligibilityTraceModule:
         self.params.isotope = isotope
     
     def step(self, 
-             dt: float,
-             dimer_count: int,
-             coherence: float,
-             plateau_potential: bool = False,
-             calcium_uM: float = 0.0) -> Dict:
+            dt: float,
+            dimer_count: int,
+            coherence: float,
+            T2_effective: float,  # ← ADD: Receive from quantum_coherence
+            plateau_potential: bool = False,
+            calcium_uM: float = 0.0) -> Dict:
         """
         Update eligibility trace for one timestep
         
         Args:
             dt: Timestep in seconds
             dimer_count: Number of coherent dimers at this synapse
-            coherence: Mean coherence of dimers (0-1)
-            plateau_potential: True if instructive signal (dendritic Ca²⁺ spike) present
-            calcium_uM: Current calcium concentration (for direction determination)
-            
-        Returns:
-            Dict containing eligibility state and plasticity decision
+            coherence: Mean coherence of dimers (0-1) from quantum_coherence
+            T2_effective: Emergent T2 from quantum_coherence (seconds)
+            ...
         """
         p = self.params
         s = self.state
         
-        # Store diagnostics
         s.last_dimer_count = dimer_count
         s.last_coherence = coherence
         
         # === ELIGIBILITY CREATION ===
-        # Only create trace if this is NEW activity (not persistent dimers)
-        # Detect new activity by calcium being elevated
         is_new_activity = (dimer_count >= p.dimer_threshold_min and 
                         coherence > p.coherence_threshold and
-                        calcium_uM > 1.0)  # Above baseline indicates active period
+                        calcium_uM > 1.0)
         
         if is_new_activity and not s.is_tagged:
-            # First tagging event
             s.is_tagged = True
             s.time_since_tag = 0.0
             s.eligibility = min(1.0, dimer_count / p.dimer_saturation)
@@ -199,18 +179,20 @@ class EligibilityTraceModule:
             s.tag_count += 1
         
         # === ELIGIBILITY DECAY ===
-        # Always decay once tagged (this is the T2 decay)
         if s.is_tagged:
             s.time_since_tag += dt
-            s.decay_rate = 1.0 / p.T2
+            s.decay_rate = 1.0 / T2_effective  # ← USE PASSED T2, not prescribed
             decay_factor = np.exp(-dt * s.decay_rate)
             s.eligibility *= decay_factor
             
             if s.eligibility < p.eligibility_floor:
                 s.is_tagged = False
                 s.eligibility = 0.0
-                s.time_since_tag = np.inf
-        
+    
+        # Store T2 for later access
+        s.T2_current = T2_effective
+
+
         # === PLASTICITY CONVERSION ===
         # Convert eligibility → plasticity ONLY if plateau potential arrives
         # This implements the gating function of BTSP
@@ -255,7 +237,7 @@ class EligibilityTraceModule:
             'weight_change': s.weight_change,
             'weight_direction': s.weight_direction,
             'decay_rate': s.decay_rate,
-            'T2_current': p.T2,
+            'T2_current': T2_effective,
         }
     
     def get_eligibility(self) -> float:
@@ -278,10 +260,9 @@ class EligibilityTraceModule:
         This is the key experimental prediction:
         half-life = T2 * ln(2) ≈ 0.693 * T2
         
-        For P31: ~46.9 seconds
-        For P32: ~0.21 seconds
         """
-        return self.params.T2 * np.log(2)
+        T2 = getattr(self.state, 'T2_current', 67.0)  # Default to P31 value
+        return T2 * np.log(2)
     
     def get_history(self, variable: str) -> np.ndarray:
         """Get recorded history for a variable"""

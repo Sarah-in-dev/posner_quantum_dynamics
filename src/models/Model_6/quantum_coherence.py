@@ -132,17 +132,26 @@ class QuantumCoherenceSystem:
         T2_isolated_dimer = T2_base * intra_dimer_factor  # ~3s
     
         # === STEP 3: J-coupling field protection (THE KEY!) ===
-        # Fisher 2015: ATP creates ~20 Hz J-coupling → spin locking
-        # Protection scales with coupling strength squared
         J_free = self.params.J_coupling_baseline  # 0.2 Hz
         J_ATP = self.params.J_coupling_ATP  # 20 Hz
+        J_intrinsic = self.params.J_intrinsic_dimer  # 15 Hz (within formed dimer)
         protection_strength = self.params.J_protection_strength  # 25
-    
+
+        # For EXISTING dimers: use intrinsic J-coupling (molecular structure)
+        # For NEW dimers: use external J-field (determines formation)
+        # Existing dimers are where coherence > 0
+        existing_dimers = self.coherence > 0
+
+        # Effective J-coupling: intrinsic for existing, external for new
+        J_effective = np.where(existing_dimers, 
+                            np.maximum(j_coupling, J_intrinsic),  # Existing: at least intrinsic
+                            j_coupling)  # New: external field
+
         # Calculate protection factor
-        J_normalized = (j_coupling - J_free) / (J_ATP - J_free)
-        J_normalized = np.clip(J_normalized, 0, 1)  # Clamp to [0,1]
-    
-        J_protection = 1.0 + protection_strength * J_normalized**2 * self.P31_fraction  # Up to 26x!
+        J_normalized = (J_effective - J_free) / (J_ATP - J_free)
+        J_normalized = np.clip(J_normalized, 0, 1)
+
+        J_protection = 1.0 + protection_strength * J_normalized**2 * self.P31_fraction  # Up to 26x for full ATP & 100% P31
     
         T2_with_J = T2_isolated_dimer * J_protection
     

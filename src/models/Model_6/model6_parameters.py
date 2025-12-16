@@ -293,6 +293,11 @@ class QuantumParameters:
     J_coupling_ATP: float = 20.0  # Hz (ATP-driven protection)
     J_protection_strength: float = 25.0  # Scaling factor for protection
 
+    # Intrinsic J-coupling within formed dimer structure
+    # The 4 ³¹P nuclei in Ca₆(PO₄)₄ are coupled through chemical bonds
+    # This is FIXED by molecular geometry, independent of external ATP field
+    J_intrinsic_dimer: float = 15.0  # Hz (intra-dimer coupling from molecular structure)
+    
     # Inter-dimer entanglement scaling
     # When multiple dimers are coupled, collective coherence emerges
     entanglement_log_factor: float = 0.2  # Log scaling with N_entangled dimers

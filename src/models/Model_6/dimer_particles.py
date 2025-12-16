@@ -84,7 +84,7 @@ class DimerParticleSystem:
         self.entanglement_matrix: Optional[np.ndarray] = None  # Dense, for analysis
         
         # Physics parameters
-        self.T2_base = 100.0          # s, base coherence time
+        # self.T2_base = 100.0          # s, base coherence time
         self.k_dissolution = 0.001    # 1/s, dissolution rate
         self.k_entangle = 0.5         # 1/s, entanglement attempt rate
         self.coupling_length = 5.0    # nm, characteristic coupling distance
@@ -216,21 +216,29 @@ class DimerParticleSystem:
         - J-coupling protection
         - Template binding (reduces tumbling)
         """
+        # Intrinsic J-coupling from dimer molecular structure
+        J_intrinsic = 15.0  # Hz - from chemical bonds within Ca₆(PO₄)₄
+        J_ref = 10.0  # Hz - reference for protection scaling
+        
         for dimer in self.dimers:
             grid_pos = self._position_to_grid(dimer.position)
-            j_coupling = j_coupling_field[grid_pos]
-            dimer.local_j_coupling = j_coupling
+            j_external = j_coupling_field[grid_pos]
             
-            # Effective T2
-            # J-coupling protection: T2_eff = T2_base × (1 + J/J_ref)
-            J_ref = 10.0  # Hz
-            j_protection = 1.0 + j_coupling / J_ref
+            # Formed dimers have intrinsic J-coupling from molecular structure
+            # External J-field can add protection but intrinsic is always present
+            j_effective = max(J_intrinsic, j_external)
+            dimer.local_j_coupling = j_effective
+            
+            # Effective T2 using same physics as quantum_coherence
+            j_protection = 1.0 + j_effective / J_ref
             
             # Template binding: additional protection
             template_factor = 1.3 if dimer.template_bound else 1.0
             
-            T2_eff = self.T2_base * j_protection * template_factor
-            
+            # Calculate emergent T2 (not using prescribed T2_base!)
+            T2_base_emergent = 3.0  # ~3s from single-spin + intra-dimer coupling
+            T2_eff = T2_base_emergent * j_protection * template_factor
+
             # Exponential decay with noise
             decay = np.exp(-dt / T2_eff)
             noise = 1.0 + 0.02 * np.sqrt(dt) * np.random.randn()  # 2% noise per second

@@ -191,7 +191,12 @@ def experiment_mt_invasion(config: ExperimentConfig,
             'n_trp': compute_summary_statistics([t.peak_values.get('peak_n_trp', 0) for t in label_trials]),
             'field': compute_summary_statistics([t.peak_values.get('peak_em_field', 0) for t in label_trials]),
             'k_enhancement': compute_summary_statistics([t.peak_values.get('peak_k_enhancement', 1) for t in label_trials]),
+            'peak_dimers': compute_summary_statistics([t.peak_values.get('peak_dimers', 0) for t in label_trials]),
+            'peak_eligibility': compute_summary_statistics([t.peak_values.get('peak_eligibility', 0) for t in label_trials]),
+            'committed': compute_summary_statistics([1 if t.peak_values.get('committed', False) else 0 for t in label_trials]),
+            'committed_level': compute_summary_statistics([t.peak_values.get('committed_level', 0) for t in label_trials]),
             'strength': compute_summary_statistics([t.peak_values.get('final_strength', 1) for t in label_trials]),
+            'peak_coherence': compute_summary_statistics([t.peak_values.get('peak_coherence', 0) for t in label_trials]),
         }
         
         if verbose:

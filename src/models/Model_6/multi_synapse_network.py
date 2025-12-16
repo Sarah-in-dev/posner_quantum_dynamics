@@ -499,9 +499,13 @@ class MultiSynapseNetwork:
             metrics = synapse.get_experimental_metrics()
             
             # Collect state - USE THE METRICS
+            # Get dimer concentration and convert to molecule count
+            dimer_nM = metrics.get('dimer_peak_nM_ct', 0.0)
+            dimer_count = dimer_nM * 0.006  # 741 nM → ~4.5 dimers
+
             state = SynapseState(
                 position_um=self.positions[i],
-                dimer_count=metrics.get('dimer_peak_nM_ct', 0.0) or metrics.get('dimer_peak_nM', 0.0),
+                dimer_count=dimer_count,
                 coherence=metrics.get('coherence_dimer_mean', 0.0),
                 collective_field_kT=getattr(synapse, '_collective_field_kT', 0.0),
                 eligibility=getattr(synapse, '_current_eligibility', 0.0),
@@ -519,9 +523,9 @@ class MultiSynapseNetwork:
         # Compute network-level quantities
         network_state = self._compute_network_state(synapse_states)
         
-        # Check for network commitment (only when reward/dopamine is present)
-        if stimulus.get('reward', False):
-            self._check_network_commitment(network_state)
+        # Check for network commitment every step
+        # (commitment is irreversible once field exceeds threshold with eligibility)
+        self._check_network_commitment(network_state)
         
         # Update time
         self.time += dt
@@ -571,16 +575,6 @@ class MultiSynapseNetwork:
         
         U_single_kT = 6.6  # From Fisher 2015
     
-        # Get TRUE entangled network size from cross-synapse tracker
-        # This replaces the prescribed f_ent = 0.3 with emergent entanglement
-        if hasattr(self, '_network_entanglement') and self._network_entanglement:
-            n_entangled = self._network_entanglement['n_entangled_network']
-        else:
-            n_entangled = 0
-        
-        # Collective threshold: need ~35 entangled dimers for network effects
-        N_collective_threshold = 35.0
-        
         # Get TRUE entangled network from cross-synapse tracker
         if hasattr(self, '_network_entanglement') and self._network_entanglement:
             n_entangled = self._network_entanglement['n_entangled_network']
@@ -589,26 +583,28 @@ class MultiSynapseNetwork:
             n_entangled = 0
             n_bonds = 0
         
-        # Collective threshold: need dimers to form network
+        # === Q2 FIELD: From entangled dimers ===
         N_collective_threshold = 35.0
         
         if n_entangled >= N_collective_threshold:
-            # EMERGENT entanglement fraction from actual bond structure
-            # f_ent = bonds / possible_pairs
             n_possible_pairs = n_entangled * (n_entangled - 1) // 2
             if n_possible_pairs > 0:
                 f_ent_emergent = n_bonds / n_possible_pairs
             else:
                 f_ent_emergent = 0.0
-            
-            # Effective entangled count = f_ent × N
             effective_N = f_ent_emergent * n_entangled
-            
-            # Field from collective quantum state
-            network_field = U_single_kT * np.sqrt(effective_N)
+            q2_field = U_single_kT * np.sqrt(effective_N)
         else:
-            # Below threshold - no collective field
-            network_field = 0.0
+            q2_field = 0.0
+        
+        # === Q1 FIELD: From tryptophan networks ===
+        # Each synapse has its own Q1 field; network field is the mean
+        q1_fields = [s.collective_field_kT for s in synapse_states]
+        q1_field = np.mean(q1_fields) if q1_fields else 0.0
+        
+        # === TOTAL NETWORK FIELD ===
+        # Q1 and Q2 are coupled systems - use the dominant contribution
+        network_field = max(q1_field, q2_field)
         
         # Count committed synapses
         n_committed = sum(1 for s in synapse_states if s.committed)

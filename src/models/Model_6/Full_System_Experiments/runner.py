@@ -139,8 +139,9 @@ def measure_state(model, time: float, phase: str, network=None) -> SystemState:
     
     
     # === QUANTUM SYSTEM 2: Dimers ===
-    # Single synapse dimer concentration from model (in nM)
-    dimer_conc_nM = getattr(model, '_previous_dimer_count', 0.0)
+    # Get dimer concentration from proper source
+    metrics = model.get_experimental_metrics()
+    dimer_conc_nM = metrics.get('dimer_peak_nM_ct', 0.0)
     
     # Convert concentration to molecule count per synapse
     # Spine volume ≈ 0.1 µm³ = 1e-16 L
@@ -167,9 +168,18 @@ def measure_state(model, time: float, phase: str, network=None) -> SystemState:
     state.dimer_count = total_network_dimers  # Legacy compatibility
     
     state.dimer_coherence = getattr(model, '_previous_coherence', 0.0)
-    state.eligibility = getattr(model, '_current_eligibility', 0.0)
+    # Use the proper eligibility getter (matches test_eligibility_decay.py)
+    if hasattr(model, 'eligibility'):
+        state.eligibility = model.eligibility.get_eligibility()
+    else:
+        state.eligibility = 0.0
     state.network_modulation = getattr(model, '_network_modulation', 0.0)
-    
+
+    # Get peak calcium for diagnostics
+    if hasattr(model, 'get_experimental_metrics'):
+        metrics = model.get_experimental_metrics()
+        state.peak_calcium_uM = metrics.get('calcium_peak_uM', 0.0)
+        
     # === COUPLING ===
     k_agg = getattr(model, '_k_agg_for_next_step', None)
     state.k_agg_enhanced = k_agg if k_agg is not None else 0.0
@@ -207,23 +217,42 @@ def measure_state(model, time: float, phase: str, network=None) -> SystemState:
     
     # === NETWORK OVERRIDES ===
     if network is not None:
-        # Aggregate dimer counts from all synapses
-        dimer_counts = [getattr(s, '_previous_dimer_count', 0) for s in network.synapses]
-        state.dimer_count = sum(dimer_counts)
-        state.total_network_dimers = sum(dimer_counts)
+        total_dimers = 0.0
+        total_eligibility = 0.0
+        weighted_coherence = 0.0
         
-        # Mean coherence weighted by dimers
-        coherences = [getattr(s, '_previous_coherence', 0) for s in network.synapses]
-        if state.dimer_count > 0:
-            state.dimer_coherence = sum(c * d for c, d in zip(coherences, dimer_counts)) / state.dimer_count
+        for synapse in network.synapses:
+            # Get CURRENT dimer concentration (not peak)
+            dimer_nM = getattr(synapse, '_previous_dimer_count', 0.0)
+            # Convert nM to molecule count: dimers = nM × 0.006
+            dimers_this_synapse = dimer_nM * 0.006
+            total_dimers += dimers_this_synapse
+            
+            # Get coherence
+            coherence = getattr(synapse, '_previous_coherence', 0.0)
+            weighted_coherence += coherence * dimers_this_synapse
+            
+            # Get eligibility from proper module
+            if hasattr(synapse, 'eligibility'):
+                total_eligibility += synapse.eligibility.get_eligibility()
         
-        # Mean eligibility
-        eligibilities = [getattr(s, '_current_eligibility', 0) for s in network.synapses]
-        state.eligibility = np.mean(eligibilities)
+        state.dimer_count = total_dimers
+        state.total_network_dimers = total_dimers
+        state.eligibility = total_eligibility / len(network.synapses)
+        
+        # Weighted coherence
+        if total_dimers > 0:
+            state.dimer_coherence = weighted_coherence / total_dimers
+        else:
+            state.dimer_coherence = 0.0
+        
+        # USE NETWORK COMMITMENT (not individual synapse)
+        state.committed = network.network_committed
+        state.committed_level = network.network_commitment_level
         
         # Synaptic strength scales with commitment
         if state.committed:
-            state.synaptic_strength = 1.0 + 0.5 * state.committed_level  # Up to 1.5x
+            state.synaptic_strength = 1.0 + 0.5 * state.committed_level
         else:
             state.synaptic_strength = 1.0
     
