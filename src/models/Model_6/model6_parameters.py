@@ -330,7 +330,25 @@ class QuantumParameters:
     Q10_quantum: float = 1.0  # Should be ~1.0
     Q10_classical: float = 2.3  # Typical enzyme
     
-
+    # === NEW: SINGLET DYNAMICS (Agarwal et al. 2023) ===
+    
+    # Intra-dimer J-coupling constants (Hz) - from DFT calculations
+    # These are MUCH smaller than ATP-derived J-coupling (~15-20 Hz)
+    # Used to initialize each dimer's internal J-coupling network
+    j_intra_dimer_mean: float = 0.15   # Hz (Agarwal Table 11)
+    j_intra_dimer_std: float = 0.15    # Hz (spread in values)
+    
+    # Singlet probability thresholds
+    singlet_entanglement_threshold: float = 0.5  # P_S > 0.5 = entangled
+    singlet_thermal: float = 0.25                # Maximally mixed state
+    
+    # Characteristic singlet lifetimes (emergent from J-coupling spread)
+    # These replace the old T2 values for coherence decay
+    T_singlet_dimer: float = 500.0   # s (dimers: ~100-1000s from Agarwal)
+    T_singlet_trimer: float = 0.5    # s (trimers: <1s from Agarwal)
+    
+    # Dipolar relaxation (from Agarwal MD simulations)
+    tau_c_rotational: float = 177e-12  # s (rotational correlation time)
 
 @dataclass
 class DopamineParameters:

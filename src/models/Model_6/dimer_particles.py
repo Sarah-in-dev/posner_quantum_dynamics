@@ -10,19 +10,56 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+# NEW:
 @dataclass
 class Dimer:
-    """Individual calcium phosphate dimer particle"""
+    """
+    Individual calcium phosphate dimer particle
+    
+    Quantum state tracked via singlet probability (Agarwal et al. 2023)
+    rather than phenomenological T2 decay.
+    
+    Key physics:
+    - 4 ³¹P spins per dimer, forming 2 singlet pairs from pyrophosphate
+    - P_S = 1.0: pure singlet (maximally entangled)
+    - P_S > 0.5: entanglement preserved
+    - P_S = 0.25: thermalized (no entanglement)
+    """
     
     id: int
     position: np.ndarray          # (x, y, z) in nm
     birth_time: float             # When formed
-    coherence: float = 1.0        # Quantum coherence [0, 1]
     template_bound: bool = False  # Bound to scaffolding protein
     
+    # === SINGLET STATE (replaces phenomenological coherence) ===
+    singlet_probability: float = 1.0  # P_S: 0.25 (thermal) to 1.0 (pure singlet)
+    
+    # Intra-dimer J-coupling constants (Hz)
+    # 6 values for 4 spins: pairs (0,1), (0,2), (0,3), (1,2), (1,3), (2,3)
+    # Initialized from Agarwal DFT distribution: mean ~0.15 Hz, range -0.5 to +0.5 Hz
+    j_couplings_intra: np.ndarray = field(default=None)
+    
     # Local environment (updated each step)
-    local_j_coupling: float = 0.0
+    local_j_coupling: float = 0.0  # External J-field (ATP-derived)
     local_calcium: float = 0.0
+    
+    def __post_init__(self):
+        if self.j_couplings_intra is None:
+            # DFT values from Agarwal Table 11: mean ~0.15 Hz, std ~0.15 Hz
+            self.j_couplings_intra = np.random.normal(0.15, 0.15, size=6)
+            self.j_couplings_intra = np.clip(self.j_couplings_intra, -0.5, 0.5)
+    
+    @property
+    def is_entangled(self) -> bool:
+        """Entanglement preserved when P_S > 0.5 (Agarwal threshold)"""
+        return self.singlet_probability > 0.5
+    
+    @property
+    def coherence(self) -> float:
+        """Backward compatibility: map singlet probability to 0-1 scale"""
+        # P_S = 0.25 → coherence = 0
+        # P_S = 1.0 → coherence = 1
+        return (self.singlet_probability - 0.25) / 0.75
     
     def __hash__(self):
         return self.id
@@ -207,44 +244,57 @@ class DimerParticleSystem:
     # COHERENCE DYNAMICS
     # =========================================================================
     
-    def step_coherence(self, dt: float, j_coupling_field: np.ndarray):
-        """
-        Update coherence of each dimer
+    # NEW:
+def step_coherence(self, dt: float, j_coupling_field: np.ndarray):
+    """
+    Update singlet probability for each dimer
+    
+    Physics from Agarwal et al. 2023:
+    - Singlet decay driven by J-coupling frequency spread (destructive interference)
+    - Dimers (4 spins) have fewer frequencies → slower decay than trimers (6 spins)
+    - Characteristic singlet lifetime: 100-1000s for dimers
+    - Entanglement threshold: P_S > 0.5
+    """
+    # Singlet dynamics parameters (from Agarwal 2023)
+    P_S_thermal = 0.25  # Thermalized (maximally mixed) state
+    T_singlet_base = 500.0  # s, characteristic decay time for dimers
+    
+    for dimer in self.dimers:
+        grid_pos = self._position_to_grid(dimer.position)
+        j_external = j_coupling_field[grid_pos]
+        dimer.local_j_coupling = j_external
         
-        T2 depends on:
-        - Base T2 (~100s for dimers)
-        - J-coupling protection
-        - Template binding (reduces tumbling)
-        """
-        # Intrinsic J-coupling from dimer molecular structure
-        J_intrinsic = 15.0  # Hz - from chemical bonds within Ca₆(PO₄)₄
-        J_ref = 10.0  # Hz - reference for protection scaling
+        # === SINGLET PROBABILITY DECAY ===
+        # Based on Agarwal's finding: dimers maintain P_S > 0.5 for ~100-1000s
         
-        for dimer in self.dimers:
-            grid_pos = self._position_to_grid(dimer.position)
-            j_external = j_coupling_field[grid_pos]
-            
-            # Formed dimers have intrinsic J-coupling from molecular structure
-            # External J-field can add protection but intrinsic is always present
-            j_effective = max(J_intrinsic, j_external)
-            dimer.local_j_coupling = j_effective
-            
-            # Effective T2 using same physics as quantum_coherence
-            j_protection = 1.0 + j_effective / J_ref
-            
-            # Template binding: additional protection
-            template_factor = 1.3 if dimer.template_bound else 1.0
-            
-            # Calculate emergent T2 (not using prescribed T2_base!)
-            T2_base_emergent = 3.0  # ~3s from single-spin + intra-dimer coupling
-            T2_eff = T2_base_emergent * j_protection * template_factor
-
-            # Exponential decay with noise
-            decay = np.exp(-dt / T2_eff)
-            noise = 1.0 + 0.02 * np.sqrt(dt) * np.random.randn()  # 2% noise per second
-            
-            dimer.coherence *= decay * noise
-            dimer.coherence = np.clip(dimer.coherence, 0, 1)
+        # J-coupling spread determines decay rate
+        # More uniform J-couplings → slower decay (fewer unique frequencies)
+        j_spread = np.std(dimer.j_couplings_intra)
+        j_mean = np.abs(np.mean(dimer.j_couplings_intra))
+        
+        # Spread factor: uniform J → slow decay, spread J → faster decay
+        spread_factor = 1.0 + 2.0 * j_spread / (j_mean + 0.1)
+        
+        # Template binding reduces tumbling → slower dipolar relaxation
+        template_factor = 0.7 if dimer.template_bound else 1.0
+        
+        # Effective singlet lifetime
+        T_singlet_eff = T_singlet_base / (spread_factor * template_factor)
+        T_singlet_eff = max(T_singlet_eff, 50.0)  # Minimum 50s (from Agarwal)
+        
+        # Decay toward thermal equilibrium
+        # P_S(t) = P_thermal + (P_S(0) - P_thermal) * exp(-t/T)
+        decay_factor = np.exp(-dt / T_singlet_eff)
+        
+        # Add small stochastic noise
+        noise = 1.0 + 0.01 * np.sqrt(dt) * np.random.randn()
+        
+        # Update singlet probability
+        P_excess = dimer.singlet_probability - P_S_thermal
+        dimer.singlet_probability = P_S_thermal + P_excess * decay_factor * noise
+        
+        # Clamp to valid range
+        dimer.singlet_probability = np.clip(dimer.singlet_probability, P_S_thermal, 1.0)
     
     # =========================================================================
     # ENTANGLEMENT DYNAMICS - THE KEY PART
