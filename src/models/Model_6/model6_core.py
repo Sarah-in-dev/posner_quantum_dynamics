@@ -441,16 +441,16 @@ class Model6QuantumSynapse:
 
             calcium_uM = float(np.max(ca_conc)) * 1e6
 
-            elig_result = self.eligibility.step(
-                dt=dt,
-                dimer_count=dimer_count,
-                coherence=qc_metrics['coherence_mean'],
-                T2_effective=qc_metrics['T2_dimer_s'],
-                calcium_uM=calcium_uM
-            )
+            # elig_result = self.eligibility.step(
+                # dt=dt,
+                # dimer_count=dimer_count,
+                # coherence=qc_metrics['coherence_mean'],
+                # T2_effective=qc_metrics['T2_dimer_s'],
+                # calcium_uM=calcium_uM
+            # )
 
             # Use module's eligibility value
-            self._current_eligibility = elig_result['eligibility']
+            # self._current_eligibility = elig_result['eligibility']
             
             # --- PHASE 9: ELIGIBILITY FROM INTEGRATED SYSTEM ---
             calcium_uM = float(np.max(ca_conc)) * 1e6
@@ -464,7 +464,7 @@ class Model6QuantumSynapse:
                 
                 # Get dimer count from CONCENTRATION (the source of truth)
                 # ~741 nM = 4-5 dimers per synapse, so ~150 nM per dimer
-                dimer_conc_nM = qc_metrics['dimer_mean_nM']
+                dimer_conc_nM = qc_metrics['dimer_peak_nM']
                 dimer_count = int(dimer_conc_nM * 0.006)  # Validated conversion factor
                 
                 elig_result = self.eligibility.step(

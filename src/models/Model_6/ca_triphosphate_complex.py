@@ -315,6 +315,25 @@ class CalciumPhosphateDimerization:
         # ca_in_pncs = self.pnc_concentration * 3.0  # 3 Ca per PNC
         # binding_fraction = ca_in_pncs / (ca_conc + 1e-12)
         # This should be ~0.5 everywhere
+
+        # =====================================================================
+        # NEW: CALCIUM THRESHOLD FOR FORMATION
+        # =====================================================================
+        # Only form NEW dimers when calcium is elevated
+        # Below threshold, existing dimers persist but no new ones form
+        ca_formation_threshold = 1e-6  # 1 µM - need calcium spike to form dimers
+        
+        if np.max(ca_conc) < ca_formation_threshold:
+            # No new formation at rest - only dissociation
+            dissolution_noise = 1.0 + np.random.normal(0, self.dissolution_noise_sigma, self.grid_shape)
+            dissolution_noise = np.maximum(dissolution_noise, 0.1)
+            
+            self.dimer_concentration -= self.k_dissociation * self.dimer_concentration * dissolution_noise * dt
+            self.trimer_concentration -= self.k_dissociation * 10.0 * self.trimer_concentration * dissolution_noise * dt
+            
+            self.dimer_concentration = np.maximum(self.dimer_concentration, 0)
+            self.trimer_concentration = np.maximum(self.trimer_concentration, 0)
+            return  # Skip formation steps
     
         # =====================================================================
         # STEP 2: SLOW PNC AGGREGATION (RATE-LIMITING, STOCHASTIC)
@@ -395,10 +414,10 @@ class CalciumPhosphateDimerization:
         self.trimer_concentration = np.maximum(self.trimer_concentration, 0)
 
         # Stoichiometry: need 6 Ca per dimer, 9 Ca per trimer
-        max_dimer_from_ca = ca_conc / 6.0
-        max_trimer_from_ca = ca_conc / 9.0
-        self.dimer_concentration = np.minimum(self.dimer_concentration, max_dimer_from_ca)
-        self.trimer_concentration = np.minimum(self.trimer_concentration, max_trimer_from_ca)
+        # max_dimer_from_ca = ca_conc / 6.0
+        # max_trimer_from_ca = ca_conc / 9.0
+        # self.dimer_concentration = np.minimum(self.dimer_concentration, max_dimer_from_ca)
+        # self.trimer_concentration = np.minimum(self.trimer_concentration, max_trimer_from_ca)
 
     
         # =====================================================================

@@ -83,9 +83,8 @@ class CalciumChannels:
             
         if voltage is not None:
             V_threshold = -0.050  # -50 mV
-            V_half = -0.030      # -30 mV
-            V_slope = 0.012      # 12 mV slope
-            
+            V_half = -0.020     # -20 mV
+            V_slope = 0.006    # 6 mV slope     
             # Boltzmann activation
             P_open_voltage = 1.0 / (1.0 + np.exp(-(voltage - V_half) / V_slope))
             
@@ -100,12 +99,12 @@ class CalciumChannels:
         for i in range(self.n_channels):
             if self.state[i]:  # Channel open
                 self.time_open[i] += dt
-                if np.random.rand() < beta_eff * dt:
+                if np.random.rand() < (1 - np.exp(-beta_eff * dt)):
                     self.state[i] = False
                     self.current[i] = 0.0
                     self.time_open[i] = 0.0
             else:  # Channel closed
-                if np.random.rand() < alpha_eff * dt:
+                if np.random.rand() < (1 - np.exp(-alpha_eff * dt)):
                     self.state[i] = True
                     self.current[i] = self.params.single_channel_current
                     

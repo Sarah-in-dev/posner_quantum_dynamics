@@ -143,12 +143,10 @@ def measure_state(model, time: float, phase: str, network=None) -> SystemState:
     metrics = model.get_experimental_metrics()
     dimer_conc_nM = metrics.get('dimer_peak_nM_ct', 0.0)
     
-    # Convert concentration to molecule count per synapse
-    # Spine volume ≈ 0.1 µm³ = 1e-16 L
-    # n = C × V × N_A where C in M, V in L
-    spine_volume_L = 1e-16
-    N_A = 6.022e23
-    dimers_per_synapse = dimer_conc_nM * 1e-9 * spine_volume_L * N_A
+    # Active zone: π × (100nm)² × 50nm ≈ 0.01 µm³ = 1e-17 L
+    # Validated: 741 nM × 0.006 = 4.45 dimers per synapse
+    DIMER_CONVERSION_FACTOR = 0.006  # nM → molecules in active zone
+    dimers_per_synapse = dimer_conc_nM * DIMER_CONVERSION_FACTOR
     
     # Network parameters
     if hasattr(model.params, 'multi_synapse') and hasattr(model.params.multi_synapse, 'n_synapses_default'):
