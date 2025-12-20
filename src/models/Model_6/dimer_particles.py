@@ -201,7 +201,6 @@ class DimerParticleSystem:
                         id=self.next_id,
                         position=pos_nm,
                         birth_time=self.time,
-                        coherence=1.0,
                         template_bound=template_bound
                     )
                     
@@ -245,56 +244,56 @@ class DimerParticleSystem:
     # =========================================================================
     
     # NEW:
-def step_coherence(self, dt: float, j_coupling_field: np.ndarray):
-    """
-    Update singlet probability for each dimer
-    
-    Physics from Agarwal et al. 2023:
-    - Singlet decay driven by J-coupling frequency spread (destructive interference)
-    - Dimers (4 spins) have fewer frequencies → slower decay than trimers (6 spins)
-    - Characteristic singlet lifetime: 100-1000s for dimers
-    - Entanglement threshold: P_S > 0.5
-    """
-    # Singlet dynamics parameters (from Agarwal 2023)
-    P_S_thermal = 0.25  # Thermalized (maximally mixed) state
-    T_singlet_base = 500.0  # s, characteristic decay time for dimers
-    
-    for dimer in self.dimers:
-        grid_pos = self._position_to_grid(dimer.position)
-        j_external = j_coupling_field[grid_pos]
-        dimer.local_j_coupling = j_external
+    def step_coherence(self, dt: float, j_coupling_field: np.ndarray):
+        """
+        Update singlet probability for each dimer
         
-        # === SINGLET PROBABILITY DECAY ===
-        # Based on Agarwal's finding: dimers maintain P_S > 0.5 for ~100-1000s
+        Physics from Agarwal et al. 2023:
+        - Singlet decay driven by J-coupling frequency spread (destructive interference)
+        - Dimers (4 spins) have fewer frequencies → slower decay than trimers (6 spins)
+        - Characteristic singlet lifetime: 100-1000s for dimers
+        - Entanglement threshold: P_S > 0.5
+        """
+        # Singlet dynamics parameters (from Agarwal 2023)
+        P_S_thermal = 0.25  # Thermalized (maximally mixed) state
+        T_singlet_base = 500.0  # s, characteristic decay time for dimers
         
-        # J-coupling spread determines decay rate
-        # More uniform J-couplings → slower decay (fewer unique frequencies)
-        j_spread = np.std(dimer.j_couplings_intra)
-        j_mean = np.abs(np.mean(dimer.j_couplings_intra))
-        
-        # Spread factor: uniform J → slow decay, spread J → faster decay
-        spread_factor = 1.0 + 2.0 * j_spread / (j_mean + 0.1)
-        
-        # Template binding reduces tumbling → slower dipolar relaxation
-        template_factor = 0.7 if dimer.template_bound else 1.0
-        
-        # Effective singlet lifetime
-        T_singlet_eff = T_singlet_base / (spread_factor * template_factor)
-        T_singlet_eff = max(T_singlet_eff, 50.0)  # Minimum 50s (from Agarwal)
-        
-        # Decay toward thermal equilibrium
-        # P_S(t) = P_thermal + (P_S(0) - P_thermal) * exp(-t/T)
-        decay_factor = np.exp(-dt / T_singlet_eff)
-        
-        # Add small stochastic noise
-        noise = 1.0 + 0.01 * np.sqrt(dt) * np.random.randn()
-        
-        # Update singlet probability
-        P_excess = dimer.singlet_probability - P_S_thermal
-        dimer.singlet_probability = P_S_thermal + P_excess * decay_factor * noise
-        
-        # Clamp to valid range
-        dimer.singlet_probability = np.clip(dimer.singlet_probability, P_S_thermal, 1.0)
+        for dimer in self.dimers:
+            grid_pos = self._position_to_grid(dimer.position)
+            j_external = j_coupling_field[grid_pos]
+            dimer.local_j_coupling = j_external
+            
+            # === SINGLET PROBABILITY DECAY ===
+            # Based on Agarwal's finding: dimers maintain P_S > 0.5 for ~100-1000s
+            
+            # J-coupling spread determines decay rate
+            # More uniform J-couplings → slower decay (fewer unique frequencies)
+            j_spread = np.std(dimer.j_couplings_intra)
+            j_mean = np.abs(np.mean(dimer.j_couplings_intra))
+            
+            # Spread factor: uniform J → slow decay, spread J → faster decay
+            spread_factor = 1.0 + 2.0 * j_spread / (j_mean + 0.1)
+            
+            # Template binding reduces tumbling → slower dipolar relaxation
+            template_factor = 0.7 if dimer.template_bound else 1.0
+            
+            # Effective singlet lifetime
+            T_singlet_eff = T_singlet_base / (spread_factor * template_factor)
+            T_singlet_eff = max(T_singlet_eff, 50.0)  # Minimum 50s (from Agarwal)
+            
+            # Decay toward thermal equilibrium
+            # P_S(t) = P_thermal + (P_S(0) - P_thermal) * exp(-t/T)
+            decay_factor = np.exp(-dt / T_singlet_eff)
+            
+            # Add small stochastic noise
+            noise = 1.0 + 0.01 * np.sqrt(dt) * np.random.randn()
+            
+            # Update singlet probability
+            P_excess = dimer.singlet_probability - P_S_thermal
+            dimer.singlet_probability = P_S_thermal + P_excess * decay_factor * noise
+            
+            # Clamp to valid range
+            dimer.singlet_probability = np.clip(dimer.singlet_probability, P_S_thermal, 1.0)
     
     # =========================================================================
     # ENTANGLEMENT DYNAMICS - THE KEY PART

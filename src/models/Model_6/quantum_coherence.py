@@ -78,102 +78,102 @@ class QuantumCoherenceSystem:
         
         
     # NEW step method - replace existing
-def step(self, dt: float, dimer_conc: np.ndarray, j_coupling: np.ndarray,
-        temperature: float = 310.15, dopamine_d2: Optional[np.ndarray] = None,
-        template_binding: Optional[np.ndarray] = None):
-    """
-    Update quantum coherence using SINGLET PROBABILITY physics
-    
-    Based on Agarwal et al. 2023 "The Biological Qubit":
-    - Track singlet probability P_S (not phenomenological T2)
-    - P_S > 0.5 indicates entanglement preserved
-    - Decay driven by J-coupling frequency spread, not simple T2
-    - Dimers (4 spins) maintain P_S > 0.5 for ~100-1000s
-    
-    Key insight: "it is ultimately the size of the spin system 
-    that has the greatest effect" on singlet lifetime.
-    """
-    
-    # Store dimer concentration for metrics
-    self.dimer_concentration = dimer_conc.copy()
-    
-    # === SINGLET PARAMETERS (from Agarwal 2023) ===
-    P_S_thermal = 0.25  # Maximally mixed state
-    P_S_threshold = 0.5  # Entanglement threshold
-    
-    # Base singlet lifetime depends on isotope
-    # ³¹P (I=1/2): long singlet lifetime (~500s for dimers)
-    # ³²P (I=1): quadrupolar relaxation destroys singlets quickly (~1s)
-    T_singlet_P31 = 500.0  # s (Agarwal: "hundreds of seconds")
-    T_singlet_P32 = 1.0    # s (quadrupolar relaxation)
-    
-    P32_fraction = 1.0 - self.P31_fraction
-    T_singlet_base = (self.P31_fraction * T_singlet_P31 + 
-                      P32_fraction * T_singlet_P32)
-    
-    # === MODULATING FACTORS ===
-    
-    # J-coupling spread effect (more uniform → slower decay)
-    # In regions with strong J-field, spins are more coherently coupled
-    J_ref = 10.0  # Hz
-    j_uniformity = 1.0 / (1.0 + np.abs(j_coupling - J_ref) / J_ref)
-    
-    # Number of coupled spins effect
-    # 4 spins → ~7,380 oscillation frequencies
-    # 6 spins → ~2 million frequencies
-    # Fewer frequencies → slower destructive interference
-    n_spins = self.n_spins_dimer  # 4 for dimers
-    spin_factor = 1.0 / np.log(n_spins + 1)  # ~0.6 for 4 spins
-    
-    # Temperature (minor effect for singlets - they're protected)
-    T_ref = 310.15
-    temp_factor = 1.0  # Singlets are largely temperature-independent
-    
-    # Dopamine modulation (D2 can enhance coherence)
-    if dopamine_d2 is not None:
-        dopamine_factor = 1.0 + dopamine_d2 * 0.3
-    else:
-        dopamine_factor = 1.0
-    
-    # === EFFECTIVE SINGLET LIFETIME ===
-    T_singlet_eff = (T_singlet_base * j_uniformity * spin_factor * 
-                     temp_factor * dopamine_factor)
-    T_singlet_eff = np.maximum(T_singlet_eff, 0.1)  # Safety floor
-    
-    # === SINGLET PROBABILITY EVOLUTION ===
-    has_dimers = dimer_conc > 0
-    
-    # Initialize new dimers with P_S = 1.0 (from pyrophosphate singlet)
-    new_dimers = has_dimers & (self.coherence == 0)
-    self.coherence[new_dimers] = 1.0  # Born as pure singlet
-    
-    # Decay toward thermal equilibrium
-    # P_S(t) = P_thermal + (P_S(0) - P_thermal) * exp(-t/T)
-    decay_rate = dt / T_singlet_eff[has_dimers]
-    
-    # Stochastic noise (quantum fluctuations)
-    noise_amplitude = 0.02
-    noise = noise_amplitude * np.sqrt(decay_rate) * np.random.standard_normal(np.sum(has_dimers))
-    
-    # Update: decay from current value toward thermal
-    P_excess = self.coherence[has_dimers] - P_S_thermal
-    self.coherence[has_dimers] = P_S_thermal + P_excess * np.exp(-decay_rate) * (1.0 + noise)
-    
-    # Clamp to valid range [0.25, 1.0] for singlet probability interpretation
-    # But keep 0-1 for backward compatibility (0 = no dimers)
-    self.coherence = np.clip(self.coherence, 0.0, 1.0)
-    
-    # Clear coherence where no dimers
-    self.coherence[~has_dimers] = 0
-    
-    # Store effective singlet lifetime as "T2" for backward compatibility
-    self.T2_effective = T_singlet_eff
-    
-    # Store entanglement fraction (P_S > 0.5)
-    if np.any(has_dimers):
-        self.entanglement_fraction = np.mean(self.coherence[has_dimers] > 0.5)
-    else:
-        self.entanglement_fraction = 0.0
+    def step(self, dt: float, dimer_conc: np.ndarray, j_coupling: np.ndarray,
+            temperature: float = 310.15, dopamine_d2: Optional[np.ndarray] = None,
+            template_binding: Optional[np.ndarray] = None):
+        """
+        Update quantum coherence using SINGLET PROBABILITY physics
+        
+        Based on Agarwal et al. 2023 "The Biological Qubit":
+        - Track singlet probability P_S (not phenomenological T2)
+        - P_S > 0.5 indicates entanglement preserved
+        - Decay driven by J-coupling frequency spread, not simple T2
+        - Dimers (4 spins) maintain P_S > 0.5 for ~100-1000s
+        
+        Key insight: "it is ultimately the size of the spin system 
+        that has the greatest effect" on singlet lifetime.
+        """
+        
+        # Store dimer concentration for metrics
+        self.dimer_concentration = dimer_conc.copy()
+        
+        # === SINGLET PARAMETERS (from Agarwal 2023) ===
+        P_S_thermal = 0.25  # Maximally mixed state
+        P_S_threshold = 0.5  # Entanglement threshold
+        
+        # Base singlet lifetime depends on isotope
+        # ³¹P (I=1/2): long singlet lifetime (~500s for dimers)
+        # ³²P (I=1): quadrupolar relaxation destroys singlets quickly (~1s)
+        T_singlet_P31 = 500.0  # s (Agarwal: "hundreds of seconds")
+        T_singlet_P32 = 1.0    # s (quadrupolar relaxation)
+        
+        P32_fraction = 1.0 - self.P31_fraction
+        T_singlet_base = (self.P31_fraction * T_singlet_P31 + 
+                        P32_fraction * T_singlet_P32)
+        
+        # === MODULATING FACTORS ===
+        
+        # J-coupling spread effect (more uniform → slower decay)
+        # In regions with strong J-field, spins are more coherently coupled
+        J_ref = 10.0  # Hz
+        j_uniformity = 1.0 / (1.0 + np.abs(j_coupling - J_ref) / J_ref)
+        
+        # Number of coupled spins effect
+        # 4 spins → ~7,380 oscillation frequencies
+        # 6 spins → ~2 million frequencies
+        # Fewer frequencies → slower destructive interference
+        n_spins = self.n_spins_dimer  # 4 for dimers
+        spin_factor = 1.0 / np.log(n_spins + 1)  # ~0.6 for 4 spins
+        
+        # Temperature (minor effect for singlets - they're protected)
+        T_ref = 310.15
+        temp_factor = 1.0  # Singlets are largely temperature-independent
+        
+        # Dopamine modulation (D2 can enhance coherence)
+        if dopamine_d2 is not None:
+            dopamine_factor = 1.0 + dopamine_d2 * 0.3
+        else:
+            dopamine_factor = 1.0
+        
+        # === EFFECTIVE SINGLET LIFETIME ===
+        T_singlet_eff = (T_singlet_base * j_uniformity * spin_factor * 
+                        temp_factor * dopamine_factor)
+        T_singlet_eff = np.maximum(T_singlet_eff, 0.1)  # Safety floor
+        
+        # === SINGLET PROBABILITY EVOLUTION ===
+        has_dimers = dimer_conc > 0
+        
+        # Initialize new dimers with P_S = 1.0 (from pyrophosphate singlet)
+        new_dimers = has_dimers & (self.coherence == 0)
+        self.coherence[new_dimers] = 1.0  # Born as pure singlet
+        
+        # Decay toward thermal equilibrium
+        # P_S(t) = P_thermal + (P_S(0) - P_thermal) * exp(-t/T)
+        decay_rate = dt / T_singlet_eff[has_dimers]
+        
+        # Stochastic noise (quantum fluctuations)
+        noise_amplitude = 0.02
+        noise = noise_amplitude * np.sqrt(decay_rate) * np.random.standard_normal(np.sum(has_dimers))
+        
+        # Update: decay from current value toward thermal
+        P_excess = self.coherence[has_dimers] - P_S_thermal
+        self.coherence[has_dimers] = P_S_thermal + P_excess * np.exp(-decay_rate) * (1.0 + noise)
+        
+        # Clamp to valid range [0.25, 1.0] for singlet probability interpretation
+        # But keep 0-1 for backward compatibility (0 = no dimers)
+        self.coherence = np.clip(self.coherence, 0.0, 1.0)
+        
+        # Clear coherence where no dimers
+        self.coherence[~has_dimers] = 0
+        
+        # Store effective singlet lifetime as "T2" for backward compatibility
+        self.T2_effective = T_singlet_eff
+        
+        # Store entanglement fraction (P_S > 0.5)
+        if np.any(has_dimers):
+            self.entanglement_fraction = np.mean(self.coherence[has_dimers] > 0.5)
+        else:
+            self.entanglement_fraction = 0.0
     
     def get_experimental_metrics(self) -> Dict[str, float]:
         """

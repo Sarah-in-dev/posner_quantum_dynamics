@@ -339,6 +339,7 @@ class Model6QuantumSynapse:
             # --- PHASE 2: QUANTUM COHERENCE OF DIMERS ---
             temperature = stimulus.get('temperature', self.params.environment.T)
             self.quantum.step(dt, dimer_conc, j_coupling, temperature)
+
             
             # --- PHASE 3: PARTICLE-BASED DIMER TRACKING WITH EMERGENT ENTANGLEMENT ---
             # Get dimer concentration from ca_phosphate system
@@ -571,6 +572,16 @@ class Model6QuantumSynapse:
             # Quantum coherence tracking
             temperature = stimulus.get('temperature', self.params.environment.T)
             self.quantum.step(dt, dimer_conc, j_coupling, temperature)
+
+            # Particle-based dimer tracking
+            dimer_concentration = self.ca_phosphate.get_dimer_concentration()
+            particle_metrics = self.dimer_particles.step(
+                dt=dt,
+                dimer_concentration=dimer_concentration,
+                template_field=self.ca_phosphate.templates.template_field,
+                calcium_field=ca_conc,
+                j_coupling_field=j_coupling
+            )
             
             # Dopamine update
             if self.dopamine is not None:
