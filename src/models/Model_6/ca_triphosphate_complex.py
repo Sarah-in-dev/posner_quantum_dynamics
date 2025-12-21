@@ -505,7 +505,7 @@ class TemplateEffects:
         
         # SHARPER decay: 1000x at surface, 1x at ~5-8nm
         # Decay length = 1.5 nm (tighter confinement to template surface)
-        enhancement = 1000 * np.exp(-distance_nm / 1.5)
+        enhancement = 50 * np.exp(-distance_nm / 1.5)
 
         # Only count enhancement > 10x as "template effect"
         enhancement = np.where(enhancement > 10.0, enhancement, 1.0)

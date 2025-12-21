@@ -161,11 +161,13 @@ class DimerParticleSystem:
         - Hysteresis prevents rapid turnover from concentration noise
         """
         # Calculate target particle count from concentration
-        grid_volume_L = (self.grid_shape[0] * self.dx) * (self.grid_shape[1] * self.dx) * 20e-9 * 1000
+        # Use active zone volume (0.01 μm³) - matches established dimer calculations
+        az_volume_L = 1e-17  # 0.01 μm³ active zone (Bhalla 2004)
         N_A = 6.022e23
         
+        # Peak concentration at templates × active zone volume
         peak_conc = np.max(dimer_concentration)
-        target_count = int(round(peak_conc * grid_volume_L * N_A))
+        target_count = int(round(peak_conc * az_volume_L * N_A))
         
         current_count = len(self.dimers)
         n_births = 0
@@ -207,6 +209,18 @@ class DimerParticleSystem:
                     self.dimers.append(dimer)
                     self.next_id += 1
                     n_births += 1
+                    
+                    # INHERITED ENTANGLEMENT (Fisher 2015):
+                    # Phosphates from same pyrophosphate hydrolysis are born entangled
+                    # Check existing dimers for shared origin
+                    if template_bound:
+                        birth_window = 0.1  # 100ms - same ATP burst
+                        for other in self.dimers[:-1]:  # Exclude just-added dimer
+                            if other.template_bound and other.is_entangled:
+                                if abs(other.birth_time - dimer.birth_time) < birth_window:
+                                    # Shared origin - inherit entanglement
+                                    strength = other.singlet_probability * dimer.singlet_probability
+                                    self._create_bond(dimer.id, other.id, strength=strength)
         
         # --- DEATH: Remove particles if significantly above target ---
         elif difference <= -2:
@@ -256,7 +270,15 @@ class DimerParticleSystem:
         """
         # Singlet dynamics parameters (from Agarwal 2023)
         P_S_thermal = 0.25  # Thermalized (maximally mixed) state
-        T_singlet_base = 500.0  # s, characteristic decay time for dimers
+        
+        # ISOTOPE-SPECIFIC singlet lifetimes
+        # P31: T_singlet ~216s (Agarwal - dipolar relaxation only)
+        # P32: T_singlet ~0.4s (quadrupolar relaxation dominates)
+        T_singlet_P31 = 216.0  # s
+        T_singlet_P32 = 0.4    # s
+        
+        # Get isotope fraction from params
+        fraction_P31 = getattr(self.params.environment, 'fraction_P31', 1.0)
         
         for dimer in self.dimers:
             grid_pos = self._position_to_grid(dimer.position)
@@ -264,10 +286,10 @@ class DimerParticleSystem:
             dimer.local_j_coupling = j_external
             
             # === SINGLET PROBABILITY DECAY ===
-            # Based on Agarwal's finding: dimers maintain P_S > 0.5 for ~100-1000s
+            # Isotope-weighted singlet lifetime
+            T_singlet_base = fraction_P31 * T_singlet_P31 + (1 - fraction_P31) * T_singlet_P32
             
             # J-coupling spread determines decay rate
-            # More uniform J-couplings → slower decay (fewer unique frequencies)
             j_spread = np.std(dimer.j_couplings_intra)
             j_mean = np.abs(np.mean(dimer.j_couplings_intra))
             
@@ -279,7 +301,7 @@ class DimerParticleSystem:
             
             # Effective singlet lifetime
             T_singlet_eff = T_singlet_base / (spread_factor * template_factor)
-            T_singlet_eff = max(T_singlet_eff, 50.0)  # Minimum 50s (from Agarwal)
+            T_singlet_eff = max(T_singlet_eff, 0.1)  # Minimum 0.1s for P32
             
             # Decay toward thermal equilibrium
             # P_S(t) = P_thermal + (P_S(0) - P_thermal) * exp(-t/T)
@@ -317,29 +339,30 @@ class DimerParticleSystem:
                 dimer_i = self.dimers[i]
                 dimer_j = self.dimers[j]
                 
-                # Skip if either below coherence threshold
-                if (dimer_i.coherence < self.coherence_threshold or 
-                    dimer_j.coherence < self.coherence_threshold):
+                # Skip if either loses singlet state (P_S > 0.5 required)
+                if not dimer_i.is_entangled or not dimer_j.is_entangled:
                     self._remove_bond(dimer_i.id, dimer_j.id)
                     continue
                 
-                # SHARED J-COUPLING ENVIRONMENT determines entanglement
-                # Both must be in strong J-field (from same ATP pool)
-                j_min = min(dimer_i.local_j_coupling, dimer_j.local_j_coupling)
-                
-                if j_min < self.j_coupling_threshold:
-                    # Not in coherent environment
+                # SHARED ORIGIN determines entanglement (Fisher 2015):
+                # Phosphates from same pyrophosphate hydrolysis event
+                # 1. Both template-bound (same ATPase/pyrophosphatase region)
+                if not (dimer_i.template_bound and dimer_j.template_bound):
                     continue
                 
-                # Coupling strength from J-field (not distance)
-                # Higher J = stronger coherent coupling
-                j_coupling_factor = j_min / 20.0  # Normalize to ~1 at 20 Hz
+                # 2. Formed within same temporal window (same activity burst)
+                birth_window = 0.1  # 100ms - one ATP hydrolysis burst
+                if abs(dimer_i.birth_time - dimer_j.birth_time) > birth_window:
+                    continue
                 
-                # Coherence factor
-                coherence_factor = dimer_i.coherence * dimer_j.coherence
+                # Coupling strength from shared origin
+                time_factor = 1.0 - abs(dimer_i.birth_time - dimer_j.birth_time) / birth_window
+                
+                # Coherence factor (singlet probability product)
+                coherence_factor = dimer_i.singlet_probability * dimer_j.singlet_probability
                 
                 # Effective coupling rate
-                k_eff = self.k_entangle * j_coupling_factor * coherence_factor
+                k_eff = self.k_entangle * time_factor * coherence_factor
                 
                 bond = self._get_bond(dimer_i.id, dimer_j.id)
                 
@@ -348,8 +371,8 @@ class DimerParticleSystem:
                     if np.random.random() < p_entangle:
                         self._create_bond(dimer_i.id, dimer_j.id, strength=coherence_factor)
                 else:
-                    # Disentanglement if J-coupling drops or coherence lost
-                    k_disentangle = 0.1 * (1 - j_coupling_factor * coherence_factor)
+                    # Disentanglement if singlet probability drops
+                    k_disentangle = 0.1 * (1 - coherence_factor)
                     p_disentangle = 1 - np.exp(-k_disentangle * dt)
                     
                     if np.random.random() < p_disentangle:
