@@ -173,6 +173,29 @@ def measure_state(model, time: float, phase: str, network=None) -> SystemState:
         state.eligibility = 0.0
     state.network_modulation = getattr(model, '_network_modulation', 0.0)
 
+    # === PARTICLE-BASED METRICS (from dimer_particles system) ===
+    if hasattr(model, 'dimer_particles'):
+        pm = model.dimer_particles.get_network_metrics()
+        state.n_particles = pm['n_dimers']
+        state.n_bonds = pm['n_bonds']
+        state.largest_cluster = pm['largest_cluster']
+        state.f_entangled = pm['f_entangled']
+        
+        # Mean singlet probability - the actual quantum state
+        if model.dimer_particles.dimers:
+            state.mean_singlet_prob = float(np.mean([
+                d.singlet_probability for d in model.dimer_particles.dimers
+            ]))
+        else:
+            state.mean_singlet_prob = 1.0  # No dimers = default
+    else:
+        # Fallback if particle system not available
+        state.n_particles = 0
+        state.n_bonds = 0
+        state.largest_cluster = 0
+        state.f_entangled = 0.0
+        state.mean_singlet_prob = 1.0
+
     # Get peak calcium for diagnostics
     if hasattr(model, 'get_experimental_metrics'):
         metrics = model.get_experimental_metrics()
@@ -253,6 +276,28 @@ def measure_state(model, time: float, phase: str, network=None) -> SystemState:
             state.synaptic_strength = 1.0 + 0.5 * state.committed_level
         else:
             state.synaptic_strength = 1.0
+
+        # === PARTICLE-BASED METRICS FROM ALL SYNAPSES ===
+        total_particles = 0
+        total_bonds = 0
+        max_cluster = 0
+        all_singlet_probs = []
+        
+        for synapse in network.synapses:
+            if hasattr(synapse, 'dimer_particles'):
+                pm = synapse.dimer_particles.get_network_metrics()
+                total_particles += pm['n_dimers']
+                total_bonds += pm['n_bonds']
+                max_cluster = max(max_cluster, pm['largest_cluster'])
+                
+                for d in synapse.dimer_particles.dimers:
+                    all_singlet_probs.append(d.singlet_probability)
+        
+        state.n_particles = total_particles
+        state.n_bonds = total_bonds
+        state.largest_cluster = max_cluster
+        state.f_entangled = len(all_singlet_probs) / total_particles if total_particles > 0 else 0.0
+        state.mean_singlet_prob = float(np.mean(all_singlet_probs)) if all_singlet_probs else 1.0
     
     return state
 

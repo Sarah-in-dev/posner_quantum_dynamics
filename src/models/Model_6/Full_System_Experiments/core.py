@@ -149,6 +149,13 @@ class SystemState:
     dimer_coherence: float = 0.0
     eligibility: float = 0.0
     network_modulation: float = 0.0
+
+    # === PARTICLE-BASED METRICS (Agarwal 2023 physics) ===
+    n_particles: int = 0              # Actual dimer particle count
+    n_bonds: int = 0                  # Entanglement bonds
+    largest_cluster: int = 0          # Largest entangled network size
+    f_entangled: float = 0.0          # Fraction of dimers in network
+    mean_singlet_prob: float = 1.0    # Mean P_S (0.25=thermal, 1.0=pure singlet)
     
     # === COUPLING METRICS ===
     k_agg_enhanced: float = 0.0

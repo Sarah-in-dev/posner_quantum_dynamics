@@ -178,8 +178,8 @@ class DimerParticleSystem:
         difference = target_count - current_count
         
         # --- BIRTH: Add particles if significantly below target ---
-        if difference >= 2:
-            n_to_add = difference - 1  # Leave buffer
+        if difference >= 0:
+            n_to_add = difference # Leave buffer
             
             conc_weighted = dimer_concentration * (1 + template_field * 10)
             total_weight = np.sum(conc_weighted)
@@ -223,8 +223,8 @@ class DimerParticleSystem:
                                     self._create_bond(dimer.id, other.id, strength=strength)
         
         # --- DEATH: Remove particles if significantly above target ---
-        elif difference <= -2:
-            n_to_remove = abs(difference) - 1  # Leave buffer
+        elif difference < 0:
+            n_to_remove = abs(difference)
             
             sorted_dimers = sorted(self.dimers, key=lambda d: d.coherence)
             
@@ -321,64 +321,88 @@ class DimerParticleSystem:
     # ENTANGLEMENT DYNAMICS - THE KEY PART
     # =========================================================================
     
-    def step_entanglement(self, dt: float):
+    def step_entanglement(self, dt: float, collective_field_kT: float = 0.0):
         """
-        Update entanglement network based on SHARED J-COUPLING ENVIRONMENT
+        Update entanglement network via two pathways:
         
-        Physics basis (Fisher 2015):
-        - Entanglement inherited from ATP hydrolysis (pyrophosphate → 2Pi)
-        - J-coupling field marks regions where coherent phosphates exist
-        - Dimers in same J-coupling environment share entanglement
+        1. BIRTH ENTANGLEMENT (immediate):
+           - Dimers from same pyrophosphate hydrolysis share origin
+           - Requires: same temporal window + template-bound
+           
+        2. EM-MEDIATED ENTANGLEMENT (continuous):
+           - Tryptophan superradiance creates coherent EM field
+           - Field acts as quantum bus - dimers couple through shared field mode
+           - Rate proportional to field strength (no hard threshold)
+           - Stronger field = faster entanglement transfer
+        
+        Physics basis:
+        - Birth entanglement from shared pyrophosphate (Fisher 2015)
+        - EM field creates coherent environment for spin coupling
+        - Dimers coupled to same coherent field become coupled to each other
         """
         n = len(self.dimers)
         if n < 2:
             return
+        
+        # EM-mediated entanglement: rate scales with field strength
+        # Reference scale: 20 kT is strong field (full MT invasion + activity)
+        reference_kT = 20.0
+        k_entangle_em_base = 1.0  # Base rate at reference field (1/s)
         
         for i in range(n):
             for j in range(i + 1, n):
                 dimer_i = self.dimers[i]
                 dimer_j = self.dimers[j]
                 
-                # Skip if either loses singlet state (P_S > 0.5 required)
+                # Both must maintain singlet state (P_S > 0.5)
                 if not dimer_i.is_entangled or not dimer_j.is_entangled:
                     self._remove_bond(dimer_i.id, dimer_j.id)
                     continue
                 
-                # SHARED ORIGIN determines entanglement (Fisher 2015):
-                # Phosphates from same pyrophosphate hydrolysis event
-                # 1. Both template-bound (same ATPase/pyrophosphatase region)
-                if not (dimer_i.template_bound and dimer_j.template_bound):
-                    continue
-                
-                # 2. Formed within same temporal window (same activity burst)
-                birth_window = 0.1  # 100ms - one ATP hydrolysis burst
-                if abs(dimer_i.birth_time - dimer_j.birth_time) > birth_window:
-                    continue
-                
-                # Coupling strength from shared origin
-                time_factor = 1.0 - abs(dimer_i.birth_time - dimer_j.birth_time) / birth_window
-                
-                # Coherence factor (singlet probability product)
+                bond = self._get_bond(dimer_i.id, dimer_j.id)
                 coherence_factor = dimer_i.singlet_probability * dimer_j.singlet_probability
                 
-                # Effective coupling rate
-                k_eff = self.k_entangle * time_factor * coherence_factor
+                # === PATHWAY 1: Birth entanglement (shared pyrophosphate origin) ===
+                birth_window = 0.1  # 100ms - same ATP hydrolysis burst
+                same_burst = abs(dimer_i.birth_time - dimer_j.birth_time) < birth_window
+                both_template = dimer_i.template_bound and dimer_j.template_bound
                 
-                bond = self._get_bond(dimer_i.id, dimer_j.id)
-                
-                if bond is None:
+                if same_burst and both_template and bond is None:
+                    # Immediate entanglement from shared origin
+                    time_factor = 1.0 - abs(dimer_i.birth_time - dimer_j.birth_time) / birth_window
+                    k_eff = self.k_entangle * time_factor * coherence_factor
                     p_entangle = 1 - np.exp(-k_eff * dt)
                     if np.random.random() < p_entangle:
                         self._create_bond(dimer_i.id, dimer_j.id, strength=coherence_factor)
+                    continue
+                
+                # === PATHWAY 2: EM-mediated entanglement (continuous) ===
+                # Rate proportional to field strength - no threshold
+                # Field creates coherent environment for spin coupling
+                em_coupling_rate = k_entangle_em_base * (collective_field_kT / reference_kT) * coherence_factor
+                
+                if bond is None:
+                    # Try to form new bond via EM coupling
+                    p_entangle = 1 - np.exp(-em_coupling_rate * dt)
+                    if np.random.random() < p_entangle:
+                        self._create_bond(dimer_i.id, dimer_j.id, strength=coherence_factor)
                 else:
-                    # Disentanglement if singlet probability drops
-                    k_disentangle = 0.1 * (1 - coherence_factor)
-                    p_disentangle = 1 - np.exp(-k_disentangle * dt)
+                    # Update existing bond strength
+                    bond.strength = coherence_factor
+                
+                # === DISENTANGLEMENT ===
+                # Weaker field = less protection = faster decay
+                if bond is not None:
+                    # Base disentanglement from decoherence
+                    k_decohere = 0.01 * (1 - coherence_factor)
                     
+                    # Field provides protection - stronger field = slower decay
+                    protection_factor = collective_field_kT / reference_kT
+                    k_disentangle = k_decohere / (1 + protection_factor)
+                    
+                    p_disentangle = 1 - np.exp(-k_disentangle * dt)
                     if np.random.random() < p_disentangle:
                         self._remove_bond(dimer_i.id, dimer_j.id)
-                    else:
-                        bond.strength = coherence_factor
     
     def _get_bond(self, id_i: int, id_j: int) -> Optional[EntanglementBond]:
         """Get entanglement bond between two dimers"""
@@ -489,7 +513,8 @@ class DimerParticleSystem:
              dimer_concentration: np.ndarray,
              template_field: np.ndarray,
              calcium_field: np.ndarray,
-             j_coupling_field: np.ndarray) -> dict:
+             j_coupling_field: np.ndarray,
+             collective_field_kT: float = 0.0) -> dict:
         """
         Main simulation step
         
@@ -514,7 +539,7 @@ class DimerParticleSystem:
         self.step_coherence(dt, j_coupling_field)
         
         # 4. Entanglement: update bonds based on coherence and J-coupling (EMERGENT)
-        self.step_entanglement(dt)
+        self.step_entanglement(dt, collective_field_kT)
         
         # 5. Metrics
         metrics = self.get_network_metrics()

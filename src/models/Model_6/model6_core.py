@@ -351,8 +351,12 @@ class Model6QuantumSynapse:
                 dimer_concentration=dimer_concentration,
                 template_field=self.ca_phosphate.templates.template_field,
                 calcium_field=ca_conc,
-                j_coupling_field=j_coupling
+                j_coupling_field=j_coupling,
+                collective_field_kT=self._collective_field_kT
             )
+
+            # Update dimer count from particle system (source of truth)
+            self._previous_dimer_count = particle_metrics['n_dimers']
             
             # EMERGENT metrics replace prescribed ones
             n_dimers_total = particle_metrics['n_dimers']
@@ -489,14 +493,13 @@ class Model6QuantumSynapse:
             total_network_dimers = self._previous_dimer_count
 
 
-            eligibility_present = (eligibility > eligibility_threshold)
+            eligibility_present = (eligibility >= eligibility_threshold)
             dopamine_read = self._dopamine_above_read_threshold()
             calcium_elevated = (calcium_uM > calcium_threshold_uM)
             field_sufficient = (self._collective_field_kT > field_threshold_kT)
             dimers_sufficient = (total_network_dimers >= dimer_threshold)
 
-            # Gate opens when ALL FOUR conditions met
-            plasticity_gate = eligibility_present and dopamine_read and calcium_elevated and field_sufficient
+            plasticity_gate = eligibility_present and dopamine_read and calcium_elevated and field_sufficient and dimers_sufficient
             
             self._current_eligibility = eligibility
             self._plasticity_gate = plasticity_gate
@@ -580,8 +583,12 @@ class Model6QuantumSynapse:
                 dimer_concentration=dimer_concentration,
                 template_field=self.ca_phosphate.templates.template_field,
                 calcium_field=ca_conc,
-                j_coupling_field=j_coupling
+                j_coupling_field=j_coupling,
+                collective_field_kT=self._collective_field_kT
             )
+
+            # Update dimer count from particle system (source of truth)
+            self._previous_dimer_count = particle_metrics['n_dimers']
             
             # Dopamine update
             if self.dopamine is not None:
