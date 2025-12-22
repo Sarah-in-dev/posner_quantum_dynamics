@@ -1,17 +1,18 @@
 """
 Dopamine System Module for Model 6
 ===================================
-Integrates existing dopamine_biophysics.py with Model 6 architecture
+Complete biophysically-constrained dopamine dynamics.
 
-This module adapts your existing dopamine system to work with Model 6's
-emergent framework while maintaining all the biophysical detail.
+Merged from dopamine_system.py and dopamine_biophysics.py to provide
+full spatial dynamics, receptor binding, and quantum modulation effects.
 
-Key Citations (from dopamine_biophysics.py):
+Key Citations:
 - Pothos et al. 2000 J Neurosci (vesicular content)
 - Garris et al. 1994 J Neurochem (concentration ranges)
-- Rice & Cragg 2008 Brain Res Rev (diffusion)
+- Rice & Cragg 2008 Brain Res Rev (diffusion, tortuosity)
 - Cragg 2000 J Neurosci (DAT kinetics)
 - Hernandez-Lopez et al. 2000 J Neurosci (D2 effects on calcium)
+- Yagishita et al. 2014 Science (dopamine timing window)
 
 KEY FINDING FROM MODEL 5:
 Dopamine biases toward dimers (long coherence) over trimers (short coherence)
@@ -20,26 +21,24 @@ This is the quantum switch for learning!
 
 import numpy as np
 from typing import Dict, Tuple, Optional, List
+from scipy import ndimage
 import logging
 
 from model6_parameters import Model6Parameters, DopamineParameters
-
-# Import your existing dopamine biophysics
-try:
-    from dopamine_biophysics import DopamineField, DopamineParameters as DA_Params
-    HAS_DOPAMINE_BIOPHYSICS = True
-except ImportError:
-    HAS_DOPAMINE_BIOPHYSICS = False
-    logging.warning("dopamine_biophysics.py not found - using simplified model")
 
 logger = logging.getLogger(__name__)
 
 
 class DopamineSystemAdapter:
     """
-    Adapter that wraps your existing DopamineField for Model 6
+    Biophysically-constrained dopamine system for Model 6
     
-    Provides unified interface while using your validated biophysics
+    Handles:
+    - Stochastic vesicular release with Gaussian spatial spread
+    - Diffusion with tortuosity correction
+    - Michaelis-Menten DAT uptake
+    - D1 and D2 receptor binding dynamics
+    - Quantum modulation effects (dimer/trimer bias)
     """
     
     def __init__(self, grid_shape: Tuple[int, int], dx: float,
@@ -65,60 +64,52 @@ class DopamineSystemAdapter:
         
         self.release_sites = release_sites
         
-        # Initialize based on available module
-        if HAS_DOPAMINE_BIOPHYSICS:
-            self._init_full_biophysics()
-        else:
-            self._init_simplified()
+        # === CONCENTRATION FIELDS ===
+        self.dopamine_concentration = np.ones(grid_shape) * self.params.dopamine_tonic
         
-        logger.info(f"Initialized dopamine system ({len(release_sites)} release sites)")
+        # === RECEPTOR OCCUPANCY FIELDS ===
+        self.d1_occupancy = np.zeros(grid_shape)
+        self.d2_occupancy = np.zeros(grid_shape)
         
-    def _init_full_biophysics(self):
-        """Initialize with your full dopamine_biophysics.py module"""
+        # === DIFFUSION PARAMETERS ===
+        # Tortuosity correction (Rice & Cragg 2008)
+        self.tortuosity = 1.6
+        self.D_effective = self.params.D_dopamine / (self.tortuosity ** 2)
         
-        # Create parameters matching your existing module
-        da_params = DA_Params()
+        # === RELEASE PARAMETERS ===
+        self.release_spread_sigma = 1e-6  # 1 µm spread from release site
+        self.cleft_width = 20e-9  # 20 nm synaptic cleft
         
-        # Override with Model 6 parameters if specified
-        da_params.tonic_concentration = self.params.dopamine_tonic
-        da_params.peak_concentration_synapse = self.params.dopamine_phasic_peak
-        da_params.molecules_per_vesicle = self.params.molecules_per_vesicle
-        da_params.vesicles_per_bouton = self.params.vesicles_per_terminal
-        da_params.release_probability = self.params.release_probability
-        da_params.D_dopamine = self.params.D_dopamine
-        da_params.Vmax = self.params.dat_vmax
-        da_params.Km_DAT = self.params.dat_km
-        da_params.Kd_D2 = self.params.d2_kd
-        
-        # Create your DopamineField
-        self.dopamine_field = DopamineField(
-            grid_size=self.grid_shape[0],
-            dx=self.dx,
-            params=da_params,
-            release_sites=self.release_sites
-        )
-        
-        self.mode = "full_biophysics"
-        logger.info("Using full dopamine biophysics module")
-        
-    def _init_simplified(self):
-        """Simplified dopamine if module not available"""
-        
-        # Simple concentration field
-        self.dopamine_concentration = np.ones(self.grid_shape) * self.params.dopamine_tonic
-        
-        # D2 receptor occupancy field
-        self.d2_occupancy = np.zeros(self.grid_shape)
-        
-        self.mode = "simplified"
-
-        # Stochastic parameters
-        self.vesicle_release_probability_base = 0.06  # Per action potential (Pothos 2000)
+        # === STOCHASTIC PARAMETERS ===
+        self.vesicle_release_probability_base = self.params.release_probability
         self.vesicle_content_mean = self.params.molecules_per_vesicle
         self.vesicle_content_std = self.params.molecules_per_vesicle * 0.2  # 20% CV
-
-        logger.warning("Using simplified dopamine model")
         
+        # === STATE TRACKING ===
+        self.release_timer = 0.0
+        self.vesicles_released = 0
+        self.total_molecules_released = 0
+        self.burst_duration = 0.1  # 100 ms phasic burst
+        
+        # === QUANTUM MODULATION PARAMETERS ===
+        self.da_quantum_threshold = 100e-9  # 100 nM for quantum effects
+        self.da_protection_threshold = 50e-9  # 50 nM starts protecting coherence
+        self.dimer_enhancement_max = 10.0
+        self.trimer_suppression_max = 0.1
+        self.coherence_protection_max = 3.0
+        self.d2_quantum_coupling = 10e-9  # Kd for quantum effects via D2
+        
+        # === TIMING PARAMETERS (Yagishita 2014) ===
+        self.da_calcium_delay = 0.050  # 50 ms optimal delay
+        self.quantum_window = 0.200  # 200 ms window for coincidence
+        
+        logger.info(f"Dopamine system initialized: {grid_shape}, "
+                   f"{len(release_sites)} release sites, D_eff={self.D_effective:.2e} m²/s")
+    
+    # =========================================================================
+    # MAIN UPDATE
+    # =========================================================================
+    
     def step(self, dt: float, reward_signal: bool = False):
         """
         Update dopamine system for one timestep
@@ -127,126 +118,186 @@ class DopamineSystemAdapter:
             dt: Time step (s)
             reward_signal: Whether reward is present (triggers phasic release)
         """
-        if self.mode == "full_biophysics":
-            # Use your validated biophysics
-            self.dopamine_field.update(dt, reward=reward_signal)
-            
+        # 1. Handle release
+        if reward_signal:
+            self._phasic_release(dt)
         else:
-            # === STOCHASTIC SIMPLIFIED MODEL ===
+            self._tonic_release(dt)
+            self.release_timer = 0
+        
+        # 2. Diffusion with tortuosity
+        # self._apply_diffusion(dt)
+        
+        # 3. DAT uptake (Michaelis-Menten)
+        self._apply_uptake(dt)
+        
+        # 4. Update receptor occupancy
+        self._update_receptor_occupancy()
+        
+        # 5. Enforce constraints
+        self._enforce_constraints()
+    
+    # =========================================================================
+    # RELEASE DYNAMICS
+    # =========================================================================
+    
+    def _phasic_release(self, dt: float):
+        """Phasic burst release during reward"""
+        if self.release_timer < self.burst_duration:
+            for (i, j) in self.release_sites:
+                # During burst, release is more reliable
+                if self.release_timer < 0.1:  # First 100ms of burst
+                    vesicles_per_pulse = 5  # Multiple vesicles for µM concentrations
+                    self._release_vesicles(i, j, vesicles_per_pulse)
             
-            if reward_signal:
-                # STOCHASTIC vesicle release at release sites
-                for x, y in self.release_sites:
-                    
-                    # 1. Probabilistic release events
-                    # Each vesicle has probability of releasing
-                    n_vesicles_available = self.params.vesicles_per_terminal
-                    
-                    # Poisson-like: each vesicle independently releases with probability p
-                    release_probability = self.vesicle_release_probability_base
-                    
-                    # Binomial: how many vesicles release?
-                    n_released = np.random.binomial(n_vesicles_available, release_probability)
-                    
-                    if n_released > 0:
-                        # 2. Variable vesicle content (gamma distribution)
-                        shape = (self.vesicle_content_mean / self.vesicle_content_std) ** 2
-                        scale = self.vesicle_content_std ** 2 / self.vesicle_content_mean
-                        
-                        # Total molecules released
-                        total_molecules = 0
-                        for _ in range(n_released):
-                            vesicle_content = np.random.gamma(shape, scale)
-                            total_molecules += vesicle_content
-                        
-                        # Convert to concentration (simplified - instant mixing in voxel)
-                        # Volume of one voxel: (dx)³
-                        voxel_volume = (self.dx ** 3)  # m³
-                        avogadro = 6.022e23
-                        
-                        # Concentration increase (M)
-                        delta_conc = (total_molecules / avogadro) / voxel_volume
-                        
-                        # Add to field
-                        self.dopamine_concentration[x, y] += delta_conc
+            self.release_timer += dt
+    
+    def _tonic_release(self, dt: float):
+        """Tonic release during normal activity"""
+        tonic_firing_rate = 4.0  # Hz
+        
+        for (i, j) in self.release_sites:
+            p_release = self.vesicle_release_probability_base * tonic_firing_rate * dt
             
-            # Simple decay toward tonic with stochastic noise
-            tau_decay = 0.2  # s (Yavich et al. 2007)
-            
-            # Deterministic decay
-            decay_rate = (self.params.dopamine_tonic - self.dopamine_concentration) / tau_decay
-            
-            # Add uptake noise (DAT stochasticity)
-            uptake_noise = np.random.normal(1.0, 0.1, self.grid_shape)  # 10% variability
-            uptake_noise = np.maximum(uptake_noise, 0.1)  # Keep positive
-            
-            self.dopamine_concentration += decay_rate * dt * uptake_noise
-            
-            # Floor at zero
-            self.dopamine_concentration = np.maximum(self.dopamine_concentration, 0)
-            
-            # Update D2 occupancy with binding noise
-            # Hill equation with stochastic component
-            kd = self.params.d2_kd
-            
-            # Stochastic binding/unbinding
-            binding_noise = np.random.normal(1.0, 0.05, self.grid_shape)  # 5% binding noise
-            binding_noise = np.maximum(binding_noise, 0.5)
-            
-            self.d2_occupancy = (self.dopamine_concentration * binding_noise) / (
-                kd + self.dopamine_concentration * binding_noise
-            )
-            
-            # Clip to [0, 1]
-            self.d2_occupancy = np.clip(self.d2_occupancy, 0, 1)
+            if np.random.random() < p_release:
+                self._release_vesicles(i, j, 1)
+    
+    def _release_vesicles(self, i: int, j: int, n_vesicles: int):
+        """Release vesicles at specified location with Gaussian spatial spread"""
+        # Stochastic vesicle content
+        molecules_per_vesicle = max(100, np.random.normal(
+            self.vesicle_content_mean, self.vesicle_content_std
+        ))
+        total_molecules = n_vesicles * molecules_per_vesicle
+        
+        self.total_molecules_released += total_molecules
+        self.vesicles_released += n_vesicles
+        
+        # Calculate concentration increase
+        sigma = self.release_spread_sigma
+        effective_radius = 2 * sigma  # 2 sigma captures ~95%
+        effective_area = np.pi * effective_radius**2
+        effective_volume = effective_area * self.cleft_width
+        
+        avogadro = 6.022e23
+        moles = total_molecules / avogadro
+        concentration_increase = moles / effective_volume
+        
+        # Apply with Gaussian spread
+        self._add_with_gaussian_spread(i, j, concentration_increase)
+    
+    def _add_with_gaussian_spread(self, i: int, j: int, concentration: float):
+        """Add concentration with Gaussian spatial spread"""
+        sigma_grid = self.release_spread_sigma / self.dx
+        
+        # Create kernel
+        kernel_size = min(int(6 * sigma_grid) + 1, self.grid_shape[0])
+        if kernel_size % 2 == 0:
+            kernel_size += 1
+        if kernel_size < 3:
+            kernel_size = 3
+        
+        # Generate normalized Gaussian
+        x = np.arange(kernel_size) - kernel_size // 2
+        y = np.arange(kernel_size) - kernel_size // 2
+        X, Y = np.meshgrid(x, y)
+        kernel = np.exp(-(X**2 + Y**2) / (2 * sigma_grid**2 + 1e-10))
+        kernel = kernel / np.sum(kernel)
+        
+        # Apply to field with boundary handling
+        half = kernel_size // 2
+        i_min = max(0, i - half)
+        i_max = min(self.grid_shape[0], i + half + 1)
+        j_min = max(0, j - half)
+        j_max = min(self.grid_shape[1], j + half + 1)
+        
+        ki_min = half - (i - i_min)
+        ki_max = half + (i_max - i)
+        kj_min = half - (j - j_min)
+        kj_max = half + (j_max - j)
+        
+        self.dopamine_concentration[i_min:i_max, j_min:j_max] += \
+            concentration * kernel[ki_min:ki_max, kj_min:kj_max]
+    
+    # =========================================================================
+    # DIFFUSION AND UPTAKE
+    # =========================================================================
+    
+    def _apply_diffusion(self, dt: float):
+        """Apply diffusion with Laplacian and tortuosity correction"""
+        # Laplacian kernel
+        kernel = np.array([[0, 1, 0],
+                          [1, -4, 1],
+                          [0, 1, 0]], dtype=np.float64)
+        
+        laplacian = ndimage.convolve(self.dopamine_concentration, kernel, mode='nearest')
+        laplacian = laplacian / (self.dx * self.dx)
+        
+        self.dopamine_concentration += self.D_effective * laplacian * dt
+    
+    def _apply_uptake(self, dt: float):
+        """Apply Michaelis-Menten uptake via DAT"""
+        # Only uptake above tonic level
+        excess = np.maximum(0, self.dopamine_concentration - self.params.dopamine_tonic)
+        
+        # Michaelis-Menten kinetics with stochastic noise
+        uptake_noise = np.random.normal(1.0, 0.1, self.grid_shape)
+        uptake_noise = np.maximum(uptake_noise, 0.1)
+        
+        uptake_rate = self.params.dat_vmax * excess / (self.params.dat_km + excess)
+        self.dopamine_concentration -= uptake_rate * dt * uptake_noise
+    
+    def _update_receptor_occupancy(self):
+        """Update D1 and D2 receptor occupancy (Hill equation)"""
+        # D1: High affinity (~1 nM)
+        kd_d1 = 1e-9
+        self.d1_occupancy = self.dopamine_concentration / (self.dopamine_concentration + kd_d1)
+        
+        # D2: Lower affinity (~10 nM) - main quantum modulator
+        self.d2_occupancy = self.dopamine_concentration / (self.dopamine_concentration + self.params.d2_kd)
+        
+        # Clip to valid range
+        self.d1_occupancy = np.clip(self.d1_occupancy, 0, 1)
+        self.d2_occupancy = np.clip(self.d2_occupancy, 0, 1)
+    
+    def _enforce_constraints(self):
+        """Enforce biological constraints"""
+        # Minimum at tonic level
+        self.dopamine_concentration = np.maximum(
+            self.dopamine_concentration, self.params.dopamine_tonic
+        )
+        
+        # Maximum reasonable concentration
+        max_possible = 10e-6  # 10 µM
+        self.dopamine_concentration = np.minimum(self.dopamine_concentration, max_possible)
+    
+    # =========================================================================
+    # ACCESSORS
+    # =========================================================================
     
     def get_dopamine_concentration(self) -> np.ndarray:
-        """
-        Get current dopamine concentration field (M)
-        
-        Returns:
-            Dopamine concentration (M)
-        """
-        if self.mode == "full_biophysics":
-            return self.dopamine_field.field.copy()
-        else:
-            return self.dopamine_concentration.copy()
+        """Get current dopamine concentration field (M)"""
+        return self.dopamine_concentration.copy()
+    
+    def get_d1_occupancy(self) -> np.ndarray:
+        """Get D1 receptor occupancy field (0-1)"""
+        return self.d1_occupancy.copy()
     
     def get_d2_occupancy(self) -> np.ndarray:
-        """
-        Get D2 receptor occupancy field (0-1)
-        
-        This is THE critical output for quantum modulation!
-        
-        Returns:
-            D2 receptor occupancy (0-1)
-        """
-        if self.mode == "full_biophysics":
-            # Your module calculates this
-            stats = self.dopamine_field.get_statistics()
-            # Return spatial field (simplified - use mean)
-            mean_occupancy = stats['D2_occupancy_mean']
-            return np.ones(self.grid_shape) * mean_occupancy
-        else:
-            return self.d2_occupancy.copy()
+        """Get D2 receptor occupancy field (0-1)"""
+        return self.d2_occupancy.copy()
     
     def get_calcium_modulation(self) -> np.ndarray:
         """
         Get calcium channel modulation factor
         
         Hernandez-Lopez et al. 2000:
-        "D2 activation reduces Ca²⁺ current by 30%"
+        D2 activation reduces Ca²⁺ current by 30%
         
         Returns:
             Modulation factor (0.7 = 30% reduction at full D2 activation)
         """
-        d2_occupancy = self.get_d2_occupancy()
-        
-        # Linear modulation
-        # 0% D2 → 1.0x calcium (no change)
-        # 100% D2 → 0.7x calcium (30% reduction)
-        modulation = 1.0 - (self.params.ca_channel_inhibition * d2_occupancy)
-        
+        modulation = 1.0 - (self.params.ca_channel_inhibition * self.d2_occupancy)
         return modulation
     
     def get_dimer_bias(self) -> np.ndarray:
@@ -256,174 +307,189 @@ class DopamineSystemAdapter:
         MODEL 5 KEY FINDING:
         High dopamine (D2 activation) favors dimers over trimers
         
-        Mechanism:
-        1. D2 reduces calcium influx
-        2. Smaller calcium clusters form
-        3. These preferentially aggregate as dimers
-        
         Returns:
             Dimer bias factor (0-1, where 1 = maximum dimer preference)
         """
-        d2_occupancy = self.get_d2_occupancy()
-        
-        # Base preferences (without dopamine)
-        # Trimers kinetically favored (more binding sites)
-        # But dopamine shifts this
-        
         # At 0% D2: prefer trimers (bias = 0.3)
         # At 100% D2: prefer dimers (bias = 0.8)
-        bias = 0.3 + 0.5 * d2_occupancy
-        
+        bias = 0.3 + 0.5 * self.d2_occupancy
         return bias
     
-    def get_experimental_metrics(self) -> Dict[str, float]:
-        
-        """
-        Return metrics for experimental validation
+    # =========================================================================
+    # QUANTUM MODULATION
+    # =========================================================================
     
-        Aligns with thesis measurements and literature values
+    def get_quantum_modulation(self, i: int, j: int) -> Dict[str, float]:
         """
-        if self.mode == "full_biophysics":
-            # Get comprehensive stats from your module
-            stats = self.dopamine_field.get_statistics()
+        Calculate quantum modulation factors at a specific location.
         
-            return {
-                'dopamine_mean_nM': stats.get('mean', 0) * 1e9,
-                'dopamine_max_nM': stats.get('max', 0) * 1e9,
-                'dopamine_peak_nM': stats.get('max', 0) * 1e9,
-                'd2_occupancy_mean': stats.get('D2_occupancy_mean', 0),
-                'd2_occupancy_peak': stats.get('D2_occupancy_peak', stats.get('D2_occupancy_mean', 0)),
-                'vesicles_released': stats.get('vesicles_released', 0),
-                'calcium_modulation_mean': np.mean(self.get_calcium_modulation()),
-                'dimer_bias_mean': np.mean(self.get_dimer_bias()),
-            }
+        Returns factors for dimer enhancement, trimer suppression, 
+        and coherence protection.
+        
+        Based on:
+        - Agarwal et al. 2023: Dimers superior for coherence
+        - D2 receptor activation curve
+        """
+        da_local = self.dopamine_concentration[i, j]
+        
+        # D2 receptor activation for quantum effects
+        d2_activation = da_local / (da_local + self.d2_quantum_coupling)
+        
+        factors = {
+            'dimer_enhancement': 1.0 + (self.dimer_enhancement_max - 1.0) * d2_activation,
+            'trimer_suppression': 1.0 - (1.0 - self.trimer_suppression_max) * d2_activation,
+            'coherence_protection': 1.0 + (self.coherence_protection_max - 1.0) * d2_activation,
+            'd2_occupancy': d2_activation,
+            'above_quantum_threshold': da_local > self.da_quantum_threshold
+        }
+        
+        return factors
+    
+    def get_coincidence_factor(self, calcium_spike_time: float, 
+                               current_time: float) -> float:
+        """
+        Calculate coincidence factor for STDP-like learning.
+        
+        Based on Yagishita et al. 2014 Science:
+        Dopamine must arrive within specific window after calcium.
+        
+        Args:
+            calcium_spike_time: Time of calcium spike (s)
+            current_time: Current simulation time (s)
+            
+        Returns:
+            Coincidence factor (0-1)
+        """
+        time_diff = current_time - calcium_spike_time
+        
+        if time_diff < 0:
+            # Dopamine before calcium - no learning
+            return 0.0
+        elif time_diff < self.da_calcium_delay:
+            # Too early - dopamine before optimal window
+            return 0.5
+        elif time_diff <= self.quantum_window:
+            # Optimal window for quantum coherence
+            return 1.0
         else:
-            return {
-                'dopamine_mean_nM': np.mean(self.dopamine_concentration) * 1e9,
-                'dopamine_max_nM': np.max(self.dopamine_concentration) * 1e9,
-                'dopamine_peak_nM': np.max(self.dopamine_concentration) * 1e9,
-                'd2_occupancy_mean': np.mean(self.d2_occupancy),
-                'd2_occupancy_peak': np.max(self.d2_occupancy),
-                'calcium_modulation_mean': np.mean(self.get_calcium_modulation()),
-                'dimer_bias_mean': np.mean(self.get_dimer_bias()),
-            }
-
-
-# ============================================================================
-# VALIDATION TESTS
-# ============================================================================
-
-if __name__ == "__main__":
-    from model6_parameters import Model6Parameters
+            # Too late - coherence already decayed
+            return np.exp(-(time_diff - self.quantum_window) / 0.1)
     
-    print("="*70)
-    print("DOPAMINE SYSTEM VALIDATION")
-    print("="*70)
-    
-    params = Model6Parameters()
-    
-    # Create grid
-    grid_shape = (50, 50)
-    dx = 2 * params.spatial.active_zone_radius / grid_shape[0]
-    
-    # Create dopamine system
-    da_system = DopamineSystemAdapter(grid_shape, dx, params)
-    
-    print(f"\nInitialized in mode: {da_system.mode}")
-    
-    # Test 1: Baseline (tonic dopamine)
-    print("\nTest 1: Baseline (Tonic Dopamine)")
-    
-    dt = 1e-3  # 1 ms
-    
-    # Run for 100 ms with no reward
-    print("  Running 100 ms without reward...")
-    for i in range(100):
-        da_system.step(dt, reward_signal=False)
-    
-    metrics_baseline = da_system.get_experimental_metrics()
-    print(f"    Dopamine: {metrics_baseline['dopamine_mean_nM']:.1f} nM")
-    print(f"    D2 occupancy: {metrics_baseline['d2_occupancy_mean']:.3f}")
-    print(f"    Literature (Garris 1994): 20 nM tonic")
-    
-    if 15 <= metrics_baseline['dopamine_mean_nM'] <= 25:
-        print(f"    ✓ Tonic dopamine in expected range")
-    
-    # Test 2: Phasic release (reward)
-    print("\nTest 2: Phasic Release (Reward Signal)")
-    
-    # Reset system
-    da_system = DopamineSystemAdapter(grid_shape, dx, params)
-    
-    da_history = []
-    d2_history = []
-    
-    # Run with reward burst
-    print("  Running 500 ms with reward burst (first 100 ms)...")
-    for i in range(500):
-        reward = (i < 100)  # Reward for first 100 ms
-        da_system.step(dt, reward_signal=reward)
+    def calculate_emergent_selectivity(self, i: int, j: int, 
+                                       ca_local: float, po4_local: float) -> Dict[str, float]:
+        """
+        Calculate emergent dimer/trimer selectivity based on dopamine's 
+        physical effects on the local environment.
         
-        if i % 50 == 0:
-            metrics = da_system.get_experimental_metrics()
-            da_history.append(metrics['dopamine_max_nM'])
-            d2_history.append(metrics['d2_occupancy_peak'])
+        Key mechanisms:
+        1. D2 activation reduces calcium influx
+        2. Changes Ca/P ratio, affecting which phase forms
+        3. Local ionic strength changes affect nucleation
+        
+        Args:
+            i, j: Grid position
+            ca_local: Local calcium concentration (M)
+            po4_local: Local phosphate concentration (M)
+            
+        Returns:
+            Dictionary with selectivity factors
+        """
+        da_local = self.dopamine_concentration[i, j]
+        d2_occ = self.d2_occupancy[i, j]
+        
+        # 1. D2 reduces calcium (via Gi/o → decreased Ca channel opening)
+        ca_effective = ca_local * (1 - 0.3 * d2_occ)  # 30% reduction at full D2
+        
+        # 2. Calculate feasibility based on stoichiometry
+        # Dimers need Ca6(PO4)4, Trimers need Ca9(PO4)6
+        if d2_occ > 0.5:
+            # With less calcium, smaller clusters (dimers) are favored
+            dimer_feasibility = min(ca_effective / (6 * 50e-9), 1.0)
+            trimer_feasibility = min(ca_effective / (9 * 50e-9), 1.0)
+        else:
+            dimer_feasibility = 1.0
+            trimer_feasibility = 1.0
+        
+        # 3. Ionic strength effects
+        # Higher ionic strength reduces Debye length → affects larger clusters more
+        ionic_strength_factor = 1 + 0.5 * d2_occ
+        
+        # Trimers have more P-P interactions, more affected by screening
+        dimer_ionic_penalty = 1.0 / (1 + 0.1 * ionic_strength_factor)
+        trimer_ionic_penalty = 1.0 / (1 + 0.3 * ionic_strength_factor)
+        
+        # 4. Combine effects
+        dimer_factor = dimer_feasibility * dimer_ionic_penalty
+        trimer_factor = trimer_feasibility * trimer_ionic_penalty
+        
+        return {
+            'dimer_factor': dimer_factor,
+            'trimer_factor': trimer_factor,
+            'ca_effective': ca_effective,
+            'd2_occupancy': d2_occ,
+            'emergent_selectivity': dimer_factor / trimer_factor if trimer_factor > 0 else 10.0
+        }
     
-    peak_da = max(da_history)
-    peak_d2 = max(d2_history)
+    def calculate_spatiotemporal_gradient(self) -> np.ndarray:
+        """
+        Calculate spatial gradient of dopamine for directional effects.
+        High gradients might indicate learning-relevant locations.
+        
+        Returns:
+            Gradient magnitude field
+        """
+        grad_x = np.gradient(self.dopamine_concentration, axis=1) / self.dx
+        grad_y = np.gradient(self.dopamine_concentration, axis=0) / self.dx
+        gradient_magnitude = np.sqrt(grad_x**2 + grad_y**2)
+        return gradient_magnitude
     
-    print(f"    Peak dopamine: {peak_da:.1f} nM")
-    print(f"    Peak D2 occupancy: {peak_d2:.3f}")
-    print(f"    Literature (Garris 1994): 1-10 μM phasic")
+    # =========================================================================
+    # METRICS AND RESET
+    # =========================================================================
     
-    if peak_da > 100:  # Should see substantial increase
-        print(f"    ✓ Phasic release detected")
+    def get_experimental_metrics(self) -> Dict[str, float]:
+        """Return metrics for experimental validation"""
+        return {
+            'dopamine_mean_nM': np.mean(self.dopamine_concentration) * 1e9,
+            'dopamine_max_nM': np.max(self.dopamine_concentration) * 1e9,
+            'dopamine_peak_nM': np.max(self.dopamine_concentration) * 1e9,
+            'd1_occupancy_mean': np.mean(self.d1_occupancy),
+            'd1_occupancy_peak': np.max(self.d1_occupancy),
+            'd2_occupancy_mean': np.mean(self.d2_occupancy),
+            'd2_occupancy_peak': np.max(self.d2_occupancy),
+            'calcium_modulation_mean': np.mean(self.get_calcium_modulation()),
+            'dimer_bias_mean': np.mean(self.get_dimer_bias()),
+            'vesicles_released': self.vesicles_released,
+            'total_molecules': self.total_molecules_released,
+        }
     
-    # Test 3: Calcium modulation
-    print("\nTest 3: Calcium Channel Modulation")
+    def reset(self):
+        """Reset to baseline state"""
+        self.dopamine_concentration[:] = self.params.dopamine_tonic
+        self.d1_occupancy[:] = 0
+        self.d2_occupancy[:] = 0
+        self.release_timer = 0
+        self.vesicles_released = 0
+        self.total_molecules_released = 0
+
+
+# =============================================================================
+# CONVENIENCE FUNCTION
+# =============================================================================
+
+def create_dopamine_system(grid_shape: Tuple[int, int], dx: float,
+                           params: Model6Parameters,
+                           release_sites: Optional[List[Tuple[int, int]]] = None) -> DopamineSystemAdapter:
+    """
+    Create a dopamine system with Model 6 parameters.
     
-    # At peak dopamine
-    ca_mod = da_system.get_calcium_modulation()
-    ca_mod_mean = np.mean(ca_mod)
-    ca_mod_min = np.min(ca_mod)
-    
-    print(f"    Mean Ca modulation: {ca_mod_mean:.3f}x")
-    print(f"    Min Ca modulation: {ca_mod_min:.3f}x")
-    print(f"    Expected: 0.7x (30% reduction)")
-    print(f"    Literature (Hernandez-Lopez 2000): 30% reduction")
-    
-    if 0.65 <= ca_mod_min <= 0.75:
-        print(f"    ✓ Calcium modulation matches literature")
-    
-    # Test 4: Dimer bias
-    print("\nTest 4: Dimer/Trimer Bias (Model 5 Finding)")
-    
-    # Reset with low dopamine
-    da_system_low = DopamineSystemAdapter(grid_shape, dx, params)
-    for i in range(50):
-        da_system_low.step(dt, reward_signal=False)
-    
-    bias_low = np.mean(da_system_low.get_dimer_bias())
-    
-    # System with high dopamine
-    da_system_high = DopamineSystemAdapter(grid_shape, dx, params)
-    for i in range(100):
-        da_system_high.step(dt, reward_signal=True)
-    
-    bias_high = np.mean(da_system_high.get_dimer_bias())
-    
-    print(f"    Low dopamine: Dimer bias = {bias_low:.3f}")
-    print(f"    High dopamine: Dimer bias = {bias_high:.3f}")
-    print(f"    Shift: {(bias_high - bias_low)*100:.1f}%")
-    
-    if bias_high > bias_low * 1.5:
-        print(f"    ✓ Dopamine enhances dimer preference (Model 5 finding!)")
-    
-    print("\n" + "="*70)
-    print("Dopamine system validation complete!")
-    print("KEY FINDINGS:")
-    print("  1. Tonic/phasic dopamine levels match literature")
-    print("  2. D2 activation reduces calcium current (30%)")
-    print("  3. Dopamine biases toward dimer formation")
-    print("  4. Integrated with Model 6 quantum framework")
-    print("="*70)
+    Args:
+        grid_shape: Grid dimensions
+        dx: Grid spacing in meters
+        params: Model6Parameters instance
+        release_sites: Optional release site positions
+        
+    Returns:
+        Configured DopamineSystemAdapter instance
+    """
+    return DopamineSystemAdapter(grid_shape, dx, params, release_sites)

@@ -31,7 +31,6 @@ from quantum_coherence import QuantumCoherenceSystem  # CHANGED from posner_syst
 from pH_dynamics import pHDynamics
 from camkii_module import CaMKIIModule
 from spine_plasticity_module import SpinePlasticityModule
-from eligibility_trace import EligibilityTraceModule
 from ddsc_module import DDSCSystem, DDSCParameters
 
 from dimer_particles import DimerParticleSystem
@@ -134,7 +133,7 @@ class Model6QuantumSynapse:
         self.spine_plasticity = SpinePlasticityModule()
         logger.info("CaMKII and spine plasticity modules initialized")
 
-        self.eligibility = EligibilityTraceModule()
+         
         self.ddsc = DDSCSystem(DDSCParameters())
 
         # Particle-based dimer tracking with emergent entanglement
@@ -168,6 +167,7 @@ class Model6QuantumSynapse:
             'n_entangled_network': [],
             'f_entangled': [],
             'n_entanglement_bonds': [],
+            'mean_singlet_prob': [],
         }
 
         # Add to self.history dict (around line ~95):
@@ -435,113 +435,72 @@ class Model6QuantumSynapse:
                 reward = stimulus.get('reward', False)
                 self.dopamine.step(dt, reward_signal=reward)
             
-            # Inside the EM-enabled path, after quantum.step() and before PHASE 9:
 
-            # --- ELIGIBILITY FROM INTEGRATED SYSTEM ---
-            qc_metrics = self.quantum.get_experimental_metrics()
-
-            # Convert concentration to discrete count using validated factor
-            dimer_conc_nM = qc_metrics['dimer_peak_nM']
-            dimer_count = int(dimer_conc_nM * 0.006)
-
+            # --- PHASE 9: ELIGIBILITY FROM PARTICLE SYSTEM (Agarwal 2023) ---
             calcium_uM = float(np.max(ca_conc)) * 1e6
-
-            # elig_result = self.eligibility.step(
-                # dt=dt,
-                # dimer_count=dimer_count,
-                # coherence=qc_metrics['coherence_mean'],
-                # T2_effective=qc_metrics['T2_dimer_s'],
-                # calcium_uM=calcium_uM
-            # )
-
-            # Use module's eligibility value
-            # self._current_eligibility = elig_result['eligibility']
             
-            # --- PHASE 9: ELIGIBILITY FROM INTEGRATED SYSTEM ---
-            calcium_uM = float(np.max(ca_conc)) * 1e6
-
-            if hasattr(self, '_locked_eligibility') and self._locked_eligibility is not None:
-                # Debug/testing mode - override with locked value
-                eligibility = self._locked_eligibility
+            # Eligibility IS the singlet state - no separate module needed
+            if self.dimer_particles.dimers:
+                mean_P_S = np.mean([d.singlet_probability for d in self.dimer_particles.dimers])
+                n_entangled = sum(1 for d in self.dimer_particles.dimers if d.is_entangled)
+                n_dimers = len(self.dimer_particles.dimers)
             else:
-                # Normal operation - get from quantum_coherence → eligibility_trace
-                qc_metrics = self.quantum.get_experimental_metrics()
-                
-                # Get dimer count from CONCENTRATION (the source of truth)
-                # ~741 nM = 4-5 dimers per synapse, so ~150 nM per dimer
-                dimer_conc_nM = qc_metrics['dimer_peak_nM']
-                dimer_count = int(dimer_conc_nM * 0.006)  # Validated conversion factor
-                
-                elig_result = self.eligibility.step(
-                    dt=dt,
-                    dimer_count=dimer_count,
-                    coherence=qc_metrics['coherence_mean'],
-                    T2_effective=qc_metrics['T2_dimer_s'],
-                    calcium_uM=calcium_uM
-                )
-                eligibility = elig_result['eligibility']
-            
-            # FOUR-FACTOR RULE: Eligibility + Dopamine + Calcium + Q1 Field
-            eligibility_threshold = 0.3
-            calcium_threshold_uM = 0.5  # Need some calcium elevation
-            field_threshold_kT = 10.0   # Need sufficient Q1 field for CaMKII assistance
-            dimer_threshold = 30  # Need ~30-50 network dimers for collective effects
+                mean_P_S = 0.25  # Thermal equilibrium (no dimers)
+                n_entangled = 0
+                n_dimers = 0
 
-            # Calculate total network dimers
-            n_synapses = self.params.multi_synapse.n_synapses_default if self.params.multi_synapse_enabled else 1
-            coupling_factor = getattr(self, '_spatial_coupling_factor', 1.0)
-            total_network_dimers = self._previous_dimer_count
+            # Eligibility = rescaled singlet probability [0, 1]
+            # P_S = 0.25 → eligibility = 0, P_S = 1.0 → eligibility = 1
+            eligibility = (mean_P_S - 0.25) / 0.75
 
+            # THREE-FACTOR GATE (biologically grounded):
+            # 1. Eligibility: entangled dimers exist (P_S > 0.5, Agarwal threshold)
+            # 2. Dopamine: reward/instructive signal present  
+            # 3. Calcium: postsynaptic activity marker
+            calcium_threshold_uM = 0.5
 
-            eligibility_present = (eligibility >= eligibility_threshold)
+            eligibility_present = (mean_P_S > 0.5)  # Agarwal entanglement threshold
             dopamine_read = self._dopamine_above_read_threshold()
             calcium_elevated = (calcium_uM > calcium_threshold_uM)
-            field_sufficient = (self._collective_field_kT > field_threshold_kT)
-            dimers_sufficient = (total_network_dimers >= dimer_threshold)
 
-            plasticity_gate = eligibility_present and dopamine_read and calcium_elevated and field_sufficient and dimers_sufficient
-            
+            plasticity_gate = eligibility_present and dopamine_read and calcium_elevated
+
+            # Store for diagnostics and history
             self._current_eligibility = eligibility
+            self._mean_singlet_prob = mean_P_S
+            self._n_entangled_dimers = n_entangled
             self._plasticity_gate = plasticity_gate
-            self._total_network_dimers = total_network_dimers
-            
+
             # --- PHASE 10: CaMKII WITH COMMITMENT LOCKING ---
-            # Use ACTUAL collective field from dimer ensemble (not prescribed!)
             reference_field_kT = self._collective_field_kT
 
             if plasticity_gate and not self._camkii_committed:
-                # COMMITMENT: Lock in the current eligibility level
+                # COMMITMENT: Lock in memory at current eligibility level
                 self._camkii_committed = True
                 
-                # Commitment level scales with network dimers (Option C fix)
-                # This creates graded response: more dimers = stronger commitment
-                dimer_threshold_for_full = 50.0  # Full commitment at 50+ network dimers
-                dimer_scaling = min(1.0, self._total_network_dimers / dimer_threshold_for_full)
-                self._committed_memory_level = eligibility * dimer_scaling
+                # Commitment STRENGTH scales with quantum factors
+                dimer_factor = min(1.0, n_entangled / 10.0)
+                field_factor = min(1.0, reference_field_kT / 20.0)
                 
-                # CaMKII activates with field assistance
+                self._committed_memory_level = eligibility * dimer_factor * field_factor
+                
                 camkii_state = self.camkii.step(dt, calcium_uM, reference_field_kT)
                 
             elif self._camkii_committed:
-                # Already committed - classical cascade continues
-                # Field no longer matters, commitment is locked
                 camkii_state = self.camkii.step(dt, calcium_uM, 0.0)
                 
             else:
-                # Gate closed, no commitment
                 camkii_state = self.camkii.step(dt, calcium_uM, 0.0)
-            
+
             # --- PHASE 11: SPINE PLASTICITY ---
             if self._camkii_committed:
-                # Drive toward committed level
                 spine_state = self.spine_plasticity.step(
                     dt, 
-                    self._committed_memory_level,  # Target from commitment
+                    self._committed_memory_level,
                     calcium_uM,
                     quantum_field_kT=reference_field_kT
                 )
             else:
-                # No commitment - field still protects existing structure
                 spine_state = self.spine_plasticity.step(
                     dt, 0.0, calcium_uM,
                     quantum_field_kT=reference_field_kT
@@ -597,27 +556,26 @@ class Model6QuantumSynapse:
             
             calcium_uM = float(np.max(ca_conc)) * 1e6
             
-            # --- ELIGIBILITY FROM INTEGRATED SYSTEM ---
-            qc_metrics = self.quantum.get_experimental_metrics()
-            
-            # Convert concentration to discrete count using validated factor
-            # 741 nM → 4.45 dimers (active zone volume: 0.01 μm³)
-            dimer_conc_nM = qc_metrics['dimer_peak_nM']
-            dimer_count = int(dimer_conc_nM * 0.006)
-            
-            elig_result = self.eligibility.step(
-                dt=dt,
-                dimer_count=dimer_count,
-                coherence=qc_metrics['coherence_mean'],
-                T2_effective=qc_metrics['T2_dimer_s'],
-                calcium_uM=calcium_uM
-            )
-            eligibility = elig_result['eligibility']
+            # --- ELIGIBILITY FROM PARTICLE SYSTEM (Agarwal 2023) ---
+            if self.dimer_particles.dimers:
+                mean_P_S = np.mean([d.singlet_probability for d in self.dimer_particles.dimers])
+                n_entangled = sum(1 for d in self.dimer_particles.dimers if d.is_entangled)
+                n_dimers = len(self.dimer_particles.dimers)
+            else:
+                mean_P_S = 0.25
+                n_entangled = 0
+                n_dimers = 0
+
+            eligibility = (mean_P_S - 0.25) / 0.75
             self._current_eligibility = eligibility
+            self._mean_singlet_prob = mean_P_S
+            self._n_entangled_dimers = n_entangled
+            self._plasticity_gate = False  # No gate in non-EM path
             
             # Check if plateau should trigger DDSC
             plateau = stimulus.get('plateau_potential', False)
             if plateau:
+                qc_metrics = self.quantum.get_experimental_metrics()
                 self.ddsc.check_trigger(qc_metrics['coherence_mean'], self.time)
             
             # Update DDSC if triggered
@@ -730,9 +688,32 @@ class Model6QuantumSynapse:
         return metrics
     
     
-    def get_eligibility(self):
-        """Return current eligibility (= coherence)"""
-        return getattr(self, '_current_eligibility', 0.0)
+    def get_eligibility(self) -> float:
+        """
+        Eligibility = rescaled mean singlet probability from dimer particles
+        
+        Maps P_S range [0.25, 1.0] to eligibility range [0, 1]
+        This IS the temporal credit assignment trace (Agarwal 2023)
+        """
+        if hasattr(self, 'dimer_particles') and self.dimer_particles.dimers:
+            mean_P_S = np.mean([d.singlet_probability for d in self.dimer_particles.dimers])
+            return (mean_P_S - 0.25) / 0.75
+        return 0.0
+
+    def is_eligible(self) -> bool:
+        """
+        Synapse is eligible when mean P_S > 0.5 (Agarwal entanglement threshold)
+        """
+        if hasattr(self, 'dimer_particles') and self.dimer_particles.dimers:
+            mean_P_S = np.mean([d.singlet_probability for d in self.dimer_particles.dimers])
+            return mean_P_S > 0.5
+        return False
+
+    def get_mean_singlet_probability(self) -> float:
+        """Direct access to mean P_S for reporting"""
+        if hasattr(self, 'dimer_particles') and self.dimer_particles.dimers:
+            return float(np.mean([d.singlet_probability for d in self.dimer_particles.dimers]))
+        return 0.25  # Thermal equilibrium
     
     def set_locked_eligibility(self, value):
         """Lock eligibility to a fixed value for the duration of an experiment"""
@@ -763,11 +744,13 @@ class Model6QuantumSynapse:
         self.history['AMPAR_count'].append(self.spine_plasticity.AMPAR_count)
         self.history['synaptic_strength'].append(self.spine_plasticity.get_synaptic_strength())
 
-        self.history['eligibility'].append(self.eligibility.get_eligibility())
-        self.history['plasticity_gate'].append(self.eligibility.state.plasticity_gate)
+        self.history['eligibility'].append(self.get_eligibility())
+        self.history['mean_singlet_prob'].append(self.get_mean_singlet_probability())
+        self.history['plasticity_gate'].append(self._plasticity_gate)
 
         self.history['structural_drive'].append(self.ddsc.get_structural_drive())
         self.history['ddsc_current'].append(self.ddsc.current_ddsc)
+        
         
         if self.dopamine is not None:
             self.history['dopamine_max'].append(metrics['dopamine_max_nM'])

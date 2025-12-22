@@ -167,11 +167,8 @@ def measure_state(model, time: float, phase: str, network=None) -> SystemState:
     
     state.dimer_coherence = getattr(model, '_previous_coherence', 0.0)
     # Use the proper eligibility getter (matches test_eligibility_decay.py)
-    if hasattr(model, 'eligibility'):
-        state.eligibility = model.eligibility.get_eligibility()
-    else:
-        state.eligibility = 0.0
-    state.network_modulation = getattr(model, '_network_modulation', 0.0)
+    state.eligibility = model.get_eligibility()
+    state.mean_singlet_prob = model.get_mean_singlet_probability()
 
     # === PARTICLE-BASED METRICS (from dimer_particles system) ===
     if hasattr(model, 'dimer_particles'):
@@ -253,9 +250,8 @@ def measure_state(model, time: float, phase: str, network=None) -> SystemState:
             coherence = getattr(synapse, '_previous_coherence', 0.0)
             weighted_coherence += coherence * dimers_this_synapse
             
-            # Get eligibility from proper module
-            if hasattr(synapse, 'eligibility'):
-                total_eligibility += synapse.eligibility.get_eligibility()
+            # Get eligibility from particle system
+            total_eligibility += synapse.get_eligibility()
         
         state.dimer_count = total_dimers
         state.total_network_dimers = total_dimers
