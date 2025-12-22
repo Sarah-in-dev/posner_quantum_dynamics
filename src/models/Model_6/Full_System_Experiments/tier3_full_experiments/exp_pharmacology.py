@@ -32,6 +32,7 @@ import matplotlib.pyplot as plt
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+from model6_core import Model6QuantumSynapse
 from model6_parameters import Model6Parameters
 from multi_synapse_network import MultiSynapseNetwork
 
@@ -169,6 +170,8 @@ class PharmacologyExperiment:
     def _create_network(self, condition: PharmCondition) -> MultiSynapseNetwork:
         """Create network with specified pharmacological condition"""
         params = Model6Parameters()
+        params.em_coupling_enabled = True
+        params.multi_synapse_enabled = True
         
         # APV blocks NMDA
         if condition.nmda_blocked:
@@ -178,16 +181,18 @@ class PharmacologyExperiment:
         if condition.isoflurane_pct > 0:
             # Scale tryptophan quantum yield by (1 - dose/100)
             reduction = 1.0 - condition.isoflurane_pct / 100.0
-            params.tryptophan.quantum_yield *= reduction
+            params.tryptophan.quantum_yield_free *= reduction
         
         # Create network
         network = MultiSynapseNetwork(
             n_synapses=condition.n_synapses,
             params=params,
             pattern='clustered',
-            spacing_um=1.0,
-            mt_invaded=condition.mt_invaded
+            spacing_um=1.0
         )
+        
+        network.initialize(Model6QuantumSynapse, params)
+        network.set_microtubule_invasion(condition.mt_invaded)
         
         return network
     
@@ -211,15 +216,20 @@ class PharmacologyExperiment:
         for _ in range(100):
             network.step(dt, {"voltage": -70e-3, "reward": False})
         
-        # === PHASE 2: STIMULATION + DOPAMINE (overlap for gate) ===
-        n_stim = int(self.stim_duration_s / dt)
-        for _ in range(n_stim):
-            network.step(dt, {"voltage": -10e-3, "reward": True})
-            
-            # Track peaks
-            metrics = network.get_network_metrics()
-            if metrics.get('collective_field_kT', 0) > peak_field:
-                peak_field = metrics.get('collective_field_kT', 0)
+        # === PHASE 2: STIMULATION + DOPAMINE (theta-burst for gate) ===
+        for burst in range(5):
+            for spike in range(4):
+                for _ in range(2):  # 2ms depolarization
+                    network.step(dt, {"voltage": -10e-3, "reward": True})
+                for _ in range(8):  # 8ms rest
+                    network.step(dt, {"voltage": -70e-3, "reward": True})
+            for _ in range(160):  # 160ms inter-burst interval
+                network.step(dt, {"voltage": -70e-3, "reward": True})
+                
+            # Track peaks during stimulation
+            metrics = network.get_experimental_metrics()
+            if metrics.get('mean_field_kT', 0) > peak_field:
+                peak_field = metrics.get('mean_field_kT', 0)
             
             current_dimers = sum(
                 len(s.dimer_particles.dimers) if hasattr(s, 'dimer_particles') else 0

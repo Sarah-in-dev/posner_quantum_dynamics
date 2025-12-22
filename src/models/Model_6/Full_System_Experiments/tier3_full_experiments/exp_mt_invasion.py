@@ -34,6 +34,7 @@ import matplotlib.pyplot as plt
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+from model6_core import Model6QuantumSynapse
 from model6_parameters import Model6Parameters
 from multi_synapse_network import MultiSynapseNetwork
 
@@ -137,14 +138,18 @@ class MTInvasionExperiment:
     def _create_network(self, mt_invaded: bool) -> MultiSynapseNetwork:
         """Create network with specified MT status"""
         params = Model6Parameters()
+        params.em_coupling_enabled = True
+        params.multi_synapse_enabled = True
         
         network = MultiSynapseNetwork(
             n_synapses=self.n_synapses,
             params=params,
             pattern='clustered',
-            spacing_um=1.0,
-            mt_invaded=mt_invaded
+            spacing_um=1.0
         )
+        
+        network.initialize(Model6QuantumSynapse, params)
+        network.set_microtubule_invasion(mt_invaded)
         
         return network
     
@@ -168,30 +173,33 @@ class MTInvasionExperiment:
         for _ in range(100):
             network.step(dt, {"voltage": -70e-3, "reward": False})
         
-        # === PHASE 2: STIMULATION + DOPAMINE ===
-        n_stim = int(self.stim_duration_s / dt)
-        
-        for i in range(n_stim):
-            network.step(dt, {"voltage": -10e-3, "reward": True})
+        # === PHASE 2: STIMULATION + DOPAMINE (theta-burst) ===
+        for burst in range(5):
+            for spike in range(4):
+                for _ in range(2):  # 2ms depolarization
+                    network.step(dt, {"voltage": -10e-3, "reward": True})
+                for _ in range(8):  # 8ms rest
+                    network.step(dt, {"voltage": -70e-3, "reward": True})
+            for _ in range(160):  # 160ms inter-burst interval
+                network.step(dt, {"voltage": -70e-3, "reward": True})
             
-            # Sample every 10ms
-            if i % 10 == 0:
-                metrics = network.get_network_metrics()
-                em_field = metrics.get('collective_field_kT', 0)
-                em_fields.append(em_field)
-                
-                dimers = sum(
-                    len(s.dimer_particles.dimers) if hasattr(s, 'dimer_particles') else 0
-                    for s in network.synapses
-                )
-                dimer_counts.append(dimers)
-                
-                # Record timeline
-                result.timeline.append({
-                    'time': i * dt,
-                    'em_field': em_field,
-                    'dimers': dimers
-                })
+            # Sample after each burst
+            metrics = network.get_experimental_metrics()
+            em_field = metrics.get('mean_field_kT', 0)
+            em_fields.append(em_field)
+            
+            dimers = sum(
+                len(s.dimer_particles.dimers) if hasattr(s, 'dimer_particles') else 0
+                for s in network.synapses
+            )
+            dimer_counts.append(dimers)
+            
+            # Record timeline
+            result.timeline.append({
+                'time': burst * 0.2,  # ~200ms per burst
+                'em_field': em_field,
+                'dimers': dimers
+            })
         
         # === PHASE 3: CONSOLIDATION ===
         n_consol = int(self.consolidation_s / dt)
