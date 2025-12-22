@@ -111,6 +111,8 @@ class DimerParticleSystem:
         self.dx = dx  # Grid spacing in meters
         self.dx_nm = dx * 1e9  # In nanometers
         
+        self._bond_lookup = {}  # key: (min_id, max_id) -> bond
+        
         # Particle storage
         self.dimers: List[Dimer] = []
         self.next_id = 0
@@ -237,10 +239,10 @@ class DimerParticleSystem:
         return {'n_births': n_births, 'n_deaths': n_deaths}
     
     def _remove_all_bonds_for_dimer(self, dimer_id: int):
-        """Remove all entanglement bonds involving a specific dimer"""
-        to_remove = [bond for bond in self.entanglement_bonds 
+        to_remove = [key for key, bond in self._bond_lookup.items() 
                     if bond.dimer_i == dimer_id or bond.dimer_j == dimer_id]
-        for bond in to_remove:
+        for key in to_remove:
+            bond = self._bond_lookup.pop(key)
             self.entanglement_bonds.discard(bond)
     
     def _remove_dimer(self, dimer: Dimer):
@@ -405,15 +407,13 @@ class DimerParticleSystem:
                         self._remove_bond(dimer_i.id, dimer_j.id)
     
     def _get_bond(self, id_i: int, id_j: int) -> Optional[EntanglementBond]:
-        """Get entanglement bond between two dimers"""
         key = (min(id_i, id_j), max(id_i, id_j))
-        for bond in self.entanglement_bonds:
-            if (min(bond.dimer_i, bond.dimer_j), max(bond.dimer_i, bond.dimer_j)) == key:
-                return bond
-        return None
-    
+        return self._bond_lookup.get(key)
+        
     def _create_bond(self, id_i: int, id_j: int, strength: float):
-        """Create new entanglement bond"""
+        key = (min(id_i, id_j), max(id_i, id_j))
+        if key in self._bond_lookup:
+            return  # Already exists
         bond = EntanglementBond(
             dimer_i=id_i,
             dimer_j=id_j,
@@ -421,13 +421,14 @@ class DimerParticleSystem:
             formation_time=self.time
         )
         self.entanglement_bonds.add(bond)
+        self._bond_lookup[key] = bond
     
     def _remove_bond(self, id_i: int, id_j: int):
-        """Remove entanglement bond"""
-        bond = self._get_bond(id_i, id_j)
+        key = (min(id_i, id_j), max(id_i, id_j))
+        bond = self._bond_lookup.pop(key, None)
         if bond:
             self.entanglement_bonds.discard(bond)
-    
+
     # =========================================================================
     # NETWORK ANALYSIS - FIND ENTANGLED CLUSTERS
     # =========================================================================

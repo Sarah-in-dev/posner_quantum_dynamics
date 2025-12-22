@@ -166,6 +166,7 @@ class NetworkEntanglementTracker:
         }
     
     def _update_entanglement(self, dt: float):
+        print(f"DEBUG: all_dimers={len(self.all_dimers)}, bonds={len(self.entanglement_bonds)}")
         """
         Update pairwise entanglement with cross-synapse coupling
         """
@@ -495,23 +496,21 @@ class MultiSynapseNetwork:
             # (In future, could have synapse-specific stimuli)
             synapse.step(dt, stimulus)
             
-            # Get actual metrics from synapse
-            metrics = synapse.get_experimental_metrics()
-            
-            # Collect state - USE THE METRICS
-            # Get dimer concentration and convert to molecule count
-            dimer_nM = metrics.get('dimer_peak_nM_ct', 0.0)
-            dimer_count = dimer_nM * 0.006  # 741 nM → ~4.5 dimers
+            # Get dimer count directly from particle system (fast)
+            if hasattr(synapse, 'dimer_particles'):
+                dimer_count = len(synapse.dimer_particles.dimers)
+            else:
+                dimer_count = 0
 
             state = SynapseState(
                 position_um=self.positions[i],
                 dimer_count=dimer_count,
-                coherence=metrics.get('coherence_dimer_mean', 0.0),
+                coherence=synapse.get_mean_singlet_probability() if hasattr(synapse, 'get_mean_singlet_probability') else 0.0,
                 collective_field_kT=getattr(synapse, '_collective_field_kT', 0.0),
                 eligibility=getattr(synapse, '_current_eligibility', 0.0),
                 committed=getattr(synapse, '_camkii_committed', False),
                 committed_level=getattr(synapse, '_committed_memory_level', 0.0),
-                calcium_peak_uM=metrics.get('calcium_peak_uM', 0.0)
+                calcium_peak_uM=0.0,
             )
             synapse_states.append(state)
         
