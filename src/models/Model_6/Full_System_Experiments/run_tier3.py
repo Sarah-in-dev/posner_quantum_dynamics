@@ -1,15 +1,24 @@
 #!/usr/bin/env python3
 """
-Run Tier 3 Experiments
-======================
+Run Tier 3 Experiments (Complete Suite)
+========================================
 
 Full-scale experiments testing complete quantum-classical cascade predictions.
 
 These experiments run in minutes to hours and validate:
+
+ORIGINAL EXPERIMENTS (validated):
 1. Isotope comparison (P31 vs P32) - definitive test of quantum coherence necessity
 2. Dopamine timing - eligibility decay validates T2 prediction
 3. Pharmacological dissection - separate Q1/Q2/classical contributions
 4. MT invasion - tryptophan network requirement
+
+NEW EXPERIMENTS (December 2025):
+5. Temperature - coherence vs kinetics tradeoff
+6. Stimulation intensity - input-output curves (Hill analysis)
+7. UV wavelength - optimal superradiance activation
+8. Spatial clustering - geometry effects on cooperativity
+9. Consolidation kinetics - classical cascade to structural plasticity
 
 Known constraints (from Tier 2 debugging):
 - O(n²) entanglement bottleneck: limit synapses to ~10, consolidation to ~1-2s
@@ -20,10 +29,11 @@ Known constraints (from Tier 2 debugging):
 - To block calcium: params.calcium.nmda_blocked = True
 
 Usage:
-    python run_tier3.py                           # Full run, all experiments
-    python run_tier3.py --quick                   # Quick validation mode
-    python run_tier3.py --experiment isotope      # Single experiment
-    python run_tier3.py --list                    # List available experiments
+    python run_tier3.py                              # Full run, all experiments
+    python run_tier3.py --quick                      # Quick validation mode
+    python run_tier3.py --experiment isotope         # Single experiment
+    python run_tier3.py --experiment temperature     # New experiment
+    python run_tier3.py --list                       # List available experiments
 
 Author: Sarah Davidson
 Date: December 2025
@@ -39,33 +49,86 @@ import matplotlib.pyplot as plt
 # Add parent to path (Model_6 directory)
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Import experiment modules
+# Import experiment modules - Original
 from tier3_full_experiments import exp_isotope
 from tier3_full_experiments import exp_dopamine_timing
 from tier3_full_experiments import exp_pharmacology
 from tier3_full_experiments import exp_mt_invasion
 
+# Import experiment modules - New
+from tier3_full_experiments import exp_temperature
+from tier3_full_experiments import exp_stim_intensity
+from tier3_full_experiments import exp_uv_wavelength
+from tier3_full_experiments import exp_spatial_clustering
+from tier3_full_experiments import exp_consolidation_kinetics
+
 
 EXPERIMENTS = {
+    # === ORIGINAL EXPERIMENTS ===
     'isotope': {
         'name': 'Isotope Comparison (P31 vs P32)',
         'module': exp_isotope,
-        'description': 'Definitive test: P31 (T2≈67s) vs P32 (T2≈0.3s) eligibility decay'
+        'class': 'IsotopeExperiment',
+        'description': 'Definitive test: P31 (T2≈100s) vs P32 (T2≈0.3s) eligibility decay',
+        'category': 'core'
     },
     'dopamine_timing': {
         'name': 'Dopamine Timing Window',
         'module': exp_dopamine_timing,
-        'description': 'Validates T2=67s prediction through eligibility decay with delay'
+        'class': 'DopamineTimingExperiment',
+        'description': 'Validates T2=100s prediction through eligibility decay with delay',
+        'category': 'core'
     },
     'pharmacology': {
         'name': 'Pharmacological Dissection',
         'module': exp_pharmacology,
-        'description': 'Separate Q1 (tryptophan), Q2 (dimer), classical contributions'
+        'class': 'PharmacologyExperiment',
+        'description': 'Separate Q1 (tryptophan), Q2 (dimer), classical contributions',
+        'category': 'core'
     },
     'mt_invasion': {
         'name': 'MT Invasion Requirement',
         'module': exp_mt_invasion,
-        'description': 'Compare MT+ (invaded) vs MT- (naive) synapses'
+        'class': 'MTInvasionExperiment',
+        'description': 'Compare MT+ (invaded) vs MT- (naive) synapses',
+        'category': 'core'
+    },
+    
+    # === NEW EXPERIMENTS ===
+    'temperature': {
+        'name': 'Temperature Effects',
+        'module': exp_temperature,
+        'class': 'TemperatureExperiment',
+        'description': 'Coherence vs kinetics tradeoff - validates physiological optimization',
+        'category': 'physics'
+    },
+    'stim_intensity': {
+        'name': 'Stimulation Intensity (IO Curves)',
+        'module': exp_stim_intensity,
+        'class': 'StimIntensityExperiment',
+        'description': 'Input-output curves with Hill coefficient for cooperativity',
+        'category': 'physics'
+    },
+    'uv_wavelength': {
+        'name': 'UV Wavelength Effects',
+        'module': exp_uv_wavelength,
+        'class': 'UVWavelengthExperiment',
+        'description': 'Optimal superradiance activation - validates tryptophan as Q1 substrate',
+        'category': 'physics'
+    },
+    'spatial_clustering': {
+        'name': 'Spatial Clustering',
+        'module': exp_spatial_clustering,
+        'class': 'SpatialClusteringExperiment',
+        'description': 'Geometry effects on quantum cooperativity - clustered vs distributed',
+        'category': 'architecture'
+    },
+    'consolidation': {
+        'name': 'Consolidation Kinetics',
+        'module': exp_consolidation_kinetics,
+        'class': 'ConsolidationKineticsExperiment',
+        'description': 'Full cascade to structural plasticity - validates quantum→classical coupling',
+        'category': 'plasticity'
     },
 }
 
@@ -78,27 +141,24 @@ def create_output_dir(base_dir: str) -> Path:
     return output_dir
 
 
-def run_experiment(name: str, module, output_dir: Path,
+def run_experiment(name: str, output_dir: Path,
                    quick: bool = False, verbose: bool = True) -> dict:
     """Run single experiment and return summary"""
     
+    info = EXPERIMENTS[name]
+    module = info['module']
+    class_name = info['class']
+    
     print(f"\n{'='*70}")
-    print(f"TIER 3 EXPERIMENT: {EXPERIMENTS[name]['name']}")
+    print(f"TIER 3 EXPERIMENT: {info['name']}")
     print(f"{'='*70}")
-    print(EXPERIMENTS[name]['description'])
+    print(f"Category: {info['category']}")
+    print(f"Description: {info['description']}")
     print()
     
     # Get the experiment class from the module
-    if name == 'isotope':
-        experiment = module.IsotopeExperiment(quick_mode=quick, verbose=verbose)
-    elif name == 'dopamine_timing':
-        experiment = module.DopamineTimingExperiment(quick_mode=quick, verbose=verbose)
-    elif name == 'pharmacology':
-        experiment = module.PharmacologyExperiment(quick_mode=quick, verbose=verbose)
-    elif name == 'mt_invasion':
-        experiment = module.MTInvasionExperiment(quick_mode=quick, verbose=verbose)
-    else:
-        raise ValueError(f"Unknown experiment: {name}")
+    ExperimentClass = getattr(module, class_name)
+    experiment = ExperimentClass(quick_mode=quick, verbose=verbose)
     
     # Run experiment
     result = experiment.run()
@@ -118,13 +178,15 @@ def run_experiment(name: str, module, output_dir: Path,
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Run Tier 3 full-scale experiments',
+        description='Run Tier 3 full-scale experiments (complete suite)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
     python run_tier3.py                           # Full run, all experiments
     python run_tier3.py --quick                   # Quick validation mode
     python run_tier3.py --experiment isotope      # Single experiment
+    python run_tier3.py --experiment temperature  # New physics experiment
+    python run_tier3.py --category core           # Run only core experiments
     python run_tier3.py --list                    # List available experiments
         """
     )
@@ -133,6 +195,10 @@ Examples:
                         help='Quick mode (fewer conditions, shorter durations)')
     parser.add_argument('--experiment', type=str, choices=list(EXPERIMENTS.keys()),
                         help='Run single experiment')
+    parser.add_argument('--category', type=str, 
+                        choices=['core', 'physics', 'architecture', 'plasticity', 'all'],
+                        default='all',
+                        help='Run experiments by category')
     parser.add_argument('--output', type=str, default='results',
                         help='Output directory (default: results)')
     parser.add_argument('--no-plots', action='store_true',
@@ -146,10 +212,22 @@ Examples:
     
     if args.list:
         print("\nAvailable Tier 3 Experiments:")
-        print("-" * 60)
+        print("=" * 70)
+        
+        categories = {}
         for key, info in EXPERIMENTS.items():
-            print(f"  {key:<20} - {info['name']}")
-            print(f"  {' '*20}   {info['description']}")
+            cat = info['category']
+            if cat not in categories:
+                categories[cat] = []
+            categories[cat].append((key, info))
+        
+        for cat in ['core', 'physics', 'architecture', 'plasticity']:
+            if cat in categories:
+                print(f"\n[{cat.upper()}]")
+                print("-" * 60)
+                for key, info in categories[cat]:
+                    print(f"  {key:<20} - {info['name']}")
+                    print(f"  {' '*20}   {info['description']}")
         return 0
     
     # Create output directory
@@ -162,15 +240,20 @@ Examples:
     # Determine which experiments to run
     if args.experiment:
         experiments_to_run = [args.experiment]
+    elif args.category != 'all':
+        experiments_to_run = [k for k, v in EXPERIMENTS.items() if v['category'] == args.category]
     else:
         experiments_to_run = list(EXPERIMENTS.keys())
     
+    print(f"\nExperiments to run: {len(experiments_to_run)}")
+    for exp in experiments_to_run:
+        print(f"  - {exp}")
+    
     # Run experiments
     for exp_name in experiments_to_run:
-        module = EXPERIMENTS[exp_name]['module']
         try:
             result = run_experiment(
-                exp_name, module, output_dir,
+                exp_name, output_dir,
                 quick=args.quick,
                 verbose=not args.quiet
             )
@@ -201,24 +284,52 @@ Examples:
     print(f"\nResults saved to: {output_dir}")
     print(f"Experiments run: {len(experiments_to_run)}")
     
-    # Key findings
-    for exp_name, result in all_results.items():
-        if 'error' in result:
-            print(f"\n✗ {exp_name}: ERROR - {result['error']}")
-        elif exp_name == 'isotope':
-            if result.get('quantum_necessary'):
-                print(f"\n✓ ISOTOPE: P31 maintains eligibility, P32 does not - quantum coherence required")
-            else:
-                print(f"\n⚠ ISOTOPE: Check results - expected P31 >> P32")
-        elif exp_name == 'dopamine_timing':
-            fitted_t2 = result.get('fitted_T2_s', 0)
-            print(f"\n✓ DOPAMINE TIMING: Fitted T2 = {fitted_t2:.1f}s (theory: 67s)")
-        elif exp_name == 'pharmacology':
-            if result.get('dissection_valid'):
-                print(f"\n✓ PHARMACOLOGY: Q1/Q2/classical contributions separated")
-        elif exp_name == 'mt_invasion':
-            if result.get('mt_required'):
-                print(f"\n✓ MT INVASION: Tryptophan network required for full cascade")
+    # Key findings by category
+    print("\n--- CORE EXPERIMENTS ---")
+    for exp_name in ['isotope', 'dopamine_timing', 'pharmacology', 'mt_invasion']:
+        if exp_name in all_results:
+            result = all_results[exp_name]
+            if 'error' in result:
+                print(f"  ✗ {exp_name}: ERROR - {result['error']}")
+            elif exp_name == 'isotope' and result.get('quantum_necessary'):
+                print(f"  ✓ ISOTOPE: Quantum coherence required (T2 ratio: {result.get('t2_ratio', 0):.0f}×)")
+            elif exp_name == 'dopamine_timing':
+                print(f"  ✓ DOPAMINE: Fitted T2 = {result.get('fitted_T2_s', 0):.1f}s")
+            elif exp_name == 'pharmacology' and result.get('dissection_valid'):
+                print(f"  ✓ PHARMACOLOGY: Q1/Q2/classical separated")
+            elif exp_name == 'mt_invasion' and result.get('mt_required'):
+                print(f"  ✓ MT INVASION: Field ratio = {result.get('field_ratio', 0):.1f}×")
+    
+    print("\n--- PHYSICS EXPERIMENTS ---")
+    for exp_name in ['temperature', 'stim_intensity', 'uv_wavelength']:
+        if exp_name in all_results:
+            result = all_results[exp_name]
+            if 'error' in result:
+                print(f"  ✗ {exp_name}: ERROR - {result['error']}")
+            elif exp_name == 'temperature' and result.get('physiological_optimal'):
+                print(f"  ✓ TEMPERATURE: Optimal at {result.get('optimal_temp_C', 37)}°C (physiological)")
+            elif exp_name == 'stim_intensity' and result.get('cooperative'):
+                print(f"  ✓ STIM INTENSITY: Hill n = {result.get('hill_n', 0):.2f} (cooperative)")
+            elif exp_name == 'uv_wavelength' and result.get('matches_tryptophan'):
+                print(f"  ✓ UV WAVELENGTH: Peak at {result.get('peak_wavelength_nm', 0):.0f}nm (matches Trp)")
+    
+    print("\n--- ARCHITECTURE EXPERIMENTS ---")
+    for exp_name in ['spatial_clustering']:
+        if exp_name in all_results:
+            result = all_results[exp_name]
+            if 'error' in result:
+                print(f"  ✗ {exp_name}: ERROR - {result['error']}")
+            elif result.get('clustered_optimal'):
+                print(f"  ✓ SPATIAL: Clustered geometry optimal")
+    
+    print("\n--- PLASTICITY EXPERIMENTS ---")
+    for exp_name in ['consolidation']:
+        if exp_name in all_results:
+            result = all_results[exp_name]
+            if 'error' in result:
+                print(f"  ✗ {exp_name}: ERROR - {result['error']}")
+            elif result.get('matches_literature'):
+                print(f"  ✓ CONSOLIDATION: Volume at 60s = {result.get('volume_at_60s', 0):.2f}× (matches literature)")
     
     if not args.no_plots:
         plt.show()

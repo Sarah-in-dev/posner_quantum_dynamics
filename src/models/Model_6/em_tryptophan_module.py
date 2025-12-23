@@ -526,6 +526,7 @@ class TryptophanSuperradianceModule:
         self.collective = CollectiveDipoleProperties(params)
         self.emission = SuperradiantEmission(params)
         self.time_average = TimeAveragedField(params)
+        self.absorption = TryptophanAbsorption(params)
         
         # State tracking
         self.state = {
@@ -623,12 +624,20 @@ class TryptophanSuperradianceModule:
 
         if external_uv_active:
             # External UV provides CONTINUOUS excitation (not spike-dependent)
-            # Calculate steady-state time-averaged field from external UV
             external_intensity = self.params.metabolic_uv.external_uv_intensity
+            external_wavelength = self.params.metabolic_uv.external_uv_wavelength
             
-            # Higher external UV → stronger continuous field
-            # Scale: 1 mW/m² gives ~2x metabolic baseline
-            uv_enhancement = 1.0 + (external_intensity / 1e-3) * 1.0  # 1 mW → 2x
+            # WAVELENGTH-DEPENDENT ABSORPTION
+            # Tryptophan absorbs at 280nm (peak), FWHM ~30nm
+            # Off-resonance wavelengths (400nm, 500nm) are NOT absorbed
+            wl_nm = external_wavelength * 1e9
+            absorption = np.exp(-0.5 * ((wl_nm - 280.0) / 12.74) ** 2)  # 12.74 = 30/2.355
+            
+            # Only absorbed photons contribute to enhancement
+            effective_intensity = external_intensity * absorption
+            absorption_efficiency = self.absorption.get_absorption_efficiency(external_wavelength)
+            effective_intensity = external_intensity * absorption_efficiency
+            uv_enhancement = 1.0 + (effective_intensity / 1e-3) * 1.0 if absorption_efficiency > 0.01 else 1.0
             uv_enhancement = min(uv_enhancement, 5.0)  # Cap at 5x
             
             # Continuous field (doesn't depend on ca_spike_active)
@@ -747,6 +756,19 @@ class TryptophanExcitation:
         photons_per_spike = photon_flux * spike_duration
         excitations = photons_per_spike * self.absorption_efficiency
         return excitations
+    
+class TryptophanAbsorption:
+    """Wavelength-dependent absorption for tryptophan"""
+    
+    def __init__(self, params=None):
+        self.peak_wavelength_nm = 280.0
+        self.fwhm_main_nm = 30.0
+    
+    def get_absorption_efficiency(self, wavelength_m: float) -> float:
+        """Returns 0-1 based on tryptophan absorption spectrum"""
+        wavelength_nm = wavelength_m * 1e9
+        sigma = self.fwhm_main_nm / 2.355
+        return np.exp(-0.5 * ((wavelength_nm - 280.0) / sigma) ** 2)
 
 # =============================================================================
 # TESTING / VALIDATION
