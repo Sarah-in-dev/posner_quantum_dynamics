@@ -409,17 +409,13 @@ class CalciumPhosphateDimerization:
         self.dimer_concentration += d_dimer_dt
         self.trimer_concentration += d_trimer_dt
 
+        # Only count positive formation (not dissociation releasing Ca back)
+        self._ca_consumed = 6.0 * np.maximum(d_dimer_dt, 0) + 9.0 * np.maximum(d_trimer_dt, 0)
+
         # Physical limits  ← YOUR NEW CODE STARTS HERE
         self.dimer_concentration = np.maximum(self.dimer_concentration, 0)
         self.trimer_concentration = np.maximum(self.trimer_concentration, 0)
 
-        # Stoichiometry: need 6 Ca per dimer, 9 Ca per trimer
-        # max_dimer_from_ca = ca_conc / 6.0
-        # max_trimer_from_ca = ca_conc / 9.0
-        # self.dimer_concentration = np.minimum(self.dimer_concentration, max_dimer_from_ca)
-        # self.trimer_concentration = np.minimum(self.trimer_concentration, max_trimer_from_ca)
-
-    
         # =====================================================================
         # STEP 3: PNC LIFETIME TRACKING (OPTIONAL, FOR VALIDATION)
         # =====================================================================
@@ -430,7 +426,11 @@ class CalciumPhosphateDimerization:
         else:
             dimer_fraction = np.ones_like(ca_conc)
 
-
+    def get_calcium_consumed(self) -> np.ndarray:
+        """Return calcium consumed by dimer/trimer formation this timestep"""
+        return getattr(self, '_ca_consumed', np.zeros(self.grid_shape))
+    
+    
     def get_pnc_metrics(self) -> Dict[str, float]:
         """
         Get PNC-specific metrics for validation
@@ -544,7 +544,7 @@ class CaHPO4DimerSystem:
         
         logger.info("Initialized CaHPO₄→Ca₆(PO₄)₄ dimer system with CORRECT chemistry")
         
-    def step(self, dt: float, ca_conc: np.ndarray, po4_conc: np.ndarray) -> None:
+    def step(self, dt: float, ca_conc: np.ndarray, po4_conc: np.ndarray) -> np.ndarray:
         """
         Update system with correct 1:1 ion pair chemistry
         
@@ -574,6 +574,8 @@ class CaHPO4DimerSystem:
         
         # Update reference
         self.dimer_concentration = self.dimerization.dimer_concentration
+
+        return self.dimerization.get_calcium_consumed()
         
     def get_ion_pair_concentration(self) -> np.ndarray:
         """Get CaHPO₄⁰ concentration (M) - the monomer units"""

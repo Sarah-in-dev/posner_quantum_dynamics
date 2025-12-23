@@ -331,7 +331,12 @@ class Model6QuantumSynapse:
             # Form dimers with the prepared enhancement
             k_agg_original = self.ca_phosphate.dimerization.k_base
             self.ca_phosphate.dimerization.k_base = k_agg_to_use
-            self.ca_phosphate.step(dt, ca_conc, phosphate)
+            ca_consumed = self.ca_phosphate.step(dt, ca_conc, phosphate)
+
+            # Apply consumption back to calcium system
+            if ca_consumed is not None:
+                self.calcium.apply_consumption(ca_consumed)
+
             self.ca_phosphate.dimerization.k_base = k_agg_original  # Restore
             
             dimer_conc = self.ca_phosphate.get_dimer_concentration()
@@ -339,7 +344,6 @@ class Model6QuantumSynapse:
             # --- PHASE 2: QUANTUM COHERENCE OF DIMERS ---
             temperature = stimulus.get('temperature', self.params.environment.T)
             self.quantum.step(dt, dimer_conc, j_coupling, temperature)
-
             
             # --- PHASE 3: PARTICLE-BASED DIMER TRACKING WITH EMERGENT ENTANGLEMENT ---
             # Get dimer concentration from ca_phosphate system
@@ -421,7 +425,7 @@ class Model6QuantumSynapse:
             )
             
             # Store for NEXT timestep (this is the feedback delay)
-            self._k_agg_for_next_step = coupling_state['output']['k_agg_enhanced']
+            self._k_agg_for_next_step = k_agg_baseline     
             
             # Track for diagnostics
             self._em_field_trp = em_field_trp
@@ -528,7 +532,9 @@ class Model6QuantumSynapse:
             self._network_modulation = 0.0
             
             # Dimer formation (no EM enhancement)
-            self.ca_phosphate.step(dt, ca_conc, phosphate)
+            ca_consumed = self.ca_phosphate.step(dt, ca_conc, phosphate)
+            if ca_consumed is not None:
+                self.calcium.apply_consumption(ca_consumed)
             dimer_conc = self.ca_phosphate.get_dimer_concentration()
             
             # Quantum coherence tracking

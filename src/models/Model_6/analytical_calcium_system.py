@@ -376,6 +376,20 @@ class AnalyticalCalciumSystem:
         # 5. Track peak
         self.peak_concentration = max(self.peak_concentration, np.max(self._local_ca))
         
+    def apply_consumption(self, ca_consumed: np.ndarray):
+        """
+        Remove calcium consumed by dimer formation
+        
+        This provides the natural negative feedback that limits dimer count.
+        """
+        self._ca_field -= ca_consumed
+        self._ca_field = np.maximum(self._ca_field, 0)  # Can't go negative
+    
+        # Also update local points
+        if hasattr(self, '_local_ca'):
+            for i, (x, y) in enumerate(self.local_points):
+                self._local_ca[i] = self._ca_field[x, y]
+    
     def get_concentration(self) -> np.ndarray:
         """
         Get current free calcium concentration field
