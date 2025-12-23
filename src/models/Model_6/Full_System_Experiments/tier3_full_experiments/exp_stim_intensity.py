@@ -184,13 +184,15 @@ class StimIntensityExperiment:
                 # Depolarization at test voltage
                 for _ in range(2):
                     state = network.step(dt, {"voltage": stim_voltage, "reward": True})
-                    calcium_trace.append(state.mean_calcium * 1e6)  # Convert to μM
+                    mean_ca = np.mean([s.calcium_peak_uM for s in state.synapse_states]) if state.synapse_states else 0
+                    calcium_trace.append(mean_ca)  # Already in μM
                 
                 # Return to rest
                 for _ in range(8):
                     state = network.step(dt, {"voltage": -70e-3, "reward": True})
-                    calcium_trace.append(state.mean_calcium * 1e6)
-            
+                    mean_ca = np.mean([s.calcium_peak_uM for s in state.synapse_states]) if state.synapse_states else 0
+                    calcium_trace.append(mean_ca)
+
             # Inter-burst interval
             for _ in range(160):
                 state = network.step(dt, {"voltage": -70e-3, "reward": True})

@@ -6,28 +6,23 @@ Experiment: Spatial Clustering Effects
 Tests how synapse geometry affects quantum cooperativity.
 
 Scientific basis:
-- EM coupling strength decays with distance (exponential)
-- Clustered synapses should have stronger collective effects
-- Distributed synapses may not reach critical coupling threshold
+- Cross-synapse entanglement requires proximity
+- Clustered synapses form unified quantum networks
+- Distributed synapses have fragmented networks
 
 Predictions:
-- Clustered synapses: Strong EM coupling, faster commitment
-- Linear arrangement: Intermediate coupling
-- Distributed synapses: Weak coupling, may fail to commit
+- Clustered: Few clusters, many cross-synapse bonds, high coverage
+- Distributed: Many clusters, few cross-synapse bonds, low coverage
 
 Protocol:
 1. Create networks with identical synapse count but different geometries
 2. Apply identical stimulation protocol
-3. Measure EM field coherence, coupling strength, commitment
+3. Measure cross-synapse entanglement, cluster count, network coverage
 
 Success criteria:
-- Clustered > Linear > Distributed for field strength
-- Coupling decay matches expected exponential
+- Clustered has fewer clusters (unified network)
+- Clustered has more cross-synapse bonds
 - Validates collective quantum effects require proximity
-
-References:
-- Harvey & Bhalla (2015): Clustered plasticity
-- Murakoshi & Bhalla (2012): Spine clustering
 """
 
 import numpy as np
@@ -69,18 +64,26 @@ class ClusterTrialResult:
     max_distance_um: float = 0.0
     mean_coupling_strength: float = 0.0
     
-    # Q1 metrics
-    peak_em_field_kT: float = 0.0
-    field_coherence: float = 0.0  # How synchronized across synapses
+    # Spatial entanglement metrics (KEY METRICS)
+    n_clusters: int = 0
+    cross_synapse_bonds: int = 0
+    within_synapse_bonds: int = 0
+    network_coverage: float = 0.0
+    n_entangled_network: int = 0
     
-    # Q2 metrics
+    # Field metrics
+    q2_field_kT: float = 0.0
+    q1_field_kT: float = 0.0
+    field_coherence: float = 0.0
+    
+    # Dimer metrics
     peak_dimers: int = 0
     entanglement_fraction: float = 0.0
     
     # Output
     eligibility: float = 0.0
     committed: bool = False
-    commitment_time_s: float = 0.0  # Time to commitment
+    commitment_time_s: float = 0.0
     final_strength: float = 1.0
     
     runtime_s: float = 0.0
@@ -98,9 +101,6 @@ class ClusterResult:
     # Ranking
     best_pattern: str = ""
     worst_pattern: str = ""
-    
-    # Coupling analysis
-    coupling_decay_constant: float = 0.0  # μm
     
     timestamp: str = ""
     runtime_s: float = 0.0
@@ -137,10 +137,6 @@ class SpatialClusteringExperiment:
         params.em_coupling_enabled = True
         params.multi_synapse_enabled = True
         
-        # Set coupling length constant
-        if hasattr(params, 'em_coupling'):
-            params.em_coupling.coupling_length_um = 2.0  # Standard value
-        
         network = MultiSynapseNetwork(
             n_synapses=condition.n_synapses,
             params=params,
@@ -176,8 +172,7 @@ class SpatialClusteringExperiment:
         dt = 0.001  # 1 ms timestep
         
         # Track metrics over time
-        em_fields = []
-        per_synapse_fields = []
+        q2_fields = []
         commitment_time = None
         
         # === PHASE 1: BASELINE (100ms) ===
@@ -188,69 +183,77 @@ class SpatialClusteringExperiment:
         for burst in range(5):
             for spike in range(4):
                 for _ in range(2):
-                    state = network.step(dt, {"voltage": -10e-3, "reward": True})
+                    network.step(dt, {"voltage": -10e-3, "reward": True})
                 for _ in range(8):
-                    state = network.step(dt, {"voltage": -70e-3, "reward": True})
+                    network.step(dt, {"voltage": -70e-3, "reward": True})
             
-            # Record EM field
+            # Record Q2 field
             metrics = network.get_experimental_metrics()
-            em_fields.append(metrics.get('mean_field_kT', 0))
-            
-            # Record per-synapse fields for coherence calculation
-            synapse_fields = []
-            for s in network.synapses:
-                if hasattr(s, '_em_field_trp'):
-                    synapse_fields.append(s._em_field_trp)
-            if synapse_fields:
-                per_synapse_fields.append(synapse_fields)
+            q2_fields.append(metrics.get('q2_field_kT', 0))
             
             # Check for commitment
             if network.network_committed and commitment_time is None:
-                commitment_time = burst * 0.2  # Approximate time in seconds
+                commitment_time = burst * 0.2
             
             for _ in range(160):
                 network.step(dt, {"voltage": -70e-3, "reward": True})
-        
-        # Record peak EM field
-        result.peak_em_field_kT = max(em_fields) if em_fields else 0
-        
-        # Calculate field coherence (how synchronized are synapses)
-        if per_synapse_fields:
-            # Coherence = 1 - coefficient of variation
-            cvs = []
-            for fields in per_synapse_fields:
-                if len(fields) > 1 and np.mean(fields) > 0:
-                    cv = np.std(fields) / np.mean(fields)
-                    cvs.append(cv)
-            result.field_coherence = 1 - np.mean(cvs) if cvs else 0
-        
-        # Record dimers
-        result.peak_dimers = sum(
-            len(s.dimer_particles.dimers) if hasattr(s, 'dimer_particles') else 0
-            for s in network.synapses
-        )
-        
-        # Entanglement fraction
-        total_dimers = 0
-        entangled_dimers = 0
-        for s in network.synapses:
-            if hasattr(s, 'dimer_particles'):
-                for d in s.dimer_particles.dimers:
-                    total_dimers += 1
-                    if hasattr(d, 'is_entangled') and d.is_entangled:
-                        entangled_dimers += 1
-        result.entanglement_fraction = entangled_dimers / total_dimers if total_dimers > 0 else 0
         
         # === PHASE 3: CONSOLIDATION ===
         n_consol = int(self.consolidation_s / dt)
         for step in range(n_consol):
             network.step(dt, {"voltage": -70e-3, "reward": True})
-            
-            # Check for commitment
             if network.network_committed and commitment_time is None:
-                commitment_time = 1.0 + step * dt  # Time after stimulation
+                commitment_time = 1.0 + step * dt
         
         # === FINAL MEASUREMENTS ===
+        metrics = network.get_experimental_metrics()
+        
+        # Q2 field and Q1 field
+        result.q2_field_kT = max(q2_fields) if q2_fields else 0
+        result.q1_field_kT = metrics.get('mean_field_kT', 0)
+        
+        # Cross-synapse entanglement
+        result.cross_synapse_bonds = metrics.get('cross_synapse_bonds', 0)
+        result.within_synapse_bonds = metrics.get('within_synapse_bonds', 0)
+        result.n_entangled_network = metrics.get('n_entangled_network', 0)
+        
+        # Count clusters using union-find
+        tracker = network.entanglement_tracker
+        if tracker.all_dimers:
+            parent = {d['global_id']: d['global_id'] for d in tracker.all_dimers}
+            
+            def find(x):
+                if parent[x] != x:
+                    parent[x] = find(parent[x])
+                return parent[x]
+            
+            for bond in tracker.entanglement_bonds:
+                if bond[0] in parent and bond[1] in parent:
+                    px, py = find(bond[0]), find(bond[1])
+                    if px != py:
+                        parent[px] = py
+            
+            roots = set(find(d['global_id']) for d in tracker.all_dimers)
+            result.n_clusters = len(roots)
+            
+            # Largest cluster coverage
+            clusters = {}
+            for d in tracker.all_dimers:
+                root = find(d['global_id'])
+                clusters[root] = clusters.get(root, 0) + 1
+            largest = max(clusters.values()) if clusters else 0
+            result.network_coverage = largest / len(tracker.all_dimers)
+        else:
+            result.n_clusters = 0
+            result.network_coverage = 0.0
+        
+        # Dimer metrics
+        result.peak_dimers = sum(
+            len(s.dimer_particles.dimers) if hasattr(s, 'dimer_particles') else 0
+            for s in network.synapses
+        )
+        
+        # Commitment
         result.eligibility = np.mean([s.get_eligibility() for s in network.synapses])
         result.committed = network.network_committed
         result.commitment_time_s = commitment_time if commitment_time else 0
@@ -296,9 +299,11 @@ class SpatialClusteringExperiment:
             
             if self.verbose:
                 cond_trials = [t for t in trials if t.condition.name == cond.name]
-                field = np.mean([t.peak_em_field_kT for t in cond_trials])
+                clusters = np.mean([t.n_clusters for t in cond_trials])
+                cross = np.mean([t.cross_synapse_bonds for t in cond_trials])
+                coverage = np.mean([t.network_coverage for t in cond_trials])
                 commit = np.mean([1 if t.committed else 0 for t in cond_trials])
-                print(f" Q1={field:.1f}kT, commit={commit:.0%}")
+                print(f" clusters={clusters:.0f}, cross={cross:.0f}, coverage={coverage:.0%}, commit={commit:.0%}")
         
         # Build result
         result = ClusterResult(
@@ -334,30 +339,30 @@ class SpatialClusteringExperiment:
                         'spacing_um': spacing,
                         'mean_distance_um': np.mean([t.mean_distance_um for t in cond_trials]),
                         'mean_coupling': np.mean([t.mean_coupling_strength for t in cond_trials]),
-                        'em_field_mean': np.mean([t.peak_em_field_kT for t in cond_trials]),
-                        'em_field_std': np.std([t.peak_em_field_kT for t in cond_trials]),
-                        'field_coherence_mean': np.mean([t.field_coherence for t in cond_trials]),
-                        'dimers_mean': np.mean([t.peak_dimers for t in cond_trials]),
-                        'entanglement_mean': np.mean([t.entanglement_fraction for t in cond_trials]),
+                        'n_clusters_mean': np.mean([t.n_clusters for t in cond_trials]),
+                        'cross_bonds_mean': np.mean([t.cross_synapse_bonds for t in cond_trials]),
+                        'within_bonds_mean': np.mean([t.within_synapse_bonds for t in cond_trials]),
+                        'coverage_mean': np.mean([t.network_coverage for t in cond_trials]),
+                        'q2_field_mean': np.mean([t.q2_field_kT for t in cond_trials]),
                         'commit_rate': np.mean([1 if t.committed else 0 for t in cond_trials]),
-                        'commit_time_mean': np.mean([t.commitment_time_s for t in cond_trials if t.committed]),
-                        'strength_mean': np.mean([t.final_strength for t in cond_trials]),
                         'n_trials': len(cond_trials)
                     }
         
         return summary
     
     def _rank_patterns(self, result: ClusterResult):
-        """Rank patterns by performance"""
+        """Rank patterns by performance (fewer clusters = better connectivity)"""
         pattern_scores = {}
         
         for pattern in self.patterns:
             pattern_trials = [t for t in result.trials if t.condition.pattern == pattern]
             if pattern_trials:
-                # Score based on field strength and commitment
-                field = np.mean([t.peak_em_field_kT for t in pattern_trials])
-                commit = np.mean([1 if t.committed else 0 for t in pattern_trials])
-                pattern_scores[pattern] = field * (1 + commit)  # Combined score
+                # Score: more cross-bonds and fewer clusters = better
+                cross = np.mean([t.cross_synapse_bonds for t in pattern_trials])
+                clusters = np.mean([t.n_clusters for t in pattern_trials])
+                coverage = np.mean([t.network_coverage for t in pattern_trials])
+                # Higher cross-bonds, lower clusters, higher coverage = better
+                pattern_scores[pattern] = cross * coverage / max(clusters, 1)
         
         if pattern_scores:
             result.best_pattern = max(pattern_scores, key=pattern_scores.get)
@@ -370,19 +375,14 @@ class SpatialClusteringExperiment:
         print("="*70)
         
         print("\n" + "-"*70)
-        print(f"{'Pattern':<20} {'Spacing':<10} {'Distance':<10} {'Coupling':<10} {'Q1 Field':<10} {'Commit':<10}")
+        print(f"{'Pattern':<12} {'Spacing':<8} {'Clusters':<10} {'CrossBonds':<12} {'Coverage':<10} {'Commit':<8}")
         print("-"*70)
         
         for key in sorted(result.summary.keys()):
             stats = result.summary[key]
-            pattern = stats['pattern']
-            spacing = stats['spacing_um']
-            distance = stats['mean_distance_um']
-            coupling = stats['mean_coupling']
-            field = stats['em_field_mean']
-            commit = stats['commit_rate']
-            
-            print(f"{pattern:<20} {spacing:<10.1f} {distance:<10.2f} {coupling:<10.3f} {field:<10.1f} {commit:<10.0%}")
+            print(f"{stats['pattern']:<12} {stats['spacing_um']:<8.1f} "
+                  f"{stats['n_clusters_mean']:<10.0f} {stats['cross_bonds_mean']:<12.0f} "
+                  f"{stats['coverage_mean']:<10.0%} {stats['commit_rate']:<8.0%}")
         
         print("\n" + "="*70)
         print("PATTERN RANKING")
@@ -396,9 +396,10 @@ class SpatialClusteringExperiment:
         for pattern in self.patterns:
             pattern_trials = [t for t in result.trials if t.condition.pattern == pattern]
             if pattern_trials:
-                field = np.mean([t.peak_em_field_kT for t in pattern_trials])
-                commit = np.mean([1 if t.committed else 0 for t in pattern_trials])
-                print(f"    {pattern:<15}: Q1={field:.1f}kT, commit={commit:.0%}")
+                clusters = np.mean([t.n_clusters for t in pattern_trials])
+                cross = np.mean([t.cross_synapse_bonds for t in pattern_trials])
+                coverage = np.mean([t.network_coverage for t in pattern_trials])
+                print(f"    {pattern:<15}: clusters={clusters:.0f}, cross_bonds={cross:.0f}, coverage={coverage:.0%}")
         
         if result.best_pattern == 'clustered':
             print("\n  ✓ CLUSTERED GEOMETRY OPTIMAL")
@@ -412,67 +413,77 @@ class SpatialClusteringExperiment:
         """Generate publication-quality figure"""
         fig, axes = plt.subplots(1, 3, figsize=(14, 4.5))
         
-        # Colors by pattern
-        colors = {
-            'clustered': '#2ca02c',
-            'linear': '#1f77b4',
-            'distributed': '#ff7f0e',
-            'random': '#9467bd'
-        }
+        # Collect data for plotting
+        distances_c = []
+        distances_d = []
+        couplings_c = []
+        couplings_d = []
+        clusters_c = []
+        clusters_d = []
+        cross_c = []
+        cross_d = []
         
-        # === Panel A: EM Field vs Mean Distance ===
-        ax1 = axes[0]
-        
-        for key, stats in result.summary.items():
-            pattern = stats['pattern']
-            distance = stats['mean_distance_um']
-            field = stats['em_field_mean']
-            field_std = stats['em_field_std']
+        for spacing in self.spacings_um:
+            key_c = f"clustered_{spacing:.1f}µm"
+            key_d = f"distributed_{spacing:.1f}µm"
             
-            ax1.errorbar(distance, field, yerr=field_std, fmt='o', 
-                        color=colors.get(pattern, 'gray'), markersize=10,
-                        capsize=4, label=pattern if key.endswith('0.5µm') or key.endswith('1.0µm') else '')
+            if key_c in result.summary:
+                distances_c.append(result.summary[key_c]['mean_distance_um'])
+                couplings_c.append(result.summary[key_c]['mean_coupling'])
+                clusters_c.append(result.summary[key_c]['n_clusters_mean'])
+                cross_c.append(result.summary[key_c]['cross_bonds_mean'])
+            
+            if key_d in result.summary:
+                distances_d.append(result.summary[key_d]['mean_distance_um'])
+                couplings_d.append(result.summary[key_d]['mean_coupling'])
+                clusters_d.append(result.summary[key_d]['n_clusters_mean'])
+                cross_d.append(result.summary[key_d]['cross_bonds_mean'])
+        
+        # === Panel A: Clusters vs Distance ===
+        ax1 = axes[0]
+        if distances_c and clusters_c:
+            ax1.scatter(distances_c, clusters_c, c='green', s=100, label='clustered')
+            ax1.errorbar(distances_c, clusters_c, fmt='none', c='green', alpha=0.5)
+        if distances_d and clusters_d:
+            ax1.scatter(distances_d, clusters_d, c='orange', s=100, label='distributed')
+            ax1.errorbar(distances_d, clusters_d, fmt='none', c='orange', alpha=0.5)
         
         ax1.set_xlabel('Mean Inter-synapse Distance (µm)', fontsize=11)
-        ax1.set_ylabel('Q1 EM Field (kT)', fontsize=11)
-        ax1.set_title('A. Field vs Distance', fontweight='bold')
-        ax1.legend(loc='upper right', fontsize=9)
+        ax1.set_ylabel('Number of Clusters', fontsize=11)
+        ax1.set_title('A. Network Fragmentation', fontweight='bold')
+        ax1.legend(loc='upper left')
         
-        # === Panel B: Coupling Strength vs Field ===
+        # === Panel B: Cross-synapse bonds vs Coupling ===
         ax2 = axes[1]
-        
-        for key, stats in result.summary.items():
-            pattern = stats['pattern']
-            coupling = stats['mean_coupling']
-            field = stats['em_field_mean']
-            
-            ax2.scatter(coupling, field, s=100, color=colors.get(pattern, 'gray'),
-                       label=pattern if key.endswith('0.5µm') else '', alpha=0.7)
+        if couplings_c and cross_c:
+            ax2.scatter(couplings_c, cross_c, c='green', s=100, label='clustered')
+        if couplings_d and cross_d:
+            ax2.scatter(couplings_d, cross_d, c='orange', s=100, label='distributed')
         
         ax2.set_xlabel('Mean Coupling Strength', fontsize=11)
-        ax2.set_ylabel('Q1 EM Field (kT)', fontsize=11)
-        ax2.set_title('B. Field vs Coupling', fontweight='bold')
-        ax2.legend(loc='upper left', fontsize=9)
+        ax2.set_ylabel('Cross-Synapse Bonds', fontsize=11)
+        ax2.set_title('B. Cross-Synapse Entanglement', fontweight='bold')
+        ax2.legend(loc='upper left')
         
-        # === Panel C: Commitment Rate by Pattern ===
+        # === Panel C: Network Coverage by Pattern ===
         ax3 = axes[2]
         
         x = np.arange(len(self.patterns))
         width = 0.8 / len(self.spacings_um)
         
         for i, spacing in enumerate(self.spacings_um):
-            commits = []
+            coverages = []
             for pattern in self.patterns:
                 key = f"{pattern}_{spacing:.1f}µm"
-                commits.append(result.summary.get(key, {}).get('commit_rate', 0))
+                coverages.append(result.summary.get(key, {}).get('coverage_mean', 0))
             
             offset = (i - len(self.spacings_um)/2 + 0.5) * width
-            bars = ax3.bar(x + offset, commits, width, label=f'{spacing:.1f}µm', alpha=0.8)
+            ax3.bar(x + offset, coverages, width, label=f'{spacing:.1f}µm', alpha=0.8)
         
         ax3.axhline(y=0.5, color='gray', linestyle=':', alpha=0.5)
         ax3.set_xlabel('Pattern', fontsize=11)
-        ax3.set_ylabel('Commitment Rate', fontsize=11)
-        ax3.set_title('C. Commitment by Geometry', fontweight='bold')
+        ax3.set_ylabel('Network Coverage', fontsize=11)
+        ax3.set_title('C. Unified Network Coverage', fontweight='bold')
         ax3.set_xticks(x)
         ax3.set_xticklabels(self.patterns, rotation=20)
         ax3.set_ylim(0, 1.1)

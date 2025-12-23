@@ -420,6 +420,7 @@ class MultiSynapseNetwork:
         np.fill_diagonal(weights, 1.0)
         return weights
     
+    
     def initialize(self, ModelClass, base_params=None):
         """
         Initialize individual synapse models
@@ -509,7 +510,7 @@ class MultiSynapseNetwork:
                 eligibility=getattr(synapse, '_current_eligibility', 0.0),
                 committed=getattr(synapse, '_camkii_committed', False),
                 committed_level=getattr(synapse, '_committed_memory_level', 0.0),
-                calcium_peak_uM=0.0,
+                calcium_peak_uM=np.max(synapse.calcium.get_concentration()) * 1e6,
             )
             synapse_states.append(state)
         
@@ -665,13 +666,39 @@ class MultiSynapseNetwork:
         coherences = [getattr(s, '_previous_coherence', 0) for s in self.synapses]
         fields = [getattr(s, '_collective_field_kT', 0) for s in self.synapses]
         
+        # Cross-synapse entanglement metrics (THE KEY SPATIAL EFFECT)
+        ent = self._network_entanglement if hasattr(self, '_network_entanglement') and self._network_entanglement else {}
+        n_entangled_network = ent.get('n_entangled_network', 0)
+        n_total_bonds = ent.get('n_bonds', 0)
+        
+        # Count within vs cross-synapse bonds
+        within_bonds = 0
+        cross_bonds = 0
+        if hasattr(self, 'entanglement_tracker') and self.entanglement_tracker.all_dimers:
+            dimer_synapse = {d['global_id']: d['synapse_idx'] for d in self.entanglement_tracker.all_dimers}
+            for bond in self.entanglement_tracker.entanglement_bonds:
+                id1, id2 = bond
+                if dimer_synapse.get(id1) == dimer_synapse.get(id2):
+                    within_bonds += 1
+                else:
+                    cross_bonds += 1
+        
+        # Q2 field from entangled dimer network
+        U_single_kT = 6.6
+        q2_field = U_single_kT * np.sqrt(n_entangled_network) if n_entangled_network > 0 else 0.0
+        
         return {
             'n_synapses': self.n_synapses,
             'total_dimers': sum(dimer_counts),
             'mean_dimers_per_synapse': np.mean(dimer_counts),
             'std_dimers_per_synapse': np.std(dimer_counts),
             'mean_coherence': np.mean(coherences),
-            'mean_field_kT': np.mean(fields),
+            'mean_field_kT': np.mean(fields),  # Q1 field (local tryptophan)
+            'q2_field_kT': q2_field,  # Q2 field (entangled dimer network)
+            'n_entangled_network': n_entangled_network,
+            'within_synapse_bonds': within_bonds,
+            'cross_synapse_bonds': cross_bonds,
+            'total_bonds': n_total_bonds,
             'network_committed': self.network_committed,
             'network_commitment_level': self.network_commitment_level,
             'pattern': self.pattern,
