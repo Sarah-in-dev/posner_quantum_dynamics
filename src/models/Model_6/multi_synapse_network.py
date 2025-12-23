@@ -166,7 +166,6 @@ class NetworkEntanglementTracker:
         }
     
     def _update_entanglement(self, dt: float):
-        print(f"DEBUG: all_dimers={len(self.all_dimers)}, bonds={len(self.entanglement_bonds)}")
         """
         Update pairwise entanglement with cross-synapse coupling
         """

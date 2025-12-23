@@ -186,7 +186,7 @@ class QuantumClassicalCascadeExperiment:
         if quick_mode:
             self.n_trials = 2
             self.n_synapses = 5
-            self.observation_s = 60  # Watch cascade for 60s
+            self.observation_s = 30  # Watch cascade for 30s
             self.sample_interval_s = 2.0
         else:
             self.n_trials = 5
@@ -399,8 +399,8 @@ class QuantumClassicalCascadeExperiment:
         
         # === PHASE 4: OBSERVE CASCADE ===
         observation_start = current_time
-        dt_obs = 0.01  # 10ms steps for efficiency
-        
+        dt_obs = 0.1  # 100ms steps for efficiency
+
         last_sample_time = current_time
         
         while current_time - observation_start < self.observation_s:

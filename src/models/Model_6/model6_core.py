@@ -425,7 +425,8 @@ class Model6QuantumSynapse:
             )
             
             # Store for NEXT timestep (this is the feedback delay)
-            self._k_agg_for_next_step = k_agg_baseline     
+            # FORWARD COUPLING: Tryptophan EM field enhances dimer formation rate
+            self._k_agg_for_next_step = coupling_state['output']['k_agg_enhanced']   
             
             # Track for diagnostics
             self._em_field_trp = em_field_trp
@@ -475,26 +476,20 @@ class Model6QuantumSynapse:
             self._n_entangled_dimers = n_entangled
             self._plasticity_gate = plasticity_gate
 
-            # --- PHASE 10: CaMKII WITH COMMITMENT LOCKING ---
-            reference_field_kT = self._collective_field_kT
-
+            # --- PHASE 10: CaMKII WITH BARRIER MODULATION ---
+            # REVERSE COUPLING: Dimer field ALWAYS modulates CaMKII barrier
+            # This is the Q2 → Classical pathway
+            dimer_field_kT = coupling_state['reverse']['energy_modulation_kT']
+            
+            # CaMKII receives dimer field continuously (barrier modulation)
+            camkii_state = self.camkii.step(dt, calcium_uM, dimer_field_kT)
+            
+            # THREE-FACTOR GATE controls COMMITMENT (memory consolidation), not barrier
             if plasticity_gate and not self._camkii_committed:
-                # COMMITMENT: Lock in memory at current eligibility level
                 self._camkii_committed = True
-                
-                # Commitment STRENGTH scales with quantum factors
                 dimer_factor = min(1.0, n_entangled / 10.0)
-                field_factor = min(1.0, reference_field_kT / 20.0)
-                
+                field_factor = min(1.0, dimer_field_kT / 20.0)
                 self._committed_memory_level = eligibility * dimer_factor * field_factor
-                
-                camkii_state = self.camkii.step(dt, calcium_uM, reference_field_kT)
-                
-            elif self._camkii_committed:
-                camkii_state = self.camkii.step(dt, calcium_uM, 0.0)
-                
-            else:
-                camkii_state = self.camkii.step(dt, calcium_uM, 0.0)
 
             # --- PHASE 11: SPINE PLASTICITY ---
             if self._camkii_committed:
@@ -502,12 +497,12 @@ class Model6QuantumSynapse:
                     dt, 
                     self._committed_memory_level,
                     calcium_uM,
-                    quantum_field_kT=reference_field_kT
+                    quantum_field_kT=dimer_field_kT
                 )
             else:
                 spine_state = self.spine_plasticity.step(
                     dt, 0.0, calcium_uM,
-                    quantum_field_kT=reference_field_kT
+                    quantum_field_kT=dimer_field_kT
                 )
             
             # --- PHASE 12: TEMPLATE FEEDBACK (threshold behavior) ---
@@ -523,6 +518,16 @@ class Model6QuantumSynapse:
                 new_templates = baseline_templates  # No change below threshold
             
             self.ca_phosphate.set_n_templates(new_templates)
+
+            # --- PHASE 13: DDSC TRIGGERING (same as non-EM) ---
+            plateau = stimulus.get('plateau_potential', False)
+            if plateau:
+                # Use eligibility from dimer system to check DDSC trigger
+                self.ddsc.check_trigger(self._current_eligibility, self.time)
+            
+            # Update DDSC if triggered
+            if self.ddsc.triggered:
+                self.ddsc.integrate(self.time, dt)
         
         else:
             # === NON-EM PATH ===
@@ -578,15 +583,10 @@ class Model6QuantumSynapse:
             self._n_entangled_dimers = n_entangled
             self._plasticity_gate = False  # No gate in non-EM path
             
-            # Check if plateau should trigger DDSC
-            plateau = stimulus.get('plateau_potential', False)
-            if plateau:
-                qc_metrics = self.quantum.get_experimental_metrics()
-                self.ddsc.check_trigger(qc_metrics['coherence_mean'], self.time)
-            
-            # Update DDSC if triggered
-            if self.ddsc.triggered:
-                self.ddsc.integrate(self.time, dt)
+            # Non-EM path: No DDSC triggering
+            # Without EM coupling, dimers cannot influence CaMKII barrier
+            # Classical plasticity follows a different (slower) pathway
+            # DDSC remains untriggered - the quantum-classical handoff doesn't occur
             
             # Get structural drive from DDSC
             structural_drive = self.ddsc.get_structural_drive()
