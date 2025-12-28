@@ -515,9 +515,15 @@ class MultiSynapseNetwork:
             synapse_states.append(state)
         
         # Update network-level entanglement
-        self._network_entanglement = self.entanglement_tracker.step(
-            dt, self.synapses, self.positions
-        )
+        # Only update entanglement every 10 steps (expensive O(n²) operation)
+        if not hasattr(self, '_entanglement_step_counter'):
+            self._entanglement_step_counter = 0
+        self._entanglement_step_counter += 1
+
+        if self._entanglement_step_counter % 10 == 0:
+            self._network_entanglement = self.entanglement_tracker.step(
+                dt, self.synapses, self.positions
+            )
         
         # Compute network-level quantities
         network_state = self._compute_network_state(synapse_states)

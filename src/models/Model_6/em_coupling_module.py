@@ -402,7 +402,8 @@ class DimerProteinCoupling:
     
     def calculate_protein_modulation(self, 
                                     n_coherent_dimers: int,
-                                    protein_type: str = 'generic') -> Dict:
+                                    protein_type: str = 'generic',
+                                    combined_field_kT: float = None) -> Dict:
         """
         Calculate protein conformational modulation
         
@@ -443,6 +444,25 @@ class DimerProteinCoupling:
                 'above_threshold': False,
                 'n_dimers': n_coherent_dimers,
                 'energy_kT_raw': 0.0
+            }
+        
+        
+        # === CRITICAL THRESHOLD CHECK ===
+        # Barrier modulation requires COMBINED field (Q1+Q2) above 20 kT
+        # If combined_field_kT is provided, use it; otherwise use Q2 alone
+        FIELD_THRESHOLD_KT = 20.0
+        effective_field = combined_field_kT if combined_field_kT is not None else U_field
+        
+        if effective_field < FIELD_THRESHOLD_KT:
+            return {
+                'energy_modulation_kT': U_field,
+                'barrier_reduction_fraction': 0.0,
+                'barrier_reduction_kT': 0.0,
+                'rate_enhancement': 1.0,
+                'regime': field_dict['regime'],
+                'above_threshold': False,
+                'n_dimers': n_coherent_dimers,
+                'energy_kT_raw': field_dict['energy_kT_raw']
             }
         
         # Protein-specific barrier properties

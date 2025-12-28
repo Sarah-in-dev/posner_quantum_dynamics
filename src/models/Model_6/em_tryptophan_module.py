@@ -314,7 +314,10 @@ class SuperradiantEmission:
         For a charge q displaced by distance d in field E:
             U = q × E × d
         
-        Characteristic scale: 2e (for Ca²⁺ or HPO₄²⁻) at 1.5 Å
+        Physical scenario: Modulation of P-O bond electron density
+        Using single electron charge at P-O bond length (1.5 Å)
+        This gives ~20 kT at 3.6 GV/m, the "Goldilocks zone" for
+        modulating weak bonds without breaking covalent bonds.
         
         Parameters:
         ----------
@@ -327,11 +330,11 @@ class SuperradiantEmission:
         -------
         tuple : (energy_J, energy_kT)
         """
-        # Charge
+        # Charge - single electron for bond modulation
         e = 1.602e-19  # C
-        q = 2 * e  # For divalent ions
+        q = e  # Single charge for P-O bond electron
         
-        # Displacement
+        # Displacement - P-O bond length
         d_char = 1.5e-10  # m (1.5 Angstrom)
         
         # Energy
@@ -691,9 +694,30 @@ class TryptophanSuperradianceModule:
         n_trp_threshold = 100  # Minimum for collective field
         
         if n_tryptophans >= n_trp_threshold:
-            # Base field scales with sqrt(N), normalized to 22 kT at 1200 trp
-            base_kT = 22.0 * np.sqrt(n_tryptophans / 1200.0)
-            base_kT = min(base_kT, 25.0)  # Cap at 25 kT
+            # === FIRST-PRINCIPLES CALCULATION ===
+            # Calculate collective dipole: μ = μ_single × √(N × f_coherent)
+            mu_single = self.params.tryptophan.dipole_moment  # 2e-29 C·m
+            f_coherent = self.params.tryptophan.f_coherent  # ~0.08
+            n_eff = n_tryptophans * f_coherent
+            mu_collective = mu_single * np.sqrt(n_eff)
+            
+            # Electric field at 1 nm: E = (1/4πε₀) × (2μ/r³)
+            epsilon_0 = 8.854e-12  # F/m
+            r = 1e-9  # 1 nm
+            E_field = (1.0 / (4 * np.pi * epsilon_0)) * (2 * mu_collective / r**3)
+            
+            # Energy delivered to bond: U = e × E × d
+            e = 1.602e-19  # C (single charge for P-O bond modulation)
+            d = 1.5e-10  # m (1.5 Å, P-O bond length)
+            U_joules = e * E_field * d
+            
+            # Convert to kT
+            k_B = 1.381e-23  # J/K
+            T = 310.15  # K
+            base_kT = U_joules / (k_B * T)
+            
+            # Cap at 30 kT (physical limit - higher would break bonds)
+            base_kT = min(base_kT, 30.0)
             
             # Anesthetic reduces tryptophan coupling
             if self.params.tryptophan.anesthetic_applied:

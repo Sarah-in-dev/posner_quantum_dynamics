@@ -63,6 +63,10 @@ def run_experiment(name: str, module, output_dir: Path,
     print(f"{'='*70}")
     print(EXPERIMENTS[name]['description'])
     
+    # Create experiment-specific subdirectory
+    exp_output_dir = output_dir / name
+    exp_output_dir.mkdir(parents=True, exist_ok=True)
+    
     if name == 'network_threshold':
         # Quick mode: fewer synapse counts
         if quick:
@@ -72,7 +76,7 @@ def run_experiment(name: str, module, output_dir: Path,
         
         result = module.run(synapse_counts=synapse_counts, verbose=verbose)
         module.print_summary(result)
-        fig = module.plot(result, output_dir=output_dir)
+        fig = module.plot(result, output_dir=exp_output_dir)
         
         return {
             'threshold_n_synapses': result.threshold_n_synapses,
@@ -83,7 +87,7 @@ def run_experiment(name: str, module, output_dir: Path,
     elif name == 'three_factor_gate':
         result = module.run(verbose=verbose)
         module.print_summary(result)
-        fig = module.plot(result, output_dir=output_dir)
+        fig = module.plot(result, output_dir=exp_output_dir)
         
         return {
             'gate_validated': bool(result.gate_logic_validated),

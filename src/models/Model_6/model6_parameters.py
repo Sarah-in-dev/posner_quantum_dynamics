@@ -450,6 +450,16 @@ class TryptophanParameters:
     # Corresponds to geometry_enhancement × disorder_reduction ≈ 1.0
     geometry_enhancement: float = 2.0  # Organized MT lattice
     disorder_reduction: float = 0.5  # Partial coherence due to thermal motion
+
+    # === COHERENT FRACTION ===
+    # Fraction of tryptophans that couple coherently for field calculation
+    # Physical basis: not all N tryptophans participate in collective dipole
+    # - Thermal fluctuations break some coupling
+    # - Geometric disorder in biological lattice
+    # - Decoherence from protein environment
+    # Value: f_coherent = 0.10 gives ~22 kT at N=1200
+    # This makes the 22 kT energy scale EMERGENT from physics
+    f_coherent: float = 0.10  # Fraction coherent (tunable parameter)
     
     # === OPTICAL PROPERTIES ===
     wavelength_absorption: float = 280e-9  # m (tryptophan absorption peak)

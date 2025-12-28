@@ -519,12 +519,14 @@ class Model6QuantumSynapse:
             
             self.ca_phosphate.set_n_templates(new_templates)
 
-            # --- PHASE 13: DDSC TRIGGERING (same as non-EM) ---
+            # --- PHASE 13: DDSC TRIGGERING ---
             plateau = stimulus.get('plateau_potential', False)
             if plateau:
-                # Use eligibility from dimer system to check DDSC trigger
-                self.ddsc.check_trigger(self._current_eligibility, self.time)
-            
+                # DDSC requires BOTH eligibility AND sufficient combined field (>20 kT)
+                FIELD_THRESHOLD_KT = 20.0
+                if self._collective_field_kT >= FIELD_THRESHOLD_KT:
+                    self.ddsc.check_trigger(self._current_eligibility, self.time)
+                        
             # Update DDSC if triggered
             if self.ddsc.triggered:
                 self.ddsc.integrate(self.time, dt)

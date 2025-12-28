@@ -326,21 +326,32 @@ class DimerParticleSystem:
     def step_entanglement(self, dt: float, collective_field_kT: float = 0.0):
         """
         Update entanglement network via two pathways:
+    
+        1. BIRTH ENTANGLEMENT (primary pathway):
+        - Dimers formed within ~100ms window from overlapping ATP hydrolysis
+        - Inherit correlated nuclear spin states from shared pyrophosphate origin
+        - Requires: temporal overlap + both template-bound
+        - Physics: Fisher 2015, Halpern & Crosson 2019
         
-        1. BIRTH ENTANGLEMENT (immediate):
-           - Dimers from same pyrophosphate hydrolysis share origin
-           - Requires: same temporal window + template-bound
-           
-        2. EM-MEDIATED ENTANGLEMENT (continuous):
-           - Tryptophan superradiance creates coherent EM field
-           - Field acts as quantum bus - dimers couple through shared field mode
-           - Rate proportional to field strength (no hard threshold)
-           - Stronger field = faster entanglement transfer
+        2. EM-FIELD-PROTECTED NETWORK GROWTH (enabling condition):
+        - Tryptophan superradiance creates coherent EM environment
+        - Field PROTECTS existing correlations, does not directly CREATE entanglement
+        - Analogous to "cavity protection" in spin ensemble QED (Putz et al. 2014)
+        - Rate of network connectivity growth scales with field strength
+        - Stronger field = slower decoherence = larger connected clusters
+        
+        THEORETICAL NOTE:
+        The microscopic Hamiltonian for EM-mediated nuclear spin coupling in 
+        biological systems remains an open question. The UV-frequency tryptophan
+        field (~10^15 Hz) cannot couple directly to nuclear spin dynamics (~Hz)
+        via standard dispersive mechanisms. Our phenomenological treatment captures
+        the essential physics that coherent environments protect quantum states,
+        while leaving the detailed mechanism for future theoretical work.
         
         Physics basis:
         - Birth entanglement from shared pyrophosphate (Fisher 2015)
-        - EM field creates coherent environment for spin coupling
-        - Dimers coupled to same coherent field become coupled to each other
+        - Cavity protection analogy (Putz et al. 2014, Nature Physics)
+        - Field provides coherent environment, not direct coupling
         """
         n = len(self.dimers)
         if n < 2:

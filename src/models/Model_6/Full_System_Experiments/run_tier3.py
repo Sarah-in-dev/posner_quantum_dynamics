@@ -156,6 +156,10 @@ def run_experiment(name: str, output_dir: Path,
     print(f"Description: {info['description']}")
     print()
     
+    # === ADD THIS: Create experiment-specific subdirectory ===
+    exp_output_dir = output_dir / name
+    exp_output_dir.mkdir(parents=True, exist_ok=True)
+    
     # Get the experiment class from the module
     ExperimentClass = getattr(module, class_name)
     experiment = ExperimentClass(quick_mode=quick, verbose=verbose)
@@ -166,14 +170,12 @@ def run_experiment(name: str, output_dir: Path,
     # Print summary
     experiment.print_summary(result)
     
-    # Generate plots
-    fig = experiment.plot(result, output_dir=output_dir)
+    # Generate plots - USE exp_output_dir
+    fig = experiment.plot(result, output_dir=exp_output_dir)
     
-    # Save results
-    result_path = output_dir / f"{name}_results.json"
+    # Save results - USE exp_output_dir
+    result_path = exp_output_dir / f"results.json"  # Simplified name since it's in its own folder
     experiment.save_results(result, result_path)
-    
-    return experiment.get_summary_dict(result)
 
 
 def main():
@@ -289,7 +291,9 @@ Examples:
     for exp_name in ['isotope', 'dopamine_timing', 'pharmacology', 'mt_invasion']:
         if exp_name in all_results:
             result = all_results[exp_name]
-            if 'error' in result:
+            if result is None:
+                print(f"  ? {exp_name}: No result returned")
+            elif 'error' in result:
                 print(f"  ✗ {exp_name}: ERROR - {result['error']}")
             elif exp_name == 'isotope' and result.get('quantum_necessary'):
                 print(f"  ✓ ISOTOPE: Quantum coherence required (T2 ratio: {result.get('t2_ratio', 0):.0f}×)")
@@ -304,7 +308,9 @@ Examples:
     for exp_name in ['temperature', 'stim_intensity', 'uv_wavelength']:
         if exp_name in all_results:
             result = all_results[exp_name]
-            if 'error' in result:
+            if result is None:
+                print(f"  ? {exp_name}: No result returned")
+            elif 'error' in result:
                 print(f"  ✗ {exp_name}: ERROR - {result['error']}")
             elif exp_name == 'temperature' and result.get('physiological_optimal'):
                 print(f"  ✓ TEMPERATURE: Optimal at {result.get('optimal_temp_C', 37)}°C (physiological)")
@@ -317,7 +323,9 @@ Examples:
     for exp_name in ['spatial_clustering']:
         if exp_name in all_results:
             result = all_results[exp_name]
-            if 'error' in result:
+            if result is None:
+                print(f"  ? {exp_name}: No result returned")
+            elif 'error' in result:
                 print(f"  ✗ {exp_name}: ERROR - {result['error']}")
             elif result.get('clustered_optimal'):
                 print(f"  ✓ SPATIAL: Clustered geometry optimal")
@@ -326,10 +334,12 @@ Examples:
     for exp_name in ['consolidation']:
         if exp_name in all_results:
             result = all_results[exp_name]
-            if 'error' in result:
+            if result is None:
+                print(f"  ? {exp_name}: No result returned")
+            elif 'error' in result:
                 print(f"  ✗ {exp_name}: ERROR - {result['error']}")
-            elif result.get('matches_literature'):
-                print(f"  ✓ CONSOLIDATION: Volume at 60s = {result.get('volume_at_60s', 0):.2f}× (matches literature)")
+            elif result.get('feedback_validated'):
+                print(f"  ✓ CONSOLIDATION: Cascade validated")
     
     if not args.no_plots:
         plt.show()

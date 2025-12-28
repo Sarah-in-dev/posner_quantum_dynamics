@@ -78,12 +78,16 @@ def run_experiment(name: str, module, output_dir: Path,
     print(f"{'='*70}")
     print(EXPERIMENTS[name]['description'])
     
+    # Create experiment-specific subdirectory
+    exp_output_dir = output_dir / name
+    exp_output_dir.mkdir(parents=True, exist_ok=True)
+    
     # Configure based on quick mode
     if name == 'isotope':
         duration = 10.0 if quick else 60.0
         results = module.run(duration_s=duration, verbose=verbose)
         module.print_summary(results)
-        fig = module.plot(results, output_dir=output_dir)
+        fig = module.plot(results, output_dir=exp_output_dir)
         
         return {
             'P31_final_singlet': float(results['P31'].final_singlet),
@@ -96,7 +100,7 @@ def run_experiment(name: str, module, output_dir: Path,
         rest = 3.0 if quick else 10.0
         result = module.run(n_bursts=n_bursts, rest_duration_s=rest, verbose=verbose)
         module.print_summary(result)
-        fig = module.plot(result, output_dir=output_dir)
+        fig = module.plot(result, output_dir=exp_output_dir)
         
         return {
             'final_particles': int(result.rest_particles[-1]) if result.rest_particles else 0,
@@ -108,7 +112,7 @@ def run_experiment(name: str, module, output_dir: Path,
         n_bursts = 3 if quick else 5
         result = module.run(n_bursts=n_bursts, verbose=verbose)
         module.print_summary(result)
-        fig = module.plot(result, output_dir=output_dir)
+        fig = module.plot(result, output_dir=exp_output_dir)
         
         return {
             'final_particles': int(result.final_particles),
@@ -121,7 +125,7 @@ def run_experiment(name: str, module, output_dir: Path,
         dur_p32 = 2.0 if quick else 5.0
         results = module.run(duration_P31=dur_p31, duration_P32=dur_p32, verbose=verbose)
         module.print_summary(results)
-        fig = module.plot(results, output_dir=output_dir)
+        fig = module.plot(results, output_dir=exp_output_dir)
         
         return {
             'P31_T_fitted': float(results['P31'].T_singlet_fitted),
