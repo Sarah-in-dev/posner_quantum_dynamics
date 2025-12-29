@@ -343,6 +343,9 @@ class Model6QuantumSynapse:
             
             # --- PHASE 2: QUANTUM COHERENCE OF DIMERS ---
             temperature = stimulus.get('temperature', self.params.environment.T)
+            # Apply temperature scaling to chemical kinetics
+            self.calcium.channels.apply_temperature_scaling(temperature)
+            self.ca_phosphate.dimerization.apply_temperature_scaling(temperature)
             self.quantum.step(dt, dimer_conc, j_coupling, temperature)
             
             # --- PHASE 3: PARTICLE-BASED DIMER TRACKING WITH EMERGENT ENTANGLEMENT ---

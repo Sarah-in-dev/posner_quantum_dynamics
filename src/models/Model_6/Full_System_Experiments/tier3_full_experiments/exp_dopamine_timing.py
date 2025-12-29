@@ -171,7 +171,7 @@ class DopamineTimingExperiment:
         # === PHASE 3: DELAY (no reward, resting potential) ===
         if condition.dopamine_delay_s > 0:
             # Use coarser timestep for long delays
-            dt_delay = 0.01 if condition.dopamine_delay_s > 5 else 0.001
+            dt_delay = 0.1 if condition.dopamine_delay_s > 5 else 0.05
             n_delay = int(condition.dopamine_delay_s / dt_delay)
             
             # Record timeline at intervals

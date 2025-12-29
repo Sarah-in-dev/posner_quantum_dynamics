@@ -56,20 +56,35 @@ class CalciumChannels:
         self.params = params
         self.n_channels = len(positions)
         
-        # Channel state (boolean: open or closed)
+        # Channel state
         self.state = np.zeros(self.n_channels, dtype=bool)
-        
-        # Current through each channel (Amperes)
         self.current = np.zeros(self.n_channels)
         
-        # Gating kinetics
-        self.alpha = 1e3  # Opening rate (1/s)
-        self.beta = 2e3   # Closing rate (1/s) → ~0.5ms open time
+        # Gating kinetics at reference temperature (37°C)
+        self.alpha_ref = 1e3   # Opening rate (1/s) at 310.15 K
+        self.beta_ref = 2e3    # Closing rate (1/s) at 310.15 K
+        self.alpha = self.alpha_ref
+        self.beta = self.beta_ref
         
-        # Track open time for each channel
+        # Temperature scaling parameters
+        self.T_ref = 310.15  # K (37°C)
+        self.Ea_gating = 60000.0  # J/mol (~Q10 = 2.5 for channel kinetics)
+        
         self.time_open = np.zeros(self.n_channels)
         
         logger.info(f"Initialized {self.n_channels} calcium channels")
+    
+    def apply_temperature_scaling(self, T: float):
+        """
+        Apply Arrhenius temperature scaling to channel gating rates.
+        
+        Args:
+            T: Temperature in Kelvin
+        """
+        R = 8.314  # J/(mol·K)
+        scale_factor = np.exp(-self.Ea_gating / R * (1/T - 1/self.T_ref))
+        self.alpha = self.alpha_ref * scale_factor
+        self.beta = self.beta_ref * scale_factor
         
     def update_gating(self, dt: float, voltage: Optional[float] = None):
         """

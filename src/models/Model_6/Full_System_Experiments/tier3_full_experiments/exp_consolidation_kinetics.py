@@ -285,7 +285,9 @@ class QuantumClassicalCascadeExperiment:
             
             if hasattr(s, 'em_coupling') and s.em_coupling is not None:
                 n_coh = len(s.dimer_particles.dimers) if hasattr(s, 'dimer_particles') else 0
-                mod = s.em_coupling.reverse.calculate_protein_modulation(n_coh, 'camkii')
+                # Get combined field (Q1 from tryptophan + Q2 contribution)
+                combined_field = s._collective_field_kT if hasattr(s, '_collective_field_kT') else 0.0
+                mod = s.em_coupling.reverse.calculate_protein_modulation(n_coh, 'camkii', combined_field_kT=combined_field)
                 barrier_reductions.append(mod.get('barrier_reduction_kT', 0))
                 rate_enhancements.append(mod.get('rate_enhancement', 1))
             

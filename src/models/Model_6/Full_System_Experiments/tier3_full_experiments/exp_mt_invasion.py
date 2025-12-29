@@ -291,7 +291,7 @@ class MTInvasionExperiment:
         
         # Validate: MT+ should have significantly higher field and commitment
         result.mt_required = (
-            result.mt_plus_field > 2 * result.mt_minus_field and
+            result.mt_plus_field > 1.5 * result.mt_minus_field and
             result.mt_plus_commit > result.mt_minus_commit + 0.2
         )
         

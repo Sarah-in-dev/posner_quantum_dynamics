@@ -61,6 +61,8 @@ from tier3_full_experiments import exp_stim_intensity
 from tier3_full_experiments import exp_uv_wavelength
 from tier3_full_experiments import exp_spatial_clustering
 from tier3_full_experiments import exp_consolidation_kinetics
+from tier3_full_experiments import exp_sensitivity_analysis
+from tier3_full_experiments import exp_classical_comparison
 
 
 EXPERIMENTS = {
@@ -130,6 +132,21 @@ EXPERIMENTS = {
         'description': 'Full cascade to structural plasticity - validates quantum→classical coupling',
         'category': 'plasticity'
     },
+    'sensitivity': {
+    'name': 'Parameter Sensitivity Analysis',
+    'module': exp_sensitivity_analysis,
+    'class': 'SensitivityExperiment',
+    'description': 'Tests robustness of predictions to parameter uncertainty',
+    'category': 'validation'
+    },
+    'classical': {
+    'name': 'Classical vs Quantum Comparison',
+    'module': exp_classical_comparison,
+    'class': 'ClassicalComparisonExperiment',
+    'description': 'Shows CaMKII cannot bridge 60-100s learning window',
+    'category': 'validation'
+    },
+    
 }
 
 

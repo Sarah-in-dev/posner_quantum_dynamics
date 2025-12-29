@@ -198,7 +198,7 @@ class IsotopeExperiment:
         # During delay, no reward signal - this tests eligibility persistence
         if condition.dopamine_delay_s > 0:
             # Use coarser timestep for long delays
-            dt_delay = 0.01 if condition.dopamine_delay_s > 1 else 0.001
+            dt_delay = 0.1 if condition.dopamine_delay_s > 1 else 0.001
             n_delay_steps = int(condition.dopamine_delay_s / dt_delay)
             
             for _ in range(n_delay_steps):

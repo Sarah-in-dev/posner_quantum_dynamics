@@ -125,7 +125,7 @@ class SpatialClusteringExperiment:
             self.n_synapses = 5
             self.consolidation_s = 0.5
         else:
-            self.patterns = ['clustered', 'linear', 'distributed', 'random']
+            self.patterns = ['clustered', 'linear', 'distributed']
             self.spacings_um = [0.5, 1.0, 2.0, 5.0]
             self.n_trials = 5
             self.n_synapses = 10

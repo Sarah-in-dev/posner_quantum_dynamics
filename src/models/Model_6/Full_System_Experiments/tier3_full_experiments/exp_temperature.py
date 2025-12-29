@@ -140,13 +140,31 @@ class TemperatureExperiment:
             self.consolidation_s = 1.0
     
     def _create_network(self, condition: TempCondition) -> MultiSynapseNetwork:
-        """Create network at specified temperature"""
+        """Create network at specified temperature with temperature-adjusted rates"""
         params = Model6Parameters()
         params.em_coupling_enabled = True
         params.multi_synapse_enabled = True
         
         # Set temperature (Kelvin)
-        params.environment.T = condition.temperature_K
+        T = condition.temperature_K
+        T_ref = 310.15  # 37°C reference
+        params.environment.T = T
+        
+        # === TEMPERATURE-ADJUST CLASSICAL CHEMISTRY (Q10 ~ 2.0) ===
+        # These rates should increase with temperature
+        Q10 = 2.0
+        temp_factor = Q10 ** ((T - T_ref) / 10.0)
+        
+        # ATP hydrolysis (affects phosphate production)
+        params.atp.hydrolysis_rate_active *= temp_factor
+        params.atp.hydrolysis_rate_basal *= temp_factor
+        
+        # Dimer formation kinetics
+        params.posner.formation_rate_constant *= temp_factor
+        
+        # === QUANTUM PARAMETERS STAY CONSTANT ===
+        # T2, singlet lifetime - these are NOT touched
+        # This is the key quantum signature!
         
         # Create network
         network = MultiSynapseNetwork(
@@ -175,6 +193,9 @@ class TemperatureExperiment:
         
         dt = 0.001  # 1 ms timestep
         
+        # Temperature in Kelvin for this condition
+        temp_K = condition.temperature_K
+
         # Track metrics over time
         dimer_timeline = []
         singlet_prob_timeline = []
@@ -182,15 +203,15 @@ class TemperatureExperiment:
         
         # === PHASE 1: BASELINE (100ms) ===
         for _ in range(100):
-            network.step(dt, {"voltage": -70e-3, "reward": False})
+            network.step(dt, {"voltage": -70e-3, "reward": False, "temperature": temp_K})
         
         # === PHASE 2: STIMULATION (theta-burst with dopamine) ===
         for burst in range(5):
             for spike in range(4):
                 for _ in range(2):  # 2ms depolarization
-                    network.step(dt, {"voltage": -10e-3, "reward": True})
+                    network.step(dt, {"voltage": -10e-3, "reward": True, "temperature": temp_K})
                 for _ in range(8):  # 8ms rest
-                    network.step(dt, {"voltage": -70e-3, "reward": True})
+                    network.step(dt, {"voltage": -70e-3, "reward": True, "temperature": temp_K})
             
             # Record after each burst
             dimers = sum(
@@ -213,7 +234,7 @@ class TemperatureExperiment:
             singlet_prob_timeline.append(np.mean(all_ps) if all_ps else 0.25)
             
             for _ in range(160):  # 160ms inter-burst interval
-                network.step(dt, {"voltage": -70e-3, "reward": True})
+                network.step(dt, {"voltage": -70e-3, "reward": True, "temperature": temp_K})
         
         # Record peak dimers
         result.peak_dimers = max(dimer_timeline) if dimer_timeline else 0
@@ -222,7 +243,7 @@ class TemperatureExperiment:
         # === PHASE 3: CONSOLIDATION ===
         n_consol = int(self.consolidation_s / dt)
         for _ in range(n_consol):
-            network.step(dt, {"voltage": -70e-3, "reward": True})
+            network.step(dt, {"voltage": -70e-3, "reward": True, "temperature": temp_K})
         
         # === FINAL MEASUREMENTS ===
         metrics = network.get_experimental_metrics()

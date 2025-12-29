@@ -128,6 +128,11 @@ class CalciumPhosphateDimerization:
         # NEW: PNC lifetime tracking (optional, for diagnostics)
         self.pnc_lifetime = np.zeros(grid_shape)
         
+        # Base rate at reference temperature (37°C = 310.15 K)
+        self.k_base_ref = 8e5  # M⁻¹s⁻¹ at 310.15 K
+        self.k_base = self.k_base_ref  # Current effective rate
+        self.T_ref = 310.15  # K (37°C)
+        self.Ea_aggregation = 50000.0  # J/mol (~Q10 = 2.0)
         
         # Aggregation is diffusion-limited
         # BUT: 6 units must come together (higher order than 2)
@@ -142,17 +147,6 @@ class CalciumPhosphateDimerization:
         N_A = 6.022e23
         k_pairwise_M = k_pairwise * N_A
         
-        # For 6-body aggregation, effective rate is much lower
-        # Estimated from nucleation theory: k_eff ≈ k₂ × ([CaHPO₄]/C₀)⁴
-        # where C₀ is a reference concentration (1 mM)
-        # This gives concentration-dependent rate
-        
-        # Recalibrated for PNC aggregation (from spec doc)
-        # Target: 741 nM dimers in 100-200 ms with template enhancement
-        # [PNC] ~ few μM (from 50% binding)
-        # k_agg ≈ 8×10⁵ M⁻¹s⁻¹ for bulk aggregation
-        self.k_base = 8e5  # M⁻¹s⁻¹ (recalibrated for PNC aggregation)
-        
         
         # Dissociation (very slow - dimers are stable)
         self.k_dissociation = 0.001  # s⁻¹
@@ -163,6 +157,20 @@ class CalciumPhosphateDimerization:
         
         logger.info(f"Initialized Ca₆(PO₄)₄ dimer aggregation (k_agg={self.k_base:.2e} M⁻¹s⁻¹)")
         
+    def apply_temperature_scaling(self, T: float):
+        """
+        Apply Arrhenius temperature scaling to aggregation rate.
+        
+        Args:
+            T: Temperature in Kelvin
+        
+        Standard Arrhenius: k(T) = k_ref × exp(-Ea/R × (1/T - 1/T_ref))
+        With Ea = 50 kJ/mol, gives Q10 ≈ 2.0
+        """
+        R = 8.314  # J/(mol·K)
+        scale_factor = np.exp(-self.Ea_aggregation / R * (1/T - 1/self.T_ref))
+        self.k_base = self.k_base_ref * scale_factor
+    
     def calculate_pnc_equilibrium(self, 
                                 ion_pair_conc: np.ndarray,
                                 ca_conc: np.ndarray) -> np.ndarray:
