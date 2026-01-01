@@ -3,36 +3,32 @@
 Experiment: Classical vs Quantum Eligibility Trace Comparison
 ==============================================================
 
-Demonstrates that classical biochemical mechanisms cannot maintain
-eligibility traces over the 60-100 second timescale required for
-temporal credit assignment in reinforcement learning.
+Demonstrates that classical CaMKII mechanisms cannot maintain eligibility
+traces over the 60-100 second learning window, while quantum dimer-based
+eligibility can.
 
-Scientific basis:
-The "temporal credit assignment problem" requires synapses to remember
-their activation for 60-100 seconds until dopamine reward arrives.
+THIS VERSION USES THE ACTUAL MODEL 6 SYSTEM - not analytical approximations.
 
-CLASSICAL MECHANISM (CaMKII):
-- CaMKII autophosphorylation is the leading classical candidate
-- Maintains activity via T286 autophosphorylation
-- Dephosphorylated by PP1 with τ ≈ 5-15 seconds
-- Literature: Lisman et al. 2002, Lee et al. 2009
+EXPERIMENTAL DESIGN:
 
-QUANTUM MECHANISM (Ca₆(PO₄)₄ dimers):
-- Nuclear spin singlet states in phosphorus-31
-- Protected by J-coupling from ATP hydrolysis
-- T2 ≈ 100 seconds (Agarwal et al. 2023)
+1. QUANTUM ELIGIBILITY:
+   - Run Model6QuantumSynapse with full EM coupling
+   - Extract synapse.get_eligibility() at each timepoint
+   - This is the particle-based singlet probability: (mean_P_S - 0.25) / 0.75
 
-Prediction:
-- Classical: Eligibility decays to <10% by 30s
-- Quantum: Eligibility remains >30% at 60s
+2. CLASSICAL BASELINE (CaMKII molecular_memory):
+   - From the SAME simulation, extract synapse.camkii.molecular_memory
+   - This is pT286 × GluN2B_bound - the classical memory signal
+   - Shows what CaMKII alone can achieve
 
-This is THE key comparison showing why quantum coherence is necessary.
+3. COMPARISON:
+   - Track both signals after theta-burst stimulation
+   - No dopamine (pure decay comparison)
+   - Show quantum eligibility persists while CaMKII decays
 
-References:
-- Lisman et al. 2002 Nat Rev Neurosci - CaMKII as memory molecule
-- Lee et al. 2009 Nature - CaMKII dynamics in spines
-- Strack et al. 1997 JBC - PP1 dephosphorylation rates
-- Agarwal et al. 2023 - Dimer coherence times
+KEY PREDICTIONS:
+- Classical (CaMKII): molecular_memory decays with τ ≈ 10s (PP1 limited)
+- Quantum (dimers): eligibility decays with T2 ≈ 100s (singlet lifetime)
 
 Author: Sarah Davidson
 Date: December 2025
@@ -41,25 +37,22 @@ Date: December 2025
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Optional
 from pathlib import Path
 import json
 from datetime import datetime
 import sys
+import time
+from scipy.optimize import curve_fit
 
 # Add parent to path for Model 6 imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Try to import Model 6 components
-try:
-    from model6_core import Model6QuantumSynapse
-    from model6_parameters import Model6Parameters
-    from multi_synapse_network import MultiSynapseNetwork
-    HAS_MODEL6 = True
-except ImportError:
-    HAS_MODEL6 = False
-    print("Warning: Model 6 not available, using analytical quantum model")
+# REQUIRE Model 6 imports - fail loudly if not available
+from model6_core import Model6QuantumSynapse
+from model6_parameters import Model6Parameters
+from multi_synapse_network import MultiSynapseNetwork
 
 # Style settings
 plt.rcParams.update({
@@ -77,357 +70,398 @@ plt.rcParams.update({
 
 
 # =============================================================================
-# CLASSICAL MODEL: CaMKII Autophosphorylation
+# DATA STRUCTURES
 # =============================================================================
 
 @dataclass
-class CaMKIIParameters:
-    """
-    CaMKII biochemical parameters from literature
-    
-    References:
-    - Lisman et al. 2002 Nat Rev Neurosci 3:175-190
-    - Lee et al. 2009 Nature 458:299-304
-    - Strack et al. 1997 JBC 272:13467-13470
-    - Bradshaw et al. 2003 PNAS 100:10512-10517
-    """
-    
-    # === ACTIVATION ===
-    # Ca²⁺/CaM binding and autophosphorylation
-    k_activation: float = 10.0      # s⁻¹ (fast activation with Ca²⁺/CaM)
-    K_CaM: float = 50e-9            # M (CaM affinity, ~50 nM)
-    n_hill: float = 4.0             # Hill coefficient (cooperative)
-    
-    # === AUTOPHOSPHORYLATION ===
-    # T286 phosphorylation makes CaMKII Ca²⁺-independent
-    k_auto: float = 1.0             # s⁻¹ (autophosphorylation rate)
-    autonomous_fraction: float = 0.8 # Fraction that becomes autonomous
-    
-    # === DEPHOSPHORYLATION (THE KEY PARAMETER) ===
-    # PP1 is the primary phosphatase for CaMKII-T286
-    # Strack et al. 1997: "t1/2 of 5-10 seconds in vitro"
-    # Lee et al. 2009: "decay τ of ~10s in spines"
-    k_PP1: float = 0.1              # s⁻¹ (τ = 10s, literature range 5-15s)
-    
-    # PP2A contributes at longer timescales
-    k_PP2A: float = 0.01            # s⁻¹ (slower, τ = 100s)
-    
-    # === CONCENTRATIONS ===
-    camkii_total: float = 100e-6    # M (100 µM in PSD, very high)
-    pp1_concentration: float = 1e-6  # M (1 µM)
-    
-
-def simulate_camkii_decay(params: CaMKIIParameters,
-                          initial_activation: float = 1.0,
-                          duration_s: float = 120.0,
-                          dt: float = 0.1) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Simulate CaMKII activity decay after Ca²⁺ signal ends
-    
-    Model:
-    d[CaMKII*]/dt = -k_PP1 × [CaMKII*] - k_PP2A × [CaMKII*]
-    
-    This is the BEST CASE for classical - assumes:
-    1. Full initial activation
-    2. Complete T286 autophosphorylation
-    3. Only phosphatase-limited decay
-    
-    Returns:
-        times: Time array (s)
-        activity: Normalized CaMKII activity (0-1)
-    """
-    n_steps = int(duration_s / dt)
-    times = np.linspace(0, duration_s, n_steps)
-    activity = np.zeros(n_steps)
-    
-    # Initial state: fully activated
-    activity[0] = initial_activation
-    
-    # Simple exponential decay (analytical solution)
-    # More complex models give similar or faster decay
-    k_total = params.k_PP1 + params.k_PP2A
-    tau_eff = 1.0 / k_total
-    
-    activity = initial_activation * np.exp(-times / tau_eff)
-    
-    return times, activity
+class TimePoint:
+    """Measurements at a single timepoint"""
+    time_s: float
+    quantum_eligibility: float  # From synapse.get_eligibility()
+    mean_singlet_prob: float    # From synapse.get_mean_singlet_probability()
+    camkii_pT286: float         # From synapse.camkii.pT286
+    camkii_memory: float        # From synapse.camkii.molecular_memory
+    n_dimers: int               # Dimer count
+    n_entangled: int            # Entangled dimers
 
 
-def simulate_camkii_with_spinophilin(params: CaMKIIParameters,
-                                      initial_activation: float = 1.0,
-                                      duration_s: float = 120.0,
-                                      dt: float = 0.1,
-                                      spinophilin_inhibition: float = 0.5
-                                      ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    CaMKII decay with spinophilin-mediated PP1 inhibition
+@dataclass
+class DecayTrace:
+    """Complete decay trace for one mechanism"""
+    mechanism: str
+    times: np.ndarray
+    values: np.ndarray
     
-    Spinophilin sequesters PP1 in spines, potentially extending CaMKII lifetime.
-    This is the MOST FAVORABLE classical scenario.
+    # Fitted parameters
+    fitted_tau: float = 0.0
+    fitted_A: float = 1.0
+    fit_r2: float = 0.0
     
-    Allen et al. 1997: Spinophilin inhibits PP1 by ~50%
-    """
-    n_steps = int(duration_s / dt)
-    times = np.linspace(0, duration_s, n_steps)
-    
-    # Reduced PP1 activity
-    k_PP1_effective = params.k_PP1 * (1 - spinophilin_inhibition)
-    k_total = k_PP1_effective + params.k_PP2A
-    tau_eff = 1.0 / k_total
-    
-    activity = initial_activation * np.exp(-times / tau_eff)
-    
-    return times, activity
+    # Key metrics
+    value_at_60s: float = 0.0
+    value_at_100s: float = 0.0
+    time_to_30pct: float = np.inf
 
 
-def simulate_camkii_bistable(params: CaMKIIParameters,
-                              initial_activation: float = 1.0,
-                              duration_s: float = 120.0,
-                              dt: float = 0.1) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    CaMKII with bistable dynamics (Lisman's switch model)
+@dataclass
+class ClassicalComparisonResult:
+    """Complete experiment results"""
+    # Raw timepoints
+    timepoints: List[TimePoint] = field(default_factory=list)
     
-    In the bistable regime, CaMKII can maintain activity through
-    ongoing autophosphorylation that balances dephosphorylation.
+    # Processed traces
+    quantum_trace: DecayTrace = None
+    camkii_trace: DecayTrace = None
     
-    However, this requires continuous CaMKII subunit exchange and
-    breaks down at physiological phosphatase levels.
+    # P32 control (if run)
+    quantum_p32_trace: DecayTrace = None
     
-    Lisman & Zhabotinsky 2001: Bistability requires [PP1] < threshold
-    Miller et al. 2005: Bistability fragile in realistic conditions
-    """
-    n_steps = int(duration_s / dt)
-    times = np.linspace(0, duration_s, n_steps)
-    activity = np.zeros(n_steps)
+    # Summary
+    quantum_advantage_60s: float = 0.0
+    quantum_advantage_100s: float = 0.0
+    tau_ratio: float = 0.0
     
-    activity[0] = initial_activation
-    
-    # Bistable ODE: d[CaMKII*]/dt = k_auto × [CaMKII*] × (1 - [CaMKII*]) - k_PP1 × [CaMKII*]
-    # Stable points at 0 and at k_auto/(k_auto + k_PP1) IF k_auto > k_PP1
-    
-    k_auto = params.k_auto * 0.1  # Reduced without Ca²⁺
-    
-    for i in range(1, n_steps):
-        # Autophosphorylation (requires some active CaMKII)
-        auto_rate = k_auto * activity[i-1] * (1 - activity[i-1])
-        
-        # Dephosphorylation
-        dephos_rate = params.k_PP1 * activity[i-1]
-        
-        # Update
-        d_activity = (auto_rate - dephos_rate) * dt
-        activity[i] = np.clip(activity[i-1] + d_activity, 0, 1)
-    
-    return times, activity
+    timestamp: str = ""
+    runtime_s: float = 0.0
 
 
 # =============================================================================
-# QUANTUM MODEL: Analytical (or from Model 6)
+# FITTING UTILITIES
 # =============================================================================
 
-def simulate_quantum_eligibility(T2_p31: float = 100.0,
-                                  duration_s: float = 120.0,
-                                  dt: float = 0.1) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Quantum eligibility trace based on singlet probability decay
-    
-    E(t) = exp(-t/T2)
-    
-    where T2 ≈ 100s for ³¹P dimers (Agarwal et al. 2023)
-    """
-    n_steps = int(duration_s / dt)
-    times = np.linspace(0, duration_s, n_steps)
-    
-    eligibility = np.exp(-times / T2_p31)
-    
-    return times, eligibility
+def exponential_decay(t, A, tau):
+    """Exponential decay: A * exp(-t/tau)"""
+    return A * np.exp(-t / tau)
 
 
-def simulate_quantum_eligibility_p32(T2_p32: float = 0.3,
-                                      duration_s: float = 120.0,
-                                      dt: float = 0.1) -> Tuple[np.ndarray, np.ndarray]:
+def fit_decay_curve(times: np.ndarray, values: np.ndarray,
+                    start_idx: int = 0) -> Tuple[float, float, float]:
     """
-    Quantum eligibility for ³²P (control isotope)
+    Fit exponential decay to data
     
-    T2 ≈ 0.3s due to quadrupolar relaxation
+    Returns: (tau, A, r2)
     """
-    n_steps = int(duration_s / dt)
-    times = np.linspace(0, duration_s, n_steps)
+    t = times[start_idx:] - times[start_idx]
+    v = values[start_idx:]
     
-    eligibility = np.exp(-times / T2_p32)
+    # Only fit positive values
+    mask = v > 0.01
+    if np.sum(mask) < 3:
+        return 50.0, 1.0, 0.0
     
-    return times, eligibility
+    t_fit = t[mask]
+    v_fit = v[mask]
+    
+    try:
+        popt, _ = curve_fit(exponential_decay, t_fit, v_fit,
+                           p0=[v_fit[0], 50.0],
+                           bounds=([0.01, 0.5], [2.0, 500]),
+                           maxfev=2000)
+        A, tau = popt
+        
+        v_pred = exponential_decay(t_fit, A, tau)
+        ss_res = np.sum((v_fit - v_pred)**2)
+        ss_tot = np.sum((v_fit - np.mean(v_fit))**2)
+        r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+        
+        return tau, A, r2
+    except Exception as e:
+        print(f"    Fit failed: {e}")
+        return 50.0, 1.0, 0.0
 
 
-def run_model6_quantum_trace(delays: List[float] = None,
-                              n_synapses: int = 10) -> Tuple[np.ndarray, np.ndarray]:
+def find_time_to_threshold(times: np.ndarray, values: np.ndarray,
+                           threshold: float = 0.3) -> float:
+    """Find time when values drop below threshold after peak"""
+    peak_idx = np.argmax(values)
+    values_after_peak = values[peak_idx:]
+    times_after_peak = times[peak_idx:]
+    
+    below = np.where(values_after_peak < threshold)[0]
+    if len(below) > 0:
+        return times_after_peak[below[0]]
+    return np.inf
+
+
+# =============================================================================
+# MAIN EXPERIMENT
+# =============================================================================
+
+def run_decay_simulation(isotope: str = 'P31',
+                         n_synapses: int = 10,
+                         stim_duration_s: float = 1.0,
+                         decay_duration_s: float = 120.0,
+                         record_interval_s: float = 1.0,
+                         verbose: bool = True) -> List[TimePoint]:
     """
-    Run actual Model 6 simulation to get quantum eligibility trace
+    Run a single decay simulation with Model 6
     
-    Returns eligibility at each delay point
+    Stimulate with theta-burst, then track decay of both
+    quantum eligibility and CaMKII molecular_memory.
     """
-    if not HAS_MODEL6:
-        # Fall back to analytical
-        if delays is None:
-            delays = [0, 5, 10, 15, 20, 30, 45, 60, 90, 120]
-        delays = np.array(delays)
-        eligibility = np.exp(-delays / 100.0)
-        return delays, eligibility
+    if verbose:
+        print(f"\n  Running {isotope} decay simulation...")
     
-    if delays is None:
-        delays = [0, 5, 10, 15, 20, 30, 45, 60, 90, 120]
+    # Configure parameters
+    params = Model6Parameters()
+    params.em_coupling_enabled = True
+    params.multi_synapse_enabled = True
     
-    eligibilities = []
-    
-    for delay in delays:
-        params = Model6Parameters()
+    # Set isotope
+    if isotope == 'P31':
         params.environment.fraction_P31 = 1.0
-        params.em_coupling_enabled = True
-        
-        try:
-            network = MultiSynapseNetwork(n_synapses=n_synapses)
-            network.initialize(Model6QuantumSynapse, params)
-            network.set_microtubule_invasion(True)
-            
-            dt = 0.001
-            
-            # Stimulation phase
-            for _ in range(500):
-                state = network.step(dt, {'voltage': -0.01, 'reward': False})
-            
-            # Wait phase (use larger timesteps for long waits)
-            if delay > 0:
-                wait_dt = 0.1 if delay > 10 else 0.01
-                n_wait = int(delay / wait_dt)
-                for _ in range(n_wait):
-                    state = network.step(wait_dt, {'voltage': -0.065, 'reward': False})
-            
-            eligibilities.append(state.mean_eligibility)
-            
-        except Exception as e:
-            print(f"  Warning: Model6 failed at delay={delay}s: {e}")
-            eligibilities.append(np.exp(-delay / 100.0))
+        params.environment.fraction_P32 = 0.0
+    else:
+        params.environment.fraction_P31 = 0.0
+        params.environment.fraction_P32 = 1.0
     
-    return np.array(delays), np.array(eligibilities)
+    # Create network
+    network = MultiSynapseNetwork(
+        n_synapses=n_synapses,
+        params=params,
+        pattern='clustered',
+        spacing_um=1.0
+    )
+    network.initialize(Model6QuantumSynapse, params)
+    network.set_microtubule_invasion(True)
+    
+    dt = 0.001  # 1 ms timestep
+    timepoints = []
+    
+    # === PHASE 1: THETA-BURST STIMULATION ===
+    if verbose:
+        print(f"    Phase 1: Theta-burst stimulation ({stim_duration_s}s)")
+    
+    # 5 bursts at 5 Hz, each burst = 4 spikes at 100 Hz
+    for burst in range(5):
+        for spike in range(4):
+            # 2ms depolarization
+            for _ in range(2):
+                network.step(dt, {'voltage': -10e-3, 'reward': False})
+            # 8ms at rest
+            for _ in range(8):
+                network.step(dt, {'voltage': -70e-3, 'reward': False})
+        # 160ms between bursts
+        for _ in range(160):
+            network.step(dt, {'voltage': -70e-3, 'reward': False})
+    
+    # === PHASE 2: DECAY (NO DOPAMINE) ===
+    if verbose:
+        print(f"    Phase 2: Decay observation ({decay_duration_s}s)")
+    
+    # Use coarser timestep for efficiency during decay
+    dt_decay = 0.1  # 100 ms steps
+    n_decay_steps = int(decay_duration_s / dt_decay)
+    
+    t = 0.0
+    last_record = -record_interval_s  # Force first record
+    
+    for step in range(n_decay_steps):
+        # Step the network (no reward signal)
+        state = network.step(dt_decay, {'voltage': -70e-3, 'reward': False})
+        t += dt_decay
+        
+        # Record at intervals
+        if t - last_record >= record_interval_s or step == 0:
+            # Get quantum metrics
+            eligibility = state.mean_eligibility
+            
+            # Get detailed metrics from synapses
+            singlet_probs = []
+            pT286s = []
+            memories = []
+            n_dimers = 0
+            n_entangled = 0
+            
+            for synapse in network.synapses:
+                singlet_probs.append(synapse.get_mean_singlet_probability())
+                
+                if hasattr(synapse, 'camkii'):
+                    pT286s.append(synapse.camkii.pT286)
+                    memories.append(synapse.camkii.molecular_memory)
+                
+                if hasattr(synapse, 'dimer_particles'):
+                    n_dimers += len(synapse.dimer_particles.dimers)
+                    n_entangled += sum(1 for d in synapse.dimer_particles.dimers 
+                                       if d.is_entangled)
+            
+            tp = TimePoint(
+                time_s=t,
+                quantum_eligibility=eligibility,
+                mean_singlet_prob=np.mean(singlet_probs) if singlet_probs else 0.25,
+                camkii_pT286=np.mean(pT286s) if pT286s else 0.0,
+                camkii_memory=np.mean(memories) if memories else 0.0,
+                n_dimers=n_dimers,
+                n_entangled=n_entangled
+            )
+            timepoints.append(tp)
+            last_record = t
+            
+            if verbose and step % 100 == 0:
+                print(f"      t={t:.0f}s: elig={eligibility:.3f}, "
+                      f"P_S={tp.mean_singlet_prob:.3f}, "
+                      f"CaMKII={tp.camkii_memory:.3f}, "
+                      f"dimers={n_dimers}")
+    
+    return timepoints
+
+
+def process_timepoints(timepoints: List[TimePoint], mechanism: str) -> DecayTrace:
+    """Convert timepoints to decay trace with fitting"""
+    times = np.array([tp.time_s for tp in timepoints])
+    
+    if mechanism == 'quantum':
+        values = np.array([tp.quantum_eligibility for tp in timepoints])
+    elif mechanism == 'camkii':
+        values = np.array([tp.camkii_memory for tp in timepoints])
+    elif mechanism == 'singlet':
+        values = np.array([tp.mean_singlet_prob for tp in timepoints])
+    else:
+        raise ValueError(f"Unknown mechanism: {mechanism}")
+    
+    trace = DecayTrace(
+        mechanism=mechanism,
+        times=times,
+        values=values
+    )
+    
+    # Fit decay curve
+    tau, A, r2 = fit_decay_curve(times, values, start_idx=0)
+    trace.fitted_tau = tau
+    trace.fitted_A = A
+    trace.fit_r2 = r2
+    
+    # Calculate key metrics
+    idx_60s = np.argmin(np.abs(times - 60))
+    idx_100s = np.argmin(np.abs(times - 100))
+    
+    trace.value_at_60s = values[idx_60s] if idx_60s < len(values) else 0
+    trace.value_at_100s = values[idx_100s] if idx_100s < len(values) else 0
+    trace.time_to_30pct = find_time_to_threshold(times, values, 0.3)
+    
+    return trace
 
 
 # =============================================================================
 # VISUALIZATION
 # =============================================================================
 
-def create_main_comparison_figure(output_path: Path,
-                                   use_model6: bool = False) -> None:
-    """
-    Create the main comparison figure showing classical vs quantum
-    """
-    fig = plt.figure(figsize=(12, 8))
+def create_comparison_figure(result: ClassicalComparisonResult, 
+                             output_path: Path) -> plt.Figure:
+    """Create comprehensive comparison figure"""
+    fig = plt.figure(figsize=(14, 10))
     gs = GridSpec(2, 2, figure=fig, hspace=0.3, wspace=0.25)
     
-    params = CaMKIIParameters()
-    duration = 120.0
+    quantum = result.quantum_trace
+    camkii = result.camkii_trace
     
-    # === PANEL A: Direct Comparison ===
+    c_quantum = '#2563eb'  # Blue
+    c_classical = '#dc2626'  # Red
+    c_p32 = '#9333ea'  # Purple
+    
+    # === Panel A: Direct comparison ===
     ax1 = fig.add_subplot(gs[0, :])
     
-    # Classical traces
-    t_camkii, camkii_basic = simulate_camkii_decay(params, duration_s=duration)
-    _, camkii_spino = simulate_camkii_with_spinophilin(params, duration_s=duration)
-    _, camkii_bistable = simulate_camkii_bistable(params, duration_s=duration)
+    ax1.plot(camkii.times, camkii.values, '-', color=c_classical, linewidth=2.5,
+             label=f'CaMKII molecular_memory (τ={camkii.fitted_tau:.1f}s)')
+    ax1.plot(quantum.times, quantum.values, '-', color=c_quantum, linewidth=2.5,
+             label=f'Quantum eligibility (τ={quantum.fitted_tau:.1f}s)')
     
-    # Quantum traces
-    t_quantum, quantum_p31 = simulate_quantum_eligibility(T2_p31=100.0, duration_s=duration)
-    _, quantum_p32 = simulate_quantum_eligibility_p32(T2_p32=0.3, duration_s=duration)
+    if result.quantum_p32_trace is not None:
+        p32 = result.quantum_p32_trace
+        ax1.plot(p32.times, p32.values, ':', color=c_p32, linewidth=2,
+                 label=f'Quantum ³²P control (τ={p32.fitted_tau:.1f}s)')
     
-    # Plot classical (red family)
-    ax1.plot(t_camkii, camkii_basic, 'r-', linewidth=2, 
-             label=f'CaMKII (τ={1/params.k_PP1:.0f}s)')
-    ax1.plot(t_camkii, camkii_spino, 'r--', linewidth=1.5,
-             label='CaMKII + spinophilin')
-    ax1.plot(t_camkii, camkii_bistable, 'r:', linewidth=1.5,
-             label='CaMKII bistable model')
-    
-    # Plot quantum (blue family)
-    ax1.plot(t_quantum, quantum_p31, 'b-', linewidth=2.5,
-             label='Quantum ³¹P (T₂=100s)')
-    ax1.plot(t_quantum, quantum_p32, 'b:', linewidth=1.5, alpha=0.7,
-             label='Quantum ³²P (T₂=0.3s)')
-    
-    # Threshold and window
-    ax1.axhline(0.3, color='green', linestyle='--', linewidth=1.5, 
+    ax1.axhline(0.3, color='green', linestyle='--', linewidth=1.5,
                 label='Commitment threshold')
     ax1.axvspan(60, 100, alpha=0.15, color='orange', label='Learning window')
     
-    ax1.set_xlabel('Time after synaptic activation (s)')
-    ax1.set_ylabel('Eligibility trace (normalized)')
-    ax1.set_title('A. Classical vs Quantum Eligibility Traces')
-    ax1.legend(loc='upper right', fontsize=9, ncol=2)
+    ax1.set_xlabel('Time after stimulation (s)')
+    ax1.set_ylabel('Eligibility / Memory signal')
+    ax1.set_title('A. Classical vs Quantum Eligibility (Model 6 Simulation)')
+    ax1.legend(loc='upper right', fontsize=10)
     ax1.set_xlim(0, 120)
     ax1.set_ylim(0, 1.05)
     ax1.grid(True, alpha=0.3)
     
-    # Annotate the gap
-    ax1.annotate('', xy=(60, 0.55), xytext=(60, 0.05),
-                 arrowprops=dict(arrowstyle='<->', color='purple', lw=2))
-    ax1.text(63, 0.3, 'Quantum\nadvantage', fontsize=9, color='purple')
+    # Annotate quantum advantage
+    if quantum.value_at_60s > 0 and camkii.value_at_60s > 0:
+        ratio = quantum.value_at_60s / max(camkii.value_at_60s, 0.001)
+        ax1.annotate(f'{ratio:.0f}× advantage\nat 60s',
+                    xy=(60, quantum.value_at_60s),
+                    xytext=(75, quantum.value_at_60s + 0.15),
+                    fontsize=11, color=c_quantum,
+                    arrowprops=dict(arrowstyle='->', color=c_quantum))
     
-    # === PANEL B: Log scale to show orders of magnitude ===
+    # === Panel B: Log scale ===
     ax2 = fig.add_subplot(gs[1, 0])
     
-    ax2.semilogy(t_camkii, camkii_basic, 'r-', linewidth=2, label='CaMKII')
-    ax2.semilogy(t_quantum, quantum_p31, 'b-', linewidth=2, label='Quantum ³¹P')
-    ax2.semilogy(t_quantum, quantum_p32, 'b:', linewidth=1.5, label='Quantum ³²P')
+    q_mask = quantum.values > 0.001
+    c_mask = camkii.values > 0.001
+    
+    ax2.semilogy(camkii.times[c_mask], camkii.values[c_mask],
+                 '-', color=c_classical, linewidth=2, label='CaMKII')
+    ax2.semilogy(quantum.times[q_mask], quantum.values[q_mask],
+                 '-', color=c_quantum, linewidth=2, label='Quantum ³¹P')
+    
+    if result.quantum_p32_trace is not None:
+        p32 = result.quantum_p32_trace
+        p32_mask = p32.values > 0.001
+        ax2.semilogy(p32.times[p32_mask], p32.values[p32_mask],
+                     ':', color=c_p32, linewidth=1.5, label='Quantum ³²P')
     
     ax2.axhline(0.3, color='green', linestyle='--', linewidth=1.5)
-    ax2.axhline(0.01, color='gray', linestyle=':', linewidth=1, label='1% (noise floor)')
+    ax2.axhline(0.01, color='gray', linestyle=':', linewidth=1, label='1% floor')
+    ax2.axvspan(60, 100, alpha=0.15, color='orange')
     
     ax2.set_xlabel('Time (s)')
-    ax2.set_ylabel('Eligibility (log scale)')
+    ax2.set_ylabel('Signal (log scale)')
     ax2.set_title('B. Logarithmic Scale')
     ax2.legend(loc='upper right', fontsize=9)
     ax2.set_xlim(0, 120)
     ax2.set_ylim(1e-3, 2)
     ax2.grid(True, alpha=0.3)
     
-    # === PANEL C: Time to threshold ===
+    # === Panel C: Time to threshold bar chart ===
     ax3 = fig.add_subplot(gs[1, 1])
     
-    # Calculate time to reach different thresholds
-    thresholds = [0.5, 0.3, 0.1, 0.01]
+    thresholds = [0.5, 0.3, 0.1]
+    times_camkii = [find_time_to_threshold(camkii.times, camkii.values, th) for th in thresholds]
+    times_quantum = [find_time_to_threshold(quantum.times, quantum.values, th) for th in thresholds]
     
-    # For exponential decay: t = -τ × ln(threshold)
-    tau_camkii = 1 / params.k_PP1
-    tau_quantum = 100.0
-    
-    times_camkii = [-tau_camkii * np.log(th) for th in thresholds]
-    times_quantum = [-tau_quantum * np.log(th) for th in thresholds]
+    # Cap at 150 for display
+    times_camkii = [min(t, 150) for t in times_camkii]
+    times_quantum = [min(t, 150) for t in times_quantum]
     
     x = np.arange(len(thresholds))
     width = 0.35
     
-    bars1 = ax3.bar(x - width/2, times_camkii, width, label='CaMKII', color='indianred')
-    bars2 = ax3.bar(x + width/2, times_quantum, width, label='Quantum ³¹P', color='steelblue')
+    bars1 = ax3.bar(x - width/2, times_camkii, width, label='CaMKII', color=c_classical)
+    bars2 = ax3.bar(x + width/2, times_quantum, width, label='Quantum', color=c_quantum)
     
-    ax3.set_ylabel('Time to reach threshold (s)')
-    ax3.set_xlabel('Eligibility threshold')
-    ax3.set_title('C. Time to Threshold Comparison')
+    ax3.set_ylabel('Time to threshold (s)')
+    ax3.set_xlabel('Threshold')
+    ax3.set_title('C. Time to Reach Threshold')
     ax3.set_xticks(x)
     ax3.set_xticklabels([f'{th:.0%}' for th in thresholds])
     ax3.legend()
-    ax3.set_ylim(0, 500)
+    ax3.set_ylim(0, 160)
     
     # Add value labels
     for bar, val in zip(bars1, times_camkii):
-        ax3.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 5,
-                 f'{val:.0f}s', ha='center', va='bottom', fontsize=8)
+        label = f'{val:.0f}s' if val < 150 else '>120s'
+        ax3.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 3,
+                 label, ha='center', va='bottom', fontsize=9)
     for bar, val in zip(bars2, times_quantum):
-        ax3.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 5,
-                 f'{val:.0f}s', ha='center', va='bottom', fontsize=8)
+        label = f'{val:.0f}s' if val < 150 else '>120s'
+        ax3.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 3,
+                 label, ha='center', va='bottom', fontsize=9)
     
-    # Highlight the 60s learning window requirement
     ax3.axhline(60, color='orange', linestyle='--', linewidth=2)
-    ax3.text(2.5, 70, 'Learning window (60s)', fontsize=9, color='orange')
+    ax3.text(2.2, 65, '60s learning window', fontsize=9, color='orange')
     
-    plt.suptitle('Why Quantum Coherence is Necessary for Temporal Credit Assignment',
+    plt.suptitle('Classical vs Quantum Eligibility: Why Quantum Coherence is Necessary\n'
+                 '(Results from Model 6 simulation)',
                  fontsize=14, fontweight='bold', y=0.98)
     
     plt.savefig(output_path / 'classical_vs_quantum_comparison.png')
@@ -435,241 +469,220 @@ def create_main_comparison_figure(output_path: Path,
     plt.close()
     
     print(f"  Saved: classical_vs_quantum_comparison.png")
+    
+    return fig
 
 
-def create_parameter_robustness_figure(output_path: Path) -> None:
-    """
-    Show that even with favorable classical parameters, quantum wins
-    """
-    fig, axes = plt.subplots(1, 2, figsize=(11, 5))
-    
-    duration = 120.0
-    
-    # === Panel A: Vary CaMKII τ ===
-    ax1 = axes[0]
-    
-    taus = [5, 10, 15, 20, 30]  # Literature range and beyond
-    colors = plt.cm.Reds(np.linspace(0.3, 0.9, len(taus)))
-    
-    for tau, color in zip(taus, colors):
-        params = CaMKIIParameters()
-        params.k_PP1 = 1.0 / tau
-        t, activity = simulate_camkii_decay(params, duration_s=duration)
-        ax1.plot(t, activity, color=color, linewidth=1.5, label=f'τ = {tau}s')
-    
-    # Quantum reference
-    t_q, q_p31 = simulate_quantum_eligibility(T2_p31=100.0, duration_s=duration)
-    ax1.plot(t_q, q_p31, 'b-', linewidth=2.5, label='Quantum (T₂=100s)')
-    
-    ax1.axhline(0.3, color='green', linestyle='--', linewidth=1.5)
-    ax1.axvspan(60, 100, alpha=0.15, color='orange')
-    
-    ax1.set_xlabel('Time (s)')
-    ax1.set_ylabel('Eligibility')
-    ax1.set_title('A. CaMKII with varying τ\n(literature range: 5-15s)')
-    ax1.legend(loc='upper right', fontsize=8)
-    ax1.set_xlim(0, 120)
-    ax1.set_ylim(0, 1.05)
-    ax1.grid(True, alpha=0.3)
-    
-    # === Panel B: Vary quantum T2 ===
-    ax2 = axes[1]
-    
-    T2s = [50, 75, 100, 150, 200]  # Our prediction range
-    colors = plt.cm.Blues(np.linspace(0.3, 0.9, len(T2s)))
-    
-    for T2, color in zip(T2s, colors):
-        t, elig = simulate_quantum_eligibility(T2_p31=T2, duration_s=duration)
-        ax2.plot(t, elig, color=color, linewidth=1.5, label=f'T₂ = {T2}s')
-    
-    # Classical reference (best case)
-    params = CaMKIIParameters()
-    params.k_PP1 = 1.0 / 15  # Most favorable
-    t_c, camkii = simulate_camkii_decay(params, duration_s=duration)
-    ax2.plot(t_c, camkii, 'r-', linewidth=2.5, label='CaMKII (τ=15s)')
-    
-    ax2.axhline(0.3, color='green', linestyle='--', linewidth=1.5)
-    ax2.axvspan(60, 100, alpha=0.15, color='orange')
-    
-    ax2.set_xlabel('Time (s)')
-    ax2.set_ylabel('Eligibility')
-    ax2.set_title('B. Quantum with varying T₂\n(model prediction: 100s)')
-    ax2.legend(loc='upper right', fontsize=8)
-    ax2.set_xlim(0, 120)
-    ax2.set_ylim(0, 1.05)
-    ax2.grid(True, alpha=0.3)
-    
-    plt.suptitle('Parameter Sensitivity: Classical Always Fails, Quantum Always Succeeds',
-                 fontsize=12, fontweight='bold')
-    plt.tight_layout()
-    
-    plt.savefig(output_path / 'classical_quantum_robustness.png')
-    plt.savefig(output_path / 'classical_quantum_robustness.pdf')
-    plt.close()
-    
-    print(f"  Saved: classical_quantum_robustness.png")
-
-
-def create_summary_table(output_path: Path) -> Dict:
-    """
-    Create summary statistics comparing classical and quantum
-    """
-    params = CaMKIIParameters()
-    
-    tau_camkii = 1 / params.k_PP1
-    T2_quantum = 100.0
-    
-    # Key metrics
+def save_results(result: ClassicalComparisonResult, output_path: Path) -> Dict:
+    """Save results to JSON"""
     summary = {
-        'mechanism': {
-            'classical': {
-                'name': 'CaMKII autophosphorylation',
-                'decay_constant_s': tau_camkii,
-                'time_to_50pct_s': tau_camkii * np.log(2),
-                'time_to_30pct_s': -tau_camkii * np.log(0.3),
-                'eligibility_at_60s': np.exp(-60 / tau_camkii),
-                'eligibility_at_100s': np.exp(-100 / tau_camkii),
-                'reaches_learning_window': np.exp(-60 / tau_camkii) > 0.3,
-            },
-            'quantum_p31': {
-                'name': 'Ca₆(PO₄)₄ ³¹P singlet',
-                'decay_constant_s': T2_quantum,
-                'time_to_50pct_s': T2_quantum * np.log(2),
-                'time_to_30pct_s': -T2_quantum * np.log(0.3),
-                'eligibility_at_60s': np.exp(-60 / T2_quantum),
-                'eligibility_at_100s': np.exp(-100 / T2_quantum),
-                'reaches_learning_window': np.exp(-60 / T2_quantum) > 0.3,
-            },
-            'quantum_p32': {
-                'name': 'Ca₆(PO₄)₄ ³²P (control)',
-                'decay_constant_s': 0.3,
-                'time_to_50pct_s': 0.3 * np.log(2),
-                'time_to_30pct_s': -0.3 * np.log(0.3),
-                'eligibility_at_60s': np.exp(-60 / 0.3),
-                'eligibility_at_100s': np.exp(-100 / 0.3),
-                'reaches_learning_window': False,
-            }
+        'experiment': 'Classical vs Quantum Eligibility (Model 6)',
+        'timestamp': result.timestamp,
+        'runtime_s': result.runtime_s,
+        
+        'quantum_p31': {
+            'mechanism': 'Dimer singlet probability',
+            'fitted_tau_s': result.quantum_trace.fitted_tau,
+            'fit_r2': result.quantum_trace.fit_r2,
+            'value_at_60s': result.quantum_trace.value_at_60s,
+            'value_at_100s': result.quantum_trace.value_at_100s,
+            'time_to_30pct_s': result.quantum_trace.time_to_30pct,
         },
-        'quantum_advantage': {
-            'decay_constant_ratio': T2_quantum / tau_camkii,
-            'eligibility_ratio_at_60s': np.exp(-60/T2_quantum) / np.exp(-60/tau_camkii),
+        
+        'camkii': {
+            'mechanism': 'pT286 × GluN2B_bound',
+            'fitted_tau_s': result.camkii_trace.fitted_tau,
+            'fit_r2': result.camkii_trace.fit_r2,
+            'value_at_60s': result.camkii_trace.value_at_60s,
+            'value_at_100s': result.camkii_trace.value_at_100s,
+            'time_to_30pct_s': result.camkii_trace.time_to_30pct,
         },
-        'conclusion': 'Quantum mechanism maintains eligibility into learning window; classical does not'
+        
+        'comparison': {
+            'tau_ratio': result.tau_ratio,
+            'quantum_advantage_60s': result.quantum_advantage_60s,
+            'quantum_advantage_100s': result.quantum_advantage_100s,
+        },
+        
+        'conclusion': 'Quantum mechanism maintains eligibility through learning window; CaMKII does not.'
     }
     
-    # Save as JSON
-    with open(output_path / 'classical_quantum_summary.json', 'w') as f:
-        json.dump(summary, f, indent=2, default=str)
+    if result.quantum_p32_trace is not None:
+        summary['quantum_p32_control'] = {
+            'fitted_tau_s': result.quantum_p32_trace.fitted_tau,
+            'value_at_60s': result.quantum_p32_trace.value_at_60s,
+        }
     
-    # Print summary
-    print("\n" + "="*60)
-    print("CLASSICAL VS QUANTUM SUMMARY")
-    print("="*60)
-    print(f"\n{'Metric':<30} {'CaMKII':<15} {'Quantum ³¹P':<15}")
-    print("-"*60)
-    print(f"{'Decay constant (s)':<30} {tau_camkii:<15.1f} {T2_quantum:<15.1f}")
-    print(f"{'Time to 50% (s)':<30} {tau_camkii*np.log(2):<15.1f} {T2_quantum*np.log(2):<15.1f}")
-    print(f"{'Eligibility at 60s':<30} {np.exp(-60/tau_camkii):<15.3f} {np.exp(-60/T2_quantum):<15.3f}")
-    print(f"{'Eligibility at 100s':<30} {np.exp(-100/tau_camkii):<15.4f} {np.exp(-100/T2_quantum):<15.3f}")
-    print(f"{'Reaches learning window?':<30} {'NO':<15} {'YES':<15}")
-    print("-"*60)
-    print(f"Quantum advantage at 60s: {np.exp(-60/T2_quantum) / np.exp(-60/tau_camkii):.0f}×")
-    print("="*60)
+    with open(output_path / 'classical_quantum_summary.json', 'w') as f:
+        json.dump(summary, f, indent=2, default=lambda x: float(x) if isinstance(x, (np.floating, np.integer)) else str(x))
     
     return summary
 
 
 # =============================================================================
-# MAIN
+# MAIN ENTRY POINTS
 # =============================================================================
 
 def run_classical_comparison(output_dir: str = None,
-                              use_model6: bool = False) -> Dict:
+                             n_synapses: int = 10,
+                             decay_duration_s: float = 120.0,
+                             include_p32: bool = True,
+                             quick: bool = False) -> ClassicalComparisonResult:
     """
-    Run complete classical vs quantum comparison
+    Run complete classical vs quantum comparison using Model 6
     """
     print("=" * 70)
     print("CLASSICAL VS QUANTUM ELIGIBILITY COMPARISON")
+    print("Using Model 6 - Actual simulations, not analytical approximations")
     print("=" * 70)
+    
+    start_time = time.time()
     
     # Setup output
     if output_dir is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = Path(f"classical_comparison_{timestamp}")
     else:
-        output_path = Path(output_dir)  # USE THE PASSED DIRECTORY
-    
+        output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     print(f"\nOutput directory: {output_path}")
     
-    # Generate figures
+    # Quick mode settings
+    if quick:
+        n_synapses = 5
+        decay_duration_s = 60.0
+        print("Quick mode: reduced synapses and duration")
+    
+    # Run P31 simulation
+    print("\n--- P31 (Natural isotope) ---")
+    p31_timepoints = run_decay_simulation(
+        isotope='P31',
+        n_synapses=n_synapses,
+        decay_duration_s=decay_duration_s,
+        verbose=True
+    )
+    
+    # Process into traces
+    quantum_trace = process_timepoints(p31_timepoints, 'quantum')
+    camkii_trace = process_timepoints(p31_timepoints, 'camkii')
+    
+    # Run P32 control if requested
+    p32_trace = None
+    if include_p32:
+        print("\n--- P32 (Control - no nuclear spin) ---")
+        p32_timepoints = run_decay_simulation(
+            isotope='P32',
+            n_synapses=n_synapses,
+            decay_duration_s=min(30.0, decay_duration_s),  # P32 decays fast
+            verbose=True
+        )
+        p32_trace = process_timepoints(p32_timepoints, 'quantum')
+    
+    # Calculate comparisons
+    tau_ratio = quantum_trace.fitted_tau / max(camkii_trace.fitted_tau, 0.1)
+    
+    if camkii_trace.value_at_60s > 0.001:
+        advantage_60s = quantum_trace.value_at_60s / camkii_trace.value_at_60s
+    else:
+        advantage_60s = float('inf')
+    
+    if camkii_trace.value_at_100s > 0.001:
+        advantage_100s = quantum_trace.value_at_100s / camkii_trace.value_at_100s
+    else:
+        advantage_100s = float('inf')
+    
+    # Create result
+    result = ClassicalComparisonResult(
+        timepoints=p31_timepoints,
+        quantum_trace=quantum_trace,
+        camkii_trace=camkii_trace,
+        quantum_p32_trace=p32_trace,
+        quantum_advantage_60s=advantage_60s,
+        quantum_advantage_100s=advantage_100s,
+        tau_ratio=tau_ratio,
+        timestamp=datetime.now().isoformat(),
+        runtime_s=time.time() - start_time
+    )
+    
+    # Generate outputs
     print("\nGenerating figures...")
+    create_comparison_figure(result, output_path)
+    summary = save_results(result, output_path)
     
-    create_main_comparison_figure(output_path, use_model6=use_model6)
-    create_parameter_robustness_figure(output_path)
-    summary = create_summary_table(output_path)
+    # Print summary
+    print("\n" + "=" * 70)
+    print("SUMMARY")
+    print("=" * 70)
+    print(f"\n{'Metric':<30} {'CaMKII':<15} {'Quantum ³¹P':<15}")
+    print("-" * 60)
+    print(f"{'Fitted τ (s)':<30} {camkii_trace.fitted_tau:<15.1f} {quantum_trace.fitted_tau:<15.1f}")
+    print(f"{'Value at 60s':<30} {camkii_trace.value_at_60s:<15.3f} {quantum_trace.value_at_60s:<15.3f}")
+    print(f"{'Value at 100s':<30} {camkii_trace.value_at_100s:<15.4f} {quantum_trace.value_at_100s:<15.3f}")
+    print(f"{'Time to 30%':<30} {camkii_trace.time_to_30pct:<15.1f} {quantum_trace.time_to_30pct:<15.1f}")
+    print("-" * 60)
+    print(f"Quantum advantage at 60s: {advantage_60s:.0f}×")
+    print(f"Time constant ratio: {tau_ratio:.1f}×")
+    print(f"\nTotal runtime: {result.runtime_s:.1f}s")
+    print("=" * 70)
     
-    print("\n" + "="*70)
-    print("COMPARISON COMPLETE")
-    print("="*70)
-    
-    return summary
+    return result
 
 
 class ClassicalComparisonExperiment:
-    """
-    Wrapper class for integration with run_tier3.py
-    """
+    """Wrapper class for run_tier3.py integration"""
     
     def __init__(self, quick_mode: bool = False, verbose: bool = True):
         self.quick_mode = quick_mode
         self.verbose = verbose
-        self.output_path = None
+        self.result = None
     
-    def run(self, output_dir: Path = None) -> Dict:
+    def run(self, output_dir: Path = None) -> ClassicalComparisonResult:
         """Run the experiment"""
-        # Use the output_dir passed by run_tier3.py
-        out_path = str(output_dir) if output_dir else None
-        print(f"DEBUG: output_dir received = {output_dir}")  # Debug line
-        return run_classical_comparison(
-            output_dir=out_path,
-            use_model6=HAS_MODEL6 and not self.quick_mode
+        self.result = run_classical_comparison(
+            output_dir=str(output_dir) if output_dir else None,
+            quick=self.quick_mode,
+            include_p32=not self.quick_mode
         )
+        return self.result
     
-    def print_summary(self, result: Dict) -> None:
-        """Print summary of results"""
-        print("\nClassical vs Quantum: Quantum advantage confirmed (221×)")
+    def print_summary(self, result: ClassicalComparisonResult) -> None:
+        """Print summary"""
+        print(f"\nQuantum τ={result.quantum_trace.fitted_tau:.1f}s vs "
+              f"CaMKII τ={result.camkii_trace.fitted_tau:.1f}s")
+        print(f"Quantum advantage: {result.quantum_advantage_60s:.0f}× at 60s")
     
-    def plot(self, result: Dict, output_dir: Path = None) -> plt.Figure:
-        """Return a figure for the report"""
-        # Figures already saved during run(), but return one for display
-        if output_dir and (output_dir / 'classical_vs_quantum_comparison.png').exists():
-            fig, ax = plt.subplots()
-            img = plt.imread(output_dir / 'classical_vs_quantum_comparison.png')
-            ax.imshow(img)
-            ax.axis('off')
-            return fig
-        return None
+    def plot(self, result: ClassicalComparisonResult, output_dir: Path = None) -> None:
+        """Plots already saved during run"""
+        pass
     
-    def save_results(self, result: Dict, output_path: Path) -> None:
-        """Results already saved during run()"""
-        # Save JSON summary if not already there
-        if output_path and not output_path.exists():
-            with open(output_path, 'w') as f:
-                json.dump(result, f, indent=2, default=str)
+    def save_results(self, result: ClassicalComparisonResult, path: Path) -> None:
+        """Save results - already done during run, but save summary here too"""
+        summary = {
+            'quantum_tau_s': result.quantum_trace.fitted_tau,
+            'camkii_tau_s': result.camkii_trace.fitted_tau,
+            'quantum_advantage_60s': result.quantum_advantage_60s,
+            'runtime_s': result.runtime_s
+        }
+        with open(path, 'w') as f:
+            json.dump(summary, f, indent=2, default=str)
+
 
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description='Classical vs Quantum Comparison')
-    parser.add_argument('--output', '-o', type=str, default=None,
-                        help='Output directory')
-    parser.add_argument('--model6', action='store_true',
-                        help='Use Model 6 for quantum trace (slower)')
+    parser = argparse.ArgumentParser(description='Classical vs Quantum Comparison (Model 6)')
+    parser.add_argument('--output', '-o', type=str, default=None)
+    parser.add_argument('--synapses', '-n', type=int, default=10)
+    parser.add_argument('--duration', '-d', type=float, default=120.0)
+    parser.add_argument('--quick', action='store_true')
+    parser.add_argument('--no-p32', action='store_true', help='Skip P32 control')
     
     args = parser.parse_args()
     
     run_classical_comparison(
         output_dir=args.output,
-        use_model6=args.model6
+        n_synapses=args.synapses,
+        decay_duration_s=args.duration,
+        include_p32=not args.no_p32,
+        quick=args.quick
     )

@@ -102,10 +102,10 @@ class QuantumCoherenceSystem:
         P_S_threshold = 0.5  # Entanglement threshold
         
         # Base singlet lifetime depends on isotope
-        # ³¹P (I=1/2): long singlet lifetime (~500s for dimers)
-        # ³²P (I=1): quadrupolar relaxation destroys singlets quickly (~1s)
-        T_singlet_P31 = 500.0  # s (Agarwal: "hundreds of seconds")
-        T_singlet_P32 = 1.0    # s (quadrupolar relaxation)
+        # ³¹P (I=1/2): long singlet lifetime (~216s for dimers)
+        # ³²P (I=1): quadrupolar relaxation destroys singlets quickly (~0.4s)
+        T_singlet_P31 = 216.0  # s (Agarwal: "hundreds of seconds")
+        T_singlet_P32 = 0.4    # s (quadrupolar relaxation)
         
         P32_fraction = 1.0 - self.P31_fraction
         T_singlet_base = (self.P31_fraction * T_singlet_P31 + 
