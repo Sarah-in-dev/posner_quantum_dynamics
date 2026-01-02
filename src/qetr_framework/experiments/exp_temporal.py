@@ -28,7 +28,7 @@ from datetime import datetime
 from models.Model_6.model6_parameters import Model6Parameters
 from models.Model_6.eligibility_trace import EligibilityTraceModule, PhosphorusIsotope
 
-from ..quantum_eligibility.physics import QuantumEligibilityPhysics, Isotope, compare_isotopes
+from ..model6_adapter import QuantumEligibilityPhysics, compare_isotopes
 from ..agents import QETRAgent, TDLambdaAgent
 from ..environments import (
     DelayedRewardEnvironment,
@@ -83,9 +83,7 @@ def run_single_trial(agent, env, dt: float = 0.1) -> Tuple[float, bool]:
     reward, info = env.step(action)
     total_reward += reward
     
-    # Activate the synapse for this action
-    if hasattr(agent, 'synapses'):
-        agent.synapses[action].activate(1.0)
+    agent.activate(action)
     
     # Wait for delayed reward (advance time)
     max_wait = 150.0  # seconds
@@ -158,12 +156,12 @@ def run_isotope_ablation(config: ExperimentConfig) -> Dict:
     
     results = {}
     
-    for isotope in [Isotope.P31, Isotope.P32]:
-        print(f"\n--- {isotope.value} ---")
-        
-        # Get physics
-        physics = QuantumEligibilityPhysics(isotope=isotope)
-        T2 = physics.get_T2_effective()
+    # Line 161 alternative - use strings directly
+    for isotope in ["P31", "P32"]:
+        print(f"\n--- {isotope} ---")
+
+        adapter = QuantumEligibilityPhysics(isotope=isotope)
+        T2 = adapter.get_T2_effective()
         print(f"T2 = {T2:.2f} seconds")
         
         # Create agent and environment
@@ -185,7 +183,7 @@ def run_isotope_ablation(config: ExperimentConfig) -> Dict:
         
         # Aggregate results
         accuracies = [r['accuracy'] for r in episode_results]
-        results[isotope.value] = {
+        results[isotope] = {
             'T2': T2,
             'mean_accuracy': np.mean(accuracies),
             'std_accuracy': np.std(accuracies),
@@ -193,7 +191,7 @@ def run_isotope_ablation(config: ExperimentConfig) -> Dict:
             'all_accuracies': accuracies,
         }
         
-        print(f"Final accuracy: {results[isotope.value]['mean_accuracy']:.2%} ± {results[isotope.value]['std_accuracy']:.2%}")
+        print(f"Final accuracy: {results[isotope]['mean_accuracy']:.2%} ± {results[isotope]['std_accuracy']:.2%}")
     
     # Key metric: ratio
     ratio = results['P31']['mean_accuracy'] / max(0.01, results['P32']['mean_accuracy'])
@@ -234,7 +232,7 @@ def run_delay_scaling(config: ExperimentConfig) -> Dict:
         
         results[delay_name] = {}
         
-        for isotope in [Isotope.P31, Isotope.P32]:
+        for isotope in ["P31", "P32"]:
             env = make_env(seed=config.seed)
             agent = QETRAgent(
                 n_actions=env.n_actions,
@@ -249,12 +247,12 @@ def run_delay_scaling(config: ExperimentConfig) -> Dict:
                 episode_results.append(ep_result)
             
             accuracies = [r['accuracy'] for r in episode_results]
-            results[delay_name][isotope.value] = {
+            results[delay_name][isotope] = {
                 'mean_accuracy': np.mean(accuracies),
                 'std_accuracy': np.std(accuracies),
             }
             
-            print(f"  {isotope.value}: {results[delay_name][isotope.value]['mean_accuracy']:.2%}")
+            print(f"  {isotope}: {results[delay_name][isotope]['mean_accuracy']:.2%}")
     
     return results
 
@@ -285,7 +283,7 @@ def run_td_comparison(config: ExperimentConfig) -> Dict:
     print("\n--- QETR-P31 (physics-derived) ---")
     agent_qetr = QETRAgent(
         n_actions=env.n_actions,
-        isotope=Isotope.P31,
+        isotope="P31",
         seed=config.seed,
     )
     
@@ -415,9 +413,12 @@ def plot_results(isotope_results: Dict, delay_results: Dict, td_results: Dict,
     ax3.set_ylim(0, 1.0)
     
     plt.tight_layout()
-    plt.savefig(output_path / 'qetr_results.png', dpi=150)
-    plt.savefig(output_path / 'qetr_results.pdf')
-    print(f"\nPlots saved to {output_path}")
+    
+    # Save figures
+    save_path = Path(output_dir)
+    plt.savefig(save_path / 'qetr_results.png', dpi=150, bbox_inches='tight', facecolor='white')
+    plt.savefig(save_path / 'qetr_results.pdf', bbox_inches='tight')
+    print(f"Saved figures to {save_path}")
     
     return fig
 
@@ -428,6 +429,27 @@ def plot_results(isotope_results: Dict, delay_results: Dict, td_results: Dict,
 
 def main():
     """Run all experiments"""
+    import sys
+    from io import StringIO
+    
+    # Capture all output to both terminal and buffer
+    class Tee:
+        def __init__(self, *files):
+            self.files = files
+        def write(self, text):
+            for f in self.files:
+                f.write(text)
+                f.flush()
+        def flush(self):
+            for f in self.files:
+                f.flush()
+    
+    # Start capturing
+    output_buffer = StringIO()
+    original_stdout = sys.stdout
+    sys.stdout = Tee(original_stdout, output_buffer)
+
+
     print("=" * 60)
     print("QUANTUM ELIGIBILITY TRACE RL (QETR)")
     print("Computational Validation of Quantum Synapse Hypothesis")
@@ -462,8 +484,15 @@ def main():
     if config.run_td_comparison:
         results['td_comparison'] = run_td_comparison(config)
     
-    # Save results
     if config.save_results:
+        from datetime import datetime
+        
+        # Create timestamped output directory
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        run_name = f"qetr_temporal_{timestamp}"
+        output_path = Path(config.output_dir) / run_name
+        output_path.mkdir(parents=True, exist_ok=True)
+        
         # Convert numpy arrays to lists for JSON
         def convert_for_json(obj):
             if isinstance(obj, np.ndarray):
@@ -476,51 +505,68 @@ def main():
                 return obj
         
         results_json = convert_for_json(results)
-        results_json['timestamp'] = datetime.now().isoformat()
+        results_json['timestamp'] = timestamp
         results_json['config'] = {
             'n_episodes': config.n_episodes,
             'n_trials_per_episode': config.n_trials_per_episode,
             'seed': config.seed,
         }
         
-        with open(output_dir / 'results.json', 'w') as f:
+        # Save JSON
+        with open(output_path / 'results.json', 'w') as f:
             json.dump(results_json, f, indent=2)
         
-        print(f"\nResults saved to {output_dir / 'results.json'}")
+        print(f"\nResults saved to {output_path}/")
     
-    # Plot results
-    if config.plot_results and all(k in results for k in ['isotope_ablation', 'delay_scaling', 'td_comparison']):
-        plot_results(
-            results['isotope_ablation'],
-            results['delay_scaling'],
-            results['td_comparison'],
-            str(output_dir),
-        )
+    if config.plot_results:
+        if all(k in results for k in ['isotope_ablation', 'delay_scaling', 'td_comparison']):
+            fig = plot_results(
+                results['isotope_ablation'],
+                results['delay_scaling'],
+                results['td_comparison'],
+                str(output_path),  # Pass the output path
+            )
+            plt.savefig(output_path / 'results_summary.png', dpi=150, bbox_inches='tight')
+            print(f"  Saved: {output_path}/results_summary.png")
+            plt.close()
+
+
     
-    # Summary
-    print("\n" + "=" * 60)
-    print("SUMMARY")
-    print("=" * 60)
+    # Generate summary
+    summary_lines = []
+    summary_lines.append("=" * 60)
+    summary_lines.append("SUMMARY")
+    summary_lines.append("=" * 60)
     
     if 'isotope_ablation' in results:
         iso_res = results['isotope_ablation']
-        print(f"\n1. ISOTOPE ABLATION:")
-        print(f"   P31 accuracy: {iso_res['P31']['mean_accuracy']:.2%}")
-        print(f"   P32 accuracy: {iso_res['P32']['mean_accuracy']:.2%}")
-        print(f"   Ratio: {iso_res['performance_ratio']:.1f}x")
-        print(f"   → P31 >> P32 as predicted by quantum coherence hypothesis")
+        summary_lines.append(f"\n1. ISOTOPE ABLATION:")
+        summary_lines.append(f"   P31 accuracy: {iso_res['P31']['mean_accuracy']:.2%}")
+        summary_lines.append(f"   P32 accuracy: {iso_res['P32']['mean_accuracy']:.2%}")
+        summary_lines.append(f"   Ratio: {iso_res['performance_ratio']:.1f}x")
+        summary_lines.append(f"   → P31 >> P32 as predicted by quantum coherence hypothesis")
     
     if 'td_comparison' in results:
         td_res = results['td_comparison']
-        print(f"\n2. TD(λ) COMPARISON:")
-        print(f"   QETR-P31 (no tuning): {td_res['comparison']['qetr_accuracy']:.2%}")
-        print(f"   Best TD(λ) (tuned): {td_res['comparison']['best_td_accuracy']:.2%}")
-        print(f"   → Physics-derived parameters match tuned baseline")
+        summary_lines.append(f"\n2. TD(λ) COMPARISON:")
+        summary_lines.append(f"   QETR-P31 (no tuning): {td_res['comparison']['qetr_accuracy']:.2%}")
+        summary_lines.append(f"   Best TD(λ) (tuned): {td_res['comparison']['best_td_accuracy']:.2%}")
+        summary_lines.append(f"   → Physics-derived parameters match tuned baseline")
     
-    print("\n" + "=" * 60)
-    print("Quantum coherence provides temporal credit assignment")
-    print("without hyperparameter tuning.")
-    print("=" * 60)
+    summary_lines.append("\n" + "=" * 60)
+    summary_lines.append("Quantum coherence provides temporal credit assignment")
+    summary_lines.append("without hyperparameter tuning.")
+    summary_lines.append("=" * 60)
+    
+    # Print to terminal
+    summary_text = "\n".join(summary_lines)
+    print(summary_text)
+    
+    # Save to file
+    if config.save_results:
+        with open(output_path / 'summary.txt', 'w') as f:
+            f.write(summary_text)
+        print(f"\nSummary saved to {output_path}/summary.txt")
     
     return results
 
