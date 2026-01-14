@@ -352,6 +352,16 @@ def make_extreme_delay_task(seed: Optional[int] = None) -> DelayedRewardEnvironm
     )
     return DelayedRewardEnvironment(config, seed)
 
+def make_very_short_delay_task(seed: Optional[int] = None) -> DelayedRewardEnvironment:
+    """
+    Very short delay task (0.5-2s) - P32 should work here
+    """
+    config = DelayedRewardConfig(
+        delay_min=0.5,
+        delay_max=2.0,
+        episode_length=60.0,
+    )
+    return DelayedRewardEnvironment(config, seed)
 
 # =============================================================================
 # DEMO

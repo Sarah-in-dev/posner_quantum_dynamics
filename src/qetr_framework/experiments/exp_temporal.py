@@ -32,6 +32,8 @@ from ..model6_adapter import QuantumEligibilityPhysics, compare_isotopes
 from ..agents import QETRAgent, TDLambdaAgent
 from ..environments import (
     DelayedRewardEnvironment,
+    DelayedRewardConfig,
+    make_very_short_delay_task,
     make_short_delay_task,
     make_medium_delay_task,
     make_long_delay_task,
@@ -103,7 +105,11 @@ def run_single_trial(agent, env, dt: float = 0.1) -> Tuple[float, bool]:
             break
     
     # Check if agent learned correct action
-    correct = (np.argmax(agent.get_action_values()) == env.state.correct_action)
+    Q = agent.get_action_values()
+    max_val = np.max(Q)
+    best_actions = np.where(Q == max_val)[0]
+    predicted = np.random.choice(best_actions)
+    correct = (predicted == env.state.correct_action)
     
     return total_reward, correct
 
@@ -119,7 +125,9 @@ def run_episode(agent, env, n_trials: int, dt: float = 0.1) -> Dict:
     correct_count = 0
     
     env.reset()
-    agent.reset()
+    # Keep correct_action consistent with what agent learned
+    env.state.correct_action = 0  # Fixed target across all episodes
+    agent.reset(reset_weights=False)
     
     for trial in range(n_trials):
         reward, correct = run_single_trial(agent, env, dt)
@@ -220,6 +228,7 @@ def run_delay_scaling(config: ExperimentConfig) -> Dict:
     print("=" * 60)
     
     delay_configs = [
+        ("Very Short (0.5-2s)", make_very_short_delay_task),
         ("Short (5-15s)", make_short_delay_task),
         ("Medium (15-45s)", make_medium_delay_task),
         ("Long (30-90s)", make_long_delay_task),
@@ -391,7 +400,7 @@ def plot_results(isotope_results: Dict, delay_results: Dict, td_results: Dict,
     ax2.set_ylabel('Accuracy')
     ax2.set_title('Delay Scaling')
     ax2.set_xticks(x)
-    ax2.set_xticklabels(['Short\n(5-15s)', 'Medium\n(15-45s)', 'Long\n(30-90s)'])
+    ax2.set_xticklabels(['Very Short\n(0.5-2s)','Short\n(5-15s)', 'Medium\n(15-45s)', 'Long\n(30-90s)'])
     ax2.legend()
     ax2.set_ylim(0, 1.0)
     ax2.axhline(y=0.25, color='gray', linestyle='--')

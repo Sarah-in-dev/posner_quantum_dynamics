@@ -13,6 +13,7 @@ Author: Sarah Davidson
 from .delayed_reward import (
     DelayedRewardEnvironment,
     DelayedRewardConfig,
+    make_very_short_delay_task,
     make_short_delay_task,
     make_medium_delay_task,
     make_long_delay_task,
@@ -32,6 +33,7 @@ __all__ = [
     # Delayed reward
     'DelayedRewardEnvironment',
     'DelayedRewardConfig',
+    'make_very_short_delay_task',
     'make_short_delay_task',
     'make_medium_delay_task',
     'make_long_delay_task',
