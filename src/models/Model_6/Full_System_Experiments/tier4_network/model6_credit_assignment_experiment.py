@@ -62,24 +62,24 @@ class ExperimentConfig:
     """Configuration for credit assignment experiment"""
     
     # Network parameters
-    n_neurons: int = 10  # Small for computational tractability with full Model 6
+    n_neurons: int = 5  # Small for computational tractability with full Model 6
     
     # Delays to test (seconds)
     delays: List[float] = field(default_factory=lambda: [1, 5, 10, 20, 30, 60])
     
     # Number of trials per condition
-    n_trials: int = 10
+    n_trials: int = 3 # Keep small for speed; increase for real runs
     
     # Conditions to test
     conditions: List[str] = field(default_factory=lambda: ['P31', 'P32'])
     
     # Timing (seconds)
-    encoding_duration: float = 1.0     # How long to present stimulus
+    encoding_duration: float = 0.2     # How long to present stimulus
     response_duration: float = 0.5     # How long to collect response
     reward_duration: float = 0.5       # How long reward signal lasts
     
     # Timestep
-    dt_fine: float = 0.001    # 1 ms during encoding/response
+    dt_fine: float = 0.050    # 50 ms during encoding/response
     dt_coarse: float = 0.1    # 100 ms during delay (for speed)
     
     # Stimulus parameters
@@ -202,14 +202,22 @@ def run_single_trial(
     )
     no_stimulus = np.zeros(config.n_neurons)
     
-    # --- PHASE 1: ENCODING ---
+    # --- PHASE 1: ENCODING (theta-burst protocol) ---
     if verbose:
-        print(f"    Phase 1: Encoding ({config.encoding_duration}s)")
+        print(f"    Phase 1: Encoding (theta-burst, 5 bursts)")
     
-    n_encoding_steps = int(config.encoding_duration / config.dt_fine)
-    
-    for _ in range(n_encoding_steps):
-        state = network.step(config.dt_fine, stimulus, reward=False)
+    dt_burst = 0.001  # 1ms for burst timing
+    for burst in range(5):  # 5 bursts at 5 Hz
+        for spike in range(4):  # 4 spikes at 100 Hz
+            # 2ms depolarization
+            for _ in range(2):
+                state = network.step(dt_burst, stimulus, reward=False)
+            # 8ms rest within burst
+            for _ in range(8):
+                state = network.step(dt_burst, no_stimulus, reward=False)
+        # 160ms between bursts
+        for _ in range(160):
+            state = network.step(dt_burst, no_stimulus, reward=False)
     
     result.dimers_after_encoding = state.total_dimers
     result.eligibility_after_encoding = state.mean_eligibility

@@ -41,30 +41,6 @@ from model6_recurrent_network import Model6RecurrentNetwork, NetworkConfig
 from model6_credit_assignment_experiment import (
     ExperimentConfig, run_experiment, plot_results, print_summary, save_results
 )
-    
-if __name__ == "__main__":
-    # Configure experiment
-    config = ExperimentConfig(
-        n_neurons=10,           # 10 neurons = 90 synapses
-        delays=[1, 5, 10, 20, 30, 60],
-        n_trials=10,
-        conditions=['P31', 'P32']
-    )
-        
-    # Run experiment
-    results = run_experiment(
-        config=config,
-        Model6Class=Model6QuantumSynapse,
-        Model6Params=Model6Parameters,
-        verbose=True
-    )
-        
-    # Output
-    output_dir = Path(__file__).parent / 'results'
-        
-    plot_results(results, output_dir / 'network_credit_assignment.png')
-    save_results(results, output_dir / 'network_results.json')
-    print_summary(results)
 
 def setup_logging(output_dir: Path):
     """Configure logging"""
@@ -103,7 +79,7 @@ def main():
                        help='Skip plotting (for headless servers)')
     parser.add_argument('--seed', type=int, default=42,
                        help='Random seed base')
-    parser.add_argument('--n-neurons', type=int, default=10,
+    parser.add_argument('--n-neurons', type=int, default=5,
                        help='Number of neurons')
     
     args = parser.parse_args()
