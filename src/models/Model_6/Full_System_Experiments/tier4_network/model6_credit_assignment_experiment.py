@@ -74,7 +74,7 @@ class ExperimentConfig:
     conditions: List[str] = field(default_factory=lambda: ['P31', 'P32'])
     
     # Timing (seconds)
-    encoding_duration: float = 0.2     # How long to present stimulus
+    encoding_duration: float = 0.05     # How long to present stimulus
     response_duration: float = 0.5     # How long to collect response
     reward_duration: float = 0.5       # How long reward signal lasts
     
@@ -202,22 +202,14 @@ def run_single_trial(
     )
     no_stimulus = np.zeros(config.n_neurons)
     
-    # --- PHASE 1: ENCODING (theta-burst protocol) ---
+    # --- PHASE 1: ENCODING ---
     if verbose:
-        print(f"    Phase 1: Encoding (theta-burst, 5 bursts)")
+        print(f"    Phase 1: Encoding ({config.encoding_duration}s)")
     
-    dt_burst = 0.001  # 1ms for burst timing
-    for burst in range(5):  # 5 bursts at 5 Hz
-        for spike in range(4):  # 4 spikes at 100 Hz
-            # 2ms depolarization
-            for _ in range(2):
-                state = network.step(dt_burst, stimulus, reward=False)
-            # 8ms rest within burst
-            for _ in range(8):
-                state = network.step(dt_burst, no_stimulus, reward=False)
-        # 160ms between bursts
-        for _ in range(160):
-            state = network.step(dt_burst, no_stimulus, reward=False)
+    n_encoding_steps = int(config.encoding_duration / config.dt_fine)
+    
+    for _ in range(n_encoding_steps):
+        state = network.step(config.dt_fine, stimulus, reward=False)
     
     result.dimers_after_encoding = state.total_dimers
     result.eligibility_after_encoding = state.mean_eligibility
