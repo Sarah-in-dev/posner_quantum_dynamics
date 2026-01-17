@@ -53,6 +53,15 @@ except ImportError:
     HAS_EM_COUPLING = False
     logging.info("EM coupling modules not found - running Model 6 baseline")
 
+# Cross-region modules
+try:
+    from photon_emission_module import PhotonEmissionTracker
+    from photon_receiver_module import PhotonReceiver
+    HAS_CROSS_REGION = True
+except ImportError:
+    HAS_CROSS_REGION = False
+    logging.info("Cross-region modules not found - single-region only")
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -136,6 +145,15 @@ class Model6QuantumSynapse:
          
         self.ddsc = DDSCSystem(DDSCParameters())
 
+        # Cross-region photon emission/reception
+        self.cross_region_enabled = HAS_CROSS_REGION
+        if self.cross_region_enabled:
+            self.photon_emitter = PhotonEmissionTracker(synapse_id=0, mt_alignment=0.7)
+            self.photon_receiver = PhotonReceiver(synapse_id=0)
+            self._external_trp_boost = 1.0
+            self._external_k_boost = 1.0
+            logger.info("Cross-region coupling ENABLED")
+        
         # Particle-based dimer tracking with emergent entanglement
         self.dimer_particles = DimerParticleSystem(
             params=self.params,
@@ -406,14 +424,26 @@ class Model6QuantumSynapse:
             
             ca_spike_active = (activity_level > 0.1)
             
+            n_trp_effective = self.n_tryptophans
+            if self.cross_region_enabled:
+                n_trp_effective = int(self.n_tryptophans * self._external_trp_boost)
+            
             trp_state = self.tryptophan.update(
                 dt=dt,
                 photon_flux=metabolic_uv_flux,
-                n_tryptophans=self.n_tryptophans,
+                n_tryptophans=n_trp_effective,
                 ca_spike_active=ca_spike_active,
                 network_modulation=self._network_modulation  # REVERSE COUPLING
             )
-            
+            # Cross-region: emit photons based on tryptophan state
+            if self.cross_region_enabled:
+                emission_result = self.photon_emitter.step(
+                    dt=dt,
+                    tryptophan_state=trp_state,
+                    ca_spike_active=ca_spike_active
+                )
+
+
             em_field_trp = trp_state['output']['em_field_time_averaged']
             self._collective_field_kT = trp_state['output']['collective_field_kT']
             
@@ -609,6 +639,22 @@ class Model6QuantumSynapse:
         # Update time
         self.time += dt
         
+    def receive_photons(self, delivered_packets: list, current_time: float):
+        """Receive photons from waveguide and update modulation"""
+        if not self.cross_region_enabled:
+            return
+        
+        result = self.photon_receiver.receive_photons(delivered_packets, current_time)
+        mod = self.photon_receiver.get_modulation_factors()
+        self._external_trp_boost = mod['trp_n_effective_multiplier']
+        self._external_k_boost = mod['k_agg_multiplier']
+    
+    def get_emitted_packets(self) -> list:
+        """Get photon packets ready for waveguide transmission"""
+        if not self.cross_region_enabled:
+            return []
+        return self.photon_emitter.get_pending_packets()
+    
     def get_experimental_metrics(self) -> Dict[str, float]:
         """
         Return all experimental metrics for validation
