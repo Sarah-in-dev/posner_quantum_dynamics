@@ -95,6 +95,10 @@ class NetworkConfig:
     # Microtubule invasion (enables tryptophan EM field)
     mt_invaded: bool = True
 
+    # Encoding parameters
+    encoding_activity_threshold: float = 0.5
+    theta_burst_during_encoding: bool = True
+
 
 @dataclass
 class NetworkState:
@@ -201,21 +205,6 @@ class Model6RecurrentNetwork:
                  seed: Optional[int] = None):
         """
         Initialize Model 6 recurrent network.
-        
-        Parameters
-        ----------
-        n_neurons : int
-            Number of neurons in the recurrent circuit
-        isotope : str
-            'P31' (quantum, τ~100s) or 'P32' (control, τ~0.4s)
-        Model6Class : class
-            The Model6QuantumSynapse class to instantiate
-        Model6Params : class
-            The Model6Parameters class for configuration
-        config : NetworkConfig, optional
-            Network configuration
-        seed : int, optional
-            Random seed for reproducibility
         """
         # Configuration
         if config is not None:
@@ -237,7 +226,6 @@ class Model6RecurrentNetwork:
             self.neurons.append(neuron)
         
         # Create synapses - each is a FULL Model6 instance
-        # Dict: (pre_idx, post_idx) -> Model6QuantumSynapse
         self.synapses: Dict[Tuple[int, int], Any] = {}
         self._create_synapses()
         
@@ -303,50 +291,25 @@ class Model6RecurrentNetwork:
     def _compute_synapse_voltage(self, pre_rate: float, post_rate: float) -> float:
         """
         Map neuron activity to synaptic voltage.
-        
-        This implements NMDA-like coincidence detection:
-        - NMDA receptors require BOTH glutamate (pre) AND depolarization (post)
-        - Mg²⁺ block is removed only when postsynaptic neuron is depolarized
-        
-        Returns voltage that Model 6 calcium channels will respond to.
         """
         pre_active = pre_rate > self.config.pre_activity_threshold
         post_active = post_rate > self.config.post_activity_threshold
         
         if pre_active and post_active:
-            # Both active → NMDA unblocked → strong calcium influx
             return self.config.voltage_depolarized
         elif pre_active:
-            # Pre only → AMPA but NMDA blocked
             return self.config.voltage_partial
         else:
-            # Neither or post only → resting
             return self.config.voltage_resting
     
     def _get_synapse_weight(self, synapse) -> float:
-        """
-        Extract effective synaptic weight from Model 6 state.
-        
-        Model 6 has CaMKII commitment rather than a simple weight.
-        We map commitment level to effective weight.
-        """
+        """Extract effective synaptic weight from Model 6 state."""
         base = self.config.base_weight
-        
-        # Get commitment level
         committed_level = getattr(synapse, '_committed_memory_level', 0.0)
-        
-        # Could also use CaMKII pT286 or eligibility
-        # eligibility = getattr(synapse, '_current_eligibility', 0.0)
-        
         return base + committed_level * self.config.weight_scale
     
     def _compute_collective_field(self) -> float:
-        """
-        Compute collective EM field from all synapses.
-        
-        The tryptophan network couples synapses through the dendritic
-        microtubule network. Field scales as √N (superradiance).
-        """
+        """Compute collective EM field from all synapses."""
         if not self.config.enable_collective_field:
             return 0.0
         
@@ -356,29 +319,19 @@ class Model6RecurrentNetwork:
                 total_dimers += len(synapse.dimer_particles.dimers)
             elif hasattr(synapse, 'get_experimental_metrics'):
                 metrics = synapse.get_experimental_metrics()
-                # Estimate dimer count from concentration
-                # Active zone volume ~1e-17 L, so nM * 1e-17 * 6e23 ≈ dimers
                 dimer_nM = metrics.get('dimer_peak_nM_ct', 0.0)
                 total_dimers += int(dimer_nM * 1e-17 * 6e23 / 1e9)
         
         if total_dimers < 5:
             return 0.0
         
-        # √N scaling from superradiance
         collective_enhancement = np.sqrt(total_dimers / 5)
-        
-        # Per-dimer field (from paper: ~0.5 kT per dimer)
         base_field = min(total_dimers, 50) * 0.5
         
         return base_field * collective_enhancement * self.config.field_coupling_strength
     
     def _distribute_collective_field(self, field_kT: float):
-        """
-        Distribute collective field back to individual synapses.
-        
-        This enables coordination: synapses see the collective state
-        of the network, not just their local state.
-        """
+        """Distribute collective field back to individual synapses."""
         for synapse in self.synapses.values():
             if hasattr(synapse, '_collective_field_kT'):
                 synapse._collective_field_kT = field_kT
@@ -389,20 +342,6 @@ class Model6RecurrentNetwork:
              reward: bool = False) -> NetworkState:
         """
         Advance network by one timestep.
-        
-        Parameters
-        ----------
-        dt : float
-            Timestep in seconds
-        external_input : np.ndarray
-            External input current to each neuron [n_neurons]
-        reward : bool
-            Whether reward/dopamine signal is present
-            
-        Returns
-        -------
-        NetworkState
-            Current network state
         """
         self.time += dt
         
@@ -439,6 +378,105 @@ class Model6RecurrentNetwork:
             self._current_rates[i] = neuron.firing_rate
         
         # Compute network state
+        return self._compute_network_state()
+    
+    def run_encoding_theta_burst(self,
+                                  external_input: np.ndarray,
+                                  n_bursts: int = 5,
+                                  reward: bool = False) -> NetworkState:
+        """
+        Run validated theta-burst protocol on synapses between co-active neurons.
+        
+        Protocol: 5 bursts at 5Hz, each burst = 4 spikes at 100Hz
+        Each spike = 2ms depolarization + 8ms rest
+        
+        This matches exp_theta_burst.py validation.
+        """
+        dt = 0.001  # 1ms timestep
+        
+        # Identify active neurons
+        active_neurons = set(np.where(external_input > 0.5)[0])
+        
+        # Identify synapses to stimulate (between co-active neurons)
+        active_synapses = {
+            (pre, post) for (pre, post) in self.synapses.keys()
+            if pre in active_neurons and post in active_neurons
+        }
+        
+        logger.info(f"Theta-burst: {len(active_neurons)} neurons, {len(active_synapses)} synapses")
+        
+        # Run theta burst protocol
+        for burst in range(n_bursts):
+            for spike in range(4):
+                # 2ms depolarization
+                for _ in range(2):
+                    self.time += dt
+                    for (pre, post), synapse in self.synapses.items():
+                        if (pre, post) in active_synapses:
+                            voltage = self.config.voltage_depolarized
+                        else:
+                            voltage = self.config.voltage_resting
+                        synapse.step(dt, {'voltage': voltage, 'reward': reward})
+                
+                # 8ms rest
+                for _ in range(8):
+                    self.time += dt
+                    for synapse in self.synapses.values():
+                        synapse.step(dt, {'voltage': self.config.voltage_resting, 'reward': reward})
+            
+            # 160ms between bursts
+            for _ in range(160):
+                self.time += dt
+                for synapse in self.synapses.values():
+                    synapse.step(dt, {'voltage': self.config.voltage_resting, 'reward': reward})
+        
+        # Update neuron rates
+        for i, neuron in enumerate(self.neurons):
+            neuron.firing_rate = 0.8 if i in active_neurons else 0.1
+            self._current_rates[i] = neuron.firing_rate
+        
+        return self._compute_network_state()
+    
+    def step_delay_fast(self, dt: float) -> NetworkState:
+        """Fast delay stepping - only decay dimer coherence"""
+        self.time += dt
+        
+        # T2 based on isotope (from physics)
+        T2 = 100.0 if self.config.isotope == 'P31' else 0.4
+        
+        for synapse in self.synapses.values():
+            if hasattr(synapse, 'dimer_particles'):
+                for dimer in synapse.dimer_particles.dimers:
+                    dimer.singlet_probability *= np.exp(-dt / T2)
+        
+        return self._compute_network_state()
+    
+    def step_reward_only(self, dt: float) -> NetworkState:
+        """Reward phase - check gate with existing eligibility, don't form new dimers"""
+        self.time += dt
+        
+        for synapse in self.synapses.values():
+            # Step dopamine only
+            if hasattr(synapse, 'dopamine') and synapse.dopamine is not None:
+                synapse.dopamine.step(dt, reward_signal=True)
+            
+            # Check three-factor gate with EXISTING dimer eligibility
+            if hasattr(synapse, 'dimer_particles') and synapse.dimer_particles.dimers:
+                mean_P_S = np.mean([d.singlet_probability for d in synapse.dimer_particles.dimers])
+                n_entangled = sum(1 for d in synapse.dimer_particles.dimers if d.singlet_probability > 0.5)
+                
+                eligibility_present = (mean_P_S > 0.5)
+                dopamine_read = synapse._dopamine_above_read_threshold() if hasattr(synapse, '_dopamine_above_read_threshold') else True
+                calcium_elevated = True  # Assume reactivation provides calcium
+                
+                plasticity_gate = eligibility_present and dopamine_read and calcium_elevated
+                
+                if plasticity_gate and not getattr(synapse, '_camkii_committed', False):
+                    synapse._camkii_committed = True
+                    eligibility = (mean_P_S - 0.25) / 0.75
+                    dimer_factor = min(1.0, n_entangled / 10.0)
+                    synapse._committed_memory_level = eligibility * dimer_factor
+        
         return self._compute_network_state()
     
     def _compute_network_state(self) -> NetworkState:
@@ -531,9 +569,6 @@ class Model6RecurrentNetwork:
         for neuron in self.neurons:
             neuron.reset()
         
-        # Note: Model 6 synapses don't have a simple reset
-        # For full reset, recreate the network
-        
         self._current_rates = np.zeros(self.n_neurons)
         self.time = 0.0
     
@@ -554,36 +589,6 @@ def create_model6_network(
 ) -> Model6RecurrentNetwork:
     """
     Factory function to create Model 6 recurrent network.
-    
-    Handles imports and configuration.
-    
-    Parameters
-    ----------
-    n_neurons : int
-        Number of neurons
-    isotope : str
-        'P31' (quantum) or 'P32' (control)
-    mt_invaded : bool
-        Whether microtubules have invaded (enables EM coupling)
-    seed : int, optional
-        Random seed
-        
-    Returns
-    -------
-    Model6RecurrentNetwork
-        Configured network
-        
-    Example
-    -------
-    >>> from model6_core import Model6QuantumSynapse
-    >>> from model6_parameters import Model6Parameters
-    >>> 
-    >>> network = create_model6_network(
-    ...     n_neurons=10, 
-    ...     isotope='P31',
-    ...     Model6Class=Model6QuantumSynapse,
-    ...     Model6Params=Model6Parameters
-    ... )
     """
     config = NetworkConfig(
         n_neurons=n_neurons,
@@ -591,11 +596,6 @@ def create_model6_network(
         mt_invaded=mt_invaded
     )
     
-    # These need to be imported from your actual Model 6 code
-    # from model6_core import Model6QuantumSynapse
-    # from model6_parameters import Model6Parameters
-    
-    # For now, return network configured for later injection
     return Model6RecurrentNetwork(
         config=config,
         seed=seed
@@ -622,9 +622,7 @@ if __name__ == "__main__":
     print("      Model6Params=Model6Parameters")
     print("  )")
     print("  ")
-    print("  # Run simulation")
-    print("  for t in range(1000):")
-    print("      state = network.step(dt=0.001, external_input=stimulus, reward=False)")
-    print("  ")
-    print("  # Check metrics")
-    print("  print(network.get_network_metrics())")
+    print("  # Run encoding with theta burst")
+    print("  stimulus = np.array([2.0, 2.0, 2.0, 0, 0, 0, 0, 0, 0, 0])")
+    print("  state = network.run_encoding_theta_burst(stimulus)")
+    print("  print(f'Dimers formed: {state.total_dimers}')")

@@ -80,7 +80,7 @@ class ExperimentConfig:
     
     # Timestep
     dt_fine: float = 0.050    # 50 ms during encoding/response
-    dt_coarse: float = 0.1    # 100 ms during delay (for speed)
+    dt_coarse: float = 1.0    # 1s during delay (dimers just decay)
     
     # Stimulus parameters
     stimulus_strength: float = 2.0
@@ -204,13 +204,15 @@ def run_single_trial(
     
     # --- PHASE 1: ENCODING ---
     if verbose:
-        print(f"    Phase 1: Encoding ({config.encoding_duration}s)")
-    
-    n_encoding_steps = int(config.encoding_duration / config.dt_fine)
-    
-    for _ in range(n_encoding_steps):
-        state = network.step(config.dt_fine, stimulus, reward=False)
-    
+        print(f"    Phase 1: Encoding (theta-burst protocol)")
+
+    # Use theta-burst encoding for validated dimer formation
+    state = network.run_encoding_theta_burst(
+        external_input=stimulus,
+        n_bursts=5,
+        reward=False
+    )
+        
     result.dimers_after_encoding = state.total_dimers
     result.eligibility_after_encoding = state.mean_eligibility
     result.commitment_before = np.sum(network.get_commitment_matrix())
@@ -229,9 +231,8 @@ def run_single_trial(
     rates_during_delay = []
     
     for step in range(n_delay_steps):
-        # NO external stimulus, but network has recurrent connections
-        # This tests whether the network can maintain information
-        state = network.step(dt_delay, no_stimulus, reward=False)
+        
+        state = network.step_delay_fast(dt_delay)
         
         if step % max(1, n_delay_steps // 10) == 0:
             rates_during_delay.append(np.mean(state.rates))
@@ -257,7 +258,7 @@ def run_single_trial(
     mild_stimulus = stimulus * 0.5  # Weaker than encoding
     
     for _ in range(n_reward_steps):
-        state = network.step(config.dt_fine, mild_stimulus, reward=True)
+        state = network.step_reward_only(config.dt_fine)
     
     result.commitment_after = np.sum(network.get_commitment_matrix())
     result.delta_commitment = result.commitment_after - result.commitment_before
