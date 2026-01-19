@@ -25,6 +25,12 @@ from model6_parameters import Model6Parameters
 # Waveguide network
 from myelin_waveguide_module import WaveguideConnection, WaveguideNetwork
 
+# After existing imports, add:
+from cross_neuron_entanglement import (
+    CrossNeuronEntanglementTracker,
+    CrossNeuronEntanglementParameters
+)
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -133,14 +139,19 @@ class MultiRegionNetwork:
         self.waveguide_network = WaveguideNetwork()
         self.time = 0.0
         
+        # NEW: Cross-neuron entanglement tracker
+        self.cross_neuron_entanglement = CrossNeuronEntanglementTracker()
+        
         # History tracking
         self.history = {
             'time': [],
             'region_dimers': {},
             'region_em_fields': {},
-            'photons_transmitted': {}
+            'photons_transmitted': {},
+            'cross_neuron_bonds': [],      # NEW
+            'coordination_factor': []       # NEW
         }
-    
+
     def add_region(self, 
                    region_id: int, 
                    n_synapses: int = 5,
@@ -201,15 +212,26 @@ class MultiRegionNetwork:
             stimulus = stimuli.get(region_id, {'voltage': -70e-3, 'reward': False})
             region.step(dt, stimulus)
         
-        # === STEP 2: Collect emitted photons from each region ===
+        # === STEP 2: Collect emitted photons and TAG WITH DIMER INFO ===
         emitted_by_region = {}
         for region_id, region in self.regions.items():
             packets = region.get_emitted_packets()
             emitted_by_region[region_id] = packets
             
-            # DEBUG
-            if packets:
-                print(f"  DEBUG: Region {region_id} emitted {len(packets)} packets")
+            # NEW: Tag packets with source dimer information
+            for packet in packets:
+                synapse_idx = packet.source_synapse_id if hasattr(packet, 'source_synapse_id') else 0
+                if synapse_idx < len(region.synapses):
+                    synapse = region.synapses[synapse_idx]
+                    if hasattr(synapse, 'dimer_particles') and synapse.dimer_particles.dimers:
+                        packet.dimer_link = self.cross_neuron_entanglement.tag_packet_with_dimers(
+                            packet_id=packet.id,
+                            emission_time=self.time,
+                            source_dimers=synapse.dimer_particles.dimers,
+                            source_neuron_id=region_id,
+                            source_synapse_id=synapse_idx
+                        )
+                        packet.source_neuron_id = region_id
             
             # Inject into waveguides
             if packets:
@@ -222,17 +244,33 @@ class MultiRegionNetwork:
         # === STEP 3: Propagate through waveguides ===
         deliveries = self.waveguide_network.step(self.time)
         
-        # DEBUG
-        if deliveries:
-            for tgt, pkts in deliveries.items():
-                print(f"  DEBUG: {len(pkts)} packets delivered to region {tgt}")
-        
-        # === STEP 4: Deliver photons to target regions ===
+        # === STEP 4: Deliver photons and PROCESS ENTANGLEMENT ===
         for target_id, packets in deliveries.items():
             if target_id in self.regions:
-                self.regions[target_id].receive_photons(packets, self.time)
+                region = self.regions[target_id]
+                region.receive_photons(packets, self.time)
+                
+                # NEW: Process cross-neuron entanglement
+                for packet_record in packets:
+                    packet = packet_record.get('packet')
+                    if packet and hasattr(packet, 'dimer_link') and packet.dimer_link is not None:
+                        # Find which synapse received this packet
+                        for syn_idx, synapse in enumerate(region.synapses):
+                            if hasattr(synapse, 'dimer_particles') and synapse.dimer_particles.dimers:
+                                self.cross_neuron_entanglement.process_arrival(
+                                    dimer_link=packet.dimer_link,
+                                    n_photons_delivered=packet_record.get('delivered_photons', 0),
+                                    target_dimers=synapse.dimer_particles.dimers,
+                                    target_neuron_id=target_id,
+                                    target_synapse_id=syn_idx,
+                                    current_time=self.time
+                                )
         
-        # === STEP 5: Record history ===
+        # === STEP 5: Update cross-neuron entanglement decay ===
+        dimer_states = self._collect_dimer_states()
+        self.cross_neuron_entanglement.step(dt, dimer_states, self.time)
+        
+        # === STEP 6: Record history ===
         self.history['time'].append(self.time)
         
         for region_id, region in self.regions.items():
@@ -247,6 +285,102 @@ class MultiRegionNetwork:
             src, tgt = key
             delivered = len(deliveries.get(tgt, []))
             self.history['photons_transmitted'][key].append(delivered)
+        
+        # NEW: Record entanglement history
+        self.history['cross_neuron_bonds'].append(
+            len(self.cross_neuron_entanglement.bonds)
+        )
+        self.history['coordination_factor'].append(
+            self.cross_neuron_entanglement.get_coordination_factor(
+                list(self.regions.keys())
+            )
+        )
+
+    def _collect_dimer_states(self) -> Dict:
+        """
+        Collect current singlet probabilities of all dimers across network.
+        
+        Returns dict mapping (neuron_id, synapse_id, dimer_id) -> P_S
+        """
+        states = {}
+        
+        for region_id, region in self.regions.items():
+            for syn_idx, synapse in enumerate(region.synapses):
+                if hasattr(synapse, 'dimer_particles'):
+                    for dimer in synapse.dimer_particles.dimers:
+                        key = (region_id, syn_idx, dimer.id)
+                        states[key] = dimer.singlet_probability
+        
+        return states
+
+    def get_network_entanglement_state(self) -> Dict:
+        """
+        Get current state of cross-neuron entanglement.
+        
+        Used for coordination experiments and reward distribution.
+        """
+        neuron_ids = list(self.regions.keys())
+        
+        return {
+            'n_bonds': len(self.cross_neuron_entanglement.bonds),
+            'coordination_factor': self.cross_neuron_entanglement.get_coordination_factor(neuron_ids),
+            'entanglement_matrix': self.cross_neuron_entanglement.get_entanglement_matrix(neuron_ids),
+            'metrics': self.cross_neuron_entanglement.get_network_metrics()
+        }
+
+    def apply_reward(self, reward: float) -> Dict:
+        """
+        Apply reward to network with entanglement-based coordination.
+        
+        Neurons with cross-neuron entanglement update coherently.
+        This is the key mechanism for coordination without backprop.
+        
+        Parameters
+        ----------
+        reward : float
+            Scalar reward signal (like dopamine)
+            
+        Returns
+        -------
+        dict with update information
+        """
+        ent_state = self.get_network_entanglement_state()
+        coordination = ent_state['coordination_factor']
+        
+        updates = {}
+        
+        for region_id, region in self.regions.items():
+            for syn_idx, synapse in enumerate(region.synapses):
+                # Get local eligibility from dimer coherence
+                if hasattr(synapse, 'dimer_particles') and synapse.dimer_particles.dimers:
+                    mean_P_S = np.mean([d.singlet_probability for d in synapse.dimer_particles.dimers])
+                    eligibility = (mean_P_S - 0.25) / 0.75  # Map to 0-1
+                else:
+                    eligibility = 0.0
+                
+                # Get cross-neuron bonds involving this region
+                bonds = self.cross_neuron_entanglement.get_bonds_for_neuron(region_id)
+                bond_strength = sum(b.strength for b in bonds) / max(1, len(bonds)) if bonds else 0.0
+                
+                # Coordination bonus: stronger update for more entangled synapses
+                coordination_bonus = 1.0 + coordination * bond_strength
+                
+                # Weight update
+                learning_rate = 0.01
+                delta_w = reward * eligibility * coordination_bonus * learning_rate
+                
+                updates[(region_id, syn_idx)] = {
+                    'eligibility': eligibility,
+                    'bond_strength': bond_strength,
+                    'coordination_bonus': coordination_bonus,
+                    'delta_w': delta_w
+                }
+        
+        return {
+            'updates': updates,
+            'coordination_factor': coordination,
+            'n_cross_neuron_bonds': ent_state['n_bonds']
+        }
 
 
 # =============================================================================

@@ -29,7 +29,10 @@ Date: January 2026
 
 import numpy as np
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from cross_neuron_entanglement import PhotonDimerLink
 import logging
 
 logger = logging.getLogger(__name__)
@@ -129,6 +132,10 @@ class PhotonPacket:
     propagation_distance_m: float = 0.0
     attenuation_factor: float = 1.0  # Remaining intensity fraction
 
+    # NEW: Cross-neuron entanglement support
+    source_neuron_id: int = 0
+    dimer_link: Optional['PhotonDimerLink'] = None
+
 
 # =============================================================================
 # EMISSION TRACKER
@@ -143,6 +150,7 @@ class PhotonEmissionTracker:
     
     def __init__(self, 
                  synapse_id: int,
+                 neuron_id: int = 0,  # NEW
                  params: Optional[PhotonEmissionParameters] = None,
                  mt_alignment: float = 0.5):
         """
@@ -159,6 +167,7 @@ class PhotonEmissionTracker:
             Higher in axon initial segment, lower in spines
         """
         self.synapse_id = synapse_id
+        self.neuron_id = neuron_id  # NEW
         self.params = params or PhotonEmissionParameters()
         self.mt_alignment = mt_alignment
         

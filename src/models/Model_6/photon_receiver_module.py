@@ -38,7 +38,10 @@ Date: January 2026
 
 import numpy as np
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from cross_neuron_entanglement import CrossNeuronEntanglementTracker, CrossNeuronBond
 import logging
 
 logger = logging.getLogger(__name__)
@@ -100,6 +103,7 @@ class PhotonReceiver:
     
     def __init__(self,
                  synapse_id: int,
+                 neuron_id: int = 0,  # NEW
                  params: Optional[PhotonReceiverParameters] = None):
         """
         Initialize receiver for a target synapse
@@ -112,6 +116,7 @@ class PhotonReceiver:
             Reception parameters
         """
         self.synapse_id = synapse_id
+        self.neuron_id = neuron_id  # NEW
         self.params = params or PhotonReceiverParameters()
         
         # State variables
@@ -135,6 +140,9 @@ class PhotonReceiver:
             'trp_enhancement': [],
             'dimer_enhancement': []
         }
+
+        # NEW: Track received dimer links for cross-neuron entanglement
+        self.recent_dimer_links: List[dict] = []
         
         logger.info(f"PhotonReceiver initialized for synapse {synapse_id}")
     
@@ -173,6 +181,15 @@ class PhotonReceiver:
             # Track phase if available
             if 'packet' in record and hasattr(record['packet'], 'phase'):
                 phases.append(record['packet'].phase)
+            
+            # NEW: Capture dimer link for cross-neuron entanglement
+            if 'packet' in record and hasattr(record['packet'], 'dimer_link'):
+                if record['packet'].dimer_link is not None:
+                    self.recent_dimer_links.append({
+                        'dimer_link': record['packet'].dimer_link,
+                        'n_photons': n_photons,
+                        'arrival_time': current_time
+                    })
         
         # Add to accumulator (with absorption efficiency)
         absorbed = n_received_this_step * self.params.absorption_efficiency_350nm
@@ -220,6 +237,49 @@ class PhotonReceiver:
             'trp_enhancement': self.trp_enhancement,
             'dimer_enhancement': self.dimer_rate_enhancement
         }
+    
+    
+    def process_entanglement(self,
+                            target_dimers: List,
+                            entanglement_tracker: 'CrossNeuronEntanglementTracker',
+                            current_time: float) -> List['CrossNeuronBond']:
+        """
+        Process recent arrivals for cross-neuron entanglement.
+        
+        Should be called after receive_photons() when target dimers are available.
+        
+        Parameters
+        ----------
+        target_dimers : list
+            Current Dimer objects at this synapse
+        entanglement_tracker : CrossNeuronEntanglementTracker
+            The network's cross-neuron entanglement tracker
+        current_time : float
+            Current simulation time (s)
+            
+        Returns
+        -------
+        list of CrossNeuronBond
+            Newly created entanglement bonds
+        """
+        all_new_bonds = []
+        
+        for arrival in self.recent_dimer_links:
+            new_bonds = entanglement_tracker.process_arrival(
+                dimer_link=arrival['dimer_link'],
+                n_photons_delivered=arrival['n_photons'],
+                target_dimers=target_dimers,
+                target_neuron_id=self.neuron_id,
+                target_synapse_id=self.synapse_id,
+                current_time=current_time
+            )
+            all_new_bonds.extend(new_bonds)
+        
+        # Clear processed links
+        self.recent_dimer_links = []
+        
+        return all_new_bonds
+    
     
     def get_modulation_factors(self) -> Dict:
         """
