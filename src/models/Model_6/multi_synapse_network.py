@@ -247,6 +247,98 @@ class NetworkEntanglementTracker:
             
             return j_factor * spatial_factor
     
+    def get_synapse_correlation_matrix(self, synapses: List) -> np.ndarray:
+        """
+        Compute correlation matrix between synapses based on entanglement.
+        
+        Physics: C_ij = E_ij × √(mean_P_S_i × mean_P_S_j)
+        
+        Where E_ij is the fraction of entangled dimer pairs between synapses.
+        
+        Parameters
+        ----------
+        synapses : List[Model6QuantumSynapse]
+            All synapse models in network
+            
+        Returns
+        -------
+        np.ndarray : Correlation matrix (n_synapses × n_synapses)
+        """
+        n_syn = len(synapses)
+        C = np.zeros((n_syn, n_syn))
+        
+        if not self.all_dimers:
+            return C
+        
+        # Get mean P_singlet per synapse
+        P_singlet = []
+        for syn in synapses:
+            if hasattr(syn, 'dimer_particles') and syn.dimer_particles.dimers:
+                mean_ps = np.mean([d.singlet_probability for d in syn.dimer_particles.dimers])
+            else:
+                mean_ps = 0.25  # Thermal
+            P_singlet.append(mean_ps)
+        P_singlet = np.array(P_singlet)
+        
+        # Count cross-synapse bonds
+        # Build lookup: global_id -> synapse_idx
+        dimer_to_synapse = {d['global_id']: d['synapse_idx'] for d in self.all_dimers}
+        
+        # Count bonds between each synapse pair
+        bond_counts = np.zeros((n_syn, n_syn))
+        for id_i, id_j in self.entanglement_bonds:
+            syn_i = dimer_to_synapse.get(id_i, -1)
+            syn_j = dimer_to_synapse.get(id_j, -1)
+            if syn_i >= 0 and syn_j >= 0 and syn_i != syn_j:
+                bond_counts[syn_i, syn_j] += 1
+                bond_counts[syn_j, syn_i] += 1
+        
+        # Count dimers per synapse for normalization
+        dimers_per_synapse = np.zeros(n_syn)
+        for d in self.all_dimers:
+            dimers_per_synapse[d['synapse_idx']] += 1
+        
+        # Build correlation matrix
+        for i in range(n_syn):
+            for j in range(i+1, n_syn):
+                # Skip if either synapse has no coherent dimers
+                if P_singlet[i] < 0.5 or P_singlet[j] < 0.5:
+                    continue
+                
+                # E_ij = normalized bond count
+                max_bonds = min(dimers_per_synapse[i], dimers_per_synapse[j])
+                if max_bonds > 0:
+                    E_ij = bond_counts[i, j] / max_bonds
+                else:
+                    E_ij = 0.0
+                
+                # C_ij = E_ij × √(P_S_i × P_S_j)
+                coherence_factor = np.sqrt(P_singlet[i] * P_singlet[j])
+                C[i, j] = E_ij * coherence_factor
+                C[j, i] = C[i, j]
+        
+        return C
+
+
+    def get_coordination_factor(self, synapses: List) -> float:
+        """
+        Get overall coordination factor for network.
+        
+        Returns value in [0, 1] indicating degree of cross-synapse entanglement.
+        """
+        C = self.get_synapse_correlation_matrix(synapses)
+        n = len(synapses)
+        if n < 2:
+            return 0.0
+        
+        # Sum of off-diagonal normalized by maximum possible
+        off_diag_sum = np.sum(C) - np.trace(C)
+        max_possible = n * (n - 1)
+        
+        return min(1.0, off_diag_sum / max_possible)
+    
+    
+    
     def _find_largest_cluster(self) -> set:
         """
         Find largest connected component using union-find
@@ -525,6 +617,15 @@ class MultiSynapseNetwork:
                 dt, self.synapses, self.positions
             )
         
+        # =========================================================================
+        # GAP 3: COORDINATED THREE-FACTOR GATE EVALUATION
+        # =========================================================================
+        # When reward is present, evaluate gates with correlated sampling.
+        # This ensures entangled synapses commit/fail together.
+        if stimulus.get('reward', False):
+            self._evaluate_coordinated_gate(synapse_states)
+        # =========================================================================
+        
         # Compute network-level quantities
         network_state = self._compute_network_state(synapse_states)
         
@@ -626,6 +727,81 @@ class MultiSynapseNetwork:
             synapse_states=synapse_states
         )
     
+    
+    def sample_correlated_eligibilities(self, rng: np.random.Generator = None) -> np.ndarray:
+        """
+        Sample eligibilities with quantum correlations for reward application.
+        
+        This is the "measurement" - entangled synapses get correlated outcomes.
+        
+        Returns
+        -------
+        np.ndarray : Sampled eligibilities for each synapse
+        """
+        if rng is None:
+            rng = np.random.default_rng()
+        
+        # Get mean eligibilities from each synapse
+        mean_elig = np.array([s.get_eligibility() for s in self.synapses])
+        
+        # Get correlation matrix from entanglement
+        self.entanglement_tracker.collect_dimers(self.synapses, self.positions)
+        C = self.entanglement_tracker.get_synapse_correlation_matrix(self.synapses)
+        
+        # Build covariance matrix
+        base_var = 0.1  # Variance scale for quantum fluctuations
+        cov = np.eye(self.n_synapses) * base_var
+        
+        for i in range(self.n_synapses):
+            for j in range(i+1, self.n_synapses):
+                cov[i, j] = C[i, j] * base_var
+                cov[j, i] = cov[i, j]
+        
+        # Ensure positive semi-definite
+        eigvals = np.linalg.eigvalsh(cov)
+        if np.min(eigvals) < 0:
+            cov += np.eye(self.n_synapses) * (-np.min(eigvals) + 1e-6)
+        
+        # Sample from multivariate normal
+        sampled = rng.multivariate_normal(mean_elig, cov)
+        
+        return np.clip(sampled, 0, 1)
+
+
+    def apply_reward_correlated(self, reward: float, learning_rate: float = 0.05) -> np.ndarray:
+        """
+        Apply reward with entanglement-based coordination.
+        
+        Correlated synapses get similar eligibility samples, producing
+        coordinated weight updates without backpropagation.
+        
+        Parameters
+        ----------
+        reward : float
+            Scalar reward signal (can be negative)
+        learning_rate : float
+            Learning rate for weight updates
+            
+        Returns
+        -------
+        np.ndarray : Weight changes for each synapse
+        """
+        # Sample eligibilities with correlations
+        sampled_elig = self.sample_correlated_eligibilities()
+        
+        # Compute weight changes
+        delta_w = learning_rate * reward * sampled_elig
+        
+        # Apply to synapses (need to implement weight storage)
+        # This hooks into the CaMKII commitment mechanism
+        for i, syn in enumerate(self.synapses):
+            if hasattr(syn, '_committed_memory_level'):
+                syn._committed_memory_level += delta_w[i]
+                syn._committed_memory_level = np.clip(syn._committed_memory_level, 0, 1)
+        
+        return delta_w
+    
+    
     def _check_network_commitment(self, state: NetworkState):
         """
         Check if network crosses commitment threshold
@@ -650,6 +826,180 @@ class MultiSynapseNetwork:
                           f"(threshold={self.field_threshold_kT} kT), "
                           f"dimers={state.total_dimers:.1f}, "
                           f"level={self.network_commitment_level:.2f}")
+    
+    def step_with_coordination(self, dt: float, stimulus: dict) -> NetworkState:
+        """
+        Step network with coordinated three-factor gate evaluation.
+        
+        When reward is present, use correlated sampling to decide which
+        synapses open their plasticity gates. Entangled synapses tend to
+        commit together or fail together.
+        
+        This replaces independent gate evaluation with coordinated "measurement".
+        """
+        reward_present = stimulus.get('reward', False)
+        
+        # Step individual synapses (calcium, dimers, etc.)
+        for synapse in self.synapses:
+            synapse.step(dt, stimulus)
+        
+        # Update network entanglement tracking
+        self.entanglement_tracker.collect_dimers(self.synapses, self.positions)
+        ent_metrics = self.entanglement_tracker.step(dt, self.synapses, self.positions)
+        self._network_entanglement = ent_metrics
+        
+        # === COORDINATED THREE-FACTOR GATE ===
+        if reward_present:
+            self._evaluate_coordinated_gate(stimulus)
+        
+        # Update network state
+        self.time += dt
+        self._record_history()
+        
+        return self._get_network_state()
+
+
+    def _evaluate_coordinated_gate(self, stimulus: dict):
+        """
+        Evaluate three-factor gate with entanglement-based coordination.
+        
+        Physics: When reward arrives, the quantum state is "measured".
+        Entangled synapses collapse together, producing correlated outcomes.
+        
+        The gate has three factors:
+        1. Eligibility: P_S > 0.5 (quantum - from dimers)
+        2. Dopamine: reward signal present (classical)
+        3. Calcium: postsynaptic activity (classical)
+        
+        Entanglement affects factor 1: correlated sampling determines
+        the EFFECTIVE eligibility used for gate evaluation.
+        """
+        # Check dopamine at network level (all synapses see same reward)
+        dopamine_present = stimulus.get('reward', False)
+        if not dopamine_present:
+            return
+        
+        # Get individual gate factors
+        n = self.n_synapses
+        eligibility_raw = np.zeros(n)
+        calcium_elevated = np.zeros(n, dtype=bool)
+        
+        for i, syn in enumerate(self.synapses):
+            # Raw eligibility from dimer P_S
+            if hasattr(syn, '_mean_singlet_prob'):
+                eligibility_raw[i] = (syn._mean_singlet_prob - 0.25) / 0.75
+            else:
+                eligibility_raw[i] = 0.0
+            
+            # Calcium factor
+            calcium_uM = getattr(syn, '_peak_calcium_uM', 0.0)
+            if hasattr(syn, 'ca_system'):
+                calcium_uM = float(np.max(syn.ca_system.ca_concentration)) * 1e6
+            calcium_elevated[i] = calcium_uM > 0.5  # µM threshold
+        
+        # === CORRELATED SAMPLING (the "measurement") ===
+        # Sample eligibilities from correlated distribution
+        sampled_elig = self.sample_correlated_eligibilities()
+        
+        # Determine which synapses pass threshold
+        elig_threshold = 0.33  # P_S > 0.5 maps to elig > 0.33
+        elig_passes = sampled_elig > elig_threshold
+        
+        # === COORDINATED COMMITMENT ===
+        for i, syn in enumerate(self.synapses):
+            # All three factors must be true
+            gate_open = (
+                elig_passes[i] and           # Correlated eligibility
+                dopamine_present and          # Reward signal
+                calcium_elevated[i]           # Postsynaptic activity
+            )
+            
+            syn._plasticity_gate = gate_open
+            
+            # Commitment
+            if gate_open and not getattr(syn, '_camkii_committed', False):
+                syn._camkii_committed = True
+                
+                # Commitment level based on SAMPLED eligibility (not raw)
+                # This ensures correlated synapses get similar levels
+                n_entangled = getattr(syn, '_n_entangled_dimers', 0)
+                dimer_factor = min(1.0, n_entangled / 10.0)
+                field_kT = getattr(syn, '_collective_field_kT', 0.0)
+                field_factor = min(1.0, field_kT / 20.0)
+                
+                syn._committed_memory_level = sampled_elig[i] * dimer_factor * field_factor
+        
+        # === POST-MEASUREMENT COLLAPSE ===
+        # After "measurement", entanglement is consumed
+        self._apply_measurement_collapse()
+
+
+    def _apply_measurement_collapse(self):
+        """
+        Apply measurement collapse to entanglement network.
+        
+        Physics: Quantum measurement destroys superposition.
+        After reward-triggered "collapse", cross-synapse entanglement
+        bonds are weakened or broken.
+        
+        This is a one-time effect when reward is applied.
+        """
+        # Reduce bond strengths significantly (measurement effect)
+        # Don't completely destroy - some residual correlation remains
+        collapse_factor = 0.3  # Bonds reduced to 30% strength
+        
+        tracker = self.entanglement_tracker
+        
+        # For bonds, we can't easily modify strength (they're in a set)
+        # Instead, we accelerate decay by marking measurement time
+        self._last_measurement_time = self.time
+        
+        # Alternative: remove some bonds probabilistically
+        # Bonds between synapses that BOTH committed remain (correlated collapse)
+        # Bonds where one committed and one didn't break (decoherence)
+        
+        committed_synapses = set()
+        for i, syn in enumerate(self.synapses):
+            if getattr(syn, '_camkii_committed', False):
+                committed_synapses.add(i)
+        
+        if not hasattr(tracker, 'entanglement_bonds'):
+            return
+        
+        # Build dimer-to-synapse lookup
+        if not tracker.all_dimers:
+            return
+        
+        dimer_to_synapse = {d['global_id']: d['synapse_idx'] for d in tracker.all_dimers}
+        
+        # Find bonds to break
+        bonds_to_remove = set()
+        for bond in tracker.entanglement_bonds:
+            id_i, id_j = bond
+            syn_i = dimer_to_synapse.get(id_i, -1)
+            syn_j = dimer_to_synapse.get(id_j, -1)
+            
+            if syn_i < 0 or syn_j < 0:
+                continue
+            
+            # Break bond if commitment was discordant (one yes, one no)
+            i_committed = syn_i in committed_synapses
+            j_committed = syn_j in committed_synapses
+            
+            if i_committed != j_committed:
+                # Discordant - bond breaks with high probability
+                if np.random.random() < 0.8:
+                    bonds_to_remove.add(bond)
+            else:
+                # Concordant - bond weakens but persists
+                # (handled by accelerated decay)
+                pass
+        
+        # Remove discordant bonds
+        for bond in bonds_to_remove:
+            tracker.entanglement_bonds.discard(bond)
+    
+    
     
     def _record_history(self, state: NetworkState):
         """Record network state to history"""
