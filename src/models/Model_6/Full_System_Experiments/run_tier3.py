@@ -63,6 +63,7 @@ from tier3_full_experiments import exp_spatial_clustering
 from tier3_full_experiments import exp_consolidation_kinetics
 from tier3_full_experiments import exp_sensitivity_analysis
 from tier3_full_experiments import exp_classical_comparison
+from tier3_full_experiments import exp_network_communication
 
 
 EXPERIMENTS = {
@@ -145,6 +146,13 @@ EXPERIMENTS = {
     'class': 'ClassicalComparisonExperiment',
     'description': 'Shows CaMKII cannot bridge 60-100s learning window',
     'category': 'validation'
+    },
+    'network_communication': {
+    'name': 'Network Communication via Entanglement (Gap 4)',
+    'module': exp_network_communication,
+    'class': 'NetworkCommunicationExperiment',
+    'description': 'Tests coordination advantage: entangled O(N²) vs independent/classical O(2^N)',
+    'category': 'core'
     },
     
 }

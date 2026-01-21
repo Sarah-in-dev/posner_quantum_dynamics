@@ -417,15 +417,17 @@ class MultiSynapseNetwork:
                  pattern: str = 'linear',
                  coupling_length_um: float = 5.0,
                  field_threshold_kT: float = 20.0,
-                 params=None):
-        
+                 params=None,
+                 use_correlated_sampling: bool = True):  # ADD THIS
+    
         self.n_synapses = n_synapses
         self.spacing_um = spacing_um
         self.pattern = pattern
         self.coupling_length_um = coupling_length_um
         self.field_threshold_kT = field_threshold_kT
         self.params = params
-        
+        self.use_correlated_sampling = use_correlated_sampling
+
         # Generate synapse positions
         self.positions = self._generate_positions()
         
@@ -623,7 +625,10 @@ class MultiSynapseNetwork:
         # When reward is present, evaluate gates with correlated sampling.
         # This ensures entangled synapses commit/fail together.
         if stimulus.get('reward', False):
-            self._evaluate_coordinated_gate(synapse_states)
+            if self.use_correlated_sampling:
+                self._evaluate_coordinated_gate(stimulus)
+            else:
+                self._evaluate_independent_gate(synapse_states, stimulus)
         # =========================================================================
         
         # Compute network-level quantities
@@ -1000,6 +1005,54 @@ class MultiSynapseNetwork:
             tracker.entanglement_bonds.discard(bond)
     
     
+    def _evaluate_independent_gate(self, synapse_states: List[SynapseState], stimulus: dict):
+        """
+        Evaluate three-factor gate WITHOUT entanglement-based coordination.
+        
+        Same quantum physics (T2 coherence, dimer formation) but each synapse
+        evaluates its gate independently - no correlated sampling.
+        
+        This is the control condition to show that coordination (not just
+        long coherence time) provides the computational advantage.
+        """
+        dopamine_present = stimulus.get('reward', False)
+        if not dopamine_present:
+            return
+        
+        for i, syn in enumerate(self.synapses):
+            # Get eligibility directly from this synapse (no correlation)
+            if hasattr(syn, '_mean_singlet_prob'):
+                eligibility = (syn._mean_singlet_prob - 0.25) / 0.75
+            else:
+                eligibility = 0.0
+            
+            # Calcium factor
+            calcium_uM = getattr(syn, '_peak_calcium_uM', 0.0)
+            if hasattr(syn, 'calcium'):
+                calcium_uM = float(np.max(syn.calcium.get_concentration())) * 1e6
+            calcium_elevated = calcium_uM > 0.5
+            
+            # Independent threshold check (no correlated sampling)
+            elig_threshold = 0.33
+            elig_passes = eligibility > elig_threshold
+            
+            # Gate evaluation
+            gate_open = (
+                elig_passes and
+                dopamine_present and
+                calcium_elevated
+            )
+            
+            syn._plasticity_gate = gate_open
+            
+            # Commitment (independent)
+            if gate_open and not getattr(syn, '_camkii_committed', False):
+                syn._camkii_committed = True
+                n_entangled = getattr(syn, '_n_entangled_dimers', 0)
+                dimer_factor = min(1.0, n_entangled / 10.0)
+                field_kT = getattr(syn, '_collective_field_kT', 0.0)
+                field_factor = min(1.0, field_kT / 20.0)
+                syn._committed_memory_level = eligibility * dimer_factor * field_factor
     
     def _record_history(self, state: NetworkState):
         """Record network state to history"""
