@@ -528,29 +528,75 @@ class CreditAssignmentExperiment:
 # =============================================================================
 
 if __name__ == "__main__":
-    print("=" * 70)
-    print("CREDIT ASSIGNMENT EXPERIMENT")
-    print("=" * 70)
-    print("\nUsage:")
-    print()
-    print("  from model6_core import Model6QuantumSynapse")
-    print("  from model6_parameters import Model6Parameters")
-    print("  from credit_assignment_experiment import (")
-    print("      CreditAssignmentExperiment, ExperimentConfig")
-    print("  )")
-    print()
-    print("  config = ExperimentConfig(")
-    print("      n_neurons=10,")
-    print("      delays=[1, 5, 10, 20, 30, 60],")
-    print("      n_trials=10")
-    print("  )")
-    print()
-    print("  exp = CreditAssignmentExperiment(")
-    print("      config=config,")
-    print("      SynapseClass=Model6QuantumSynapse,")
-    print("      SynapseParams=Model6Parameters")
-    print("  )")
-    print()
-    print("  results = exp.run()")
-    print("  exp.print_summary(results)")
-    print("  exp.plot_results(results)")
+    import argparse
+    
+    parser = argparse.ArgumentParser(
+        description='Run credit assignment experiment',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+    python run_credit_assignment.py --quick      # Quick validation
+    python run_credit_assignment.py --full       # Full run
+    python run_credit_assignment.py --smoke      # Ultra-fast smoke test
+        """
+    )
+    
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--smoke', action='store_true',
+                      help='Ultra-fast smoke test (1 trial, 1 delay, 3 neurons)')
+    mode.add_argument('--quick', action='store_true',
+                      help='Quick validation (2 trials, short delays)')
+    mode.add_argument('--full', action='store_true',
+                      help='Full run (10 trials, all delays)')
+    
+    parser.add_argument('--output', type=str, default='results',
+                        help='Output directory')
+    
+    args = parser.parse_args()
+    
+    # Import Model6 classes
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+    
+    from model6_core import Model6QuantumSynapse
+    from model6_parameters import Model6Parameters
+    
+    # Configure based on mode
+    if args.smoke:
+        config = ExperimentConfig(
+            n_neurons=3,
+            delays=[1],
+            n_trials=1,
+            dt=0.05,
+            dt_delay=0.5,
+            encoding_duration=0.5,
+            reward_duration=0.2,
+            conditions=['P31'],
+            classical_taus=[],
+        )
+    elif args.quick:
+        config = ExperimentConfig(
+            n_neurons=5,
+            delays=[1, 5, 10],
+            n_trials=2,
+            dt=0.02,
+            dt_delay=0.1,
+        )
+    else:  # full
+        config = ExperimentConfig(
+            n_neurons=10,
+            delays=[1, 5, 10, 20, 30, 60],
+            n_trials=10,
+        )
+    
+    # Run
+    exp = CreditAssignmentExperiment(
+        config=config,
+        SynapseClass=Model6QuantumSynapse,
+        SynapseParams=Model6Parameters
+    )
+    
+    results = exp.run()
+    exp.print_summary(results)
+    exp.plot_results(results)
