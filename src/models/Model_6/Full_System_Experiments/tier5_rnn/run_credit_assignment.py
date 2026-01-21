@@ -286,7 +286,7 @@ class CreditAssignmentExperiment:
         self.verbose = verbose
         
         # Import RNN classes
-        from quantum_rnn import QuantumRNN, ClassicalRNN, RNNConfig
+        from rnn.quantum_rnn import QuantumRNN, ClassicalRNN, RNNConfig
         self.QuantumRNN = QuantumRNN
         self.ClassicalRNN = ClassicalRNN
         self.RNNConfig = RNNConfig
