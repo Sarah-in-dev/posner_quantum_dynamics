@@ -63,7 +63,7 @@ from tier3_full_experiments import exp_spatial_clustering
 from tier3_full_experiments import exp_consolidation_kinetics
 from tier3_full_experiments import exp_sensitivity_analysis
 from tier3_full_experiments import exp_classical_comparison
-from tier3_full_experiments import exp_network_communication
+from src.models.Model_6.Full_System_Experiments.tier5_rnn import exp_network_communication
 
 
 EXPERIMENTS = {
