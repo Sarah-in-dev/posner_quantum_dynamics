@@ -365,7 +365,8 @@ class NetworkEntanglementTracker:
         
         # Union all bonded pairs
         for id_i, id_j in self.entanglement_bonds:
-            union(id_i, id_j)
+            if id_i in parent and id_j in parent:
+                union(id_i, id_j)
         
         # Group by root
         clusters = {}
@@ -543,6 +544,7 @@ class MultiSynapseNetwork:
             
             # Create model instance
             model = ModelClass(params=params)
+            model._network_controlled = True 
             
             # Store position info
             model._network_position = self.positions[i]
@@ -634,6 +636,7 @@ class MultiSynapseNetwork:
         # This ensures entangled synapses commit/fail together.
         if stimulus.get('reward', False):
             if self.use_correlated_sampling:
+                print(f"[DEBUG] reward={stimulus.get('reward')}, use_correlated_sampling={self.use_correlated_sampling}, type={type(self.use_correlated_sampling)}")
                 self._evaluate_coordinated_gate(stimulus)
             else:
                 self._evaluate_independent_gate(synapse_states, stimulus)
@@ -887,6 +890,8 @@ class MultiSynapseNetwork:
         Entanglement affects factor 1: correlated sampling determines
         the EFFECTIVE eligibility used for gate evaluation.
         """
+        print(f"[COORDINATED] use_correlated_sampling={self.use_correlated_sampling}") 
+        
         # Check dopamine at network level (all synapses see same reward)
         dopamine_present = stimulus.get('reward', False)
         if not dopamine_present:
@@ -912,8 +917,6 @@ class MultiSynapseNetwork:
             
             # Calcium factor
             calcium_uM = getattr(syn, '_peak_calcium_uM', 0.0)
-            if hasattr(syn, 'ca_system'):
-                calcium_uM = float(np.max(syn.ca_system.ca_concentration)) * 1e6
             calcium_elevated[i] = calcium_uM > 0.5  # µM threshold
         
         # === CORRELATED SAMPLING (the "measurement") ===
@@ -921,7 +924,7 @@ class MultiSynapseNetwork:
         sampled_elig = self.sample_correlated_eligibilities()
         
         # Determine which synapses pass threshold
-        elig_threshold = 0.75  # P_S > 0.5 maps to elig > 0.75
+        elig_threshold = 0.33  # Agarwal: P_S > 0.5 entanglement threshold
         elig_passes = sampled_elig > elig_threshold
         
         # === COORDINATED COMMITMENT ===
@@ -1029,6 +1032,8 @@ class MultiSynapseNetwork:
         This is the control condition to show that coordination (not just
         long coherence time) provides the computational advantage.
         """
+        print(f"[INDEPENDENT] use_correlated_sampling={self.use_correlated_sampling}")
+    
         dopamine_present = stimulus.get('reward', False)
         if not dopamine_present:
             return
@@ -1047,12 +1052,10 @@ class MultiSynapseNetwork:
             
             # Calcium factor
             calcium_uM = getattr(syn, '_peak_calcium_uM', 0.0)
-            if hasattr(syn, 'calcium'):
-                calcium_uM = float(np.max(syn.calcium.get_concentration())) * 1e6
             calcium_elevated = calcium_uM > 0.5
             
             # Independent threshold check (no correlated sampling)
-            elig_threshold = 0.75
+            elig_threshold = 0.33 # Agarwal: P_S > 0.5 entanglement threshold
             elig_passes = eligibility > elig_threshold
             
             # Gate evaluation

@@ -301,7 +301,7 @@ class NetworkCommunicationExperiment:
             self.n_trials = 3
             self.max_attempts = 15
             self.stim_duration = 0.1
-            self.delay_duration = 30.0
+            self.delay_duration = 2.0
             self.reward_duration = 0.2
             self.dt = 0.1  # 100ms steps - much faster
         elif quick_mode:

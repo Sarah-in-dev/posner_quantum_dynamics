@@ -101,6 +101,8 @@ class Model6QuantumSynapse:
         self.time = 0.0
         self.dt = self.params.simulation.dt_diffusion  # Base timestep
         
+        self._peak_calcium_uM = 0.0  # Track peak calcium for plasticity
+        
         # Output
         self.output_dir = Path(output_dir) if output_dir else None
         if self.output_dir:
@@ -297,6 +299,10 @@ class Model6QuantumSynapse:
         # NOTE: Channel gating is STOCHASTIC (no seed, varies run-to-run)
         self.calcium.step(dt, stimulus)
         ca_conc = self.calcium.get_concentration()
+
+        current_ca_uM = float(np.max(ca_conc)) * 1e6
+        if current_ca_uM > self._peak_calcium_uM:
+            self._peak_calcium_uM = current_ca_uM
         
         # Calculate calcium influx for pH (needed later)
         ca_influx = np.gradient(ca_conc, axis=0) / dt  # Rough estimate
@@ -518,7 +524,8 @@ class Model6QuantumSynapse:
             camkii_state = self.camkii.step(dt, calcium_uM, dimer_field_kT)
             
             # THREE-FACTOR GATE controls COMMITMENT (memory consolidation), not barrier
-            if plasticity_gate and not self._camkii_committed:
+            # skip if already committed or network-controlled
+            if plasticity_gate and not self._camkii_committed and not getattr(self, '_network_controlled', False):
                 self._camkii_committed = True
                 dimer_factor = min(1.0, n_entangled / 10.0)
                 field_factor = min(1.0, dimer_field_kT / 20.0)
