@@ -186,11 +186,18 @@ def run_quantum_coordination_trial(
             candidate = (np.random.random(n_synapses) < commit_probs).astype(int)
         
         # Phase 1: Stimulate according to candidate pattern
+        # Step individual synapses with per-synapse voltage
         stim_steps = int(stim_duration / dt)
         for step in range(stim_steps):
             for i, syn in enumerate(network.synapses):
                 voltage = -10e-3 if candidate[i] == 1 else -70e-3
                 syn.step(dt, {'voltage': voltage, 'reward': False})
+            
+            # Update entanglement tracking after each step
+            # This builds entanglement between co-activated synapses
+            if step % 10 == 0:
+                network.entanglement_tracker.collect_dimers(network.synapses, network.positions)
+                network.entanglement_tracker.step(dt * 10, network.synapses, network.positions)
         
         # Phase 2: Delay
         delay_steps = int(delay_duration / dt)
@@ -205,6 +212,14 @@ def run_quantum_coordination_trial(
             reward_steps = int(reward_duration / dt)
             for step in range(reward_steps):
                 network.step(dt, {'voltage': -70e-3, 'reward': True})
+            
+            # Diagnostic: check correlation matrix and sampled eligibilities
+            if verbose:
+                C = network.entanglement_tracker.get_synapse_correlation_matrix(network.synapses)
+                mean_corr = np.mean(C[np.triu_indices(n_synapses, k=1)])
+                eligibilities = [s.get_eligibility() for s in network.synapses]
+                print(f"      Correlation matrix mean (off-diag): {mean_corr:.3f}")
+                print(f"      Eligibilities: {[f'{e:.2f}' for e in eligibilities]}")
         
         # Check commitment
         committed = np.array([
@@ -228,6 +243,7 @@ def run_classical_coordination_trial(
     target_pattern: np.ndarray,
     stim_duration: float = 2.0,
     delay_duration: float = 5.0,
+    dt: float = 0.1,
     max_attempts: int = 50,
     verbose: bool = False
 ) -> Tuple[int, bool]:
@@ -245,11 +261,11 @@ def run_classical_coordination_trial(
             candidate = (np.random.random(n_synapses) < commit_probs).astype(int)
         
         # Stimulate
-        network.stimulate(candidate, stim_duration)
+        network.stimulate(candidate, stim_duration, dt=dt)
         
         # Delay
-        network.delay(delay_duration)
-        
+        network.delay(delay_duration, dt=dt)
+
         # Reward if correct
         if np.all(candidate == target_pattern):
             network.apply_reward()
@@ -274,22 +290,36 @@ class NetworkCommunicationExperiment:
     Uses ACTUAL Model 6 physics.
     """
     
-    def __init__(self, quick_mode: bool = False, verbose: bool = True):
+    def __init__(self, quick_mode: bool = False, validation_mode: bool = False, verbose: bool = True):
         self.quick_mode = quick_mode
+        self.validation_mode = validation_mode
         self.verbose = verbose
         
-        if quick_mode:
+        if validation_mode:
+            # Ultra-fast: verify it runs in ~2-5 minutes
+            self.n_values = [3, 4]
+            self.n_trials = 3
+            self.max_attempts = 15
+            self.stim_duration = 0.1
+            self.delay_duration = 30.0
+            self.reward_duration = 0.2
+            self.dt = 0.1  # 100ms steps - much faster
+        elif quick_mode:
             self.n_values = [2, 3, 4]
-            self.n_trials = 5
-            self.max_attempts = 30
-            self.stim_duration = 1.0
-            self.delay_duration = 2.0
+            self.n_trials = 3
+            self.max_attempts = 15
+            self.stim_duration = 0.5
+            self.delay_duration = 1.0
+            self.reward_duration = 0.2
+            self.dt = 0.02  # 20ms steps
         else:
             self.n_values = [2, 3, 4, 5, 6]
             self.n_trials = 10
             self.max_attempts = 50
             self.stim_duration = 2.0
             self.delay_duration = 5.0
+            self.reward_duration = 1.0
+            self.dt = 0.01  # 10ms steps
     
     def _create_quantum_network(self, n_synapses: int, 
                                  use_correlated: bool = True) -> MultiSynapseNetwork:
@@ -305,8 +335,14 @@ class NetworkCommunicationExperiment:
             use_correlated_sampling=use_correlated  # KEY PARAMETER
         )
         
+        print(f"  Created network: n={n_synapses}, use_correlated_sampling={use_correlated}")
+
         network.initialize(Model6QuantumSynapse, params)
         network.set_microtubule_invasion(True)
+        
+        # Disable network-level field commitment for this experiment
+        # We want to test individual synapse coordination via _evaluate_coordinated_gate
+        network.field_threshold_kT = float('inf')  # Effectively disable
         
         return network
     
@@ -335,6 +371,8 @@ class NetworkCommunicationExperiment:
                     attempts, converged = run_quantum_coordination_trial(
                         network, target, 
                         self.stim_duration, self.delay_duration,
+                        reward_duration=self.reward_duration,
+                        dt=self.dt,
                         max_attempts=self.max_attempts
                     )
                 elif condition_type == 'independent':
@@ -342,6 +380,8 @@ class NetworkCommunicationExperiment:
                     attempts, converged = run_quantum_coordination_trial(
                         network, target,
                         self.stim_duration, self.delay_duration,
+                        reward_duration=self.reward_duration,
+                        dt=self.dt,
                         max_attempts=self.max_attempts
                     )
                 else:  # classical
@@ -349,6 +389,7 @@ class NetworkCommunicationExperiment:
                     attempts, converged = run_classical_coordination_trial(
                         network, target,
                         self.stim_duration, self.delay_duration,
+                        dt=self.dt,
                         max_attempts=self.max_attempts
                     )
                 
@@ -636,10 +677,11 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--quick', action='store_true', help='Quick mode')
+    parser.add_argument('--validation', action='store_true', help='Ultra-fast validation mode')
     parser.add_argument('--output', type=str, default='results', help='Output dir')
     args = parser.parse_args()
     
-    exp = NetworkCommunicationExperiment(quick_mode=args.quick)
+    exp = NetworkCommunicationExperiment(quick_mode=args.quick, validation_mode=args.validation )
     result = exp.run()
     exp.print_summary(result)
     exp.plot(result, output_dir=Path(args.output))

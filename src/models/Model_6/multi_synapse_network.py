@@ -317,6 +317,10 @@ class NetworkEntanglementTracker:
                 C[i, j] = E_ij * coherence_factor
                 C[j, i] = C[i, j]
         
+        # Clamp to valid correlation range [0, 1]
+        np.fill_diagonal(C, 0.0)  # No self-correlation
+        C = np.clip(C, 0.0, 1.0)
+        
         return C
 
 
@@ -549,6 +553,10 @@ class MultiSynapseNetwork:
         self._initialized = True
         logger.info(f"Initialized {self.n_synapses} Model6 instances")
     
+    def disable_network_commitment(self):
+        """Disable network-level field commitment for coordination experiments"""
+        self.field_threshold_kT = float('inf')
+    
     def configure_all(self, **kwargs):
         """Apply configuration to all synapses"""
         for synapse in self.synapses:
@@ -754,7 +762,7 @@ class MultiSynapseNetwork:
         C = self.entanglement_tracker.get_synapse_correlation_matrix(self.synapses)
         
         # Build covariance matrix
-        base_var = 0.1  # Variance scale for quantum fluctuations
+        base_var = 0.2  # Variance scale for quantum fluctuations
         cov = np.eye(self.n_synapses) * base_var
         
         for i in range(self.n_synapses):
@@ -884,6 +892,12 @@ class MultiSynapseNetwork:
         if not dopamine_present:
             return
         
+        # DIAGNOSTIC: Print correlation and eligibility info
+        C = self.entanglement_tracker.get_synapse_correlation_matrix(self.synapses)
+        mean_corr = np.mean(C[np.triu_indices(self.n_synapses, k=1)]) if self.n_synapses > 1 else 0
+        raw_elig = [s.get_eligibility() for s in self.synapses]
+        logger.info(f"COORDINATED GATE: corr={mean_corr:.3f}, elig={[f'{e:.2f}' for e in raw_elig]}")
+        
         # Get individual gate factors
         n = self.n_synapses
         eligibility_raw = np.zeros(n)
@@ -907,7 +921,7 @@ class MultiSynapseNetwork:
         sampled_elig = self.sample_correlated_eligibilities()
         
         # Determine which synapses pass threshold
-        elig_threshold = 0.33  # P_S > 0.5 maps to elig > 0.33
+        elig_threshold = 0.75  # P_S > 0.5 maps to elig > 0.75
         elig_passes = sampled_elig > elig_threshold
         
         # === COORDINATED COMMITMENT ===
@@ -1019,6 +1033,11 @@ class MultiSynapseNetwork:
         if not dopamine_present:
             return
         
+        # DIAGNOSTIC
+        raw_elig = [s.get_eligibility() for s in self.synapses]
+        logger.info(f"INDEPENDENT GATE: elig={[f'{e:.2f}' for e in raw_elig]}")
+        print(f"  [INDEPENDENT] raw_elig={[f'{e:.3f}' for e in raw_elig]}")
+        
         for i, syn in enumerate(self.synapses):
             # Get eligibility directly from this synapse (no correlation)
             if hasattr(syn, '_mean_singlet_prob'):
@@ -1033,7 +1052,7 @@ class MultiSynapseNetwork:
             calcium_elevated = calcium_uM > 0.5
             
             # Independent threshold check (no correlated sampling)
-            elig_threshold = 0.33
+            elig_threshold = 0.75
             elig_passes = eligibility > elig_threshold
             
             # Gate evaluation
