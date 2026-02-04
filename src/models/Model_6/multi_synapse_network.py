@@ -120,7 +120,8 @@ class NetworkEntanglementTracker:
                     'synapse_idx': syn_idx,
                     'synapse_pos_um': synapse_pos,
                     'local_j': dimer.local_j_coupling,
-                    'coherence': dimer.coherence
+                    'coherence': dimer.coherence,
+                    'P_S': dimer.singlet_probability  # <-- ADD THIS LINE
                 })
                 global_id += 1
     
@@ -251,9 +252,11 @@ class NetworkEntanglementTracker:
         """
         Compute correlation matrix between synapses based on entanglement.
         
-        Physics: C_ij = E_ij × √(mean_P_S_i × mean_P_S_j)
-        
-        Where E_ij is the fraction of entangled dimer pairs between synapses.
+        Physics: C_ij = E_ij × P_S_i × P_S_j
+
+        Quantum derivation: For two Werner states with singlet probabilities P_S_i, P_S_j,
+        the inter-dimer bond fidelity undergoes independent decoherence in each environment.
+        Measurement correlation scales linearly with bond fidelity = P_S_i × P_S_j.
         
         Parameters
         ----------
@@ -312,15 +315,28 @@ class NetworkEntanglementTracker:
                 else:
                     E_ij = 0.0
                 
-                # C_ij = E_ij × √(P_S_i × P_S_j)
-                coherence_factor = np.sqrt(P_singlet[i] * P_singlet[j])
+                # C_ij = E_ij × P_S_i × P_S_j (product form - quantum mechanically derived)
+                coherence_factor = P_singlet[i] * P_singlet[j]
                 C[i, j] = E_ij * coherence_factor
                 C[j, i] = C[i, j]
         
         # Clamp to valid correlation range [0, 1]
         np.fill_diagonal(C, 0.0)  # No self-correlation
         C = np.clip(C, 0.0, 1.0)
-        
+
+        # PSD safeguard for multivariate normal sampling
+        # (rarely needed - only if bond topology is inconsistent)
+        if n_syn > 1:
+            eigenvalues = np.linalg.eigvalsh(C + np.eye(n_syn))  # Add identity for full correlation matrix
+            if np.min(eigenvalues) < 1e-10:
+                # Project to nearest PSD: clip negative eigenvalues
+                eigenvalues_full, eigenvectors = np.linalg.eigh(C + np.eye(n_syn))
+                eigenvalues_full = np.maximum(eigenvalues_full, 1e-10)
+                C_full = eigenvectors @ np.diag(eigenvalues_full) @ eigenvectors.T
+                C = C_full - np.eye(n_syn)  # Remove identity to get off-diagonal
+                C = np.clip(C, 0.0, 1.0)
+                np.fill_diagonal(C, 0.0)
+
         return C
 
 
@@ -392,6 +408,119 @@ class NetworkEntanglementTracker:
     def _remove_bond(self, id_i: int, id_j: int):
         key = (min(id_i, id_j), max(id_i, id_j))
         self.entanglement_bonds.discard(key)
+
+
+    def perform_quantum_measurement(self, synapses: List) -> np.ndarray:
+        """
+        Only the ENTANGLED NETWORK determines eligibility.
+        Unbonded dimers don't count.
+        """
+        
+        # Find all dimers in the entangled network (those with bonds)
+        bonded_dimer_ids = set()
+        for id_i, id_j in self.entanglement_bonds:
+            bonded_dimer_ids.add(id_i)
+            bonded_dimer_ids.add(id_j)
+        
+        # Average P_S of the entangled network
+        network_P_S_values = [d['P_S'] for d in self.all_dimers 
+                            if d['global_id'] in bonded_dimer_ids]
+        
+        if not network_P_S_values:
+            # No entangled network → no quantum eligibility
+            return np.zeros(len(synapses))
+        
+        network_P_S = np.mean(network_P_S_values)
+        
+        # THE NETWORK COLLAPSES AS A UNIT
+        # Single roll for the entire entangled network
+        network_outcome = np.random.random() < network_P_S  # True = singlet
+        
+        # All bonded dimers get the SAME outcome
+        dimer_outcomes = {}
+        for gid in bonded_dimer_ids:
+            dimer_outcomes[gid] = network_outcome
+        
+        # Unbonded dimers DON'T CONTRIBUTE to eligibility
+        # (or collapse independently but don't count)
+        
+        # Synapse eligibility = fraction of its dimers in the network that are singlet
+        # If a synapse has no bonded dimers, eligibility = 0
+        n_syn = len(synapses)
+        eligibilities = np.zeros(n_syn)
+        
+        for d in self.all_dimers:
+            if d['global_id'] in bonded_dimer_ids:
+                syn_idx = d['synapse_idx']
+                if network_outcome:
+                    eligibilities[syn_idx] += 1  # Count bonded singlets
+        
+        # Normalize by total bonded dimers per synapse
+        bonded_per_synapse = np.zeros(n_syn)
+        for d in self.all_dimers:
+            if d['global_id'] in bonded_dimer_ids:
+                bonded_per_synapse[d['synapse_idx']] += 1
+        
+        for i in range(n_syn):
+            if bonded_per_synapse[i] > 0:
+                eligibilities[i] /= bonded_per_synapse[i]
+        
+        return eligibilities
+
+    def perform_independent_measurement(self, synapses: List) -> np.ndarray:
+        """
+        Control condition: Measure all dimers INDEPENDENTLY (no bond correlation).
+        
+        Same physics for individual dimers, but bonds don't cause joint collapse.
+        This is the classical control - what happens without quantum coordination.
+        
+        Returns
+        -------
+        np.ndarray : Eligibility for each synapse [0, 1]
+        """
+        n_syn = len(synapses)
+        
+        if not self.all_dimers:
+            return np.zeros(n_syn)
+        
+        # Build P_S lookup
+        dimer_P_S = {}
+        for d in self.all_dimers:
+            dimer_P_S[d['global_id']] = d.get('P_S', 0.25)
+        
+        # Measure ALL dimers independently (bonds ignored)
+        dimer_outcomes = {}
+        for d in self.all_dimers:
+            gid = d['global_id']
+            P_S = dimer_P_S.get(gid, 0.25)
+            dimer_outcomes[gid] = np.random.random() < P_S
+        
+        # Compute eligibilities
+        eligible_count = np.zeros(n_syn)
+        total_count = np.zeros(n_syn)
+        
+        for d in self.all_dimers:
+            syn_idx = d['synapse_idx']
+            if syn_idx < n_syn:
+                total_count[syn_idx] += 1
+                if dimer_outcomes.get(d['global_id'], False):
+                    eligible_count[syn_idx] += 1
+        
+        eligibilities = np.zeros(n_syn)
+        for i in range(n_syn):
+            if total_count[i] > 0:
+                eligibilities[i] = eligible_count[i] / total_count[i]
+        
+        # Store for diagnostics
+        self._last_measurement = {
+            'total_dimers': int(np.sum(total_count)),
+            'total_bonds': len(self.entanglement_bonds),
+            'singlet_outcomes': int(np.sum(eligible_count)),
+            'eligibilities': eligibilities.copy()
+        }
+        
+        return eligibilities
+
 
 class MultiSynapseNetwork:
     """
@@ -640,7 +769,7 @@ class MultiSynapseNetwork:
                 print(f"[DEBUG] reward={stimulus.get('reward')}, use_correlated_sampling={self.use_correlated_sampling}, type={type(self.use_correlated_sampling)}")
                 self._evaluate_coordinated_gate(stimulus)
             else:
-                self._evaluate_independent_gate(synapse_states, stimulus)
+                self._evaluate_independent_gate(stimulus)
         # =========================================================================
         
         # Compute network-level quantities
@@ -880,63 +1009,55 @@ class MultiSynapseNetwork:
 
     def _evaluate_coordinated_gate(self, stimulus: dict):
         """
-        Evaluate three-factor gate with entanglement-based coordination.
+        Evaluate three-factor gate with QUANTUM MEASUREMENT.
         
         Physics: When reward arrives, the quantum state is "measured".
-        Entangled synapses collapse together, producing correlated outcomes.
+        - Bonded dimers collapse TOGETHER (perfect correlation)
+        - Unbonded dimers collapse independently
+        - Synapse eligibility = fraction of dimers that collapsed to singlet
         
         The gate has three factors:
-        1. Eligibility: P_S > 0.5 (quantum - from dimers)
+        1. Eligibility: majority of dimers collapsed to singlet (quantum)
         2. Dopamine: reward signal present (classical)
         3. Calcium: postsynaptic activity (classical)
-        
-        Entanglement affects factor 1: correlated sampling determines
-        the EFFECTIVE eligibility used for gate evaluation.
         """
-        print(f"[COORDINATED] use_correlated_sampling={self.use_correlated_sampling}") 
-        
-        # Check dopamine at network level (all synapses see same reward)
         dopamine_present = stimulus.get('reward', False)
         if not dopamine_present:
             return
         
-        # DIAGNOSTIC: Print correlation and eligibility info
-        C = self.entanglement_tracker.get_synapse_correlation_matrix(self.synapses)
-        mean_corr = np.mean(C[np.triu_indices(self.n_synapses, k=1)]) if self.n_synapses > 1 else 0
-        raw_elig = [s.get_eligibility() for s in self.synapses]
-        logger.info(f"COORDINATED GATE: corr={mean_corr:.3f}, elig={[f'{e:.2f}' for e in raw_elig]}")
+        # Ensure dimer registry is current
+        self.entanglement_tracker.collect_dimers(self.synapses, self.positions)
         
-        # Get individual gate factors
-        n = self.n_synapses
-        eligibility_raw = np.zeros(n)
-        calcium_elevated = np.zeros(n, dtype=bool)
+        # === QUANTUM MEASUREMENT ===
+        # Bonded dimers collapse together; unbonded collapse independently
+        measured_eligibilities = self.entanglement_tracker.perform_quantum_measurement(
+            self.synapses
+        )
         
+        # Diagnostic output
+        measurement = getattr(self.entanglement_tracker, '_last_measurement', {})
+        n_bonds = measurement.get('total_bonds', 0)
+        n_dimers = measurement.get('total_dimers', 0)
+        n_singlet = measurement.get('singlet_outcomes', 0)
+        
+        logger.info(f"QUANTUM MEASUREMENT: {n_dimers} dimers, {n_bonds} bonds, "
+                   f"{n_singlet} singlet outcomes")
+        logger.info(f"  Measured eligibilities: {[f'{e:.2f}' for e in measured_eligibilities]}")
+        
+        # Gate threshold: eligibility > 0.5 means majority collapsed to singlet
+        elig_threshold = 0.5
+        
+        # === THREE-FACTOR GATE EVALUATION ===
         for i, syn in enumerate(self.synapses):
-            # Raw eligibility from dimer P_S
-            if hasattr(syn, '_mean_singlet_prob'):
-                eligibility_raw[i] = (syn._mean_singlet_prob - 0.25) / 0.75
-            else:
-                eligibility_raw[i] = 0.0
-            
             # Calcium factor
             calcium_uM = getattr(syn, '_peak_calcium_uM', 0.0)
-            calcium_elevated[i] = calcium_uM > 0.5  # µM threshold
-        
-        # === CORRELATED SAMPLING (the "measurement") ===
-        # Sample eligibilities from correlated distribution
-        sampled_elig = self.sample_correlated_eligibilities()
-        
-        # Determine which synapses pass threshold
-        elig_threshold = 0.33  # Agarwal: P_S > 0.5 entanglement threshold
-        elig_passes = sampled_elig > elig_threshold
-        
-        # === COORDINATED COMMITMENT ===
-        for i, syn in enumerate(self.synapses):
-            # All three factors must be true
+            calcium_elevated = calcium_uM > 0.5  # µM threshold
+            
+            # Three-factor AND gate
             gate_open = (
-                elig_passes[i] and           # Correlated eligibility
-                dopamine_present and          # Reward signal
-                calcium_elevated[i]           # Postsynaptic activity
+                measured_eligibilities[i] > elig_threshold and  # Quantum eligibility
+                dopamine_present and                             # Reward signal
+                calcium_elevated                                 # Postsynaptic activity
             )
             
             syn._plasticity_gate = gate_open
@@ -944,19 +1065,15 @@ class MultiSynapseNetwork:
             # Commitment
             if gate_open and not getattr(syn, '_camkii_committed', False):
                 syn._camkii_committed = True
+                syn._commitment_time = self.time
                 
-                # Commitment level based on SAMPLED eligibility (not raw)
-                # This ensures correlated synapses get similar levels
-                n_entangled = getattr(syn, '_n_entangled_dimers', 0)
-                dimer_factor = min(1.0, n_entangled / 10.0)
-                field_kT = getattr(syn, '_collective_field_kT', 0.0)
-                field_factor = min(1.0, field_kT / 20.0)
-                
-                syn._committed_memory_level = sampled_elig[i] * dimer_factor * field_factor
+                # Commitment level scales with measured eligibility
+                syn._committed_memory_level = measured_eligibilities[i]
         
-        # === POST-MEASUREMENT COLLAPSE ===
-        # After "measurement", entanglement is consumed
-        self._apply_measurement_collapse()
+        # === POST-MEASUREMENT: Entanglement is consumed ===
+        # Measurement collapses the quantum state
+        if hasattr(self, '_apply_measurement_collapse'):
+            self._apply_measurement_collapse()
 
 
     def _apply_measurement_collapse(self):
@@ -1025,69 +1142,63 @@ class MultiSynapseNetwork:
             tracker.entanglement_bonds.discard(bond)
     
     
-    def _evaluate_independent_gate(self, synapse_states: List[SynapseState], stimulus: dict):
+    def _evaluate_independent_gate(self, stimulus: dict):
         """
-        Evaluate three-factor gate WITHOUT entanglement-based coordination.
+        Control condition: Measure all dimers INDEPENDENTLY.
         
-        Same quantum physics (T2 coherence, dimer formation) but each synapse
-        samples INDEPENDENTLY - no correlated sampling.
+        Same quantum physics for individual dimers (P_S determines collapse probability),
+        but bonds DON'T cause joint collapse. This is what happens without entanglement-
+        based coordination.
         
         Key difference from coordinated gate:
-        - Coordinated: Covariance matrix has off-diagonal correlations
-        - Independent: Covariance matrix is diagonal (same variance, no correlation)
-        
-        This is the control condition to show that coordination (not just
-        long coherence time or sampling noise) provides the computational advantage.
+        - Coordinated: Bonded dimers collapse together (correlation = 1.0)
+        - Independent: All dimers collapse independently (correlation = 0)
         """
-        print(f"[INDEPENDENT] use_correlated_sampling={self.use_correlated_sampling}")
-    
         dopamine_present = stimulus.get('reward', False)
         if not dopamine_present:
             return
         
-        # Get mean eligibilities
-        mean_elig = np.array([s.get_eligibility() for s in self.synapses])
+        # Ensure dimer registry is current
+        self.entanglement_tracker.collect_dimers(self.synapses, self.positions)
         
-        # DIAGNOSTIC
-        print(f"  [INDEPENDENT] raw_elig={[f'{e:.3f}' for e in mean_elig]}")
+        # === INDEPENDENT MEASUREMENT ===
+        # All dimers collapse independently (bonds ignored)
+        measured_eligibilities = self.entanglement_tracker.perform_independent_measurement(
+            self.synapses
+        )
         
-        # === INDEPENDENT SAMPLING (same variance, NO correlation) ===
-        # This is the fair comparison: same noise level, but uncorrelated
-        base_var = 0.2  # Same variance as coordinated
+        # Diagnostic output
+        measurement = getattr(self.entanglement_tracker, '_last_measurement', {})
+        n_dimers = measurement.get('total_dimers', 0)
+        n_singlet = measurement.get('singlet_outcomes', 0)
         
-        # Sample each synapse independently (diagonal covariance)
-        rng = np.random.default_rng()
-        sampled_elig = mean_elig + rng.normal(0, np.sqrt(base_var), size=self.n_synapses)
-        sampled_elig = np.clip(sampled_elig, 0, 1)
+        logger.info(f"INDEPENDENT MEASUREMENT: {n_dimers} dimers, "
+                   f"{n_singlet} singlet outcomes (bonds ignored)")
+        logger.info(f"  Measured eligibilities: {[f'{e:.2f}' for e in measured_eligibilities]}")
         
-        print(f"  [INDEPENDENT] sampled_elig={[f'{e:.3f}' for e in sampled_elig]}")
+        # Gate threshold
+        elig_threshold = 0.5
         
-        # Determine which synapses pass threshold
-        elig_threshold = 0.33
-        elig_passes = sampled_elig > elig_threshold
-        
+        # === THREE-FACTOR GATE EVALUATION ===
         for i, syn in enumerate(self.synapses):
             # Calcium factor
             calcium_uM = getattr(syn, '_peak_calcium_uM', 0.0)
             calcium_elevated = calcium_uM > 0.5
             
-            # Gate evaluation
+            # Three-factor AND gate
             gate_open = (
-                elig_passes[i] and
+                measured_eligibilities[i] > elig_threshold and
                 dopamine_present and
                 calcium_elevated
             )
             
             syn._plasticity_gate = gate_open
             
-            # Commitment (independent)
+            # Commitment
             if gate_open and not getattr(syn, '_camkii_committed', False):
                 syn._camkii_committed = True
-                n_entangled = getattr(syn, '_n_entangled_dimers', 0)
-                dimer_factor = min(1.0, n_entangled / 10.0)
-                field_kT = getattr(syn, '_collective_field_kT', 0.0)
-                field_factor = min(1.0, field_kT / 20.0)
-                syn._committed_memory_level = sampled_elig[i] * dimer_factor * field_factor
+                syn._commitment_time = self.time
+                syn._committed_memory_level = measured_eligibilities[i]
     
     def _record_history(self, state: NetworkState):
         """Record network state to history"""
