@@ -432,6 +432,7 @@ class MultiSynapseNetwork:
         self.field_threshold_kT = field_threshold_kT
         self.params = params
         self.use_correlated_sampling = use_correlated_sampling
+        self.disable_auto_commitment = False 
 
         # Generate synapse positions
         self.positions = self._generate_positions()
@@ -647,7 +648,9 @@ class MultiSynapseNetwork:
         
         # Check for network commitment every step
         # (commitment is irreversible once field exceeds threshold with eligibility)
-        self._check_network_commitment(network_state)
+        # SKIP if disable_auto_commitment is True (for coordination experiments)
+        if not self.disable_auto_commitment:
+            self._check_network_commitment(network_state)
         
         # Update time
         self.time += dt
@@ -1027,10 +1030,14 @@ class MultiSynapseNetwork:
         Evaluate three-factor gate WITHOUT entanglement-based coordination.
         
         Same quantum physics (T2 coherence, dimer formation) but each synapse
-        evaluates its gate independently - no correlated sampling.
+        samples INDEPENDENTLY - no correlated sampling.
+        
+        Key difference from coordinated gate:
+        - Coordinated: Covariance matrix has off-diagonal correlations
+        - Independent: Covariance matrix is diagonal (same variance, no correlation)
         
         This is the control condition to show that coordination (not just
-        long coherence time) provides the computational advantage.
+        long coherence time or sampling noise) provides the computational advantage.
         """
         print(f"[INDEPENDENT] use_correlated_sampling={self.use_correlated_sampling}")
     
@@ -1038,29 +1045,35 @@ class MultiSynapseNetwork:
         if not dopamine_present:
             return
         
+        # Get mean eligibilities
+        mean_elig = np.array([s.get_eligibility() for s in self.synapses])
+        
         # DIAGNOSTIC
-        raw_elig = [s.get_eligibility() for s in self.synapses]
-        logger.info(f"INDEPENDENT GATE: elig={[f'{e:.2f}' for e in raw_elig]}")
-        print(f"  [INDEPENDENT] raw_elig={[f'{e:.3f}' for e in raw_elig]}")
+        print(f"  [INDEPENDENT] raw_elig={[f'{e:.3f}' for e in mean_elig]}")
+        
+        # === INDEPENDENT SAMPLING (same variance, NO correlation) ===
+        # This is the fair comparison: same noise level, but uncorrelated
+        base_var = 0.2  # Same variance as coordinated
+        
+        # Sample each synapse independently (diagonal covariance)
+        rng = np.random.default_rng()
+        sampled_elig = mean_elig + rng.normal(0, np.sqrt(base_var), size=self.n_synapses)
+        sampled_elig = np.clip(sampled_elig, 0, 1)
+        
+        print(f"  [INDEPENDENT] sampled_elig={[f'{e:.3f}' for e in sampled_elig]}")
+        
+        # Determine which synapses pass threshold
+        elig_threshold = 0.33
+        elig_passes = sampled_elig > elig_threshold
         
         for i, syn in enumerate(self.synapses):
-            # Get eligibility directly from this synapse (no correlation)
-            if hasattr(syn, '_mean_singlet_prob'):
-                eligibility = (syn._mean_singlet_prob - 0.25) / 0.75
-            else:
-                eligibility = 0.0
-            
             # Calcium factor
             calcium_uM = getattr(syn, '_peak_calcium_uM', 0.0)
             calcium_elevated = calcium_uM > 0.5
             
-            # Independent threshold check (no correlated sampling)
-            elig_threshold = 0.33 # Agarwal: P_S > 0.5 entanglement threshold
-            elig_passes = eligibility > elig_threshold
-            
             # Gate evaluation
             gate_open = (
-                elig_passes and
+                elig_passes[i] and
                 dopamine_present and
                 calcium_elevated
             )
@@ -1074,7 +1087,7 @@ class MultiSynapseNetwork:
                 dimer_factor = min(1.0, n_entangled / 10.0)
                 field_kT = getattr(syn, '_collective_field_kT', 0.0)
                 field_factor = min(1.0, field_kT / 20.0)
-                syn._committed_memory_level = eligibility * dimer_factor * field_factor
+                syn._committed_memory_level = sampled_elig[i] * dimer_factor * field_factor
     
     def _record_history(self, state: NetworkState):
         """Record network state to history"""
@@ -1137,11 +1150,39 @@ class MultiSynapseNetwork:
             'coupling_length_um': self.coupling_length_um
         }
     
+    
+    def set_coordination_mode(self, enable: bool = True):
+        """
+        Configure network for coordination experiments.
+        
+        When enabled:
+        - Disables automatic network commitment (field threshold check)
+        - Commitment only happens via three-factor gate at reward time
+        - Correlated sampling enabled for entangled synapses
+        
+        When disabled:
+        - Normal operation with field-threshold commitment
+        
+        Parameters
+        ----------
+        enable : bool
+            True for coordination experiments, False for normal operation
+        """
+        self.disable_auto_commitment = enable
+        self.use_correlated_sampling = enable
+        
+        if enable:
+            logger.info("Coordination mode ENABLED: commitment only via reward gate")
+        else:
+            logger.info("Coordination mode DISABLED: normal operation")
+    
+    
     def reset(self):
-        """Reset network state (but keep synapses)"""
+        """Reset network state (but keep synapses and coordination mode)"""
         self.network_committed = False
         self.network_commitment_level = 0.0
         self.time = 0.0
+        # Note: disable_auto_commitment and use_correlated_sampling are preserved
         self.history = {
             'time': [],
             'total_dimers': [],
