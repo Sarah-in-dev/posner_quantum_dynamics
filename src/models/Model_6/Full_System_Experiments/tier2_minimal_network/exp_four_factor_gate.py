@@ -300,7 +300,7 @@ def plot(result: FourFactorResult, output_dir: Path = None) -> plt.Figure:
     
     # Define control S-curve (smooth rise through all stages)
     # Extended to start from y-axis (x=0)
-    x_smooth = np.linspace(0, 4, 200)
+    x_smooth = np.linspace(0, 5.5, 300)
     control_y = 1.0 / (1 + np.exp(-2.0 * (x_smooth - 1.8)))  # Sigmoid
     
     # Plateau points for each knockout (x position, y value at that point)
@@ -328,7 +328,7 @@ def plot(result: FourFactorResult, output_dir: Path = None) -> plt.Figure:
         
         if px == 0:
             # Flat at zero from y-axis to right edge
-            ax.plot([0, 4], [0, 0], color=colors[cond], linewidth=2.5, 
+            ax.plot([0, 5.5], [0, 0], color=colors[cond], linewidth=2.5, 
                    label=labels[cond], zorder=5)
         else:
             # Follow control curve up to plateau point
@@ -337,7 +337,7 @@ def plot(result: FourFactorResult, output_dir: Path = None) -> plt.Figure:
             y_rise = control_y[mask_rise]
             
             # Then flat from plateau point to end
-            x_flat = np.array([px, 4.0])
+            x_flat = np.array([px, 5.5])
             y_flat = np.array([py, py])
             
             ax.plot(np.concatenate([x_rise, x_flat]), 
@@ -394,7 +394,7 @@ def plot(result: FourFactorResult, output_dir: Path = None) -> plt.Figure:
     ax.set_xticklabels(stages, fontsize=11)
     ax.set_ylabel('Progress Toward Synaptic Commitment', fontsize=12)
     ax.set_ylim(-0.05, 1.15)
-    ax.set_xlim(0, 4.8)  # Start at 0, extend past 4
+    ax.set_xlim(0, 5.4)  # Start at 0, extend past 4
     ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0])
     ax.set_yticklabels(['0%', '25%', '50%', '75%', '100%'])
     

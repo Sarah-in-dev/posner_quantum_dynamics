@@ -121,12 +121,12 @@ class IsotopeExperiment:
             self.p31_delays = [0, 15, 30]
             self.p32_delays = [0, 0.5, 1.0]
         else:
-            self.n_trials = 5
+            self.n_trials = 20
             self.n_synapses = 10
             self.stim_duration_s = 1.0
             self.consolidation_s = 1.0  # Keep short due to O(n²)
-            self.p31_delays = [0, 5, 10, 15, 20, 30, 45, 60]
-            self.p32_delays = [0, 0.25, 0.5, 1.0, 2.0]
+            self.p31_delays = [0, 5, 10, 15, 20, 30, 45, 60, 90, 120, 150, 200]
+            self.p32_delays = [0, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0]
     
     def _create_network(self, isotope: str) -> MultiSynapseNetwork:
         """Create network with specified isotope"""
@@ -415,105 +415,124 @@ class IsotopeExperiment:
         print(f"\nRuntime: {result.runtime_s:.1f}s")
     
     def plot(self, result: IsotopeResult, output_dir: Optional[Path] = None) -> plt.Figure:
-        """Generate publication-quality figure"""
-        fig, axes = plt.subplots(1, 3, figsize=(14, 4.5))
+        """Generate publication-quality single-panel figure with inset."""
+        fig, ax = plt.subplots(figsize=(12, 7))
         
         # Colors
         color_p31 = '#1f77b4'  # Blue
         color_p32 = '#d62728'  # Red
         
-        # === Panel A: Eligibility decay curves ===
-        ax1 = axes[0]
+        # === Main panel: full timescale (0-210s) ===
         
-        # P31 data
+        # P31 data with error bars
         x_p31 = np.array(self.p31_delays)
         y_p31 = np.array([result.summary['P31'].get(d, {}).get('eligibility_mean', 0) for d in self.p31_delays])
         err_p31 = np.array([result.summary['P31'].get(d, {}).get('eligibility_std', 0) for d in self.p31_delays])
+        sem_p31 = err_p31 / np.sqrt(np.array([
+            result.summary['P31'].get(d, {}).get('eligibility_n', 1) for d in self.p31_delays
+        ], dtype=float))
         
-        ax1.errorbar(x_p31, y_p31, yerr=err_p31, fmt='o-', color=color_p31, 
-                    markersize=8, linewidth=2, capsize=4, label=f'³¹P (T₂={result.p31_fitted_T2:.0f}s)')
+        ax.errorbar(x_p31, y_p31, yerr=sem_p31, fmt='o', color=color_p31,
+                    markersize=8, linewidth=2, capsize=4, zorder=5,
+                    label=f'³¹P (T₂={result.p31_fitted_T2:.0f}s)')
         
-        # P32 data  
+        # P31 fitted decay curve
+        if result.p31_fitted_T2 > 0:
+            t_fit = np.linspace(0, 210, 300)
+            A_p31 = y_p31[0] if len(y_p31) > 0 else 1.0
+            y_fit = A_p31 * np.exp(-t_fit / result.p31_fitted_T2)
+            ax.plot(t_fit, y_fit, '-', color=color_p31, alpha=0.4, linewidth=2)
+            
+            # Error band (approximate from SEM at data points)
+            if len(sem_p31) > 1:
+                upper = A_p31 * np.exp(-t_fit / (result.p31_fitted_T2 * 1.1))
+                lower = A_p31 * np.exp(-t_fit / (result.p31_fitted_T2 * 0.9))
+                ax.fill_between(t_fit, lower, upper, color=color_p31, alpha=0.1)
+        
+        # P32 data — on this scale it's basically a vertical drop at t=0
         x_p32 = np.array(self.p32_delays)
         y_p32 = np.array([result.summary['P32'].get(d, {}).get('eligibility_mean', 0) for d in self.p32_delays])
         err_p32 = np.array([result.summary['P32'].get(d, {}).get('eligibility_std', 0) for d in self.p32_delays])
         
-        ax1.errorbar(x_p32, y_p32, yerr=err_p32, fmt='s-', color=color_p32,
-                    markersize=8, linewidth=2, capsize=4, label=f'³²P (T₂={result.p32_fitted_T2:.1f}s)')
+        ax.errorbar(x_p32, y_p32, yerr=err_p32, fmt='s', color=color_p32,
+                    markersize=7, linewidth=2, capsize=4, zorder=5,
+                    label=f'³²P (T₂={result.p32_fitted_T2:.1f}s)')
         
-        # Theory curves
-        t_theory = np.linspace(0, max(self.p31_delays), 100)
-        if result.p31_fitted_T2 > 0:
-            ax1.plot(t_theory, y_p31[0] * np.exp(-t_theory / result.p31_fitted_T2), 
-                    '--', color=color_p31, alpha=0.5, linewidth=1)
-        if result.p32_fitted_T2 > 0:
-            t_theory_p32 = np.linspace(0, max(self.p32_delays), 100)
-            ax1.plot(t_theory_p32, y_p32[0] * np.exp(-t_theory_p32 / result.p32_fitted_T2),
-                    '--', color=color_p32, alpha=0.5, linewidth=1)
+        # Commit threshold
+        ax.axhline(y=0.3, color='gray', linestyle=':', alpha=0.6, linewidth=1.5,
+                   label='Commitment threshold')
         
-        ax1.axhline(y=0.3, color='gray', linestyle=':', alpha=0.5, label='Commit threshold')
-        ax1.set_xlabel('Dopamine Delay (s)', fontsize=11)
-        ax1.set_ylabel('Eligibility at Dopamine', fontsize=11)
-        ax1.set_title('A. Eligibility Decay', fontweight='bold')
-        ax1.legend(loc='upper right', fontsize=9)
-        ax1.set_xlim(-2, max(self.p31_delays) + 5)
-        ax1.set_ylim(0, 1.05)
+        # Behavioral learning window shading
+        ax.axvspan(60, 100, alpha=0.08, color='#ff7f0e', zorder=1)
+        ax.text(80, 1.02, 'Behavioral\nlearning window', ha='center', va='bottom',
+                fontsize=9, color='#e67e22', fontstyle='italic')
         
-        # === Panel B: Commitment window ===
-        ax2 = axes[1]
+        # Annotations
+        ax.annotate(f'³¹P: coherence persists\nacross learning window',
+                    xy=(80, A_p31 * np.exp(-80 / result.p31_fitted_T2) if result.p31_fitted_T2 > 0 else 0.6),
+                    xytext=(130, 0.75),
+                    fontsize=10, color=color_p31,
+                    arrowprops=dict(arrowstyle='->', color=color_p31, lw=1.5),
+                    bbox=dict(boxstyle='round,pad=0.3', facecolor='white',
+                             edgecolor=color_p31, alpha=0.9))
         
-        # Compute commit rates
-        commit_p31 = [result.summary['P31'].get(d, {}).get('commit_rate', 0) for d in self.p31_delays]
-        commit_p32 = [result.summary['P32'].get(d, {}).get('commit_rate', 0) for d in self.p32_delays]
+        ax.annotate(f'³²P: decoherence in <1s\n(no temporal integration)',
+                    xy=(5, 0.02), xytext=(40, 0.18),
+                    fontsize=10, color=color_p32,
+                    arrowprops=dict(arrowstyle='->', color=color_p32, lw=1.5),
+                    bbox=dict(boxstyle='round,pad=0.3', facecolor='white',
+                             edgecolor=color_p32, alpha=0.9))
         
-        ax2.plot(self.p31_delays, commit_p31, 'o-', color=color_p31, markersize=8, linewidth=2, label='³¹P')
-        ax2.plot(self.p32_delays, commit_p32, 's-', color=color_p32, markersize=8, linewidth=2, label='³²P')
+        # Formatting
+        ax.set_xlabel('Dopamine Delay (s)', fontsize=12)
+        ax.set_ylabel('Eligibility at Dopamine Onset', fontsize=12)
+        ax.set_title('Isotope Substitution: ³¹P vs ³²P Nuclear Spin Coherence',
+                     fontsize=13, fontweight='bold', pad=15)
+        ax.set_xlim(-5, 215)
+        ax.set_ylim(-0.05, 1.12)
+        ax.legend(loc='upper right', fontsize=10, framealpha=0.95)
+        ax.grid(True, alpha=0.2, axis='y')
         
-        ax2.axhline(y=0.5, color='gray', linestyle=':', alpha=0.5)
-        ax2.set_xlabel('Dopamine Delay (s)', fontsize=11)
-        ax2.set_ylabel('Commitment Rate', fontsize=11)
-        ax2.set_title('B. Temporal Window for Plasticity', fontweight='bold')
-        ax2.legend(loc='upper right', fontsize=9)
-        ax2.set_xlim(-2, max(self.p31_delays) + 5)
-        ax2.set_ylim(-0.05, 1.05)
-        
-        # === Panel C: Summary bar chart ===
-        ax3 = axes[2]
-        
-        categories = ['T₂ (fitted)', 'Window (50%)', 'Max delay\n(commit)']
-        
-        # P31 values
-        p31_window = self._find_50pct_window(result, 'P31')
-        p31_max_commit = self._find_max_commit_delay(result, 'P31')
-        p31_vals = [result.p31_fitted_T2, p31_window, p31_max_commit]
-        
-        # P32 values  
-        p32_window = self._find_50pct_window(result, 'P32')
-        p32_max_commit = self._find_max_commit_delay(result, 'P32')
-        p32_vals = [result.p32_fitted_T2, p32_window, p32_max_commit]
-        
-        x = np.arange(len(categories))
-        width = 0.35
-        
-        bars1 = ax3.bar(x - width/2, p31_vals, width, label='³¹P', color=color_p31, alpha=0.8)
-        bars2 = ax3.bar(x + width/2, p32_vals, width, label='³²P', color=color_p32, alpha=0.8)
-        
-        ax3.set_ylabel('Time (s)', fontsize=11)
-        ax3.set_title('C. Functional Comparison', fontweight='bold')
-        ax3.set_xticks(x)
-        ax3.set_xticklabels(categories, fontsize=10)
-        ax3.legend(loc='upper right', fontsize=9)
-        ax3.set_yscale('log')
-        ax3.set_ylim(0.1, 200)
-        
-        # Add ratio annotation
+        # T2 ratio callout
         if result.t2_ratio > 1:
-            ax3.annotate(f'{result.t2_ratio:.0f}×', xy=(0, max(p31_vals[0], p32_vals[0])),
-                        xytext=(0, max(p31_vals[0], p32_vals[0]) * 1.5),
-                        ha='center', fontsize=12, fontweight='bold')
+            ax.text(0.02, 0.02,
+                    f'T₂ ratio: {result.t2_ratio:.0f}×  (³¹P/³²P)\n'
+                    f'R² = {result.p31_r_squared:.3f} / {result.p32_r_squared:.3f}',
+                    transform=ax.transAxes, fontsize=9, va='bottom',
+                    bbox=dict(boxstyle='round', facecolor='lightyellow', edgecolor='gray', alpha=0.9))
         
-        plt.suptitle('Isotope Comparison: ³¹P vs ³²P Nuclear Spin Coherence', 
-                    fontsize=13, fontweight='bold', y=1.02)
+        # === Inset: zoomed view of P32 decay (0-5s) ===
+        ax_inset = ax.inset_axes([0.38, 0.45, 0.28, 0.30])  # [x, y, width, height]
+        
+        # P32 data with error bars
+        sem_p32 = err_p32 / np.sqrt(np.array([
+            result.summary['P32'].get(d, {}).get('eligibility_n', 1) for d in self.p32_delays
+        ], dtype=float))
+        
+        ax_inset.errorbar(x_p32, y_p32, yerr=sem_p32, fmt='s-', color=color_p32,
+                         markersize=6, linewidth=1.5, capsize=3)
+        
+        # P32 fitted curve in inset
+        if result.p32_fitted_T2 > 0:
+            t_inset = np.linspace(0, max(self.p32_delays), 100)
+            A_p32 = y_p32[0] if len(y_p32) > 0 else 1.0
+            y_inset = A_p32 * np.exp(-t_inset / result.p32_fitted_T2)
+            ax_inset.plot(t_inset, y_inset, '--', color=color_p32, alpha=0.6, linewidth=1.5)
+        
+        ax_inset.axhline(y=0.3, color='gray', linestyle=':', alpha=0.5, linewidth=1)
+        ax_inset.set_xlabel('Delay (s)', fontsize=8)
+        ax_inset.set_ylabel('Eligibility', fontsize=8)
+        ax_inset.set_title(f'³²P decay (T₂={result.p32_fitted_T2:.1f}s)', fontsize=9, fontweight='bold')
+        ax_inset.set_xlim(-0.2, max(self.p32_delays) + 0.5)
+        ax_inset.set_ylim(-0.05, 1.1)
+        ax_inset.tick_params(labelsize=7)
+        ax_inset.set_facecolor('#fff8f8')
+        
+        # Border around inset
+        for spine in ax_inset.spines.values():
+            spine.set_edgecolor(color_p32)
+            spine.set_linewidth(1.5)
+        
         plt.tight_layout()
         
         if output_dir:

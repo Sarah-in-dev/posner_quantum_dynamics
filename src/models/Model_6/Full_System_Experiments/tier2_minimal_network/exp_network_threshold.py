@@ -235,14 +235,10 @@ def run(synapse_counts: List[int] = None, verbose: bool = True) -> NetworkThresh
 
 def plot(result: NetworkThresholdResult, output_dir: Path = None) -> plt.Figure:
     """
-    Generate publication-quality figure
-    
-    Layout:
-    - Top: Network metrics vs synapse count
-    - Bottom: Threshold analysis
+    Single-panel network threshold visualization.
+    Grouped bars for particles/clusters, line for bonds showing super-linear scaling.
     """
-    fig = plt.figure(figsize=(12, 8))
-    gs = GridSpec(2, 2, figure=fig, hspace=0.35, wspace=0.3)
+    fig, ax = plt.subplots(figsize=(12, 7))
     
     # Extract data
     n_synapses = sorted(result.conditions.keys())
@@ -254,110 +250,85 @@ def plot(result: NetworkThresholdResult, output_dir: Path = None) -> plt.Figure:
     
     # Colors
     color_particles = '#2E86AB'
+    color_clusters = '#27ae60'
     color_bonds = '#E94F37'
-    color_cluster = '#28A745'
     
-    # === TOP LEFT: Particle and Bond Scaling ===
-    ax_scale = fig.add_subplot(gs[0, 0])
+    # X positions for grouped bars
+    x = np.arange(len(n_synapses))
+    bar_width = 0.30
     
-    ax_scale.plot(n_synapses, total_particles, 'o-', color=color_particles,
-                  linewidth=2, markersize=8, label='Total particles')
-    ax_scale.plot(n_synapses, total_bonds, 's-', color=color_bonds,
-                  linewidth=2, markersize=8, label='Total bonds')
+    # === Left Y-axis: Particles and Clusters (bars) ===
+    bars_p = ax.bar(x - bar_width/2, total_particles, bar_width, 
+                    color=color_particles, alpha=0.85, label='Dimers', zorder=3)
+    bars_c = ax.bar(x + bar_width/2, largest_clusters, bar_width,
+                    color=color_clusters, alpha=0.85, label='Largest Cluster', zorder=3)
     
-    # Linear reference
-    linear_ref = [n_synapses[0] * n / n_synapses[0] * total_particles[0] for n in n_synapses]
-    ax_scale.plot(n_synapses, linear_ref, '--', color='gray', alpha=0.5, label='Linear scaling')
+    ax.set_ylabel('Dimers / Cluster Size', fontsize=12, color='#333333')
+    ax.set_ylim(0, max(total_particles) * 1.25)
     
-    ax_scale.set_xlabel('Number of Synapses', fontsize=12)
-    ax_scale.set_ylabel('Count', fontsize=12)
-    ax_scale.set_title('Network Scaling with Synapse Count', fontsize=12, fontweight='bold')
-    ax_scale.legend(loc='upper left', fontsize=9)
-    ax_scale.set_xticks(n_synapses)
-    ax_scale.grid(True, alpha=0.3)
+    # Add value labels on bars
+    for bar in bars_p:
+        h = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2, h + 2, str(int(h)),
+                ha='center', va='bottom', fontsize=9, color=color_particles, fontweight='bold')
+    for bar in bars_c:
+        h = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2, h + 2, str(int(h)),
+                ha='center', va='bottom', fontsize=9, color=color_clusters, fontweight='bold')
     
-    # === TOP RIGHT: Cluster Size and Coverage ===
-    ax_cluster = fig.add_subplot(gs[0, 1])
+    # === Right Y-axis: Bonds (line) ===
+    ax2 = ax.twinx()
+    ax2.plot(x, total_bonds, 's-', color=color_bonds, linewidth=2.5,
+             markersize=10, label='Entanglement Bonds', zorder=5)
     
-    ax_cluster.bar(n_synapses, largest_clusters, color=color_cluster, alpha=0.7,
-                   label='Largest cluster')
+    # Linear reference from first point
+    linear_bonds = [total_bonds[0] * n / n_synapses[0] for n in n_synapses]
+    ax2.plot(x, linear_bonds, '--', color=color_bonds, alpha=0.4, linewidth=1.5,
+             label='Linear scaling')
     
-    # Add coverage percentage
-    ax_cluster2 = ax_cluster.twinx()
-    coverage = [result.conditions[n].network_coverage * 100 for n in n_synapses]
-    ax_cluster2.plot(n_synapses, coverage, 'ko-', linewidth=2, markersize=6,
-                     label='Coverage %')
-    ax_cluster2.set_ylabel('Network Coverage (%)', fontsize=11)
-    ax_cluster2.set_ylim(0, 105)
+    ax2.set_ylabel('Entanglement Bonds', fontsize=12, color=color_bonds)
+    ax2.tick_params(axis='y', labelcolor=color_bonds)
+    ax2.set_ylim(0, max(total_bonds) * 1.15)
     
-    ax_cluster.set_xlabel('Number of Synapses', fontsize=12)
-    ax_cluster.set_ylabel('Largest Cluster Size', fontsize=12)
-    ax_cluster.set_title('Entangled Network Size', fontsize=12, fontweight='bold')
-    ax_cluster.set_xticks(n_synapses)
-    ax_cluster.grid(True, alpha=0.3, axis='y')
+    # Add bond values
+    for i, b in enumerate(total_bonds):
+        ax2.annotate(f'{b:,}', xy=(x[i], b), xytext=(0, 10),
+                     textcoords='offset points', ha='center', fontsize=9,
+                     color=color_bonds, fontweight='bold')
+    
+    # === Singlet probability markers (commitment check) ===
+    # Small diamond markers along the top showing P_S and commitment status
+    for i, (ps, comm) in enumerate(zip(mean_ps, committed)):
+        marker_color = '#27ae60' if comm else '#e74c3c'
+        symbol = '✓' if comm else '✗'
+        ax.text(x[i], max(total_particles) * 1.18, f'P_S={ps:.2f} {symbol}',
+                ha='center', va='bottom', fontsize=8.5, color=marker_color, fontweight='bold')
+    
+    # === Formatting ===
+    ax.set_xlabel('Number of Synapses', fontsize=12)
+    ax.set_xticks(x)
+    ax.set_xticklabels([str(n) for n in n_synapses], fontsize=11)
+    ax.grid(True, alpha=0.2, axis='y')
+    
+    ax.set_title('Network Scaling: Super-Linear Entanglement Bond Growth',
+                 fontsize=13, fontweight='bold', pad=15)
     
     # Combined legend
-    lines1, labels1 = ax_cluster.get_legend_handles_labels()
-    lines2, labels2 = ax_cluster2.get_legend_handles_labels()
-    ax_cluster.legend(lines1 + lines2, labels1 + labels2, loc='upper left', fontsize=9)
+    lines_ax, labels_ax = ax.get_legend_handles_labels()
+    lines_ax2, labels_ax2 = ax2.get_legend_handles_labels()
+    ax.legend(lines_ax + lines_ax2, labels_ax + labels_ax2,
+              loc='upper left', fontsize=9, framealpha=0.95)
     
-    # === BOTTOM LEFT: Coherence ===
-    ax_coh = fig.add_subplot(gs[1, 0])
-    
-    bars = ax_coh.bar(n_synapses, mean_ps, color=color_particles, alpha=0.7)
-    ax_coh.axhline(y=0.5, color='red', linestyle='--', linewidth=1.5,
-                   label='Entanglement threshold')
-    
-    # Color bars by commitment
-    for i, (bar, comm) in enumerate(zip(bars, committed)):
-        if comm:
-            bar.set_color('#28A745')
-            bar.set_alpha(0.9)
-    
-    ax_coh.set_xlabel('Number of Synapses', fontsize=12)
-    ax_coh.set_ylabel('Mean Singlet Probability', fontsize=12)
-    ax_coh.set_title('Quantum Coherence (green = committed)', fontsize=12, fontweight='bold')
-    ax_coh.set_xticks(n_synapses)
-    ax_coh.set_ylim(0, 1.05)
-    ax_coh.legend(loc='lower right', fontsize=9)
-    ax_coh.grid(True, alpha=0.3, axis='y')
-    
-    # === BOTTOM RIGHT: Summary Table ===
-    ax_table = fig.add_subplot(gs[1, 1])
-    ax_table.axis('off')
-    
-    table_data = [['Synapses', 'Particles', 'Bonds', 'Cluster', 'P_S', 'Committed']]
-    for n in n_synapses:
-        c = result.conditions[n]
-        table_data.append([
-            str(n),
-            str(c.total_particles),
-            str(c.total_bonds),
-            str(c.largest_cluster),
-            f'{c.mean_singlet_prob:.2f}',
-            '✓' if c.committed else '✗'
-        ])
-    
-    table = ax_table.table(cellText=table_data,
-                           loc='center',
-                           cellLoc='center',
-                           colWidths=[0.12, 0.15, 0.12, 0.12, 0.12, 0.15])
-    table.auto_set_font_size(False)
-    table.set_fontsize(10)
-    table.scale(1.3, 1.8)
-    
-    # Style header
-    for j in range(6):
-        table[(0, j)].set_facecolor('#E6E6E6')
-        table[(0, j)].set_text_props(fontweight='bold')
-    
-    # Color committed rows
-    for i, comm in enumerate(committed):
-        if comm:
-            for j in range(6):
-                table[(i+1, j)].set_facecolor('#D4EDDA')
-    
-    ax_table.set_title('Network Threshold Summary', fontsize=12, fontweight='bold', pad=20)
+    # Super-linearity callout
+    if len(total_bonds) >= 2 and total_bonds[-1] > linear_bonds[-1] * 1.5:
+        ratio = total_bonds[-1] / linear_bonds[-1]
+        ax2.annotate(f'{ratio:.0f}× super-linear\nat {n_synapses[-1]} synapses',
+                     xy=(x[-1], total_bonds[-1]),
+                     xytext=(x[-1] - 0.8, total_bonds[-1] * 0.75),
+                     fontsize=10, color=color_bonds, fontstyle='italic',
+                     arrowprops=dict(arrowstyle='->', color=color_bonds, lw=1.5),
+                     bbox=dict(boxstyle='round,pad=0.3', facecolor='white',
+                              edgecolor=color_bonds, alpha=0.9))
     
     plt.tight_layout()
     
