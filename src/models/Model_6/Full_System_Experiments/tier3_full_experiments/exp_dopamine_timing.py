@@ -1,28 +1,47 @@
 #!/usr/bin/env python3
 """
-Experiment: Dopamine Timing Window
-===================================
+Experiment: Dopamine as Quantum Readout Operator
+==================================================
 
-Validates the T2 ≈ 67s prediction through eligibility decay measurements.
+Demonstrates that dopamine is the measurement signal that collapses quantum
+eligibility into classical synaptic strengthening. The isotope experiment
+shows coherence persists; THIS experiment shows what happens when you read
+it out — and what happens when you don't.
 
 Scientific basis:
 - Eligibility trace = mean singlet probability of dimer nuclear spins
-- Singlet probability decays with T2 time constant
-- For P31: T2 ≈ 67s (Fisher 2015, Agarwal 2023)
+- Dopamine triggers the three-factor gate: eligibility × dopamine × calcium
+- Without dopamine, quantum memory exists but is never converted to plasticity
+- Without prior activity, dopamine has nothing to read out
 
-Protocol:
-1. Stimulate network to form dimers (standard protocol)
-2. Wait variable delay (0-120s)
-3. Apply dopamine "reward" signal
+Protocol (stim_plus_dopamine condition):
+1. Baseline (100ms): resting, no reward
+2. Theta-burst stimulation: reward=FALSE (critical fix — no premature gate firing)
+3. Variable delay (0–200s): resting, no reward
 4. Measure eligibility at dopamine onset
-5. Fit exponential decay to extract T2
+5. Dopamine readout (300ms): reward=TRUE — gate evaluates here
+6. Consolidation (1s): no reward
+7. Measure final synaptic strength
+
+Three conditions:
+- stim_plus_dopamine: Activity → delay → dopamine readout
+- stim_no_dopamine:   Activity → delay → NO readout (quantum memory unused)
+- dopamine_only:      No activity → delay → dopamine (nothing to read)
 
 Success criteria:
-- Fitted T2 within 50-80s (allowing for model approximations)
-- R² > 0.8 for exponential fit
-- Clear exponential decay pattern
+- stim_plus_dopamine: Δstrength > 0, decaying with T₂
+- stim_no_dopamine: Δstrength ≈ 0 at all delays (memory exists but unread)
+- dopamine_only: Δstrength ≈ 0 at all delays (nothing to read)
+- Fitted T₂ from strength decay consistent with isotope experiment
 
-This experiment uses standard P31 isotope throughout.
+References:
+- Yagishita et al. (2014): Dopamine timing window for spine enlargement
+- Fisher (2015): Quantum cognition hypothesis
+- Agarwal et al. (2023): Ca₆(PO₄)₄ dimer coherence times
+
+Author: Sarah Davidson
+University of Florida
+Date: February 2026
 """
 
 import numpy as np
@@ -32,6 +51,7 @@ from pathlib import Path
 import json
 import time
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -41,15 +61,20 @@ from model6_parameters import Model6Parameters
 from multi_synapse_network import MultiSynapseNetwork
 
 
+# =============================================================================
+# DATA CLASSES
+# =============================================================================
+
 @dataclass
 class TimingCondition:
     """Single experimental condition"""
+    condition_type: str  # 'stim_plus_dopamine', 'stim_no_dopamine', 'dopamine_only'
     dopamine_delay_s: float
     n_synapses: int = 10
     
     @property
     def name(self) -> str:
-        return f"delay_{self.dopamine_delay_s:.1f}s"
+        return f"{self.condition_type}_delay_{self.dopamine_delay_s:.1f}s"
 
 
 @dataclass 
@@ -58,17 +83,25 @@ class TimingTrialResult:
     condition: TimingCondition
     trial_id: int
     
-    # Key measurements at dopamine onset
-    eligibility: float = 0.0
-    mean_singlet_prob: float = 1.0
+    # Key measurements at dopamine onset (or equivalent time point)
+    eligibility_at_readout: float = 0.0
+    mean_singlet_prob: float = 0.0
     dimer_count: int = 0
     
-    # Outcome
-    committed: bool = False
-    final_strength: float = 1.0
+    # Post-stimulation measurements (before delay)
+    eligibility_post_stim: float = 0.0
+    dimers_post_stim: int = 0
+    peak_calcium_uM: float = 0.0
+    peak_em_field_kT: float = 0.0
     
-    # Timeline (optional, for detailed analysis)
-    timeline: List[Dict] = field(default_factory=list)
+    # Outcome after dopamine readout + consolidation
+    committed: bool = False
+    commitment_level: float = 0.0
+    final_strength: float = 1.0
+    delta_strength: float = 0.0  # final_strength - 1.0
+    
+    # Per-synapse commitment (for later coordinated decoherence analysis)
+    n_synapses_committed: int = 0
     
     runtime_s: float = 0.0
 
@@ -79,10 +112,10 @@ class TimingResult:
     conditions: List[TimingCondition]
     trials: List[TimingTrialResult]
     
-    # Summary by delay
+    # Summary by condition type and delay
     summary: Dict = field(default_factory=dict)
     
-    # Fitted parameters
+    # Fitted parameters (from stim_plus_dopamine condition)
     fitted_T2: float = 0.0
     fitted_A: float = 0.0  # Initial amplitude
     r_squared: float = 0.0
@@ -94,29 +127,41 @@ class TimingResult:
     runtime_s: float = 0.0
 
 
+# =============================================================================
+# EXPERIMENT CLASS
+# =============================================================================
+
 class DopamineTimingExperiment:
     """
-    Dopamine timing window experiment
+    Dopamine timing experiment — demonstrates dopamine as quantum readout operator.
     
-    Tests eligibility decay to extract effective T2 coherence time.
+    Three conditions show that:
+    1. Quantum memory + dopamine readout = synaptic strengthening (delay-dependent)
+    2. Quantum memory without readout = no change (memory wasted)
+    3. Readout without prior memory = no change (nothing to read)
     """
     
     def __init__(self, quick_mode: bool = False, verbose: bool = True):
         self.quick_mode = quick_mode
         self.verbose = verbose
         
-        # Experimental parameters
         if quick_mode:
             self.n_trials = 2
             self.n_synapses = 5
             self.stim_duration_s = 0.5
-            self.delays = [0, 10, 20, 30, 45]
+            self.consolidation_s = 1.0
+            # Fewer delays for quick testing
+            self.main_delays = [0, 10, 30, 60, 120]
+            self.control_delays = [0, 30, 120]
         else:
-            self.n_trials = 5
+            self.n_trials = 10
             self.n_synapses = 10
             self.stim_duration_s = 1.0
-            # Extended delays to capture full decay curve
-            self.delays = [0, 5, 10, 15, 20, 30, 45, 60, 90, 120]
+            self.consolidation_s = 1.0
+            # Extended delays matching isotope experiment range
+            self.main_delays = [0, 5, 10, 15, 20, 30, 45, 60, 90, 120, 150, 200]
+            # Controls at subset of delays (flat lines need fewer points)
+            self.control_delays = [0, 15, 30, 60, 120, 200]
     
     def _create_network(self) -> MultiSynapseNetwork:
         """Create standard P31 network"""
@@ -139,7 +184,12 @@ class DopamineTimingExperiment:
         return network
     
     def _run_trial(self, condition: TimingCondition, trial_id: int) -> TimingTrialResult:
-        """Execute single trial"""
+        """
+        Execute single trial with corrected protocol.
+        
+        CRITICAL FIX: reward=False during stimulation phase.
+        Dopamine only delivered in Phase 5 (readout), not during theta-burst.
+        """
         start_time = time.time()
         
         result = TimingTrialResult(
@@ -148,51 +198,66 @@ class DopamineTimingExperiment:
         )
         
         network = self._create_network()
-        dt = 0.001
+        dt = 0.001  # 1 ms timestep
+        
+        # Determine what this condition does
+        do_stimulate = condition.condition_type in ('stim_plus_dopamine', 'stim_no_dopamine')
+        do_dopamine = condition.condition_type in ('stim_plus_dopamine', 'dopamine_only')
         
         # === PHASE 1: BASELINE (100ms) ===
         for _ in range(100):
             network.step(dt, {"voltage": -70e-3, "reward": False})
         
-        # === PHASE 2: STIMULATION (theta-burst with concurrent dopamine) ===
-        # Theta-burst: 5 bursts × 4 spikes, physiological pattern
-        for burst in range(5):
-            for spike in range(4):
-                for _ in range(2):  # 2ms depolarization
-                    network.step(dt, {"voltage": -10e-3, "reward": True})
-                for _ in range(8):  # 8ms rest
-                    network.step(dt, {"voltage": -70e-3, "reward": True})
-            for _ in range(160):  # 160ms inter-burst interval
-                network.step(dt, {"voltage": -70e-3, "reward": True})
+        # === PHASE 2: STIMULATION (theta-burst, NO DOPAMINE) ===
+        if do_stimulate:
+            # Theta-burst: 5 bursts × 4 spikes at 100 Hz, 200ms inter-burst
+            # CRITICAL: reward=False during all stimulation
+            for burst in range(5):
+                for spike in range(4):
+                    # 2ms depolarization (spike)
+                    for _ in range(2):
+                        network.step(dt, {"voltage": -10e-3, "reward": False})
+                    # 8ms rest between spikes
+                    for _ in range(8):
+                        network.step(dt, {"voltage": -70e-3, "reward": False})
+                # 160ms inter-burst interval
+                for _ in range(160):
+                    network.step(dt, {"voltage": -70e-3, "reward": False})
+        else:
+            # dopamine_only condition: sit at rest for equivalent duration
+            # Theta-burst total: 5 × (4×10ms + 160ms) = 1000ms = 1s
+            for _ in range(1000):
+                network.step(dt, {"voltage": -70e-3, "reward": False})
         
         # Record post-stimulation state
-        initial_eligibility = np.mean([s.get_eligibility() for s in network.synapses])
+        result.eligibility_post_stim = np.mean([s.get_eligibility() for s in network.synapses])
+        result.dimers_post_stim = sum(
+            len(s.dimer_particles.dimers) if hasattr(s, 'dimer_particles') else 0
+            for s in network.synapses
+        )
+        # Track peak calcium and EM field achieved during stimulation
+        result.peak_calcium_uM = max(
+            getattr(s, '_peak_calcium_uM', 0.0) for s in network.synapses
+        )
+        result.peak_em_field_kT = max(
+            getattr(s, '_collective_field_kT', 0.0) for s in network.synapses
+        )
         
         # === PHASE 3: DELAY (no reward, resting potential) ===
         if condition.dopamine_delay_s > 0:
-            # Use coarser timestep for long delays
+            # Use coarser timestep for long delays (performance)
             dt_delay = 0.1 if condition.dopamine_delay_s > 5 else 0.05
             n_delay = int(condition.dopamine_delay_s / dt_delay)
             
-            # Record timeline at intervals
-            record_interval = max(1, n_delay // 20)
-            
             for i in range(n_delay):
                 network.step(dt_delay, {'voltage': -70e-3, 'reward': False})
-                
-                # Record at intervals
-                if i % record_interval == 0 and i > 0:
-                    t = i * dt_delay
-                    elig = np.mean([s.get_eligibility() for s in network.synapses])
-                    result.timeline.append({
-                        'time': t,
-                        'eligibility': elig
-                    })
         
-        # === MEASURE AT DOPAMINE ONSET ===
-        result.eligibility = np.mean([s.get_eligibility() for s in network.synapses])
+        # === PHASE 4: MEASURE AT READOUT ONSET ===
+        # Snapshot eligibility just before dopamine arrives (or equivalent time)
+        eligibilities = [s.get_eligibility() for s in network.synapses]
+        result.eligibility_at_readout = np.mean(eligibilities)
         
-        # Get dimer metrics
+        # Dimer metrics at readout time
         all_ps = []
         total_dimers = 0
         for s in network.synapses:
@@ -204,33 +269,85 @@ class DopamineTimingExperiment:
         result.mean_singlet_prob = np.mean(all_ps) if all_ps else 0.0
         result.dimer_count = total_dimers
         
-        # === PHASE 4: DOPAMINE READ (300ms) ===
-        for _ in range(300):
-            network.step(dt, {"voltage": -70e-3, "reward": True})
+        # === PHASE 5: DOPAMINE READOUT (300ms) ===
+        if do_dopamine:
+            network.set_coordination_mode(True)
+            for _ in range(300):
+                network.step_with_coordination(dt, {"voltage": -70e-3, "reward": True})
+        else:
+            # stim_no_dopamine: equivalent time passes with no reward
+            for _ in range(300):
+                network.step(dt, {"voltage": -70e-3, "reward": False})
         
+        # === PHASE 6: CONSOLIDATION (1s) ===
+        dt_consol = 0.01  # 10ms timestep for consolidation
+        n_consol = int(self.consolidation_s / dt_consol)
+        for _ in range(n_consol):
+            network.step(dt_consol, {"voltage": -70e-3, "reward": False})
+        
+        # === FINAL MEASUREMENTS ===
         result.committed = network.network_committed
-        result.final_strength = 1.0 + 0.5 * network.network_commitment_level if result.committed else 1.0
+        result.commitment_level = network.network_commitment_level
+        
+        # Count per-synapse commitments
+        result.n_synapses_committed = sum(
+            1 for s in network.synapses if getattr(s, '_camkii_committed', False)
+        )
+        
+        # Synaptic strength
+        if result.committed:
+            result.final_strength = 1.0 + 0.5 * result.commitment_level
+        else:
+            result.final_strength = 1.0
+        
+        result.delta_strength = result.final_strength - 1.0
         
         result.runtime_s = time.time() - start_time
         
         return result
     
     def run(self) -> TimingResult:
-        """Execute complete experiment"""
+        """Execute complete experiment with all three conditions"""
         start_time = time.time()
         
-        # Build conditions
-        conditions = [TimingCondition(dopamine_delay_s=d, n_synapses=self.n_synapses) 
-                     for d in self.delays]
+        # Build all conditions
+        conditions = []
+        
+        # Main condition: stim + dopamine at variable delays
+        for delay in self.main_delays:
+            conditions.append(TimingCondition(
+                condition_type='stim_plus_dopamine',
+                dopamine_delay_s=delay,
+                n_synapses=self.n_synapses
+            ))
+        
+        # Control 1: stim but NO dopamine
+        for delay in self.control_delays:
+            conditions.append(TimingCondition(
+                condition_type='stim_no_dopamine',
+                dopamine_delay_s=delay,
+                n_synapses=self.n_synapses
+            ))
+        
+        # Control 2: dopamine only, no prior stimulation
+        for delay in self.control_delays:
+            conditions.append(TimingCondition(
+                condition_type='dopamine_only',
+                dopamine_delay_s=delay,
+                n_synapses=self.n_synapses
+            ))
         
         # Run trials
         trials = []
+        n_control_trials = max(2, self.n_trials // 2)  # Controls need fewer trials
         
         for cond in conditions:
-            if self.verbose:
-                print(f"  Delay {cond.dopamine_delay_s:5.1f}s: ", end='', flush=True)
+            n = self.n_trials if cond.condition_type == 'stim_plus_dopamine' else n_control_trials
             
-            for trial_id in range(self.n_trials):
+            if self.verbose:
+                print(f"  {cond.name}: ", end='', flush=True)
+            
+            for trial_id in range(n):
                 trial_result = self._run_trial(cond, trial_id)
                 trials.append(trial_result)
                 
@@ -238,9 +355,10 @@ class DopamineTimingExperiment:
                     print(".", end='', flush=True)
             
             if self.verbose:
-                cond_trials = [t for t in trials if t.condition.dopamine_delay_s == cond.dopamine_delay_s]
-                mean_elig = np.mean([t.eligibility for t in cond_trials])
-                print(f" elig={mean_elig:.3f}")
+                cond_trials = [t for t in trials if t.condition.name == cond.name]
+                mean_ds = np.mean([t.delta_strength for t in cond_trials])
+                mean_elig = np.mean([t.eligibility_at_readout for t in cond_trials])
+                print(f" Δstr={mean_ds:.3f}, elig={mean_elig:.3f}", flush=True)
         
         # Build result
         result = TimingResult(
@@ -252,199 +370,296 @@ class DopamineTimingExperiment:
         # Compute summary
         result.summary = self._compute_summary(trials)
         
-        # Fit decay curve
-        self._fit_decay_curve(result)
+        # Fit decay curve from stim_plus_dopamine condition
+        self._fit_strength_decay(result)
         
         result.runtime_s = time.time() - start_time
         
         return result
     
     def _compute_summary(self, trials: List[TimingTrialResult]) -> Dict:
-        """Compute summary statistics by delay"""
+        """Compute summary statistics by condition type and delay"""
         summary = {}
         
-        for delay in self.delays:
-            cond_trials = [t for t in trials if t.condition.dopamine_delay_s == delay]
+        for ctype in ['stim_plus_dopamine', 'stim_no_dopamine', 'dopamine_only']:
+            ctype_trials = [t for t in trials if t.condition.condition_type == ctype]
+            delays = sorted(set(t.condition.dopamine_delay_s for t in ctype_trials))
             
-            if cond_trials:
-                eligs = [t.eligibility for t in cond_trials]
-                ps = [t.mean_singlet_prob for t in cond_trials]
-                commits = [1 if t.committed else 0 for t in cond_trials]
-                dimers = [t.dimer_count for t in cond_trials]
+            summary[ctype] = {}
+            
+            for delay in delays:
+                d_trials = [t for t in ctype_trials if t.condition.dopamine_delay_s == delay]
                 
-                summary[delay] = {
-                    'eligibility_mean': np.mean(eligs),
-                    'eligibility_std': np.std(eligs),
-                    'singlet_prob_mean': np.mean(ps),
-                    'dimer_count_mean': np.mean(dimers),
-                    'commit_rate': np.mean(commits),
-                    'n_trials': len(cond_trials)
-                }
+                if d_trials:
+                    ds = [t.delta_strength for t in d_trials]
+                    eligs = [t.eligibility_at_readout for t in d_trials]
+                    commits = [1 if t.committed else 0 for t in d_trials]
+                    dimers = [t.dimer_count for t in d_trials]
+                    n_syn_committed = [t.n_synapses_committed for t in d_trials]
+                    
+                    summary[ctype][delay] = {
+                        'delta_strength_mean': float(np.mean(ds)),
+                        'delta_strength_std': float(np.std(ds)),
+                        'eligibility_mean': float(np.mean(eligs)),
+                        'eligibility_std': float(np.std(eligs)),
+                        'commit_rate': float(np.mean(commits)),
+                        'dimer_count_mean': float(np.mean(dimers)),
+                        'n_synapses_committed_mean': float(np.mean(n_syn_committed)),
+                        'n_trials': len(d_trials)
+                    }
         
         return summary
     
-    def _fit_decay_curve(self, result: TimingResult):
-        """Fit exponential decay: elig(t) = A * exp(-t/T2)"""
-        x = np.array(self.delays, dtype=float)
-        y = np.array([result.summary.get(d, {}).get('eligibility_mean', 0) for d in self.delays])
+    def _fit_strength_decay(self, result: TimingResult):
+        """Fit exponential decay to Δstrength from stim_plus_dopamine condition"""
+        spd = result.summary.get('stim_plus_dopamine', {})
         
-        # Filter valid points
-        valid = y > 0.01
-        if np.sum(valid) < 3:
-            if self.verbose:
-                print("  Warning: Not enough valid points for fitting")
+        if len(spd) < 3:
             return
         
-        x_valid = x[valid]
-        y_valid = y[valid]
+        delays = sorted(spd.keys())
+        strengths = [spd[d]['delta_strength_mean'] for d in delays]
         
+        x = np.array(delays, dtype=float)
+        y = np.array(strengths, dtype=float)
+        
+        # Only fit if there's actual signal
+        if max(y) < 0.01:
+            return
+        
+        # Fit: Δstrength = A × exp(-t / T₂)
         try:
-            # Log transform fit
-            log_y = np.log(y_valid)
-            coeffs = np.polyfit(x_valid, log_y, 1)
+            def decay_func(t, A, T2):
+                return A * np.exp(-t / T2)
             
-            result.fitted_T2 = -1.0 / coeffs[0] if coeffs[0] != 0 else 0
-            result.fitted_A = np.exp(coeffs[1])
+            popt, pcov = curve_fit(
+                decay_func, x, y,
+                p0=[max(y), 100.0],
+                bounds=([0, 1], [2.0, 1000]),
+                maxfev=5000
+            )
             
-            # Calculate R²
-            y_pred = result.fitted_A * np.exp(-x_valid / result.fitted_T2) if result.fitted_T2 > 0 else np.zeros_like(y_valid)
-            ss_res = np.sum((y_valid - y_pred) ** 2)
-            ss_tot = np.sum((y_valid - np.mean(y_valid)) ** 2)
-            result.r_squared = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+            result.fitted_A = popt[0]
+            result.fitted_T2 = popt[1]
             
-        except Exception as e:
+            # R²
+            y_pred = decay_func(x, *popt)
+            ss_res = np.sum((y - y_pred) ** 2)
+            ss_tot = np.sum((y - np.mean(y)) ** 2)
+            result.r_squared = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
+            
+        except (RuntimeError, ValueError) as e:
             if self.verbose:
-                print(f"  Warning: Fitting failed: {e}")
+                print(f"  Warning: Curve fit failed: {e}")
     
     def print_summary(self, result: TimingResult):
         """Print formatted summary"""
-        print("\n" + "="*60)
-        print("DOPAMINE TIMING RESULTS")
-        print("="*60)
+        print("\n" + "=" * 70)
+        print("DOPAMINE TIMING: QUANTUM READOUT EXPERIMENT")
+        print("=" * 70)
         
-        print("\nEligibility at Dopamine Onset:")
-        print("-" * 50)
-        print(f"{'Delay (s)':<12} {'Eligibility':<15} {'Commit Rate':<12} {'Dimers':<10}")
-        print("-" * 50)
+        for ctype, label in [
+            ('stim_plus_dopamine', 'STIM + DOPAMINE (main)'),
+            ('stim_no_dopamine', 'STIM ONLY (no readout)'),
+            ('dopamine_only', 'DOPAMINE ONLY (nothing to read)')
+        ]:
+            print(f"\n--- {label} ---")
+            print(f"{'Delay (s)':<12} {'Δ Strength':<18} {'Eligibility':<18} {'Commit%':<10} {'Dimers':<8}")
+            print("-" * 70)
+            
+            cdata = result.summary.get(ctype, {})
+            for delay in sorted(cdata.keys()):
+                s = cdata[delay]
+                print(f"{delay:<12.1f} "
+                      f"{s['delta_strength_mean']:.3f} ± {s['delta_strength_std']:.3f}    "
+                      f"{s['eligibility_mean']:.3f} ± {s['eligibility_std']:.3f}    "
+                      f"{s['commit_rate']:<10.0%} "
+                      f"{s['dimer_count_mean']:<8.0f}")
         
-        for delay in self.delays:
-            stats = result.summary.get(delay, {})
-            elig = stats.get('eligibility_mean', 0)
-            std = stats.get('eligibility_std', 0)
-            commit = stats.get('commit_rate', 0)
-            dimers = stats.get('dimer_count_mean', 0)
-            print(f"{delay:<12.1f} {elig:.3f} ± {std:.3f}    {commit:<12.1%} {dimers:<10.0f}")
+        print("\n" + "=" * 70)
+        print("STRENGTH DECAY FIT (stim_plus_dopamine)")
+        print("=" * 70)
         
-        print("\n" + "="*60)
-        print("DECAY FIT")
-        print("="*60)
-        print(f"  Fitted T2:    {result.fitted_T2:.1f} s")
-        print(f"  Theory T2:    {result.theory_T2:.1f} s")
-        print(f"  Ratio:        {result.fitted_T2/result.theory_T2:.2f}× theory")
-        print(f"  R²:           {result.r_squared:.3f}")
-        
-        if 0.8 < result.fitted_T2/result.theory_T2 < 2.0 and result.r_squared > 0.7:
-            print("\n  ✓ VALIDATES T2 ≥ 100s PREDICTION (Agarwal 2023)")
+        if result.fitted_T2 > 0:
+            print(f"  Fitted T₂:     {result.fitted_T2:.1f} s")
+            print(f"  Initial Δstr:   {result.fitted_A:.3f}")
+            print(f"  R²:             {result.r_squared:.3f}")
+            print(f"  Theory T₂:     {result.theory_T2:.1f} s")
+            print(f"  Ratio:          {result.fitted_T2/result.theory_T2:.2f}× theory")
         else:
-            print("\n  ⚠ Partial validation - T2 is in correct order of magnitude")
+            print("  Fit not available — check if stim_plus_dopamine produced signal")
+        
+        # Key biological conclusion
+        spd = result.summary.get('stim_plus_dopamine', {})
+        sno = result.summary.get('stim_no_dopamine', {})
+        dop = result.summary.get('dopamine_only', {})
+        
+        spd_max = max((s['delta_strength_mean'] for s in spd.values()), default=0)
+        sno_max = max((s['delta_strength_mean'] for s in sno.values()), default=0)
+        dop_max = max((s['delta_strength_mean'] for s in dop.values()), default=0)
+        
+        print(f"\n  Max Δstrength (stim+DA):     {spd_max:.3f}")
+        print(f"  Max Δstrength (stim only):   {sno_max:.3f}")
+        print(f"  Max Δstrength (DA only):     {dop_max:.3f}")
+        
+        if spd_max > 0.05 and sno_max < 0.01 and dop_max < 0.01:
+            print("\n  ✓ DOPAMINE READOUT VALIDATED")
+            print("    → Quantum memory requires dopamine to convert to structural change")
+            print("    → Dopamine alone insufficient without prior quantum memory")
         
         print(f"\nRuntime: {result.runtime_s:.1f}s")
     
     def plot(self, result: TimingResult, output_dir: Optional[Path] = None) -> plt.Figure:
-        """Generate publication-quality figure"""
-        fig, axes = plt.subplots(1, 3, figsize=(14, 4.5))
+        """
+        Single-panel figure: Dopamine as quantum readout operator.
         
-        color_data = '#1f77b4'
-        color_fit = '#ff7f0e'
-        color_theory = '#2ca02c'
+        Shows Δ synaptic strength vs. dopamine delay for all three conditions.
+        """
+        fig, ax = plt.subplots(1, 1, figsize=(8, 5.5))
         
-        # === Panel A: Eligibility decay ===
-        ax1 = axes[0]
+        # Colors
+        color_main = '#2166AC'      # Blue for stim + dopamine
+        color_no_da = '#999999'     # Gray for stim only
+        color_da_only = '#B2182B'   # Red for dopamine only
+        color_fit = '#2166AC'       # Match main color for fit
         
-        x = np.array(self.delays)
-        y = np.array([result.summary.get(d, {}).get('eligibility_mean', 0) for d in self.delays])
-        err = np.array([result.summary.get(d, {}).get('eligibility_std', 0) for d in self.delays])
+        spd = result.summary.get('stim_plus_dopamine', {})
+        sno = result.summary.get('stim_no_dopamine', {})
+        dop = result.summary.get('dopamine_only', {})
         
-        ax1.errorbar(x, y, yerr=err, fmt='o', color=color_data, markersize=8, 
-                    capsize=4, label='Data')
+        # === BEHAVIORAL LEARNING WINDOW ===
+        ax.axvspan(0, 60, alpha=0.06, color='green', zorder=0)
+        ax.text(30, ax.get_ylim()[1] * 0.02 if ax.get_ylim()[1] > 0 else 0.48,
+                'Behavioral learning window\n(Yagishita 2014, Bittner 2017)',
+                ha='center', va='bottom', fontsize=8, color='green', alpha=0.7,
+                style='italic')
         
-        # Fitted curve
+        # === SCATTER: INDIVIDUAL TRIALS ===
+        # stim_plus_dopamine trials
+        spd_trials = [t for t in result.trials if t.condition.condition_type == 'stim_plus_dopamine']
+        if spd_trials:
+            jitter = np.random.normal(0, 0.8, len(spd_trials))
+            ax.scatter(
+                [t.condition.dopamine_delay_s + j for t, j in zip(spd_trials, jitter)],
+                [t.delta_strength for t in spd_trials],
+                c=color_main, alpha=0.25, s=20, zorder=3, edgecolors='none'
+            )
+        
+        # stim_no_dopamine trials
+        sno_trials = [t for t in result.trials if t.condition.condition_type == 'stim_no_dopamine']
+        if sno_trials:
+            jitter = np.random.normal(0, 0.8, len(sno_trials))
+            ax.scatter(
+                [t.condition.dopamine_delay_s + j for t, j in zip(sno_trials, jitter)],
+                [t.delta_strength for t in sno_trials],
+                c=color_no_da, alpha=0.25, s=15, zorder=3, edgecolors='none',
+                marker='s'
+            )
+        
+        # dopamine_only trials
+        dop_trials = [t for t in result.trials if t.condition.condition_type == 'dopamine_only']
+        if dop_trials:
+            jitter = np.random.normal(0, 0.8, len(dop_trials))
+            ax.scatter(
+                [t.condition.dopamine_delay_s + j for t, j in zip(dop_trials, jitter)],
+                [t.delta_strength for t in dop_trials],
+                c=color_da_only, alpha=0.25, s=15, zorder=3, edgecolors='none',
+                marker='^'
+            )
+        
+        # === MEAN LINES ===
+        # stim_plus_dopamine means with error bars
+        if spd:
+            delays_spd = sorted(spd.keys())
+            means_spd = [spd[d]['delta_strength_mean'] for d in delays_spd]
+            stds_spd = [spd[d]['delta_strength_std'] for d in delays_spd]
+            ax.errorbar(delays_spd, means_spd, yerr=stds_spd,
+                       fmt='o-', color=color_main, markersize=6, linewidth=1.5,
+                       capsize=3, capthick=1, zorder=5,
+                       label='Activity + Dopamine')
+        
+        # stim_no_dopamine means
+        if sno:
+            delays_sno = sorted(sno.keys())
+            means_sno = [sno[d]['delta_strength_mean'] for d in delays_sno]
+            stds_sno = [sno[d]['delta_strength_std'] for d in delays_sno]
+            ax.errorbar(delays_sno, means_sno, yerr=stds_sno,
+                       fmt='s--', color=color_no_da, markersize=5, linewidth=1.2,
+                       capsize=2, capthick=0.8, zorder=4,
+                       label='Activity only (no readout)')
+        
+        # dopamine_only means
+        if dop:
+            delays_dop = sorted(dop.keys())
+            means_dop = [dop[d]['delta_strength_mean'] for d in delays_dop]
+            stds_dop = [dop[d]['delta_strength_std'] for d in delays_dop]
+            ax.errorbar(delays_dop, means_dop, yerr=stds_dop,
+                       fmt='^--', color=color_da_only, markersize=5, linewidth=1.2,
+                       capsize=2, capthick=0.8, zorder=4,
+                       label='Dopamine only (no memory)')
+        
+        # === FITTED DECAY CURVE ===
+        if result.fitted_T2 > 0 and result.fitted_A > 0:
+            t_smooth = np.linspace(0, max(self.main_delays) + 10, 200)
+            y_fit = result.fitted_A * np.exp(-t_smooth / result.fitted_T2)
+            ax.plot(t_smooth, y_fit, '-', color=color_fit, alpha=0.4, linewidth=2,
+                   zorder=2)
+        
+        # === T₂ ANNOTATION BOX ===
         if result.fitted_T2 > 0:
-            t_fit = np.linspace(0, max(self.delays), 100)
-            y_fit = result.fitted_A * np.exp(-t_fit / result.fitted_T2)
-            ax1.plot(t_fit, y_fit, '-', color=color_fit, linewidth=2,
-                    label=f'Fit: T₂={result.fitted_T2:.0f}s')
+            textstr = (f'Fitted T₂ = {result.fitted_T2:.0f} s\n'
+                      f'R² = {result.r_squared:.3f}\n'
+                      f'n = {self.n_trials} trials/delay')
+            props = dict(boxstyle='round,pad=0.5', facecolor='white',
+                        edgecolor=color_main, alpha=0.9)
+            ax.text(0.97, 0.97, textstr, transform=ax.transAxes,
+                   fontsize=9, verticalalignment='top', horizontalalignment='right',
+                   bbox=props, zorder=10)
         
-        # Theory curve
-        t_theory = np.linspace(0, max(self.delays), 100)
-        y_theory = result.fitted_A * np.exp(-t_theory / result.theory_T2)
-        ax1.plot(t_theory, y_theory, '--', color=color_theory, linewidth=1.5, alpha=0.7,
-                label=f'Theory: T₂={result.theory_T2:.0f}s')
-        
-        ax1.axhline(y=0.3, color='gray', linestyle=':', alpha=0.5, label='Commit threshold')
-        ax1.set_xlabel('Dopamine Delay (s)', fontsize=11)
-        ax1.set_ylabel('Eligibility', fontsize=11)
-        ax1.set_title('A. Eligibility Decay', fontweight='bold')
-        ax1.legend(loc='upper right', fontsize=9)
-        ax1.set_xlim(-5, max(self.delays) + 10)
-        ax1.set_ylim(0, 1.05)
-        
-        # === Panel B: Commitment rate ===
-        ax2 = axes[1]
-        
-        commit_rates = [result.summary.get(d, {}).get('commit_rate', 0) for d in self.delays]
-        ax2.plot(self.delays, commit_rates, 's-', color=color_data, markersize=8, linewidth=2)
-        
-        ax2.axhline(y=0.5, color='gray', linestyle=':', alpha=0.5)
-        ax2.set_xlabel('Dopamine Delay (s)', fontsize=11)
-        ax2.set_ylabel('Commitment Rate', fontsize=11)
-        ax2.set_title('B. Temporal Window for Plasticity', fontweight='bold')
-        ax2.set_xlim(-5, max(self.delays) + 10)
-        ax2.set_ylim(-0.05, 1.05)
-        
-        # Find window (delay at 50% commit)
-        for i, rate in enumerate(commit_rates):
-            if rate < 0.5 and i > 0:
-                window = self.delays[i-1]
-                ax2.axvline(x=window, color='red', linestyle='--', alpha=0.5,
-                           label=f'Window ≈ {window}s')
-                ax2.legend(loc='upper right', fontsize=9)
-                break
-        
-        # === Panel C: Residuals and fit quality ===
-        ax3 = axes[2]
-        
-        if result.fitted_T2 > 0:
-            y_pred = result.fitted_A * np.exp(-x / result.fitted_T2)
-            residuals = y - y_pred
-            
-            ax3.bar(x, residuals, width=3, color=color_data, alpha=0.7)
-            ax3.axhline(y=0, color='black', linewidth=0.5)
-            
-            ax3.set_xlabel('Dopamine Delay (s)', fontsize=11)
-            ax3.set_ylabel('Residual (data - fit)', fontsize=11)
-            ax3.set_title(f'C. Fit Quality (R²={result.r_squared:.3f})', fontweight='bold')
-            ax3.set_xlim(-5, max(self.delays) + 10)
+        # === ANNOTATION: WHAT CONTROLS SHOW ===
+        # Find a good position for annotation
+        max_delay = max(self.main_delays)
+        if spd:
+            max_str = max(spd[d]['delta_strength_mean'] for d in spd)
         else:
-            ax3.text(0.5, 0.5, 'Fit not available', ha='center', va='center',
-                    transform=ax3.transAxes, fontsize=12)
-            ax3.set_title('C. Fit Quality', fontweight='bold')
+            max_str = 0.5
+            
+        ax.annotate('Quantum memory exists\nbut never read out →\nno structural change',
+                    xy=(max_delay * 0.7, 0.005), fontsize=8, color=color_no_da,
+                    style='italic', ha='center', va='bottom')
         
-        plt.suptitle('Dopamine Timing: Eligibility Trace Decay', 
-                    fontsize=13, fontweight='bold', y=1.02)
+        # === FORMATTING ===
+        ax.set_xlabel('Dopamine Delay (s)', fontsize=12)
+        ax.set_ylabel('Δ Synaptic Strength', fontsize=12)
+        ax.set_title('Dopamine as Quantum Readout: Timing Determines Plasticity',
+                     fontsize=13, fontweight='bold')
+        
+        ax.set_xlim(-5, max(self.main_delays) + 10)
+        # Set y limits to show zero baseline clearly
+        if spd:
+            y_max = max(spd[d]['delta_strength_mean'] + spd[d]['delta_strength_std'] 
+                       for d in spd) * 1.3
+            ax.set_ylim(-0.05, max(0.6, y_max))
+        else:
+            ax.set_ylim(-0.05, 0.6)
+        
+        ax.axhline(y=0, color='black', linewidth=0.5, linestyle='-', alpha=0.3)
+        ax.legend(loc='upper left', fontsize=9, framealpha=0.9)
+        
         plt.tight_layout()
         
         if output_dir:
             save_path = Path(output_dir) / 'dopamine_timing.png'
             plt.savefig(save_path, dpi=150, bbox_inches='tight', facecolor='white')
-            print(f"  Saved figure to {save_path}")
+            if self.verbose:
+                print(f"  Saved figure to {save_path}")
         
         return fig
     
     def save_results(self, result: TimingResult, path: Path):
         """Save results to JSON"""
         data = {
-            'experiment': 'dopamine_timing',
+            'experiment': 'dopamine_timing_readout',
             'timestamp': result.timestamp,
             'runtime_s': result.runtime_s,
             'fitted_T2': result.fitted_T2,
@@ -452,7 +667,8 @@ class DopamineTimingExperiment:
             'r_squared': result.r_squared,
             'theory_T2': result.theory_T2,
             'summary': result.summary,
-            'delays': self.delays,
+            'main_delays': self.main_delays,
+            'control_delays': self.control_delays,
             'n_trials': self.n_trials,
             'n_synapses': self.n_synapses
         }
@@ -462,11 +678,20 @@ class DopamineTimingExperiment:
     
     def get_summary_dict(self, result: TimingResult) -> dict:
         """Get summary as dictionary for master results"""
+        spd = result.summary.get('stim_plus_dopamine', {})
+        sno = result.summary.get('stim_no_dopamine', {})
+        
         return {
             'fitted_T2_s': result.fitted_T2,
             'theory_T2_s': result.theory_T2,
             'ratio_to_theory': result.fitted_T2 / result.theory_T2 if result.theory_T2 > 0 else 0,
             'r_squared': result.r_squared,
+            'max_delta_strength_with_DA': max((s['delta_strength_mean'] for s in spd.values()), default=0),
+            'max_delta_strength_no_DA': max((s['delta_strength_mean'] for s in sno.values()), default=0),
+            'readout_validated': (
+                max((s['delta_strength_mean'] for s in spd.values()), default=0) > 0.05 and
+                max((s['delta_strength_mean'] for s in sno.values()), default=0) < 0.01
+            ),
             'runtime_s': result.runtime_s
         }
 
