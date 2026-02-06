@@ -1000,11 +1000,30 @@ class MultiSynapseNetwork:
         if reward_present:
             self._evaluate_coordinated_gate(stimulus)
         
-        # Update network state
-        self.time += dt
-        self._record_history()
+        # Build network state for history and return
+        synapse_states = []
+        for i, synapse in enumerate(self.synapses):
+            if hasattr(synapse, 'dimer_particles'):
+                dimer_count = len(synapse.dimer_particles.dimers)
+            else:
+                dimer_count = 0
+            ss = SynapseState(
+                position_um=self.positions[i],
+                dimer_count=dimer_count,
+                coherence=synapse.get_mean_singlet_probability() if hasattr(synapse, 'get_mean_singlet_probability') else 0.0,
+                collective_field_kT=getattr(synapse, '_collective_field_kT', 0.0),
+                eligibility=getattr(synapse, '_current_eligibility', 0.0),
+                committed=getattr(synapse, '_camkii_committed', False),
+                committed_level=getattr(synapse, '_committed_memory_level', 0.0),
+                calcium_peak_uM=np.max(synapse.calcium.get_concentration()) * 1e6,
+            )
+            synapse_states.append(ss)
+        network_state = self._compute_network_state(synapse_states)
         
-        return self._get_network_state()
+        self.time += dt
+        self._record_history(network_state)
+        
+        return network_state
 
 
     def _evaluate_coordinated_gate(self, stimulus: dict):
