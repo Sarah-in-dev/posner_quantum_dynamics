@@ -555,37 +555,39 @@ def plot_isotope_improved(summary_p31: Dict, summary_p32: Dict, save_path: Optio
 
 
 # =============================================================================
-# FIGURE 6: THREE-FACTOR GATE (Improved)
+# FIGURE 6: FOUR-FACTOR GATE (Improved)
 # =============================================================================
 
-def plot_three_factor_gate_improved(summary: Dict, save_path: Optional[str] = None):
+def plot_four_factor_gate_improved(summary: Dict, save_path: Optional[str] = None):
     """
-    Three-factor gate showing AND logic
+    Four-factor gate showing AND logic
     
-    All factors must be present: Eligibility + Dopamine + Calcium + Field
+    All factors must be present: Calcium + Dimers (Q2) + EM Field (Q1) + Dopamine
     """
     setup_style()
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
     
-    conditions = ['Full (E+D+Ca)', 'No Elig (P32+delay)', 'No DA', 'No Ca (APV)']
-    short_names = ['Full', 'No Elig', 'No DA', 'No Ca']
+    conditions = ['Full (all)', 'No Ca (APV)', 'No Dimers', 'No EM Field', 'No DA']
+    short_names = ['Full', 'No Ca', 'No Dimers', 'No EM', 'No DA']
     
     # === Panel A: Gate Requirements ===
     ax1 = axes[0]
     
     # Create a table-like visualization
-    factors = ['Eligibility', 'Dopamine', 'Calcium', 'Q1 Field']
+    factors = ['Calcium\n(activity)', 'Dimers\n(Q2 memory)', 'EM Field\n(Q1 coupling)', 'Dopamine\n(reward)']
     
     # Which factors are present in each condition
     # Full: all present
-    # No Elig: missing eligibility
-    # No DA: missing dopamine
-    # No Ca: missing calcium (and therefore eligibility)
+    # No Ca: missing calcium (and therefore dimers)
+    # No Dimers: calcium present but aggregation blocked
+    # No EM: dimers form but no Q1 coupling
+    # No DA: Q1+Q2 intact but no reward
     factor_matrix = np.array([
-        [1, 0, 1, 0],  # Eligibility
-        [1, 1, 0, 1],  # Dopamine
-        [1, 1, 1, 0],  # Calcium
-        [1, 1, 1, 1],  # Q1 Field
+        # Full  noCa  noDim  noEM  noDA
+        [1,     0,    1,     1,    1],  # Calcium
+        [1,     0,    0,     1,    1],  # Dimers
+        [1,     0,    0,     0,    1],  # EM Field
+        [1,     1,    1,     1,    0],  # Dopamine
     ])
     
     im = ax1.imshow(factor_matrix, cmap='RdYlGn', aspect='auto', vmin=0, vmax=1)
@@ -629,7 +631,7 @@ def plot_three_factor_gate_improved(summary: Dict, save_path: Optional[str] = No
         ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.05, 
                  outcome, ha='center', fontsize=10, fontweight='bold', color=color)
     
-    plt.suptitle('Three-Factor Gate: Biological AND Logic\n'
+    plt.suptitle('Four-Factor Gate: Dual Quantum Architecture AND Logic\n'
                  'Missing ANY factor → No commitment → No plasticity', 
                  fontsize=14, fontweight='bold', y=1.02)
     plt.tight_layout()
@@ -797,13 +799,13 @@ def plot_master_dashboard_improved(all_results: Dict, save_path: Optional[str] =
         ax.set_ylabel('Commitment')
         ax.set_title('Gate: Pharmacology', fontweight='bold', color=COLORS['gate'])
         ax.set_ylim(0, 1.1)
-    
-    # 3.4: Three-factor gate
-    if 'three_factor_gate' in all_results:
+
+    # 3.4: Four-factor gate
+    if 'four_factor_gate' in all_results:
         ax = fig.add_subplot(gs[2, 3])
-        summary = all_results['three_factor_gate'].summary_stats
-        conditions = ['Full (E+D+Ca)', 'No Elig (P32+delay)', 'No DA', 'No Ca (APV)']
-        short = ['Full', 'No E', 'No D', 'No Ca']
+        summary = all_results['four_factor_gate'].summary_stats
+        conditions = ['Full (Ca+Dimers+EM+DA)', 'No Ca (APV)', 'No Dimers', 'No EM Field', 'No DA']
+        short = ['Full', 'No Ca', 'No Dimers', 'No EM', 'No DA']
         commits = [summary.get(c, {}).get('committed', {}).get('mean', 0) for c in conditions]
         colors = [COLORS['control'] if c > 0.5 else COLORS['blocked'] for c in commits]
         ax.bar(range(len(short)), commits, color=colors, alpha=0.8)
@@ -878,11 +880,11 @@ def generate_all_figures(all_results: Dict, output_dir: str = "figures"):
             path / f"06_anesthetic_{timestamp}.png"
         )
     
-    # 7. Three-factor gate
-    if 'three_factor_gate' in all_results:
-        plot_three_factor_gate_improved(
-            all_results['three_factor_gate'].summary_stats,
-            path / f"07_three_factor_gate_{timestamp}.png"
+    # 7. Four-factor gate
+    if 'four_factor_gate' in all_results:
+        plot_four_factor_gate_improved(
+            all_results['four_factor_gate'].summary_stats,
+            path / f"07_four_factor_gate_{timestamp}.png"
         )
     
     # 8. Master dashboard

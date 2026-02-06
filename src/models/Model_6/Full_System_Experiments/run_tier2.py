@@ -29,7 +29,7 @@ import matplotlib.pyplot as plt
 sys.path.insert(0, str(Path(__file__).parent))
 
 from tier2_minimal_network import exp_network_threshold
-from tier2_minimal_network import exp_three_factor_gate
+from Full_System_Experiments.tier2_minimal_network import exp_four_factor_gate
 
 
 EXPERIMENTS = {
@@ -38,10 +38,10 @@ EXPERIMENTS = {
         'module': exp_network_threshold,
         'description': 'How synapse count affects commitment'
     },
-    'three_factor_gate': {
-        'name': 'Three-Factor Gate',
-        'module': exp_three_factor_gate,
-        'description': 'Verify eligibility + dopamine + calcium required'
+    'four_factor_gate': {
+        'name': 'Four-Factor Gate',
+        'module': exp_four_factor_gate,
+        'description': 'Verify calcium + dimers (Q2) + EM field (Q1) + dopamine required'
     }
 }
 
@@ -84,7 +84,7 @@ def run_experiment(name: str, module, output_dir: Path,
             'any_committed': any(c.committed for c in result.conditions.values())
         }
     
-    elif name == 'three_factor_gate':
+    elif name == 'four_factor_gate':
         result = module.run(verbose=verbose)
         module.print_summary(result)
         fig = module.plot(result, output_dir=exp_output_dir)
@@ -92,9 +92,10 @@ def run_experiment(name: str, module, output_dir: Path,
         return {
             'gate_validated': bool(result.gate_logic_validated),
             'control_committed': bool(result.conditions['control'].committed),
-            'no_elig_committed': bool(result.conditions['no_eligibility'].committed),
-            'no_dopa_committed': bool(result.conditions['no_dopamine'].committed),
-            'no_ca_committed': bool(result.conditions['no_calcium'].committed)
+            'no_ca_committed': bool(result.conditions['no_calcium'].committed),
+            'no_dimers_committed': bool(result.conditions['no_dimers'].committed),
+            'no_em_committed': bool(result.conditions['no_em_field'].committed),
+            'no_dopa_committed': bool(result.conditions['no_dopamine'].committed)
         }
     
     return {}
@@ -177,13 +178,12 @@ Examples:
     print(f"\nResults saved to: {output_dir}")
     print(f"Experiments run: {len(experiments_to_run)}")
     
-    # Key findings
-    if 'three_factor_gate' in all_results:
-        gate = all_results['three_factor_gate']
+    if 'four_factor_gate' in all_results:
+        gate = all_results['four_factor_gate']
         if gate.get('gate_validated'):
-            print("\n✓ THREE-FACTOR GATE VALIDATED: All factors required")
+            print("\n✓ FOUR-FACTOR GATE VALIDATED: All factors required")
         else:
-            print("\n⚠ Three-factor gate: Check results")
+            print("\n⚠ Four-factor gate: Check results")
     
     if 'network_threshold' in all_results:
         net = all_results['network_threshold']

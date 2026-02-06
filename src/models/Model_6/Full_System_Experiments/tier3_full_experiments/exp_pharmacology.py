@@ -177,11 +177,11 @@ class PharmacologyExperiment:
         if condition.nmda_blocked:
             params.calcium.nmda_blocked = True
         
-        # Isoflurane reduces tryptophan quantum yield
+        # Isoflurane blocks tryptophan superradiance (affects EM field)
         if condition.isoflurane_pct > 0:
-            # Scale tryptophan quantum yield by (1 - dose/100)
-            reduction = 1.0 - condition.isoflurane_pct / 100.0
-            params.tryptophan.quantum_yield_free *= reduction
+            params.tryptophan.anesthetic_applied = True
+            params.tryptophan.anesthetic_type = 'isoflurane'
+            params.tryptophan.anesthetic_blocking_factor = condition.isoflurane_pct / 100.0
         
         # Create network
         network = MultiSynapseNetwork(
