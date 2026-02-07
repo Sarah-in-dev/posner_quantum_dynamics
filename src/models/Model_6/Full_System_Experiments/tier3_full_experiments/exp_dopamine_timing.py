@@ -198,6 +198,7 @@ class DopamineTimingExperiment:
         )
         
         network = self._create_network()
+        network.set_coordination_mode(True)
         dt = 0.001  # 1 ms timestep
         
         # Determine what this condition does
@@ -271,7 +272,6 @@ class DopamineTimingExperiment:
         
         # === PHASE 5: DOPAMINE READOUT (300ms) ===
         if do_dopamine:
-            network.set_coordination_mode(True)
             for _ in range(300):
                 network.step_with_coordination(dt, {"voltage": -70e-3, "reward": True})
         else:

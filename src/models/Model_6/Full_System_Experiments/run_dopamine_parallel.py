@@ -65,6 +65,7 @@ def run_single_trial(args):
         )
         network.initialize(Model6QuantumSynapse, params)
         network.set_microtubule_invasion(True)
+        network.set_coordination_mode(True)
         
         dt = 0.001
         
@@ -126,7 +127,6 @@ def run_single_trial(args):
         
         # === PHASE 5: DOPAMINE READOUT (300ms) ===
         if do_dopamine:
-            network.set_coordination_mode(True)
             for _ in range(300):
                 network.step_with_coordination(dt, {"voltage": -70e-3, "reward": True})
         else:
