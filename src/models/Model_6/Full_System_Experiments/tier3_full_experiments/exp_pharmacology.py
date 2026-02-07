@@ -59,6 +59,9 @@ class PharmTrialResult:
     
     # Q1 metrics (tryptophan/EM)
     peak_em_field_kT: float = 0.0
+
+    # Calcium
+    peak_calcium_uM: float = 0.0
     
     # Q2 metrics (dimer coherence)
     peak_dimers: int = 0
@@ -236,6 +239,7 @@ class PharmacologyExperiment:
                 for s in network.synapses
             )
             peak_dimers = max(peak_dimers, current_dimers)
+            peak_calcium = float(max(getattr(s, '_peak_calcium_uM', 0.0) for s in network.synapses))
         
         # === PHASE 3: CONSOLIDATION ===
         n_consol = int(self.consolidation_s / dt)
@@ -245,7 +249,8 @@ class PharmacologyExperiment:
         # === FINAL MEASUREMENTS ===
         result.peak_em_field_kT = peak_field
         result.peak_dimers = peak_dimers
-        
+        result.peak_calcium_uM = peak_calcium
+
         # Dimer metrics
         all_ps = []
         for s in network.synapses:
@@ -320,6 +325,8 @@ class PharmacologyExperiment:
                 summary[name] = {
                     'em_field_mean': np.mean([t.peak_em_field_kT for t in cond_trials]),
                     'em_field_std': np.std([t.peak_em_field_kT for t in cond_trials]),
+                    'calcium_mean': np.mean([t.peak_calcium_uM for t in cond_trials]),
+                    'calcium_std': np.std([t.peak_calcium_uM for t in cond_trials]),
                     'dimers_mean': np.mean([t.peak_dimers for t in cond_trials]),
                     'eligibility_mean': np.mean([t.eligibility for t in cond_trials]),
                     'commit_rate': np.mean([1 if t.committed else 0 for t in cond_trials]),
