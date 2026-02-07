@@ -199,12 +199,18 @@ class DopamineTimingExperiment:
         
         network = self._create_network()
         network.set_coordination_mode(True)
+
+        # Block NMDA for dopamine_only (no prior synaptic activity)
+        if condition.condition_type == 'dopamine_only':
+            for s in network.synapses:
+                s.calcium.params.nmda_blocked = True
+
         dt = 0.001  # 1 ms timestep
-        
+
         # Determine what this condition does
         do_stimulate = condition.condition_type in ('stim_plus_dopamine', 'stim_no_dopamine')
         do_dopamine = condition.condition_type in ('stim_plus_dopamine', 'dopamine_only')
-        
+
         # === PHASE 1: BASELINE (100ms) ===
         for _ in range(100):
             network.step(dt, {"voltage": -70e-3, "reward": False})
@@ -291,7 +297,7 @@ class DopamineTimingExperiment:
         syn_levels = [getattr(s, '_committed_memory_level', 0.0) for s in network.synapses]
         
         result.committed = any(syn_committed)
-        result.commitment_level = float(np.mean(syn_levels)) if result.committed else 0.0
+        result.commitment_level = result.eligibility_at_readout if result.committed else 0.0
         
         # Count per-synapse commitments
         result.n_synapses_committed = sum(

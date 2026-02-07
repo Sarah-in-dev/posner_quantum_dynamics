@@ -66,6 +66,11 @@ def run_single_trial(args):
         network.initialize(Model6QuantumSynapse, params)
         network.set_microtubule_invasion(True)
         network.set_coordination_mode(True)
+
+        # Block NMDA for dopamine_only (no prior synaptic activity)
+        if condition_type == 'dopamine_only':
+            for s in network.synapses:
+                s.calcium.params.nmda_blocked = True
         
         dt = 0.001
         
@@ -145,7 +150,7 @@ def run_single_trial(args):
         syn_levels = [getattr(s, '_committed_memory_level', 0.0) for s in network.synapses]
         
         committed = any(syn_committed)
-        commitment_level = float(np.mean(syn_levels)) if committed else 0.0
+        commitment_level = eligibility_at_readout if committed else 0.0
         n_syn_committed = sum(
             1 for s in network.synapses if getattr(s, '_camkii_committed', False)
         )
