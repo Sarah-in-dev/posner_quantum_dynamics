@@ -139,8 +139,13 @@ def run_single_trial(args):
             network.step(dt_consol, {"voltage": -70e-3, "reward": False})
         
         # === FINAL MEASUREMENTS ===
-        committed = bool(network.network_committed)
-        commitment_level = float(network.network_commitment_level)
+        # In coordination mode, commitment is per-synapse via coordinated gate
+        # Derive network commitment from individual synapse states
+        syn_committed = [getattr(s, '_camkii_committed', False) for s in network.synapses]
+        syn_levels = [getattr(s, '_committed_memory_level', 0.0) for s in network.synapses]
+        
+        committed = any(syn_committed)
+        commitment_level = float(np.mean(syn_levels)) if committed else 0.0
         n_syn_committed = sum(
             1 for s in network.synapses if getattr(s, '_camkii_committed', False)
         )

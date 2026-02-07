@@ -286,8 +286,12 @@ class DopamineTimingExperiment:
             network.step(dt_consol, {"voltage": -70e-3, "reward": False})
         
         # === FINAL MEASUREMENTS ===
-        result.committed = network.network_committed
-        result.commitment_level = network.network_commitment_level
+        # In coordination mode, read per-synapse commitment from coordinated gate
+        syn_committed = [getattr(s, '_camkii_committed', False) for s in network.synapses]
+        syn_levels = [getattr(s, '_committed_memory_level', 0.0) for s in network.synapses]
+        
+        result.committed = any(syn_committed)
+        result.commitment_level = float(np.mean(syn_levels)) if result.committed else 0.0
         
         # Count per-synapse commitments
         result.n_synapses_committed = sum(
