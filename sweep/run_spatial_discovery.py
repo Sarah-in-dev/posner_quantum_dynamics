@@ -433,6 +433,12 @@ def run_trial(network, env, agent, trial_num, agent_dt=0.5,
         strengths = get_synaptic_strengths(network)
         agent.step(agent_dt, env, strengths)
 
+        step_count = int(trial_time / agent_dt)
+        if step_count % 10 == 0:
+            n_active = int(np.sum(activations > 0.05))
+            total_dimers = sum(len(syn.dimer_particles.dimers) for syn in network.synapses)
+            print(f"  step {step_count:3d} t={trial_time:5.1f}s | pos=({agent.position[0]:.1f},{agent.position[1]:.1f}) | active={n_active} | dimers={total_dimers}", flush=True)
+
         # Check goal
         if env.check_goal(agent.position):
             # Deliver dopamine — one reward step
@@ -464,10 +470,10 @@ def run_trial(network, env, agent, trial_num, agent_dt=0.5,
 # MAIN EXPERIMENT
 # =============================================================================
 
-def run_experiment(n_trials=25, seed=42):
+def run_experiment(n_trials=25, seed=42, n_features=40, trial_time_budget=90.0):
     """Run the full spatial discovery experiment."""
     rng = np.random.default_rng(seed)
-    env = SpatialEnvironment(seed=seed)
+    env = SpatialEnvironment(n_features=n_features, seed=seed)
     network = make_network(n_synapses=env.n_features)
     agent = Agent()
 
@@ -488,7 +494,7 @@ def run_experiment(n_trials=25, seed=42):
         agent.reset(env.size, rng)
 
         # Run trial
-        result = run_trial(network, env, agent, trial)
+        result = run_trial(network, env, agent, trial, trial_time_budget=trial_time_budget)
         wall_time = time.time() - t_start
 
         status = (f"FOUND t={result['time_to_goal']:.1f}s"
@@ -520,5 +526,4 @@ def run_experiment(n_trials=25, seed=42):
 # =============================================================================
 
 if __name__ == '__main__':
-    # Start with just 3 trials to verify the plumbing works
-    all_trials, env = run_experiment(n_trials=3, seed=42)
+    all_trials, env = run_experiment(n_trials=5, n_features=20, trial_time_budget=60.0, seed=42)
