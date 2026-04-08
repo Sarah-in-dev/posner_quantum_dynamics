@@ -47,6 +47,7 @@ except ImportError:
 try:
     from em_tryptophan_module import TryptophanSuperradianceModule
     from em_coupling_module import EMCouplingModule
+    from vibrational_cascade_module import VibrationalCascadeModule
     from local_dimer_tubulin_coupling import LocalDimerTubulinCoupling, NetworkModulationIntegrator
     HAS_EM_COUPLING = True
 except ImportError:
@@ -117,7 +118,7 @@ class Model6QuantumSynapse:
         
         if self.em_enabled:
             self.tryptophan = TryptophanSuperradianceModule(self.params)
-            self.em_coupling = EMCouplingModule(self.params)
+            self.em_coupling = VibrationalCascadeModule(self.params)
             self.local_dimer_coupling = LocalDimerTubulinCoupling()
             self.network_integrator = NetworkModulationIntegrator()
             self._network_modulation = 0.0
@@ -139,6 +140,8 @@ class Model6QuantumSynapse:
         
         # Track tryptophan count (changes with MT invasion)
         self.n_tryptophans = self.params.tryptophan.n_trp_baseline
+        self._mt_invaded = False
+        self._backbone_eta = 0.0  # Backbone Fröhlich condensation ratio
 
         self.camkii = CaMKIIModule()
         self.spine_plasticity = SpinePlasticityModule()
@@ -210,6 +213,8 @@ class Model6QuantumSynapse:
         # CaMKII commitment (once set, locked)
         self._camkii_committed = False
         self._committed_memory_level = 0.0
+        self._measurement_performed = False  # One-shot quantum measurement
+        self._measured_eligibility = 0.0
         
         
         logger.info("Model 6 initialized successfully")
@@ -297,6 +302,24 @@ class Model6QuantumSynapse:
         # === STEP 1: CALCIUM DYNAMICS ===
         # Channels open based on voltage, calcium diffuses
         # NOTE: Channel gating is STOCHASTIC (no seed, varies run-to-run)
+
+        # Spine → calcium feedback (when enabled):
+        #   1. AMPAR gain: more AMPARs → larger EPSP → more VGCC activation
+        #   2. Channel gain: larger spine surface area → more VGCCs → more Ca²⁺
+        if getattr(self.params, 'spine_calcium_feedback', False):
+            voltage = stimulus.get('voltage', -70e-3) if stimulus else -70e-3
+            resting_v = -70e-3
+            ampar_baseline = 80.0
+            ampar_gain = self.spine_plasticity.AMPAR_count / ampar_baseline
+            v_eff = resting_v + (voltage - resting_v) * ampar_gain
+            stimulus = dict(stimulus) if stimulus else {}
+            stimulus['voltage'] = v_eff
+
+            spine_vol = self.spine_plasticity.spine_volume
+            self.calcium.channel_gain = spine_vol ** 0.67  # surface area ~ vol^(2/3)
+        else:
+            self.calcium.channel_gain = 1.0
+
         self.calcium.step(dt, stimulus)
         ca_conc = self.calcium.get_concentration()
 
@@ -361,6 +384,13 @@ class Model6QuantumSynapse:
             if ca_consumed is not None:
                 self.calcium.apply_consumption(ca_consumed)
 
+            # Apply phosphate consumption back to structural pool
+            po4_consumed = self.ca_phosphate.get_phosphate_consumed()
+            if po4_consumed is not None:
+                self.atp.phosphate.phosphate_structural = np.maximum(
+                    self.atp.phosphate.phosphate_structural - po4_consumed, 0.0
+                )
+
             self.ca_phosphate.dimerization.k_base = k_agg_original  # Restore
             
             dimer_conc = self.ca_phosphate.get_dimer_concentration()
@@ -398,6 +428,9 @@ class Model6QuantumSynapse:
             # Store for tracking - use ENTANGLED count for network effects
             self._previous_dimer_count = n_entangled_network  # Changed from total to entangled
             self._previous_coherence = mean_coherence
+            self.ca_phosphate.dimerization.set_mean_singlet_probability(
+                self.get_mean_singlet_probability()
+            )
             self._n_dimers_total = n_dimers_total
             self._n_entangled_network = n_entangled_network
             self._f_entangled = f_entangled
@@ -439,7 +472,8 @@ class Model6QuantumSynapse:
                 photon_flux=metabolic_uv_flux,
                 n_tryptophans=n_trp_effective,
                 ca_spike_active=ca_spike_active,
-                network_modulation=self._network_modulation  # REVERSE COUPLING
+                network_modulation=self._network_modulation,  # REVERSE COUPLING
+                backbone_eta=self._backbone_eta if self._mt_invaded else 0.0
             )
             # Cross-region: emit photons based on tryptophan state
             if self.cross_region_enabled:
@@ -452,15 +486,16 @@ class Model6QuantumSynapse:
 
             em_field_trp = trp_state['output']['em_field_time_averaged']
             self._collective_field_kT = trp_state['output']['collective_field_kT']
-            
+
             # --- PHASE 7: PREPARE k_agg FOR NEXT TIMESTEP (forward coupling) ---
             k_agg_baseline = self.ca_phosphate.dimerization.k_base
             
             coupling_state = self.em_coupling.update(
                 em_field_trp=em_field_trp,
-                n_coherent_dimers=n_entangled_network,  # Changed: use entangled network size
+                n_coherent_dimers=n_entangled_network,
                 k_agg_baseline=k_agg_baseline,
-                phosphate_fraction=np.mean(phosphate) / 0.001
+                phosphate_fraction=np.mean(phosphate) / 0.001,
+                collective_field_kT=self._collective_field_kT
             )
             
             # Store for NEXT timestep (this is the feedback delay)
@@ -497,39 +532,69 @@ class Model6QuantumSynapse:
             # P_S = 0.25 → eligibility = 0, P_S = 1.0 → eligibility = 1
             eligibility = (mean_P_S - 0.25) / 0.75
 
-            # THREE-FACTOR GATE (biologically grounded):
-            # 1. Eligibility: entangled dimers exist (P_S > 0.5, Agarwal threshold)
-            # 2. Dopamine: reward/instructive signal present  
-            # 3. Calcium: postsynaptic activity marker
+            # --- PHASE 9: THREE-FACTOR GATE WITH PROBABILISTIC QUANTUM MEASUREMENT ---
+            # Physics: Dopamine triggers ONE-SHOT measurement of quantum state.
+            # Each dimer collapses stochastically: P(singlet) = P_S × field_fidelity
+            # Measured eligibility = fraction of dimers that collapsed to singlet.
+            # Q1 field modulates measurement fidelity (not a binary threshold).
+            
             calcium_threshold_uM = 0.5
-
-            eligibility_present = (mean_P_S > 0.5)  # Agarwal entanglement threshold
             dopamine_read = self._dopamine_above_read_threshold()
             calcium_elevated = (calcium_uM > calcium_threshold_uM)
 
-            plasticity_gate = eligibility_present and dopamine_read and calcium_elevated
-
-            # Store for diagnostics and history
+            # Store diagnostics (always updated)
             self._current_eligibility = eligibility
             self._mean_singlet_prob = mean_P_S
             self._n_entangled_dimers = n_entangled
-            self._plasticity_gate = plasticity_gate
+
+            # Measurement happens ONCE when dopamine first arrives with calcium
+            # After measurement, quantum state is collapsed — no re-roll
+            if (dopamine_read and calcium_elevated
+                    and not self._camkii_committed
+                    and not getattr(self, '_network_controlled', False)
+                    and not self._measurement_performed):
+                
+                self._measurement_performed = True
+                
+                if self.dimer_particles.dimers:
+                    # Q1 field modulates measurement fidelity
+                    # High field (22 kT) → faithful readout (fidelity ~1.0)
+                    # Low field (12 kT) → degraded readout (fidelity ~0.6)
+                    # No field (0 kT) → no readout (fidelity = 0)
+                    field_kT = self._collective_field_kT
+                    field_fidelity = min(1.0, field_kT / 20.0)
+                    
+                    # Probabilistic collapse of each dimer
+                    n_singlet = 0
+                    for dimer in self.dimer_particles.dimers:
+                        p_collapse_singlet = dimer.singlet_probability * field_fidelity
+                        if np.random.random() < p_collapse_singlet:
+                            n_singlet += 1
+                    
+                    measured_elig = n_singlet / len(self.dimer_particles.dimers)
+                else:
+                    measured_elig = 0.0
+                
+                self._measured_eligibility = measured_elig
+                
+                # Gate opens if majority collapsed to singlet
+                plasticity_gate = measured_elig > 0.5
+                
+                if plasticity_gate:
+                    self._camkii_committed = True
+                    self._committed_memory_level = measured_elig
+                
+                self._plasticity_gate = plasticity_gate
+            else:
+                self._plasticity_gate = False
 
             # --- PHASE 10: CaMKII WITH BARRIER MODULATION ---
             # REVERSE COUPLING: Dimer field ALWAYS modulates CaMKII barrier
-            # This is the Q2 → Classical pathway
+            # This is the Q2 → Classical pathway (runs every step regardless of gate)
             dimer_field_kT = coupling_state['reverse']['energy_modulation_kT']
             
             # CaMKII receives dimer field continuously (barrier modulation)
             camkii_state = self.camkii.step(dt, calcium_uM, dimer_field_kT)
-            
-            # THREE-FACTOR GATE controls COMMITMENT (memory consolidation), not barrier
-            # skip if already committed or network-controlled
-            if plasticity_gate and not self._camkii_committed and not getattr(self, '_network_controlled', False):
-                self._camkii_committed = True
-                dimer_factor = min(1.0, n_entangled / 10.0)
-                field_factor = min(1.0, dimer_field_kT / 20.0)
-                self._committed_memory_level = eligibility * dimer_factor * field_factor
 
             # --- PHASE 11: SPINE PLASTICITY ---
             if self._camkii_committed:
@@ -582,6 +647,14 @@ class Model6QuantumSynapse:
             ca_consumed = self.ca_phosphate.step(dt, ca_conc, phosphate)
             if ca_consumed is not None:
                 self.calcium.apply_consumption(ca_consumed)
+
+            # Apply phosphate consumption back to structural pool
+            po4_consumed = self.ca_phosphate.get_phosphate_consumed()
+            if po4_consumed is not None:
+                self.atp.phosphate.phosphate_structural = np.maximum(
+                    self.atp.phosphate.phosphate_structural - po4_consumed, 0.0
+                )
+
             dimer_conc = self.ca_phosphate.get_dimer_concentration()
             
             # Quantum coherence tracking
@@ -828,21 +901,32 @@ class Model6QuantumSynapse:
     def set_microtubule_invasion(self, invaded: bool):
         """
         Set microtubule invasion state
-        
+
         Updates tryptophan count when MT invades spine during plasticity
-        
+
         Args:
             invaded: True if microtubules have invaded
         """
+        self._mt_invaded = invaded
         if invaded:
             # MT invasion brings additional tryptophans
             self.n_tryptophans = self.params.get_total_tryptophans(mt_invaded=True)
         else:
             # Just baseline PSD lattice
             self.n_tryptophans = self.params.get_total_tryptophans(mt_invaded=False)
-        
+
         if self.em_enabled:
             logger.info(f"MT invasion: {invaded}, n_trp: {self.n_tryptophans}")
+
+    def set_backbone_condensation_eta(self, eta: float):
+        """Backbone Fröhlich condensation ratio.
+
+        Modulates f_coherent of invaded spine tryptophans via cooperative
+        robustness (Babcock 2024). Only affects invaded spines — the
+        continuous tubulin lattice from backbone into spine enables the
+        backbone's condensed mode to stabilize local coherence.
+        """
+        self._backbone_eta = eta
     
     
     def _dopamine_above_read_threshold(self) -> bool:

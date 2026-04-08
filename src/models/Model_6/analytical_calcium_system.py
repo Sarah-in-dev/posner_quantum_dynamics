@@ -316,7 +316,12 @@ class AnalyticalCalciumSystem:
         
         # Tracking
         self.peak_concentration = params.calcium.ca_baseline
-        
+
+        # Spine-volume feedback: effective channel count gain (default 1.0 = no scaling)
+        # Set externally by model6_core when spine_calcium_feedback is enabled.
+        # Scales single_channel_current so that n_eff = n_actual * channel_gain.
+        self.channel_gain = 1.0
+
         logger.info(f"AnalyticalCalciumSystem initialized:")
         logger.info(f"  Grid: {grid_shape} (full), {len(self.local_points)} local points")
         logger.info(f"  Templates: {len(self.template_positions)}")
@@ -366,10 +371,13 @@ class AnalyticalCalciumSystem:
         self.channels.update_gating(dt, voltage)
         
         # 2. Calculate nanodomain calcium at local points (FAST!)
+        # channel_gain scales effective current (equivalent to more channels
+        # at same conductance — set by spine volume feedback in model6_core)
+        effective_currents = self.channels.current * self.channel_gain
         self._local_ca = self.nanodomain.calculate_field_at_points(
             channel_positions=self.channels.positions,
             channel_states=self.channels.state,
-            channel_currents=self.channels.current,
+            channel_currents=effective_currents,
             query_points=self.local_points,
             dx=self.dx
         )

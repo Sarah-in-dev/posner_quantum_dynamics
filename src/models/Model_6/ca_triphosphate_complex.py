@@ -148,8 +148,9 @@ class CalciumPhosphateDimerization:
         k_pairwise_M = k_pairwise * N_A
         
         
-        # Dissociation (very slow - dimers are stable)
-        self.k_dissociation = 0.001  # s⁻¹
+        # Dissociation: classical rate modulated by singlet probability
+        self.k_classical = 0.05  # s⁻¹ (bare rate without quantum protection)
+        self._mean_singlet_prob = 0.25  # thermal equilibrium default
 
         # Stochastic parameters
         self.nucleation_probability = 0.01  # Probability per timestep at templates
@@ -157,6 +158,9 @@ class CalciumPhosphateDimerization:
         
         logger.info(f"Initialized Ca₆(PO₄)₄ dimer aggregation (k_agg={self.k_base:.2e} M⁻¹s⁻¹)")
         
+    def set_mean_singlet_probability(self, p_s: float):
+        self._mean_singlet_prob = float(np.clip(p_s, 0.0, 1.0))
+
     def apply_temperature_scaling(self, T: float):
         """
         Apply Arrhenius temperature scaling to aggregation rate.
@@ -335,9 +339,12 @@ class CalciumPhosphateDimerization:
             # No new formation at rest - only dissociation
             dissolution_noise = 1.0 + np.random.normal(0, self.dissolution_noise_sigma, self.grid_shape)
             dissolution_noise = np.maximum(dissolution_noise, 0.1)
-            
-            self.dimer_concentration -= self.k_dissociation * self.dimer_concentration * dissolution_noise * dt
-            self.trimer_concentration -= self.k_dissociation * 10.0 * self.trimer_concentration * dissolution_noise * dt
+
+            singlet_excess = max(0.0, (self._mean_singlet_prob - 0.25) / 0.75)
+            k_diss = self.k_classical * (1.0 - singlet_excess)
+
+            self.dimer_concentration -= k_diss * self.dimer_concentration * dissolution_noise * dt
+            self.trimer_concentration -= k_diss * 10.0 * self.trimer_concentration * dissolution_noise * dt
             
             self.dimer_concentration = np.maximum(self.dimer_concentration, 0)
             self.trimer_concentration = np.maximum(self.trimer_concentration, 0)
@@ -407,8 +414,11 @@ class CalciumPhosphateDimerization:
         dissolution_noise = 1.0 + np.random.normal(0, self.dissolution_noise_sigma, self.grid_shape)
         dissolution_noise = np.maximum(dissolution_noise, 0.1)  # Keep positive
 
-        dimer_dissociation = self.k_dissociation * self.dimer_concentration * dissolution_noise
-        trimer_dissociation = self.k_dissociation * 10.0 * self.trimer_concentration * dissolution_noise  # Trimers less stable
+        singlet_excess = max(0.0, (self._mean_singlet_prob - 0.25) / 0.75)
+        k_diss = self.k_classical * (1.0 - singlet_excess)
+
+        dimer_dissociation = k_diss * self.dimer_concentration * dissolution_noise
+        trimer_dissociation = k_diss * 10.0 * self.trimer_concentration * dissolution_noise  # Trimers less stable
 
         # Update both species
         d_dimer_dt = dimer_formation - dimer_dissociation  # (you modified this earlier)
@@ -417,8 +427,9 @@ class CalciumPhosphateDimerization:
         self.dimer_concentration += d_dimer_dt
         self.trimer_concentration += d_trimer_dt
 
-        # Only count positive formation (not dissociation releasing Ca back)
-        self._ca_consumed = 6.0 * np.maximum(d_dimer_dt, 0) + 9.0 * np.maximum(d_trimer_dt, 0)
+        # Net formation: negative values return Ca to pool on dissolution
+        self._ca_consumed = 6.0 * d_dimer_dt + 9.0 * d_trimer_dt
+        self._po4_consumed = 4.0 * d_dimer_dt + 6.0 * d_trimer_dt
 
         # Physical limits  ← YOUR NEW CODE STARTS HERE
         self.dimer_concentration = np.maximum(self.dimer_concentration, 0)
@@ -437,8 +448,12 @@ class CalciumPhosphateDimerization:
     def get_calcium_consumed(self) -> np.ndarray:
         """Return calcium consumed by dimer/trimer formation this timestep"""
         return getattr(self, '_ca_consumed', np.zeros(self.grid_shape))
-    
-    
+
+    def get_phosphate_consumed(self) -> np.ndarray:
+        """Return phosphate consumed by dimer/trimer formation this timestep"""
+        return getattr(self, '_po4_consumed', np.zeros(self.grid_shape))
+
+
     def get_pnc_metrics(self) -> Dict[str, float]:
         """
         Get PNC-specific metrics for validation
@@ -584,7 +599,11 @@ class CaHPO4DimerSystem:
         self.dimer_concentration = self.dimerization.dimer_concentration
 
         return self.dimerization.get_calcium_consumed()
-        
+
+    def get_phosphate_consumed(self) -> np.ndarray:
+        """Return phosphate consumed by dimer/trimer formation this timestep"""
+        return self.dimerization.get_phosphate_consumed()
+
     def get_ion_pair_concentration(self) -> np.ndarray:
         """Get CaHPO₄⁰ concentration (M) - the monomer units"""
         return self.ion_pair_concentration

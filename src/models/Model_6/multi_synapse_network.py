@@ -38,6 +38,7 @@ import numpy as np
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
 import logging
+from vibrational_cascade_module import FrohlichCondensation, TubulinCascadeParameters
 
 logger = logging.getLogger(__name__)
 
@@ -89,13 +90,16 @@ class NetworkEntanglementTracker:
         self.coherence_threshold = coherence_threshold
         
         # Network state
-        self.all_dimers = []  # List of (dimer, synapse_idx, synapse_pos)
-        self.entanglement_bonds = set()  # (global_id_i, global_id_j)
+        self.all_dimers = []  # List of dimer dicts keyed by stable_id
+        self.entanglement_bonds = set()  # (stable_id_i, stable_id_j) — stable_id = (syn_idx, dimer.id)
         
     def collect_dimers(self, synapses: List, positions: np.ndarray):
         """
-        Collect all dimers from all synapses with position info
-        
+        Collect all dimers from all synapses with position info.
+
+        Uses stable IDs: (synapse_idx, dimer.id) tuples that survive
+        across collect_dimers() calls as long as the dimer exists.
+
         Parameters
         ----------
         synapses : List[Model6QuantumSynapse]
@@ -104,26 +108,25 @@ class NetworkEntanglementTracker:
             Synapse positions in microns, shape (n_synapses, 3)
         """
         self.all_dimers = []
-        global_id = 0
-        
+
         for syn_idx, synapse in enumerate(synapses):
             if not hasattr(synapse, 'dimer_particles'):
                 continue
-                
+
             particle_system = synapse.dimer_particles
             synapse_pos = positions[syn_idx]
-            
+
             for dimer in particle_system.dimers:
+                stable_id = (syn_idx, dimer.id)
                 self.all_dimers.append({
-                    'global_id': global_id,
+                    'global_id': stable_id,
                     'dimer': dimer,
                     'synapse_idx': syn_idx,
                     'synapse_pos_um': synapse_pos,
                     'local_j': dimer.local_j_coupling,
                     'coherence': dimer.coherence,
-                    'P_S': dimer.singlet_probability  # <-- ADD THIS LINE
+                    'P_S': dimer.singlet_probability
                 })
-                global_id += 1
     
     def step(self, dt: float, synapses: List, positions: np.ndarray) -> dict:
         """
@@ -284,15 +287,15 @@ class NetworkEntanglementTracker:
         P_singlet = np.array(P_singlet)
         
         # Count cross-synapse bonds
-        # Build lookup: global_id -> synapse_idx
+        # Build lookup: stable_id -> synapse_idx
         dimer_to_synapse = {d['global_id']: d['synapse_idx'] for d in self.all_dimers}
-        
+
         # Count bonds between each synapse pair
         bond_counts = np.zeros((n_syn, n_syn))
         for id_i, id_j in self.entanglement_bonds:
-            syn_i = dimer_to_synapse.get(id_i, -1)
-            syn_j = dimer_to_synapse.get(id_j, -1)
-            if syn_i >= 0 and syn_j >= 0 and syn_i != syn_j:
+            syn_i = dimer_to_synapse.get(id_i)
+            syn_j = dimer_to_synapse.get(id_j)
+            if syn_i is not None and syn_j is not None and syn_i != syn_j:
                 bond_counts[syn_i, syn_j] += 1
                 bond_counts[syn_j, syn_i] += 1
         
@@ -359,167 +362,174 @@ class NetworkEntanglementTracker:
     
     
     
-    def _find_largest_cluster(self) -> set:
+    def _find_all_clusters(self) -> List[set]:
         """
-        Find largest connected component using union-find
+        Find all connected components using union-find.
+
+        Returns list of sets, each containing the global_ids in one
+        connected component.  Only dimers that participate in at least
+        one bond are included (unbonded dimers are singletons and are
+        omitted).
         """
         if not self.all_dimers:
-            return set()
-        
-        # Union-find
+            return []
+
         parent = {d['global_id']: d['global_id'] for d in self.all_dimers}
-        
+
         def find(x):
             if parent[x] != x:
                 parent[x] = find(parent[x])
             return parent[x]
-        
+
         def union(x, y):
             px, py = find(x), find(y)
             if px != py:
                 parent[px] = py
-        
+
         # Union all bonded pairs
+        bonded_ids = set()
         for id_i, id_j in self.entanglement_bonds:
             if id_i in parent and id_j in parent:
                 union(id_i, id_j)
-        
-        # Group by root
+                bonded_ids.add(id_i)
+                bonded_ids.add(id_j)
+
+        # Group bonded dimers by root
         clusters = {}
-        for d in self.all_dimers:
-            root = find(d['global_id'])
+        for gid in bonded_ids:
+            root = find(gid)
             if root not in clusters:
                 clusters[root] = set()
-            clusters[root].add(d['global_id'])
-        
-        # Return largest
+            clusters[root].add(gid)
+
+        return list(clusters.values())
+
+    def _find_largest_cluster(self) -> set:
+        """
+        Find largest connected component using union-find
+        """
+        clusters = self._find_all_clusters()
         if not clusters:
             return set()
-        return max(clusters.values(), key=len)
+        return max(clusters, key=len)
     
-    def _has_bond(self, id_i: int, id_j: int) -> bool:
+    def _has_bond(self, id_i, id_j) -> bool:
         key = (min(id_i, id_j), max(id_i, id_j))
         return key in self.entanglement_bonds
-    
-    def _add_bond(self, id_i: int, id_j: int):
+
+    def _add_bond(self, id_i, id_j):
         key = (min(id_i, id_j), max(id_i, id_j))
         self.entanglement_bonds.add(key)
-    
-    def _remove_bond(self, id_i: int, id_j: int):
+
+    def _remove_bond(self, id_i, id_j):
         key = (min(id_i, id_j), max(id_i, id_j))
         self.entanglement_bonds.discard(key)
 
 
     def perform_quantum_measurement(self, synapses: List) -> np.ndarray:
         """
-        Only the ENTANGLED NETWORK determines eligibility.
-        Unbonded dimers don't count.
+        Measure entangled network per connected component.
+
+        Each connected component of the bond graph collapses independently:
+          - cluster_P_S = mean(P_S) of dimers in that component
+          - Single coin flip per component: outcome = random() < cluster_P_S
+          - Dimers in components that collapse to singlet are "committed"
+
+        Returns
+        -------
+        np.ndarray : committed_counts[i] = number of committed dimers in
+                     synapse i (absolute count, NOT fraction).
         """
-        
-        # Find all dimers in the entangled network (those with bonds)
-        bonded_dimer_ids = set()
-        for id_i, id_j in self.entanglement_bonds:
-            bonded_dimer_ids.add(id_i)
-            bonded_dimer_ids.add(id_j)
-        
-        # Average P_S of the entangled network
-        network_P_S_values = [d['P_S'] for d in self.all_dimers 
-                            if d['global_id'] in bonded_dimer_ids]
-        
-        if not network_P_S_values:
-            # No entangled network → no quantum eligibility
-            return np.zeros(len(synapses))
-        
-        network_P_S = np.mean(network_P_S_values)
-        
-        # THE NETWORK COLLAPSES AS A UNIT
-        # Single roll for the entire entangled network
-        network_outcome = np.random.random() < network_P_S  # True = singlet
-        
-        # All bonded dimers get the SAME outcome
-        dimer_outcomes = {}
-        for gid in bonded_dimer_ids:
-            dimer_outcomes[gid] = network_outcome
-        
-        # Unbonded dimers DON'T CONTRIBUTE to eligibility
-        # (or collapse independently but don't count)
-        
-        # Synapse eligibility = fraction of its dimers in the network that are singlet
-        # If a synapse has no bonded dimers, eligibility = 0
         n_syn = len(synapses)
-        eligibilities = np.zeros(n_syn)
-        
-        for d in self.all_dimers:
-            if d['global_id'] in bonded_dimer_ids:
-                syn_idx = d['synapse_idx']
-                if network_outcome:
-                    eligibilities[syn_idx] += 1  # Count bonded singlets
-        
-        # Normalize by total bonded dimers per synapse
-        bonded_per_synapse = np.zeros(n_syn)
-        for d in self.all_dimers:
-            if d['global_id'] in bonded_dimer_ids:
-                bonded_per_synapse[d['synapse_idx']] += 1
-        
-        for i in range(n_syn):
-            if bonded_per_synapse[i] > 0:
-                eligibilities[i] /= bonded_per_synapse[i]
-        
-        return eligibilities
+
+        clusters = self._find_all_clusters()
+        if not clusters:
+            self._last_measurement = {
+                'total_dimers': len(self.all_dimers),
+                'total_bonds': len(self.entanglement_bonds),
+                'n_clusters_measured': 0,
+                'n_clusters_singlet': 0,
+                'singlet_outcomes': 0,
+                'committed_counts': np.zeros(n_syn),
+            }
+            return np.zeros(n_syn)
+
+        # Build global_id → dimer dict lookup
+        id_to_dimer = {d['global_id']: d for d in self.all_dimers}
+
+        committed_counts = np.zeros(n_syn)
+        n_clusters_singlet = 0
+        total_singlet_dimers = 0
+
+        for cluster_ids in clusters:
+            # Compute cluster P_S
+            cluster_ps = np.mean([
+                id_to_dimer[gid]['P_S'] for gid in cluster_ids
+                if gid in id_to_dimer
+            ])
+
+            # Independent coin flip for this component
+            if np.random.random() < cluster_ps:
+                n_clusters_singlet += 1
+                # All dimers in this component commit
+                for gid in cluster_ids:
+                    d = id_to_dimer.get(gid)
+                    if d is not None:
+                        committed_counts[d['synapse_idx']] += 1
+                        total_singlet_dimers += 1
+
+        self._last_measurement = {
+            'total_dimers': len(self.all_dimers),
+            'total_bonds': len(self.entanglement_bonds),
+            'n_clusters_measured': len(clusters),
+            'n_clusters_singlet': n_clusters_singlet,
+            'singlet_outcomes': total_singlet_dimers,
+            'committed_counts': committed_counts.copy(),
+        }
+
+        return committed_counts
 
     def perform_independent_measurement(self, synapses: List) -> np.ndarray:
         """
         Control condition: Measure all dimers INDEPENDENTLY (no bond correlation).
-        
+
         Same physics for individual dimers, but bonds don't cause joint collapse.
-        This is the classical control - what happens without quantum coordination.
-        
+        This is the classical control — what happens without entanglement-based
+        coordination.
+
         Returns
         -------
-        np.ndarray : Eligibility for each synapse [0, 1]
+        np.ndarray : committed_counts[i] = number of dimers in synapse i that
+                     independently collapsed to singlet (absolute count).
         """
         n_syn = len(synapses)
-        
+
         if not self.all_dimers:
             return np.zeros(n_syn)
-        
-        # Build P_S lookup
-        dimer_P_S = {}
-        for d in self.all_dimers:
-            dimer_P_S[d['global_id']] = d.get('P_S', 0.25)
-        
+
         # Measure ALL dimers independently (bonds ignored)
-        dimer_outcomes = {}
-        for d in self.all_dimers:
-            gid = d['global_id']
-            P_S = dimer_P_S.get(gid, 0.25)
-            dimer_outcomes[gid] = np.random.random() < P_S
-        
-        # Compute eligibilities
-        eligible_count = np.zeros(n_syn)
+        committed_counts = np.zeros(n_syn)
         total_count = np.zeros(n_syn)
-        
+        total_singlet = 0
+
         for d in self.all_dimers:
             syn_idx = d['synapse_idx']
             if syn_idx < n_syn:
                 total_count[syn_idx] += 1
-                if dimer_outcomes.get(d['global_id'], False):
-                    eligible_count[syn_idx] += 1
-        
-        eligibilities = np.zeros(n_syn)
-        for i in range(n_syn):
-            if total_count[i] > 0:
-                eligibilities[i] = eligible_count[i] / total_count[i]
-        
+                P_S = d.get('P_S', 0.25)
+                if np.random.random() < P_S:
+                    committed_counts[syn_idx] += 1
+                    total_singlet += 1
+
         # Store for diagnostics
         self._last_measurement = {
             'total_dimers': int(np.sum(total_count)),
             'total_bonds': len(self.entanglement_bonds),
-            'singlet_outcomes': int(np.sum(eligible_count)),
-            'eligibilities': eligibilities.copy()
+            'singlet_outcomes': total_singlet,
+            'committed_counts': committed_counts.copy(),
         }
-        
-        return eligibilities
+
+        return committed_counts
 
 
 class MultiSynapseNetwork:
@@ -561,7 +571,8 @@ class MultiSynapseNetwork:
         self.field_threshold_kT = field_threshold_kT
         self.params = params
         self.use_correlated_sampling = use_correlated_sampling
-        self.disable_auto_commitment = False 
+        self.disable_auto_commitment = False
+        self._backbone_frohlich = None  # Created when backbone params are available
 
         # Generate synapse positions
         self.positions = self._generate_positions()
@@ -578,7 +589,10 @@ class MultiSynapseNetwork:
         self.network_committed = False
         self.network_commitment_level = 0.0
         self.time = 0.0
-        
+
+        # Network-level measurement tracking
+        self._network_measurement_performed = False
+
         # Network-level entanglement tracking
         self.entanglement_tracker = NetworkEntanglementTracker(
             coupling_length_um=coupling_length_um
@@ -684,6 +698,20 @@ class MultiSynapseNetwork:
         
         self._initialized = True
         logger.info(f"Initialized {self.n_synapses} Model6 instances")
+
+        # Initialize backbone Fröhlich calculator if enabled
+        if self.params is not None and hasattr(self.params, 'dendritic_backbone') and self.params.dendritic_backbone.enabled:
+            bp = self.params.dendritic_backbone
+            backbone_cascade_params = TubulinCascadeParameters(
+                D_modes=bp.D_modes,
+                phi_dissipation=bp.phi_dissipation,
+                chi_redistribution=bp.chi_redistribution,
+            )
+            self._backbone_frohlich = FrohlichCondensation(backbone_cascade_params)
+            r_c = (bp.phi_dissipation / (bp.D_modes + 1)) * (1.0 + bp.phi_dissipation / bp.chi_redistribution)
+            logger.info(f"Backbone Fröhlich condensation: D={bp.D_modes}, "
+                        f"phi={bp.phi_dissipation/1e9:.1f} GHz, chi={bp.chi_redistribution/1e9:.2f} GHz, "
+                        f"r_c={r_c/1e9:.1f} GHz")
     
     def disable_network_commitment(self):
         """Disable network-level field commitment for coordination experiments"""
@@ -766,19 +794,50 @@ class MultiSynapseNetwork:
         # This ensures entangled synapses commit/fail together.
         if stimulus.get('reward', False):
             if self.use_correlated_sampling:
-                print(f"[DEBUG] reward={stimulus.get('reward')}, use_correlated_sampling={self.use_correlated_sampling}, type={type(self.use_correlated_sampling)}")
                 self._evaluate_coordinated_gate(stimulus)
             else:
                 self._evaluate_independent_gate(stimulus)
+
+            # Propagate synapse-level commitment to network flag
+            if not self.network_committed:
+                if any(getattr(s, '_camkii_committed', False) for s in self.synapses):
+                    self.network_committed = True
+                    state_now = self._compute_network_state(
+                        [SynapseState(
+                            position_um=self.positions[i],
+                            dimer_count=len(s.dimer_particles.dimers) if hasattr(s, 'dimer_particles') else 0,
+                            coherence=s.get_mean_singlet_probability() if hasattr(s, 'get_mean_singlet_probability') else 0.0,
+                            collective_field_kT=getattr(s, '_collective_field_kT', 0.0),
+                            eligibility=getattr(s, '_current_eligibility', 0.0),
+                            committed=getattr(s, '_camkii_committed', False),
+                            committed_level=getattr(s, '_committed_memory_level', 0.0),
+                            calcium_peak_uM=np.max(s.calcium.get_concentration()) * 1e6,
+                        ) for i, s in enumerate(self.synapses)]
+                    )
+                    self.network_commitment_level = state_now.mean_eligibility
+                    logger.info(
+                        f"Network COMMITTED via three-factor gate: "
+                        f"field={state_now.network_field_kT:.1f} kT, "
+                        f"dimers={state_now.total_dimers:.1f}, "
+                        f"n_committed_synapses={state_now.n_committed}"
+                    )
         # =========================================================================
-        
+
+        # === SHARED DENDRITIC BACKBONE FIELD ===
+        # The microtubule backbone is continuous along the dendritic segment.
+        # Each synapse's reverse coupling (dimer→tubulin modulation) pumps
+        # the backbone toward Fröhlich condensation. Above threshold, all
+        # synapses benefit from the shared coherent field.
+        if self.params is not None and hasattr(self.params, 'dendritic_backbone') and self.params.dendritic_backbone.enabled:
+            self._update_backbone_field()
+
         # Compute network-level quantities
         network_state = self._compute_network_state(synapse_states)
         
-        # Check for network commitment every step
-        # (commitment is irreversible once field exceeds threshold with eligibility)
-        # SKIP if disable_auto_commitment is True (for coordination experiments)
-        if not self.disable_auto_commitment:
+        # Auto-commitment disabled by default — commitment requires dopamine
+        # through the three-factor gate (coordinated or independent pathway).
+        # Only legacy experiments that explicitly set disable_auto_commitment=False use this.
+        if not getattr(self, 'disable_auto_commitment', True):
             self._check_network_commitment(network_state)
         
         # Update time
@@ -876,6 +935,61 @@ class MultiSynapseNetwork:
         )
     
     
+    def _update_backbone_field(self):
+        """Compute backbone Fröhlich condensation and pass eta to each synapse.
+
+        The backbone's condensation ratio (eta) modulates f_coherent in
+        invaded spines via cooperative robustness — NOT by injecting an
+        additive field (shaft MTs are too far for near-field coupling).
+
+        Steps:
+        1. Collect per-synapse reverse coupling modulation
+        2. Compute spatially-weighted aggregate pump rate for backbone
+        3. Fröhlich condensation (Zhang/Scully 2019 rate equations) -> eta
+        4. Pass eta to each synapse (gated on MT invasion in model6_core)
+        """
+        bp = self.params.dendritic_backbone
+
+        # Step 1: Collect per-synapse reverse coupling
+        modulations = np.array([
+            getattr(s, '_network_modulation', 0.0) for s in self.synapses
+        ])
+
+        # Step 2: Spatially-weighted aggregate pump rate
+        # Each synapse's modulation contributes to the backbone pump,
+        # weighted by its spatial coupling to the segment
+        # self.coupling_weights is the pre-computed n×n matrix
+        backbone_pump_per_synapse = self.coupling_weights @ modulations
+
+        # Step 3: Fröhlich condensation of backbone (replaces sigmoid)
+        for i, synapse in enumerate(self.synapses):
+            aggregate_mod = backbone_pump_per_synapse[i]
+
+            # Convert dimensionless modulation -> physical energy (kT) -> pump rate (Hz)
+            # Uses same optomechanical transduction as per-synapse path:
+            #   r = r_ref x (kT / kT_ref)^2,  with r_ref=100 GHz, kT_ref=22.1
+            backbone_kT = aggregate_mod * bp.kT_per_modulation_unit
+            r_pump = 100.0e9 * (backbone_kT / 22.1) ** 2
+
+            # Fröhlich condensation (Zhang/Scully 2019 rate equations)
+            cond_state = self._backbone_frohlich.calculate_steady_state(r_pump)
+            eta = cond_state['condensation_ratio']
+
+            # Pass condensation ratio to invaded synapses.
+            # The synapse's tryptophan module uses eta to boost f_coherent
+            # (cooperative robustness via continuous tubulin lattice).
+            # Non-invaded synapses ignore eta (gated in model6_core.py).
+            synapse.set_backbone_condensation_eta(eta)
+
+            # Diagnostic: print once per step (synapse 0 only)
+            if i == 0:
+                mt_inv = getattr(synapse, '_mt_invaded', False)
+                print(f"[backbone diag] agg_mod={aggregate_mod:.4f}  "
+                      f"backbone_kT={backbone_kT:.2f}  "
+                      f"r={r_pump/1e9:.1f}GHz  r/r_c={cond_state['pump_rate']/cond_state['r_c']:.2f}  "
+                      f"eta={eta:.4f}  regime={cond_state['regime']}  "
+                      f"invaded={mt_inv}")
+
     def sample_correlated_eligibilities(self, rng: np.random.Generator = None) -> np.ndarray:
         """
         Sample eligibilities with quantum correlations for reward application.
@@ -1026,69 +1140,93 @@ class MultiSynapseNetwork:
         return network_state
 
 
+    # Hill function parameters for count-dependent plasticity drive
+    HILL_N = 4        # Cooperativity (matches CaMKII ultrasensitive activation)
+    HILL_K_HALF = 20  # Half-max at 20 committed dimers per synapse
+
+    def _committed_count_to_drive(self, count: float) -> float:
+        """
+        Convert committed dimer count to plasticity drive via Hill function.
+
+        drive = count^n / (K_half^n + count^n)
+
+        Produces 0-1 output with ultrasensitive (sigmoidal) dependence on
+        the number of committed dimers.  K_half=20 means a synapse needs
+        ~20 committed dimers for half-max drive; n=4 gives sharp onset.
+        """
+        n = self.HILL_N
+        k = self.HILL_K_HALF
+        return float(count ** n / (k ** n + count ** n))
+
     def _evaluate_coordinated_gate(self, stimulus: dict):
         """
         Evaluate three-factor gate with QUANTUM MEASUREMENT.
-        
-        Physics: When reward arrives, the quantum state is "measured".
-        - Bonded dimers collapse TOGETHER (perfect correlation)
-        - Unbonded dimers collapse independently
-        - Synapse eligibility = fraction of dimers that collapsed to singlet
-        
+
+        Physics: When reward arrives, each connected component of the
+        entanglement bond graph is measured independently.
+        - Dimers within a component collapse TOGETHER (perfect correlation)
+        - Different components get independent coin flips
+        - Per-synapse committed_count = number of dimers that collapsed to singlet
+        - Plasticity drive = Hill(committed_count) with n=4, K_half=20
+
         The gate has three factors:
-        1. Eligibility: majority of dimers collapsed to singlet (quantum)
+        1. Quantum: committed_count > 0 (at least some committed dimers)
         2. Dopamine: reward signal present (classical)
         3. Calcium: postsynaptic activity (classical)
         """
         dopamine_present = stimulus.get('reward', False)
         if not dopamine_present:
             return
-        
+
+        if self._network_measurement_performed:
+            return
+        self._network_measurement_performed = True
+
         # Ensure dimer registry is current
         self.entanglement_tracker.collect_dimers(self.synapses, self.positions)
-        
-        # === QUANTUM MEASUREMENT ===
-        # Bonded dimers collapse together; unbonded collapse independently
-        measured_eligibilities = self.entanglement_tracker.perform_quantum_measurement(
+
+        # === QUANTUM MEASUREMENT (per connected component) ===
+        committed_counts = self.entanglement_tracker.perform_quantum_measurement(
             self.synapses
         )
-        
+
         # Diagnostic output
         measurement = getattr(self.entanglement_tracker, '_last_measurement', {})
         n_bonds = measurement.get('total_bonds', 0)
         n_dimers = measurement.get('total_dimers', 0)
         n_singlet = measurement.get('singlet_outcomes', 0)
-        
+        n_clust = measurement.get('n_clusters_measured', 0)
+        n_clust_s = measurement.get('n_clusters_singlet', 0)
+
         logger.info(f"QUANTUM MEASUREMENT: {n_dimers} dimers, {n_bonds} bonds, "
-                   f"{n_singlet} singlet outcomes")
-        logger.info(f"  Measured eligibilities: {[f'{e:.2f}' for e in measured_eligibilities]}")
-        
-        # Gate threshold: eligibility > 0.5 means majority collapsed to singlet
-        elig_threshold = 0.5
-        
+                    f"{n_clust} clusters ({n_clust_s} singlet), "
+                    f"{n_singlet} committed dimers")
+        logger.info(f"  Committed counts: {[f'{c:.0f}' for c in committed_counts]}")
+
         # === THREE-FACTOR GATE EVALUATION ===
         for i, syn in enumerate(self.synapses):
+            count = committed_counts[i]
+
             # Calcium factor
             calcium_uM = getattr(syn, '_peak_calcium_uM', 0.0)
             calcium_elevated = calcium_uM > 0.5  # µM threshold
-            
+
             # Three-factor AND gate
             gate_open = (
-                measured_eligibilities[i] > elig_threshold and  # Quantum eligibility
-                dopamine_present and                             # Reward signal
-                calcium_elevated                                 # Postsynaptic activity
+                count > 0 and          # Quantum: at least some committed dimers
+                dopamine_present and    # Reward signal
+                calcium_elevated        # Postsynaptic activity
             )
-            
+
             syn._plasticity_gate = gate_open
-            
-            # Commitment
+
+            # Commitment with count-dependent graded drive
             if gate_open and not getattr(syn, '_camkii_committed', False):
                 syn._camkii_committed = True
                 syn._commitment_time = self.time
-                
-                # Commitment level scales with measured eligibility
-                syn._committed_memory_level = measured_eligibilities[i]
-        
+                syn._committed_memory_level = self._committed_count_to_drive(count)
+                syn._committed_dimer_count = int(count)
+
         # === POST-MEASUREMENT: Entanglement is consumed ===
         # Measurement collapses the quantum state
         if hasattr(self, '_apply_measurement_collapse'):
@@ -1164,60 +1302,65 @@ class MultiSynapseNetwork:
     def _evaluate_independent_gate(self, stimulus: dict):
         """
         Control condition: Measure all dimers INDEPENDENTLY.
-        
-        Same quantum physics for individual dimers (P_S determines collapse probability),
-        but bonds DON'T cause joint collapse. This is what happens without entanglement-
-        based coordination.
-        
+
+        Same quantum physics for individual dimers (P_S determines collapse
+        probability), but bonds DON'T cause joint collapse.  Returns
+        committed dimer counts per synapse, converted to plasticity drive
+        via the same Hill function as the coordinated gate.
+
         Key difference from coordinated gate:
-        - Coordinated: Bonded dimers collapse together (correlation = 1.0)
+        - Coordinated: Connected components collapse together (correlation = 1)
         - Independent: All dimers collapse independently (correlation = 0)
         """
         dopamine_present = stimulus.get('reward', False)
         if not dopamine_present:
             return
-        
+
+        if self._network_measurement_performed:
+            return
+        self._network_measurement_performed = True
+
         # Ensure dimer registry is current
         self.entanglement_tracker.collect_dimers(self.synapses, self.positions)
-        
+
         # === INDEPENDENT MEASUREMENT ===
         # All dimers collapse independently (bonds ignored)
-        measured_eligibilities = self.entanglement_tracker.perform_independent_measurement(
+        committed_counts = self.entanglement_tracker.perform_independent_measurement(
             self.synapses
         )
-        
+
         # Diagnostic output
         measurement = getattr(self.entanglement_tracker, '_last_measurement', {})
         n_dimers = measurement.get('total_dimers', 0)
         n_singlet = measurement.get('singlet_outcomes', 0)
-        
+
         logger.info(f"INDEPENDENT MEASUREMENT: {n_dimers} dimers, "
-                   f"{n_singlet} singlet outcomes (bonds ignored)")
-        logger.info(f"  Measured eligibilities: {[f'{e:.2f}' for e in measured_eligibilities]}")
-        
-        # Gate threshold
-        elig_threshold = 0.5
-        
+                    f"{n_singlet} singlet outcomes (bonds ignored)")
+        logger.info(f"  Committed counts: {[f'{c:.0f}' for c in committed_counts]}")
+
         # === THREE-FACTOR GATE EVALUATION ===
         for i, syn in enumerate(self.synapses):
+            count = committed_counts[i]
+
             # Calcium factor
             calcium_uM = getattr(syn, '_peak_calcium_uM', 0.0)
             calcium_elevated = calcium_uM > 0.5
-            
+
             # Three-factor AND gate
             gate_open = (
-                measured_eligibilities[i] > elig_threshold and
-                dopamine_present and
-                calcium_elevated
+                count > 0 and          # At least some committed dimers
+                dopamine_present and    # Reward signal
+                calcium_elevated        # Postsynaptic activity
             )
-            
+
             syn._plasticity_gate = gate_open
-            
-            # Commitment
+
+            # Commitment with count-dependent graded drive
             if gate_open and not getattr(syn, '_camkii_committed', False):
                 syn._camkii_committed = True
                 syn._commitment_time = self.time
-                syn._committed_memory_level = measured_eligibilities[i]
+                syn._committed_memory_level = self._committed_count_to_drive(count)
+                syn._committed_dimer_count = int(count)
     
     def _record_history(self, state: NetworkState):
         """Record network state to history"""
@@ -1273,6 +1416,11 @@ class MultiSynapseNetwork:
             'within_synapse_bonds': within_bonds,
             'cross_synapse_bonds': cross_bonds,
             'total_bonds': n_total_bonds,
+            'n_clusters': sum(
+                s.dimer_particles.get_network_metrics().get('n_clusters', 0)
+                for s in self.synapses if hasattr(s, 'dimer_particles')
+            ),
+            'mean_connectivity': (n_total_bonds / max(sum(dimer_counts), 1e-12)),
             'network_committed': self.network_committed,
             'network_commitment_level': self.network_commitment_level,
             'pattern': self.pattern,
@@ -1298,7 +1446,7 @@ class MultiSynapseNetwork:
         enable : bool
             True for coordination experiments, False for normal operation
         """
-        self.disable_auto_commitment = enable
+        self.disable_auto_commitment = True
         self.use_correlated_sampling = enable
         
         if enable:
@@ -1325,6 +1473,21 @@ class MultiSynapseNetwork:
         for synapse in self.synapses:
             synapse._camkii_committed = False
             synapse._committed_memory_level = 0.0
+            synapse._measurement_performed = False
+
+        # Reset network state
+        self._network_state = {
+            'committed': False,
+            'commitment_level': 0.0
+        }
+
+           # Network state
+        self.network_committed = False
+        self.network_commitment_level = 0.0
+        self.time = 0.0
+
+        # Network-level measurement tracking
+        self._network_measurement_performed = False
 
 
 # =============================================================================

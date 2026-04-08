@@ -152,8 +152,9 @@ class LocalDimerTubulinCoupling:
         # This is what gets summed across synapses
         modulation = n_effective * self.modulation_per_dimer
         
-        # Cap modulation at 1.0 (single synapse can't exceed threshold alone)
-        modulation = np.clip(modulation, 0.0, 1.0)
+        # No artificial cap — modulation scales with actual dimer count and coherence
+        # Physics provides natural limits: finite dimers, coherence decay, spatial averaging
+        modulation = max(modulation, 0.0)  # Floor at zero only (can't have negative modulation)
         
         return {
             'modulation_strength': float(modulation),
@@ -253,8 +254,8 @@ class NetworkModulationIntegrator:
             excess = total_modulation - self.superradiance_threshold
             enhancement = 1.5 + excess * self.enhancement_scaling
         
-        # Cap enhancement (can't exceed physical limits)
-        enhancement = np.clip(enhancement, 1.0, 3.0)
+        # Floor only — no arbitrary upper cap; natural saturation from sigmoid and finite dimer count
+        enhancement = max(enhancement, 1.0)
         
         # Effective tryptophans (enhanced coupling means more effective network)
         effective_n_trp = int(baseline_n_tryptophans * enhancement)

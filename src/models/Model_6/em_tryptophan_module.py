@@ -554,7 +554,8 @@ class TryptophanSuperradianceModule:
                photon_flux: float,
                n_tryptophans: int,
                ca_spike_active: bool = False,
-               network_modulation: float = 0.0) -> Dict:
+               network_modulation: float = 0.0,
+               backbone_eta: float = 0.0) -> Dict:
         """
         Update tryptophan superradiance state
         
@@ -586,26 +587,17 @@ class TryptophanSuperradianceModule:
         mu_collective = self.collective.calculate_collective_dipole(n_tryptophans)
         enhancement = self.collective.calculate_enhancement_factor(n_tryptophans)
         
-        # === NETWORK MODULATION FROM DIMER-TUBULIN CASCADE ===
-        superradiance_threshold = 5.0
-        
+        # === NETWORK MODULATION STATE ===
+        # Reverse coupling from dimers to Q1 goes through Fröhlich condensation
+        # (backbone eta -> f_coherent), NOT through direct dipole modification.
+        superradiance_threshold = 5.0  # SNR-derived center point (Kurian 2022)
+
         if network_modulation >= superradiance_threshold:
-            excess = network_modulation - superradiance_threshold
-            modulation_enhancement = min(1.5 + excess * 0.2, 3.0)
             network_state = 'suprathreshold'
             above_threshold = True
-        elif network_modulation >= 1.0:
-            fraction = network_modulation / superradiance_threshold
-            modulation_enhancement = 1.0 + fraction * 0.5
-            network_state = 'threshold'
-            above_threshold = False
         else:
-            modulation_enhancement = 1.0
             network_state = 'subthreshold'
             above_threshold = False
-        
-        mu_collective = mu_collective * modulation_enhancement
-        enhancement = enhancement * modulation_enhancement
         
         # === INSTANTANEOUS EMISSION ===
         E_instant = self.emission.calculate_instantaneous_field(
@@ -697,10 +689,14 @@ class TryptophanSuperradianceModule:
             # === FIRST-PRINCIPLES CALCULATION ===
             # Calculate collective dipole: μ = μ_single × √(N × f_coherent)
             mu_single = self.params.tryptophan.dipole_moment  # 2e-29 C·m
-            f_coherent = self.params.tryptophan.f_coherent  # ~0.08
+            f_coherent_base = self.params.tryptophan.f_coherent  # ~0.08
+            # Cooperative robustness: invaded spine connected to condensed backbone
+            # has enhanced f_coherent up to Babcock 2024 experimental maximum (0.10)
+            f_coherent_max = 0.10  # Babcock 2024 experimental cooperative maximum
+            f_coherent = f_coherent_base + (f_coherent_max - f_coherent_base) * backbone_eta
             n_eff = n_tryptophans * f_coherent
             mu_collective = mu_single * np.sqrt(n_eff)
-            
+
             # Electric field at 1 nm: E = (1/4πε₀) × (2μ/r³)
             epsilon_0 = 8.854e-12  # F/m
             r = 1e-9  # 1 nm
@@ -715,9 +711,9 @@ class TryptophanSuperradianceModule:
             k_B = 1.381e-23  # J/K
             T = 310.15  # K
             base_kT = U_joules / (k_B * T)
-            
-            # Cap at 30 kT (physical limit - higher would break bonds)
-            base_kT = min(base_kT, 30.0)
+
+            # No arbitrary cap — field strength emerges from physics (N_trp, f_coherent, geometry)
+            # Covalent bond disruption requires 150-400 kT; relevant modulation regime is 0-50 kT
             
             # Anesthetic reduces tryptophan coupling
             if self.params.tryptophan.anesthetic_applied:
@@ -727,9 +723,8 @@ class TryptophanSuperradianceModule:
             # External UV enhances the effective field (more excitation events)
             if external_uv_active:
                 uv_field_boost = time_avg_dict.get('external_uv_enhancement', 1.0)
-                # UV boosts field moderately (not full multiplication - diminishing returns)
                 base_kT = base_kT * (1.0 + 0.3 * (uv_field_boost - 1.0))
-                base_kT = min(base_kT, 30.0)  # Cap with UV boost
+                # No cap — UV enhancement bounded by actual boost factor
             
             collective_field_kT = base_kT
         else:

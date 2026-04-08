@@ -711,6 +711,61 @@ class MultiSynapseParameters:
 
 
 @dataclass
+class DendriticBackboneParameters:
+    """Parameters for the shared dendritic microtubule backbone field.
+
+    The microtubule lattice in the dendritic shaft is continuous across
+    synapses on the same segment. This shared infrastructure contributes
+    a collective tryptophan field that all synapses benefit from.
+
+    The backbone's coherent fraction is activity-modulated: aggregate
+    reverse coupling from all synapses on the segment pumps the backbone
+    toward Fröhlich condensation (Zhang, Agarwal & Scully, PRL 122,
+    158101, 2019). The critical pump rate r_c is computed from the
+    backbone lattice parameters (D, phi, chi) — not hand-tuned.
+
+    References:
+        - Zhang, Agarwal & Scully 2019 (PRL 122:158101) — Fröhlich rate equations
+        - Babcock et al. 2024 (J Phys Chem B 128:4035) — superradiance scaling
+        - Harris et al. 2022 (PMC9038701) — spine density scales with MT number
+    """
+    n_backbone: int = 40000          # Total tryptophans in dendritic shaft segment
+                                      # ~5 MTs × 100 dimers/μm × 8 Trp/dimer × 10 μm
+    f_baseline: float = 0.02          # Coherent fraction at rest (thermal equilibrium)
+    f_max: float = 0.10               # Coherent fraction when fully condensed
+                                      # Matches Babcock 2024 experimental value
+
+    # --- Fröhlich condensation (Zhang/Agarwal/Scully 2019) ---
+    # Backbone lattice parameters. Same physics as per-synapse
+    # (vibrational_cascade_module.py) but different lattice scale.
+    D_modes: int = 50                 # Effective vibrational modes in backbone lattice.
+                                      # Per-synapse uses D=20 for ~1 MT in a spine.
+                                      # Backbone is ~5 MTs x 10 um — larger lattice has
+                                      # denser low-frequency mode spectrum. Sublinear
+                                      # scaling because only modes coupling to the
+                                      # relevant conformational channel contribute.
+    phi_dissipation: float = 8.0e9    # Hz — energy loss to water bath.
+                                      # Slightly lower than spine (10 GHz) because
+                                      # dendritic shaft MTs are in a more structured,
+                                      # crowded environment (MAPs, neurofilaments)
+                                      # with less direct water exposure.
+    chi_redistribution: float = 0.06e9  # Hz — nonlinear mode-mode coupling.
+                                        # Slightly higher than spine (0.05 GHz)
+                                        # because more modes -> more redistribution
+                                        # channels.
+    kT_per_modulation_unit: float = 1.5  # kT of vibrational energy at the backbone
+                                          # per unit of aggregate modulation.
+                                          # Derivation: _network_modulation = n_eff x 0.13,
+                                          # and field_at_tubulin = n_eff x 1.95 kT, so
+                                          # 1 modulation unit = 15.0 kT at LOCAL tubulin.
+                                          # Spine-to-backbone coupling efficiency ~10%
+                                          # (vibrational attenuation through spine neck
+                                          # and MT junctions) -> 15.0 x 0.10 = 1.5 kT.
+
+    enabled: bool = True              # Can disable to run without backbone coupling
+
+
+@dataclass
 class EnvironmentalParameters:
     """
     Environmental conditions
@@ -810,7 +865,8 @@ class Model6Parameters:
     metabolic_uv: MetabolicUVParameters = field(default_factory=MetabolicUVParameters)
     em_coupling: EMCouplingParameters = field(default_factory=EMCouplingParameters)
     multi_synapse: MultiSynapseParameters = field(default_factory=MultiSynapseParameters)
-    
+    dendritic_backbone: DendriticBackboneParameters = field(default_factory=DendriticBackboneParameters)
+
     # === EXISTING SECTIONS ===
     spatial: SpatialParameters = field(default_factory=SpatialParameters)
     calcium: CalciumParameters = field(default_factory=CalciumParameters)
@@ -826,6 +882,7 @@ class Model6Parameters:
     # === FEATURE FLAGS ===
     em_coupling_enabled: bool = False  # Master switch for EM coupling
     multi_synapse_enabled: bool = False  # Enable multi-synapse coordination
+    spine_calcium_feedback: bool = False  # Spine plasticity → calcium feedback loop
     
     def __post_init__(self):
         """Validate parameters and check experimental constraints"""
