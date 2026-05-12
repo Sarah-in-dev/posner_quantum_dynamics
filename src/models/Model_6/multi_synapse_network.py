@@ -105,6 +105,15 @@ class NetworkEntanglementTracker:
         Uses stable IDs: (synapse_idx, dimer.id) tuples that survive
         across collect_dimers() calls as long as the dimer exists.
 
+        As of May 13 2026 (option (c) cutover, edit 2/7):
+        - Each dimer dict now carries 'eta' (synapse._backbone_eta) and
+          'mt_invaded' (synapse._mt_invaded). These are needed for the
+          cross-synapse bond formation rate in _update_entanglement.
+        - self.intra_synapse_bonds_cache is rebuilt every call by
+          reading each synapse's per-synapse DimerParticleSystem.entanglement_bonds
+          and projecting bond.dimer_i/j into network stable-id tuples
+          with weight = bond.strength.
+
         Parameters
         ----------
         synapses : List[Model6QuantumSynapse]
@@ -113,6 +122,7 @@ class NetworkEntanglementTracker:
             Synapse positions in microns, shape (n_synapses, 3)
         """
         self.all_dimers = []
+        self.intra_synapse_bonds_cache = {}  # rebuilt every call
 
         for syn_idx, synapse in enumerate(synapses):
             if not hasattr(synapse, 'dimer_particles'):
@@ -120,6 +130,10 @@ class NetworkEntanglementTracker:
 
             particle_system = synapse.dimer_particles
             synapse_pos = positions[syn_idx]
+
+            # Synapse-level state for cross-synapse formation (read once per synapse)
+            eta = float(getattr(synapse, '_backbone_eta', 0.0))
+            mt_invaded = bool(getattr(synapse, '_mt_invaded', False))
 
             for dimer in particle_system.dimers:
                 stable_id = (syn_idx, dimer.id)
@@ -130,8 +144,19 @@ class NetworkEntanglementTracker:
                     'synapse_pos_um': synapse_pos,
                     'local_j': dimer.local_j_coupling,
                     'coherence': dimer.coherence,
-                    'P_S': dimer.singlet_probability
+                    'P_S': dimer.singlet_probability,
+                    'eta': eta,
+                    'mt_invaded': mt_invaded,
                 })
+
+            # Read-through: per-synapse bonds projected into network stable-id space.
+            # EntanglementBond dataclass (dimer_particles.py:69) has
+            # fields: dimer_i (int), dimer_j (int), strength (float), formation_time (float).
+            for bond in particle_system.entanglement_bonds:
+                id_a = (syn_idx, bond.dimer_i)
+                id_b = (syn_idx, bond.dimer_j)
+                key = (min(id_a, id_b), max(id_a, id_b))
+                self.intra_synapse_bonds_cache[key] = bond.strength
     
     def step(self, dt: float, synapses: List, positions: np.ndarray) -> dict:
         """
