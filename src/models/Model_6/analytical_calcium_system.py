@@ -412,7 +412,16 @@ class AnalyticalCalciumSystem:
         if hasattr(self, '_local_ca'):
             for i, (x, y) in enumerate(self.local_points):
                 self._local_ca[i] = self._ca_field[x, y]
-    
+
+    def apply_return(self, ca_returned: np.ndarray):
+        """Return calcium to the field (e.g., from dimer dissolution)."""
+        self._ca_field += ca_returned
+
+        # Also update local points
+        if hasattr(self, '_local_ca'):
+            for i, (x, y) in enumerate(self.local_points):
+                self._local_ca[i] = self._ca_field[x, y]
+
     def get_concentration(self) -> np.ndarray:
         """
         Get current free calcium concentration field

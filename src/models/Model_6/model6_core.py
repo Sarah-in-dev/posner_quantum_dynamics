@@ -416,9 +416,16 @@ class Model6QuantumSynapse:
                 collective_field_kT=self._collective_field_kT
             )
 
+            # Calcium return from dissolved dimers (DDSC mechanism)
+            n_dissolved = self.dimer_particles.get_dissolved_count()
+            if n_dissolved > 0:
+                ca_per_dimer_M = 6.0 / (6.022e23 * 1e-17)  # 6 Ca per dimer, 0.01 µm³ AZ volume
+                ca_return = np.full_like(ca_conc, ca_per_dimer_M * n_dissolved)
+                self.calcium.apply_return(ca_return)
+
             # Update dimer count from particle system (source of truth)
             self._previous_dimer_count = particle_metrics['n_dimers']
-            
+
             # EMERGENT metrics replace prescribed ones
             n_dimers_total = particle_metrics['n_dimers']
             n_entangled_network = particle_metrics['largest_cluster']  # KEY: entangled network size
@@ -516,6 +523,7 @@ class Model6QuantumSynapse:
             
 
             # --- PHASE 9: ELIGIBILITY FROM PARTICLE SYSTEM (Agarwal 2023) ---
+            ca_conc = self.calcium.get_concentration()  # Re-read after dissolution return
             calcium_uM = float(np.max(ca_conc)) * 1e6
             
             # Eligibility IS the singlet state - no separate module needed
@@ -596,10 +604,21 @@ class Model6QuantumSynapse:
             # CaMKII receives dimer field continuously (barrier modulation)
             camkii_state = self.camkii.step(dt, calcium_uM, dimer_field_kT)
 
+            # CaMKII molecular_memory gates commitment (DDSC mechanism)
+            # Measurement opens the gate, dissolved dimers return calcium,
+            # CaMKII integrates Ca²⁺ through T286 autophosphorylation cascade.
+            # Commitment fires when molecular_memory reaches threshold.
+            if (not self._camkii_committed
+                    and getattr(self, '_measurement_gate_opened', False)
+                    and camkii_state['molecular_memory'] > 0.5):
+                self._camkii_committed = True
+                self._commitment_time = getattr(self, '_measurement_time', self.time)
+                self._committed_memory_level = camkii_state['molecular_memory']
+
             # --- PHASE 11: SPINE PLASTICITY ---
             if self._camkii_committed:
                 spine_state = self.spine_plasticity.step(
-                    dt, 
+                    dt,
                     self._committed_memory_level,
                     calcium_uM,
                     quantum_field_kT=dimer_field_kT
@@ -672,16 +691,24 @@ class Model6QuantumSynapse:
                 collective_field_kT=self._collective_field_kT
             )
 
+            # Calcium return from dissolved dimers (DDSC mechanism)
+            n_dissolved = self.dimer_particles.get_dissolved_count()
+            if n_dissolved > 0:
+                ca_per_dimer_M = 6.0 / (6.022e23 * 1e-17)  # 6 Ca per dimer, 0.01 µm³ AZ volume
+                ca_return = np.full_like(ca_conc, ca_per_dimer_M * n_dissolved)
+                self.calcium.apply_return(ca_return)
+
             # Update dimer count from particle system (source of truth)
             self._previous_dimer_count = particle_metrics['n_dimers']
-            
+
             # Dopamine update
             if self.dopamine is not None:
                 reward = stimulus.get('reward', False)
                 self.dopamine.step(dt, reward_signal=reward)
-            
+
+            ca_conc = self.calcium.get_concentration()  # Re-read after dissolution return
             calcium_uM = float(np.max(ca_conc)) * 1e6
-            
+
             # --- ELIGIBILITY FROM PARTICLE SYSTEM (Agarwal 2023) ---
             if self.dimer_particles.dimers:
                 mean_P_S = np.mean([d.singlet_probability for d in self.dimer_particles.dimers])

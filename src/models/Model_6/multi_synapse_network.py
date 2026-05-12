@@ -92,7 +92,12 @@ class NetworkEntanglementTracker:
         # Network state
         self.all_dimers = []  # List of dimer dicts keyed by stable_id
         self.entanglement_bonds = set()  # (stable_id_i, stable_id_j) — stable_id = (syn_idx, dimer.id)
-        
+
+        # === NEW (option (c) cutover, May 13 2026): two-container split ===
+        # Populated in subsequent edits. Existing `entanglement_bonds` stays in use until cutover.
+        self.cross_synapse_bonds: Dict[Tuple, float] = {}        # tracker-owned cross-spine edges, weight = P_S_i × P_S_j
+        self.intra_synapse_bonds_cache: Dict[Tuple, float] = {}  # rebuilt each collect_dimers from per-synapse systems
+
     def collect_dimers(self, synapses: List, positions: np.ndarray):
         """
         Collect all dimers from all synapses with position info.
@@ -1220,12 +1225,15 @@ class MultiSynapseNetwork:
 
             syn._plasticity_gate = gate_open
 
-            # Commitment with count-dependent graded drive
+            # Measurement performed but commitment is NOT immediate.
+            # Record measurement outcome — dissolved dimers will return
+            # calcium, driving CaMKII cascade (DDSC mechanism).
+            # _camkii_committed will be set by CaMKII molecular_memory
+            # reaching threshold in the synapse's step().
             if gate_open and not getattr(syn, '_camkii_committed', False):
-                syn._camkii_committed = True
-                syn._commitment_time = self.time
-                syn._committed_memory_level = self._committed_count_to_drive(count)
-                syn._committed_dimer_count = int(count)
+                syn._measurement_gate_opened = True
+                syn._measurement_time = self.time
+                syn._measurement_dimer_count = int(count)
 
         # === POST-MEASUREMENT: Entanglement is consumed ===
         # Measurement collapses the quantum state

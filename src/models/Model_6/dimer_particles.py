@@ -132,7 +132,10 @@ class DimerParticleSystem:
         
         # Formation tracking
         self.formation_rate_field = np.zeros(grid_shape)
-        
+
+        # Dissolution tracking (calcium return)
+        self._dissolved_this_step = 0
+
         # Diagnostics
         self.history = {
             'time': [],
@@ -235,7 +238,8 @@ class DimerParticleSystem:
                 self.dimers.remove(dimer)
                 self._remove_all_bonds_for_dimer(dimer.id)
                 n_deaths += 1
-        
+                self._dissolved_this_step += 1
+
         return {'n_births': n_births, 'n_deaths': n_deaths}
     
     def _remove_all_bonds_for_dimer(self, dimer_id: int):
@@ -247,6 +251,7 @@ class DimerParticleSystem:
     
     def _remove_dimer(self, dimer: Dimer):
         """Remove dimer and its entanglement bonds"""
+        self._dissolved_this_step += 1
         self.dimers.remove(dimer)
         
         # Remove all entanglement bonds involving this dimer
@@ -254,7 +259,11 @@ class DimerParticleSystem:
                           if b.dimer_i == dimer.id or b.dimer_j == dimer.id]
         for bond in bonds_to_remove:
             self.entanglement_bonds.discard(bond)
-    
+
+    def get_dissolved_count(self):
+        """Number of dimers dissolved this step (for calcium return)."""
+        return self._dissolved_this_step
+
     # =========================================================================
     # COHERENCE DYNAMICS
     # =========================================================================
@@ -541,6 +550,9 @@ class DimerParticleSystem:
         j_coupling_field : np.ndarray
             J-coupling field (Hz) from ATP system
         """
+        # 0. Reset per-step dissolution counter
+        self._dissolved_this_step = 0
+
         # 1. Update time first
         self.time += dt
         
