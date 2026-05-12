@@ -320,13 +320,22 @@ def step_network_per_synapse(network, dt, per_syn_stimuli):
     for i, syn in enumerate(network.synapses):
         syn.step(dt, per_syn_stimuli[i])
 
+    # Backbone Fröhlich condensation update — must run after per-synapse
+    # step (so _network_modulation is fresh) and before the entanglement
+    # tracker (which now reads backbone eta for cross-synapse bond rate).
+    # Gated on _backbone_frohlich being non-None (only true when params
+    # has dendritic_backbone.enabled=True at initialize() time).
+    if getattr(network, '_backbone_frohlich', None) is not None:
+        network._update_backbone_field()
+
     # Network-level entanglement (every 10 steps)
     if not hasattr(network, '_entanglement_step_counter'):
         network._entanglement_step_counter = 0
     network._entanglement_step_counter += 1
     if network._entanglement_step_counter % 10 == 0:
         network._network_entanglement = network.entanglement_tracker.step(
-            dt, network.synapses, network.positions
+            dt, network.synapses, network.positions,
+            coupling_weights=getattr(network, 'coupling_weights', None),
         )
 
     # Coordinated gate on reward steps

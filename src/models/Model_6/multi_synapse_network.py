@@ -81,7 +81,14 @@ class NetworkEntanglementTracker:
     This replaces the naive sum of per-synapse entangled counts
     with true network-level entanglement tracking.
     """
-    
+
+    # Cross-synapse bond formation/dissolution rate constants.
+    # K_ENTANGLE_EM_BASE matches the per-synapse Pathway 2 base rate used in
+    # DimerParticleSystem (k_entangle = 0.5 in the old _update_entanglement).
+    # K_DISENTANGLE_BASE matches the old k_disentangle base (= 0.1).
+    K_ENTANGLE_EM_BASE: float = 0.5
+    K_DISENTANGLE_BASE: float = 0.1
+
     def __init__(self, coupling_length_um: float = 5.0, 
                  j_coupling_threshold: float = 5.0,
                  coherence_threshold: float = 0.3):
@@ -158,17 +165,18 @@ class NetworkEntanglementTracker:
                 key = (min(id_a, id_b), max(id_a, id_b))
                 self.intra_synapse_bonds_cache[key] = bond.strength
     
-    def step(self, dt: float, synapses: List, positions: np.ndarray) -> dict:
+    def step(self, dt: float, synapses: List, positions: np.ndarray,
+             coupling_weights: Optional[np.ndarray] = None) -> dict:
         """
         Update network-level entanglement
-        
+
         Returns
         -------
         dict with network metrics
         """
         # Collect current dimers from all synapses
         self.collect_dimers(synapses, positions)
-        
+
         n = len(self.all_dimers)
         if n < 2:
             return {
@@ -177,9 +185,9 @@ class NetworkEntanglementTracker:
                 'n_bonds': 0,
                 'f_entangled': 0.0
             }
-        
+
         # Update entanglement bonds
-        self._update_entanglement(dt)
+        self._update_entanglement(dt, coupling_weights)
         
         # Find largest connected cluster
         largest_cluster = self._find_largest_cluster()
@@ -199,58 +207,86 @@ class NetworkEntanglementTracker:
             'f_entangled': f_entangled
         }
     
-    def _update_entanglement(self, dt: float):
+    def _update_entanglement(self, dt: float, coupling_weights=None):
         """
-        Update pairwise entanglement with cross-synapse coupling
+        Cross-synapse bond dynamics.
+
+        As of May 13 2026 (option (c) cutover, edit 3/6):
+        - Intra-synapse bonds are NOT formed here. They are owned by
+          DimerParticleSystem via Pathway 1 (birth coherence, same ATP burst)
+          and Pathway 2 (local EM-mediated), and read through to
+          self.intra_synapse_bonds_cache by collect_dimers().
+        - Cross-synapse bonds (different synapse_idx on each endpoint) are
+          owned here. Formation rate is gated by:
+            * Backbone Fröhlich condensation: sqrt(eta_i × eta_j)
+              (linear in eta is correct — eta itself already encodes the
+               second-order phase transition per Zhang/Agarwal/Scully 2019;
+               weak-regime kinetic modulation per Reimers 2009)
+            * Spatial coupling along the lattice: coupling_weights[i,j]
+            * Microtubule invasion at both spines: hard gate (lattice continuity)
+            * Singlet character: P_S_i × P_S_j (also stored as edge weight)
+        - The legacy self.entanglement_bonds set is maintained as a union
+          mirror at the end of this method (edit 5 will convert it to a
+          @property and remove this mirror).
         """
-        k_entangle = 0.5  # Base rate
-        
-        # Clean up bonds for dimers that no longer exist
+        # Prune cross-synapse bonds for dimers that no longer exist
         current_ids = {d['global_id'] for d in self.all_dimers}
-        self.entanglement_bonds = {b for b in self.entanglement_bonds 
-                                    if b[0] in current_ids and b[1] in current_ids}
-        
-        n = len(self.all_dimers)
-        
-        for i in range(n):
-            for j in range(i + 1, n):
+        self.cross_synapse_bonds = {
+            k: v for k, v in self.cross_synapse_bonds.items()
+            if k[0] in current_ids and k[1] in current_ids
+        }
+
+        # Cross-synapse formation only runs when caller supplied coupling_weights.
+        # (Backward compat: if caller doesn't pass it, no cross bonds form —
+        # the test then exercises the intra-synapse path only.)
+        if coupling_weights is not None:
+            n = len(self.all_dimers)
+            for i in range(n):
                 d_i = self.all_dimers[i]
-                d_j = self.all_dimers[j]
-                
-                # Skip if either below coherence threshold
-                if (d_i['coherence'] < self.coherence_threshold or
-                    d_j['coherence'] < self.coherence_threshold):
-                    self._remove_bond(d_i['global_id'], d_j['global_id'])
-                    continue
-                
-                # Calculate coupling strength
-                j_coupling_factor = self._calculate_coupling(d_i, d_j)
-                
-                if j_coupling_factor < 0.1:
-                    # Too weak to maintain entanglement
-                    self._remove_bond(d_i['global_id'], d_j['global_id'])
-                    continue
-                
-                # Coherence factor
-                coherence_factor = d_i['coherence'] * d_j['coherence']
-                
-                # Effective rate
-                k_eff = k_entangle * j_coupling_factor * coherence_factor
-                
-                # Check current bond status
-                bond_exists = self._has_bond(d_i['global_id'], d_j['global_id'])
-                
-                if not bond_exists:
-                    # Try to form bond
-                    p_entangle = 1 - np.exp(-k_eff * dt)
-                    if np.random.random() < p_entangle:
-                        self._add_bond(d_i['global_id'], d_j['global_id'])
-                else:
-                    # Check for disentanglement
-                    k_disentangle = 0.1 * (1 - j_coupling_factor * coherence_factor)
-                    p_disentangle = 1 - np.exp(-k_disentangle * dt)
-                    if np.random.random() < p_disentangle:
-                        self._remove_bond(d_i['global_id'], d_j['global_id'])
+                for j in range(i + 1, n):
+                    d_j = self.all_dimers[j]
+
+                    # Skip intra-synapse — owned by DimerParticleSystem
+                    if d_i['synapse_idx'] == d_j['synapse_idx']:
+                        continue
+
+                    key = (min(d_i['global_id'], d_j['global_id']),
+                           max(d_i['global_id'], d_j['global_id']))
+
+                    # Hard gate: both spines must have invading MTs
+                    if not (d_i['mt_invaded'] and d_j['mt_invaded']):
+                        self.cross_synapse_bonds.pop(key, None)
+                        continue
+
+                    # Geometric mean of eta — both synapses must couple
+                    eta_factor = (d_i['eta'] * d_j['eta']) ** 0.5
+                    w_spatial = float(coupling_weights[d_i['synapse_idx'],
+                                                       d_j['synapse_idx']])
+                    P_product = d_i['P_S'] * d_j['P_S']
+
+                    k_cross = (self.K_ENTANGLE_EM_BASE
+                               * eta_factor * w_spatial * P_product)
+
+                    bond_exists = key in self.cross_synapse_bonds
+                    if not bond_exists:
+                        p_form = 1.0 - np.exp(-k_cross * dt)
+                        if np.random.random() < p_form:
+                            self.cross_synapse_bonds[key] = P_product
+                    else:
+                        k_diss = self.K_DISENTANGLE_BASE * (1.0 - eta_factor * P_product)
+                        p_diss = 1.0 - np.exp(-max(k_diss, 0.0) * dt)
+                        if np.random.random() < p_diss:
+                            self.cross_synapse_bonds.pop(key, None)
+                        else:
+                            # Update weight (P_S drifts as coherence evolves)
+                            self.cross_synapse_bonds[key] = P_product
+
+        # Maintain legacy entanglement_bonds set as union mirror for readers
+        # (edit 5 will replace this with a @property)
+        self.entanglement_bonds = (
+            set(self.intra_synapse_bonds_cache.keys())
+            | set(self.cross_synapse_bonds.keys())
+        )
     
     def _calculate_coupling(self, d_i: dict, d_j: dict) -> float:
         """
@@ -445,15 +481,18 @@ class NetworkEntanglementTracker:
     
     def _has_bond(self, id_i, id_j) -> bool:
         key = (min(id_i, id_j), max(id_i, id_j))
-        return key in self.entanglement_bonds
+        return (key in self.cross_synapse_bonds
+                or key in self.intra_synapse_bonds_cache)
 
-    def _add_bond(self, id_i, id_j):
+    def _add_bond(self, id_i, id_j, weight: float = 0.0):
+        # Network tracker only owns cross-synapse bonds. Intra-synapse bonds
+        # are owned by DimerParticleSystem and read through.
         key = (min(id_i, id_j), max(id_i, id_j))
-        self.entanglement_bonds.add(key)
+        self.cross_synapse_bonds[key] = weight
 
     def _remove_bond(self, id_i, id_j):
         key = (min(id_i, id_j), max(id_i, id_j))
-        self.entanglement_bonds.discard(key)
+        self.cross_synapse_bonds.pop(key, None)
 
 
     def perform_quantum_measurement(self, synapses: List) -> np.ndarray:
@@ -706,7 +745,14 @@ class MultiSynapseNetwork:
             Base parameters (will be copied for each synapse)
         """
         from copy import deepcopy
-        
+
+        # Store base params on the network so backbone init (line 772 below)
+        # and any params-dependent runtime code can see them. Previously
+        # self.params stayed at constructor default = None whenever callers
+        # (e.g. make_network) omitted params from the constructor call.
+        # May 13 2026 fix.
+        self.params = base_params
+
         self.synapses = []
         
         for i in range(self.n_synapses):
@@ -814,7 +860,8 @@ class MultiSynapseNetwork:
 
         if self._entanglement_step_counter % 10 == 0:
             self._network_entanglement = self.entanglement_tracker.step(
-                dt, self.synapses, self.positions
+                dt, self.synapses, self.positions,
+                coupling_weights=getattr(self, 'coupling_weights', None)
             )
         
         # =========================================================================

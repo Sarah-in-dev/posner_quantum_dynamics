@@ -76,8 +76,14 @@ while t < 5.0:
 print(f"  spine volumes: {spine_volumes()}", flush=True)
 print(f"  dimer counts:  {dimer_counts()}", flush=True)
 print(f"  total bonds:   {total_bonds()}", flush=True)
+print(f"  cross-synapse bonds:   {len(network.entanglement_tracker.cross_synapse_bonds)}", flush=True)
+print(f"  intra-synapse cache:   {len(network.entanglement_tracker.intra_synapse_bonds_cache)}", flush=True)
+print(f"  union (entanglement_bonds): {len(network.entanglement_tracker.entanglement_bonds)}", flush=True)
 print_gate_status()
 print_camkii_status()
+print(f"  syn 0: _mt_invaded={network.synapses[0]._mt_invaded}, _backbone_eta={network.synapses[0]._backbone_eta:.4f}", flush=True)
+print(f"  syn 1: _mt_invaded={network.synapses[1]._mt_invaded}, _backbone_eta={network.synapses[1]._backbone_eta:.4f}", flush=True)
+print(f"  coupling_weights[0,1]={network.coupling_weights[0,1]:.4f}", flush=True)
 
 # ── PHASE 2: Dopamine reward (1 s) ───────────────────────────────────────────
 print("\n=== PHASE 2: Dopamine + voltage (1 s) ===", flush=True)
@@ -108,8 +114,15 @@ print(f"  dimer counts:   {dimer_counts()}", flush=True)
 print(f"  committed:      {[getattr(s, '_camkii_committed', False) for s in network.synapses]}", flush=True)
 print(f"  network_committed: {network.network_committed}", flush=True)
 print(f"  total dissolved during phase 2: {total_dissolved}", flush=True)
+print(f"  total bonds:   {total_bonds()}", flush=True)
+print(f"  cross-synapse bonds:   {len(network.entanglement_tracker.cross_synapse_bonds)}", flush=True)
+print(f"  intra-synapse cache:   {len(network.entanglement_tracker.intra_synapse_bonds_cache)}", flush=True)
+print(f"  union (entanglement_bonds): {len(network.entanglement_tracker.entanglement_bonds)}", flush=True)
 print_gate_status()
 print_camkii_status()
+print(f"  syn 0: _mt_invaded={network.synapses[0]._mt_invaded}, _backbone_eta={network.synapses[0]._backbone_eta:.4f}", flush=True)
+print(f"  syn 1: _mt_invaded={network.synapses[1]._mt_invaded}, _backbone_eta={network.synapses[1]._backbone_eta:.4f}", flush=True)
+print(f"  coupling_weights[0,1]={network.coupling_weights[0,1]:.4f}", flush=True)
 print_calcium()
 
 # ── PHASE 3: Silent period (5 s) ─────────────────────────────────────────────
@@ -126,6 +139,9 @@ while t < 5.0:
     if t - last_print >= 1.0:
         print(f"  --- t={t:.1f}s ---", flush=True)
         print_camkii_status()
+        print(f"  syn 0: _mt_invaded={network.synapses[0]._mt_invaded}, _backbone_eta={network.synapses[0]._backbone_eta:.4f}", flush=True)
+        print(f"  syn 1: _mt_invaded={network.synapses[1]._mt_invaded}, _backbone_eta={network.synapses[1]._backbone_eta:.4f}", flush=True)
+        print(f"  coupling_weights[0,1]={network.coupling_weights[0,1]:.4f}", flush=True)
         print(f"  spine volumes: {spine_volumes()}", flush=True)
         if not committed_printed:
             for i, syn in enumerate(network.synapses):
@@ -135,6 +151,10 @@ while t < 5.0:
         last_print = t
 
 print(f"  final spine volumes: {spine_volumes()}", flush=True)
+print(f"  total bonds:   {total_bonds()}", flush=True)
+print(f"  cross-synapse bonds:   {len(network.entanglement_tracker.cross_synapse_bonds)}", flush=True)
+print(f"  intra-synapse cache:   {len(network.entanglement_tracker.intra_synapse_bonds_cache)}", flush=True)
+print(f"  union (entanglement_bonds): {len(network.entanglement_tracker.entanglement_bonds)}", flush=True)
 
 # ── Verdict ───────────────────────────────────────────────────────────────────
 v0 = spine_volumes()

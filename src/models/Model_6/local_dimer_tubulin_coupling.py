@@ -85,13 +85,16 @@ class LocalDimerTubulinCoupling:
         self.coupling_distance_nm = 1.5  # Dimer to tubulin distance
         self.decay_power = 3.0  # 1/r³ field decay
         
-        # Modulation scaling
-        # How much does one dimer affect the local tryptophan network?
-        # This should be small - we need ~10 synapses to reach threshold
-        self.modulation_per_dimer = 0.13  # Physics-derived: (0.83kT/5kT) × 0.5 × 1.5
-
-        # DERIVATION: U_dimer(2nm)=0.83kT, V_coupling=5kT, efficiency=0.5, network=1.5
-        # Validation: 10 syn × 5 dim × 0.13 = 6.5 > threshold(5.0) ✓
+        # Modulation scaling — sqrt(N) cooperative regime (Babcock 2024)
+        # Renamed from modulation_per_dimer (linear-N) to modulation_per_sqrt_dimer
+        # (sqrt-N) to match the superradiant cooperative dipole scaling
+        # (mu_collective ∝ √N_eff) already used in em_tryptophan_module.py.
+        # Linear-N was valid only in the original design range of ~5 dimers/synapse;
+        # with realistic ~2000 dimers it drove backbone Fröhlich into unphysical
+        # full-condensate regimes (Reimers 2009 bounds).
+        # Prefactor 0.15: puts backbone at r/r_c ≈ 2-5 (weak condensate)
+        # for 1000-2000 dimers/synapse.  √2000 × 0.15 ≈ 6.7 per synapse.
+        self.modulation_per_sqrt_dimer = 0.15
         
         # Coherence requirement
         self.min_coherence = 0.3  # Below this, dimer is effectively classical
@@ -148,9 +151,14 @@ class LocalDimerTubulinCoupling:
         # Individual dimers contribute additively to LOCAL tubulin modulation
         total_field_kT = n_effective * field_per_dimer_kT
         
-        # Modulation strength (synapse's contribution to network)
-        # This is what gets summed across synapses
-        modulation = n_effective * self.modulation_per_dimer
+        # Cooperative sqrt(N) scaling per Babcock 2024 (matches mu_collective
+        # ∝ √N_eff used in em_tryptophan_module.py for the collective dipole).
+        # Linear-N was a hand-tuned approximation valid only when n_dimers was
+        # in the design range of ~5 per synapse; with realistic ~2000 dimers
+        # it produced unphysical full-condensate regimes per Reimers 2009.
+        # Prefactor 0.15 chosen to put backbone Fröhlich at r/r_c ≈ 2-5 (weak
+        # regime) for typical 1000-2000 dimer counts per synapse.
+        modulation = np.sqrt(n_effective) * self.modulation_per_sqrt_dimer
         
         # No artificial cap — modulation scales with actual dimer count and coherence
         # Physics provides natural limits: finite dimers, coherence decay, spatial averaging
