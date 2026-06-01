@@ -789,6 +789,10 @@ class DendriticBackboneParameters:
                                           # (vibrational attenuation through spine neck
                                           # and MT junctions) -> 15.0 x 0.10 = 1.5 kT.
 
+    # --- Quantum pump threshold (Step B) ---
+    omega_0: float = 8.0e6           # Hz — collective mode frequency (ω₀/2π = 8 MHz)
+    Q: float = 10.0                  # Quality factor (slip-layer damping)
+
     # --- Metabolic drive (Step D) ---
     p_active_max_W: float = 60.0e-15     # Watts — sweep range [10, 65] fW
 

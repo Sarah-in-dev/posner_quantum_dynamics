@@ -38,7 +38,9 @@ import numpy as np
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
 import logging
-from vibrational_cascade_module import FrohlichCondensation, TubulinCascadeParameters
+from model6_parameters import (
+    compute_metabolic_power, P_BASAL_W, bose_einstein_occupation, hbar,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -644,7 +646,6 @@ class MultiSynapseNetwork:
         self.params = params
         self.use_correlated_sampling = use_correlated_sampling
         self.disable_auto_commitment = False
-        self._backbone_frohlich = None  # Created when backbone params are available
 
         # Generate synapse positions
         self.positions = self._generate_positions()
@@ -778,19 +779,15 @@ class MultiSynapseNetwork:
         self._initialized = True
         logger.info(f"Initialized {self.n_synapses} Model6 instances")
 
-        # Initialize backbone Fröhlich calculator if enabled
+        # Log backbone pump configuration
         if self.params is not None and hasattr(self.params, 'dendritic_backbone') and self.params.dendritic_backbone.enabled:
             bp = self.params.dendritic_backbone
-            backbone_cascade_params = TubulinCascadeParameters(
-                D_modes=bp.D_modes,
-                phi_dissipation=bp.phi_dissipation,
-                chi_redistribution=bp.chi_redistribution,
-            )
-            self._backbone_frohlich = FrohlichCondensation(backbone_cascade_params)
-            r_c = (bp.phi_dissipation / (bp.D_modes + 1)) * (1.0 + bp.phi_dissipation / bp.chi_redistribution)
-            logger.info(f"Backbone Fröhlich condensation: D={bp.D_modes}, "
-                        f"phi={bp.phi_dissipation/1e9:.1f} GHz, chi={bp.chi_redistribution/1e9:.2f} GHz, "
-                        f"r_c={r_c/1e9:.1f} GHz")
+            omega_ang = 2.0 * np.pi * bp.omega_0
+            n_bar = bose_einstein_occupation(bp.omega_0)
+            P_c = n_bar * hbar * omega_ang**2 / bp.Q
+            logger.info(f"Backbone metabolic pump: ω₀/2π={bp.omega_0/1e6:.1f} MHz, "
+                        f"Q={bp.Q:.0f}, P_c={P_c*1e15:.1f} fW, "
+                        f"P_active_max={bp.p_active_max_W*1e15:.0f} fW")
     
     def disable_network_commitment(self):
         """Disable network-level field commitment for coordination experiments"""
@@ -1016,59 +1013,48 @@ class MultiSynapseNetwork:
     
     
     def _update_backbone_field(self):
-        """Compute backbone Fröhlich condensation and pass eta to each synapse.
+        """Compute backbone condensation eta from metabolic drive P_met.
 
         The backbone's condensation ratio (eta) modulates f_coherent in
         invaded spines via cooperative robustness — NOT by injecting an
         additive field (shaft MTs are too far for near-field coupling).
 
         Steps:
-        1. Collect per-synapse reverse coupling modulation
-        2. Compute spatially-weighted aggregate pump rate for backbone
-        3. Fröhlich condensation (Zhang/Scully 2019 rate equations) -> eta
+        1. Compute per-synapse metabolic power P_met from upstream signals
+        2. Spatially aggregate active component (basal excluded from sum)
+        3. Threshold: eta = (r-1)/(r+1) where r = P_met_agg / P_c
         4. Pass eta to each synapse (gated on MT invasion in model6_core)
         """
         bp = self.params.dendritic_backbone
 
-        # Step 1: Collect per-synapse reverse coupling
-        modulations = np.array([
-            getattr(s, '_network_modulation', 0.0) for s in self.synapses
+        # Critical power: P_c = n̄_s · ℏω₀² / Q  (threshold is n_ex ≥ n̄_s)
+        omega_ang = 2.0 * np.pi * bp.omega_0
+        n_bar = bose_einstein_occupation(bp.omega_0)
+        P_c = n_bar * hbar * omega_ang**2 / bp.Q
+
+        # Per-synapse metabolic power from upstream signals
+        p_met = np.array([
+            compute_metabolic_power(
+                getattr(s, '_mt_invaded', False),
+                s.calcium.channels.get_open_fraction(),
+                bp.p_active_max_W,
+            ) for s in self.synapses
         ])
 
-        # Step 2: Spatially-weighted aggregate pump rate
-        # Each synapse's modulation contributes to the backbone pump,
-        # weighted by its spatial coupling to the segment
-        # self.coupling_weights is the pre-computed n×n matrix
-        backbone_pump_per_synapse = self.coupling_weights @ modulations
+        # Aggregate ONLY the active component; basal is per-spine, not summed
+        p_active = p_met - P_BASAL_W
+        p_met_agg = P_BASAL_W + self.coupling_weights @ p_active
 
-        # Step 3: Fröhlich condensation of backbone (replaces sigmoid)
         for i, synapse in enumerate(self.synapses):
-            aggregate_mod = backbone_pump_per_synapse[i]
-
-            # Convert dimensionless modulation -> physical energy (kT) -> pump rate (Hz)
-            # Uses same optomechanical transduction as per-synapse path:
-            #   r = r_ref x (kT / kT_ref)^2,  with r_ref=100 GHz, kT_ref=22.1
-            backbone_kT = aggregate_mod * bp.kT_per_modulation_unit
-            r_pump = 100.0e9 * (backbone_kT / 22.1) ** 2
-
-            # Fröhlich condensation (Zhang/Scully 2019 rate equations)
-            cond_state = self._backbone_frohlich.calculate_steady_state(r_pump)
-            eta = cond_state['condensation_ratio']
-
-            # Pass condensation ratio to invaded synapses.
-            # The synapse's tryptophan module uses eta to boost f_coherent
-            # (cooperative robustness via continuous tubulin lattice).
-            # Non-invaded synapses ignore eta (gated in model6_core.py).
+            r = p_met_agg[i] / P_c
+            eta = (r - 1.0) / (r + 1.0) if r >= 1.0 else 0.0
             synapse.set_backbone_condensation_eta(eta)
 
-            # Diagnostic: print once per step (synapse 0 only)
             if i == 0:
                 mt_inv = getattr(synapse, '_mt_invaded', False)
-                print(f"[backbone diag] agg_mod={aggregate_mod:.4f}  "
-                      f"backbone_kT={backbone_kT:.2f}  "
-                      f"r={r_pump/1e9:.1f}GHz  r/r_c={cond_state['pump_rate']/cond_state['r_c']:.2f}  "
-                      f"eta={eta:.4f}  regime={cond_state['regime']}  "
-                      f"invaded={mt_inv}")
+                print(f"[backbone diag] P_met={p_met[i]*1e15:.2f}fW  "
+                      f"P_agg={p_met_agg[i]*1e15:.2f}fW  P_c={P_c*1e15:.2f}fW  "
+                      f"r={r:.3f}  eta={eta:.4f}  invaded={mt_inv}")
 
     def sample_correlated_eligibilities(self, rng: np.random.Generator = None) -> np.ndarray:
         """
