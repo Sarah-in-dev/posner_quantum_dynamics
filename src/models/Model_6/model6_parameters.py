@@ -36,6 +36,19 @@ epsilon_0 = constants.epsilon_0  # Vacuum permittivity
 h = constants.h  # Planck constant
 hbar = constants.hbar  # Reduced Planck constant
 
+
+def bose_einstein_occupation(f_hz: float, T: float = 310.0) -> float:
+    """Bose-Einstein occupation n̄ = 1/(exp(h·f/kT) − 1) for frequency f in Hz.
+
+    Uses h·f (≡ ℏ·2πf = ℏω), not the ℏ·f shortcut that drops the 2π.
+    At f = 8 MHz, T = 310 K: n̄ ≈ 8.07 × 10⁵.
+    """
+    x = h * f_hz / (k_B * T)
+    if x > 500.0:
+        return 0.0
+    return 1.0 / np.expm1(x)
+
+
 @dataclass
 class SpatialParameters:
     """
