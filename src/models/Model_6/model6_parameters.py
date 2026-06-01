@@ -49,6 +49,20 @@ def bose_einstein_occupation(f_hz: float, T: float = 310.0) -> float:
     return 1.0 / np.expm1(x)
 
 
+# Basal metabolic power per spine, aggregated over ~1 µm MT (May 30 metabolic-bias calc).
+# Gives rest P_met/P_c ≈ 0.04 at Q = 10 (subcritical).
+P_BASAL_W = 0.84e-15  # Watts
+
+
+def compute_metabolic_power(mt_invaded: bool, ca_open_fraction: float,
+                            p_active_max: float = 60.0e-15) -> float:
+    """Metabolic drive P_met = P_basal + mt_invaded · ca_open · P_active_max (Watts).
+
+    Returns P_met in Watts. Inputs are upstream of the condensate (no circularity).
+    """
+    return P_BASAL_W + float(mt_invaded) * ca_open_fraction * p_active_max
+
+
 @dataclass
 class SpatialParameters:
     """
@@ -774,6 +788,9 @@ class DendriticBackboneParameters:
                                           # Spine-to-backbone coupling efficiency ~10%
                                           # (vibrational attenuation through spine neck
                                           # and MT junctions) -> 15.0 x 0.10 = 1.5 kT.
+
+    # --- Metabolic drive (Step D) ---
+    p_active_max_W: float = 60.0e-15     # Watts — sweep range [10, 65] fW
 
     enabled: bool = True              # Can disable to run without backbone coupling
 
