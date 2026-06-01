@@ -98,12 +98,22 @@ class NetworkEntanglementTracker:
         
         # Network state
         self.all_dimers = []  # List of dimer dicts keyed by stable_id
-        self.entanglement_bonds = set()  # (stable_id_i, stable_id_j) — stable_id = (syn_idx, dimer.id)
 
-        # === NEW (option (c) cutover, May 13 2026): two-container split ===
-        # Populated in subsequent edits. Existing `entanglement_bonds` stays in use until cutover.
+        # === Two-container split (option (c) cutover, May 13 2026) ===
         self.cross_synapse_bonds: Dict[Tuple, float] = {}        # tracker-owned cross-spine edges, weight = P_S_i × P_S_j
         self.intra_synapse_bonds_cache: Dict[Tuple, float] = {}  # rebuilt each collect_dimers from per-synapse systems
+
+    @property
+    def entanglement_bonds(self):
+        """Union of cross-synapse and intra-synapse bonds. Computed on demand.
+
+        This is the read-only view used by callers that need every bond regardless
+        of class — primarily connected-component partitioning for per-cluster
+        quantum measurement. Mutations go through the canonical containers
+        (cross_synapse_bonds, or DimerParticleSystem.entanglement_bonds via the
+        intra cache mirror).
+        """
+        return set(self.cross_synapse_bonds.keys()) | set(self.intra_synapse_bonds_cache.keys())
 
     def collect_dimers(self, synapses: List, positions: np.ndarray):
         """
@@ -225,9 +235,9 @@ class NetworkEntanglementTracker:
             * Spatial coupling along the lattice: coupling_weights[i,j]
             * Microtubule invasion at both spines: hard gate (lattice continuity)
             * Singlet character: P_S_i × P_S_j (also stored as edge weight)
-        - The legacy self.entanglement_bonds set is maintained as a union
-          mirror at the end of this method (edit 5 will convert it to a
-          @property and remove this mirror).
+        - The entanglement_bonds property exposes the union of both bond
+          classes for callers that need all bonds (e.g. connected-component
+          partitioning).
         """
         # Prune cross-synapse bonds for dimers that no longer exist
         current_ids = {d['global_id'] for d in self.all_dimers}
@@ -281,13 +291,6 @@ class NetworkEntanglementTracker:
                             # Update weight (P_S drifts as coherence evolves)
                             self.cross_synapse_bonds[key] = P_product
 
-        # Maintain legacy entanglement_bonds set as union mirror for readers
-        # (edit 5 will replace this with a @property)
-        self.entanglement_bonds = (
-            set(self.intra_synapse_bonds_cache.keys())
-            | set(self.cross_synapse_bonds.keys())
-        )
-    
     def _calculate_coupling(self, d_i: dict, d_j: dict) -> float:
         """
         Calculate effective coupling between two dimers
@@ -851,7 +854,15 @@ class MultiSynapseNetwork:
                 calcium_peak_uM=np.max(synapse.calcium.get_concentration()) * 1e6,
             )
             synapse_states.append(state)
-        
+
+        # === SHARED DENDRITIC BACKBONE FIELD ===
+        # The microtubule backbone is continuous along the dendritic segment.
+        # Each synapse's reverse coupling (dimer→tubulin modulation) pumps
+        # the backbone toward Fröhlich condensation. Above threshold, all
+        # synapses benefit from the shared coherent field.
+        if self.params is not None and hasattr(self.params, 'dendritic_backbone') and self.params.dendritic_backbone.enabled:
+            self._update_backbone_field()
+
         # Update network-level entanglement
         # Only update entanglement every 10 steps (expensive O(n²) operation)
         if not hasattr(self, '_entanglement_step_counter'):
@@ -899,14 +910,6 @@ class MultiSynapseNetwork:
                         f"n_committed_synapses={state_now.n_committed}"
                     )
         # =========================================================================
-
-        # === SHARED DENDRITIC BACKBONE FIELD ===
-        # The microtubule backbone is continuous along the dendritic segment.
-        # Each synapse's reverse coupling (dimer→tubulin modulation) pumps
-        # the backbone toward Fröhlich condensation. Above threshold, all
-        # synapses benefit from the shared coherent field.
-        if self.params is not None and hasattr(self.params, 'dendritic_backbone') and self.params.dendritic_backbone.enabled:
-            self._update_backbone_field()
 
         # Compute network-level quantities
         network_state = self._compute_network_state(synapse_states)
@@ -1353,7 +1356,7 @@ class MultiSynapseNetwork:
         
         # Find bonds to break
         bonds_to_remove = set()
-        for bond in tracker.entanglement_bonds:
+        for bond in tracker.cross_synapse_bonds:
             id_i, id_j = bond
             syn_i = dimer_to_synapse.get(id_i, -1)
             syn_j = dimer_to_synapse.get(id_j, -1)
@@ -1376,7 +1379,7 @@ class MultiSynapseNetwork:
         
         # Remove discordant bonds
         for bond in bonds_to_remove:
-            tracker.entanglement_bonds.discard(bond)
+            tracker.cross_synapse_bonds.pop(bond, None)
     
     
     def _evaluate_independent_gate(self, stimulus: dict):
