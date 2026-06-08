@@ -1035,7 +1035,7 @@ class MultiSynapseNetwork:
         # Per-synapse metabolic power from upstream signals
         p_met = np.array([
             compute_metabolic_power(
-                getattr(s, '_mt_invaded', False),
+                getattr(s.spine_plasticity, 'E_invasion', 0.0),
                 s.calcium.channels.get_open_fraction(),
                 bp.p_active_max_W,
             ) for s in self.synapses
@@ -1050,11 +1050,19 @@ class MultiSynapseNetwork:
             eta = (r - 1.0) / (r + 1.0) if r >= 1.0 else 0.0
             synapse.set_backbone_condensation_eta(eta)
 
-            if i == 0:
-                mt_inv = getattr(synapse, '_mt_invaded', False)
-                print(f"[backbone diag] P_met={p_met[i]*1e15:.2f}fW  "
-                      f"P_agg={p_met_agg[i]*1e15:.2f}fW  P_c={P_c*1e15:.2f}fW  "
-                      f"r={r:.3f}  eta={eta:.4f}  invaded={mt_inv}")
+
+        # Throttled diagnostics (every 200 backbone updates)
+        if not hasattr(self, '_backbone_diag_n'):
+            self._backbone_diag_n = 0
+        self._backbone_diag_n += 1
+        if self._backbone_diag_n % 200 == 0:
+            s = self.synapses[0]
+            mt_inv = getattr(s, '_mt_invaded', False)
+            r0 = p_met_agg[0] / P_c
+            eta0 = (r0 - 1.0) / (r0 + 1.0) if r0 >= 1.0 else 0.0
+            print(f"[backbone diag] P_met={p_met[0]*1e15:.2f}fW  "
+                  f"P_agg={p_met_agg[0]*1e15:.2f}fW  P_c={P_c*1e15:.2f}fW  "
+                  f"r={r0:.3f}  eta={eta0:.4f}  invaded={mt_inv}")
 
     def sample_correlated_eligibilities(self, rng: np.random.Generator = None) -> np.ndarray:
         """

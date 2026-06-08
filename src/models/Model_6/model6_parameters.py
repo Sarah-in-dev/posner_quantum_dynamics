@@ -54,13 +54,14 @@ def bose_einstein_occupation(f_hz: float, T: float = 310.0) -> float:
 P_BASAL_W = 0.84e-15  # Watts
 
 
-def compute_metabolic_power(mt_invaded: bool, ca_open_fraction: float,
+def compute_metabolic_power(e_invasion: float, ca_open_fraction: float,
                             p_active_max: float = 60.0e-15) -> float:
-    """Metabolic drive P_met = P_basal + mt_invaded · ca_open · P_active_max (Watts).
+    """Metabolic drive P_met = P_basal + E_invasion · ca_open · P_active_max (Watts).
 
-    Returns P_met in Watts. Inputs are upstream of the condensate (no circularity).
+    E_invasion ∈ [0, 1] is the continuous invasion envelope from spine plasticity.
+    Returns P_met in Watts.  Inputs are upstream of the condensate (no circularity).
     """
-    return P_BASAL_W + float(mt_invaded) * ca_open_fraction * p_active_max
+    return P_BASAL_W + float(e_invasion) * ca_open_fraction * p_active_max
 
 
 @dataclass

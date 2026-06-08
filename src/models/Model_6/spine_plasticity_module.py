@@ -75,6 +75,21 @@ class ActinParameters:
     # Destabilization (slow return to baseline)
     k_destabilization: float = 0.001     # s⁻¹, stable→dynamic (very slow)
 
+    # Enlargement + shaft-coupled supply + confinement (Honkura 2008): activity/CaM-driven,
+    # extruded to the dendritic shaft unless confined by CaMKII; the MT-invasion driver.
+    hill_calcium: float = 4.0        # CaM cooperativity (4 Ca2+ per CaM); matches camkii hill_calcium
+    # f_CaM half-activation reuses K_calcium_poly (= 1.0 uM), defined above.
+    tau_extrude: float = 180.0       # s; unconfined-enlargement extrusion to shaft. Honkura band
+                                     # 2-15 min (>6 min retention threshold). Pre-registered in-band.
+    S0: float = 0.12                 # resting G-actin monomer fraction (~12%, Star/Honkura)
+    k_exchange: float = 1.0          # s^-1; spine<->shaft G-actin exchange (fast, ~seconds). Pre-registered.
+    k_conf: float = 0.02             # s^-1; confinement establishment (~CaMKII 1-2 min). Pre-registered.
+    k_unconf: float = 0.0005         # s^-1; confinement decay (slow; confinement persists). Pre-registered.
+    E_ref: float = 1.87              # asymptotic enlargement under sustained maximal Ca (3000 s uncommitted run).
+    invasion_threshold: float = 0.1  # "sufficient F-actin reorganization" onset; soft, pre-registered.
+    # E_cap removed: the ceiling is now F_max, derived in _update_actin from
+    # volume.max_enlargement_ratio and volume.actin_volume_scaling (the measured 3.9x cap).
+
     # Quantum coupling - barrier modulation
     # Arp2/3 conformational barrier ~8 kT, ~30% electrostatic
     barrier_polymerization_kT: float = 8.0
@@ -240,9 +255,14 @@ class SpinePlasticityModule:
         # Actin pools (relative units)
         self.actin_dynamic = p.actin.dynamic_pool_baseline
         self.actin_stable = p.actin.stable_pool_baseline
-        
+        self.actin_enlargement = 0.0     # zero at rest (subcritical)
+        self.E_invasion = 0.0            # invasion reach 0-1 -> r in the Q1->Q2 kernel (wired later)
+
+        self.actin_monomer = p.actin.S0   # shaft-coupled G-actin supply
+        self.confinement   = 0.0          # CaMKII confinement latch (0 = unconfined)
+
         # Derived quantities
-        self.actin_total = self.actin_dynamic + self.actin_stable
+        self.actin_total = self.actin_dynamic + self.actin_stable + self.actin_enlargement
         self.spine_volume = p.volume.baseline_volume
         self.AMPAR_count = p.ampar.baseline_AMPAR
         self.AMPAR_surface = p.ampar.baseline_AMPAR  # Surface pool
@@ -290,56 +310,56 @@ class SpinePlasticityModule:
     def _update_actin(self, dt: float, structural_drive: float, calcium: float,
                       quantum_field_kT: float = 0.0):
         """
-        Update actin based on DDSC-derived structural drive.
-        
-        HANDOFF MODEL:
-        - structural_drive (0-1) determines the TARGET F-actin level
-        - Actin approaches this target over minutes (tau ~3 min)
-        - This is CLASSICAL consolidation, not direct quantum effects
-        
-        Args:
-            structural_drive: 0-1 value from integrated DDSC (saturating)
-                - 0 = no DDSC triggered, no structural change
-                - 1 = maximal DDSC integration, maximal structural change
-            calcium: Current calcium (for baseline homeostasis only)
-            quantum_field_kT: DEPRECATED - structural_drive replaces this
+        Shaft-reservoir + confinement-gated-extrusion actin model.
         """
-        p = self.params.actin
-        
-        # Baseline homeostasis: slight tendency toward baseline
-        baseline_total = p.dynamic_pool_baseline + p.stable_pool_baseline
-        
-        # DDSC-driven target: structural_drive sets how much enlargement
-        # max_expansion could be ~2.0 (for 3x total at full drive)
-        max_expansion = 2.0
-        target_actin_total = baseline_total * (1.0 + structural_drive * max_expansion)
-        
-        # Approach target with time constant (~3 minutes for structural changes)
-        tau_structural = 180.0  # seconds
-        
-        approach_rate = (target_actin_total - self.actin_total) / tau_structural
-        
-        # Apply change
-        self.actin_total += approach_rate * dt
-        
-        # Distribute between dynamic and stable pools
-        # During consolidation, stable fraction increases
-        stable_fraction_target = 0.15 + 0.35 * structural_drive  # 15% → 50%
-        tau_stabilization = 300.0  # 5 minutes for stabilization
-        
-        current_stable_fraction = self.actin_stable / max(0.01, self.actin_total)
-        stable_approach = (stable_fraction_target - current_stable_fraction) / tau_stabilization
-        
-        new_stable_fraction = current_stable_fraction + stable_approach * dt
-        new_stable_fraction = np.clip(new_stable_fraction, 0.1, 0.6)
-        
-        self.actin_stable = self.actin_total * new_stable_fraction
-        self.actin_dynamic = self.actin_total * (1.0 - new_stable_fraction)
-        
-        # Bounds
-        self.actin_total = np.clip(self.actin_total, 0.5, 3.0)
-        self.actin_stable = np.clip(self.actin_stable, 0.05, 1.8)
-        self.actin_dynamic = np.clip(self.actin_dynamic, 0.2, 1.5)
+        a = self.params.actin
+        vol = self.params.volume
+
+        # CaM activation by the calcium transient (uM, Hill n=4).
+        ca = max(0.0, calcium)
+        f_CaM = ca**a.hill_calcium / (a.K_calcium_poly**a.hill_calcium + ca**a.hill_calcium)
+
+        s = float(np.clip(structural_drive, 0.0, 1.0))  # commitment (DDSC)
+
+        # Confinement latch: commitment establishes a PERSISTENT lock (CaMKII cross-linking).
+        d_conf = a.k_conf * s * (1.0 - self.confinement) - a.k_unconf * self.confinement
+        self.confinement = float(np.clip(self.confinement + d_conf * dt, 0.0, 1.0))
+        conf = self.confinement
+
+        # Structural ceiling: formation stops as F-actin nears the spine's measured max size.
+        # F_max (actin units) derived from the volume cap so the two ceilings agree.
+        F = self.actin_dynamic + self.actin_enlargement + self.actin_stable
+        F_max = vol.max_enlargement_ratio ** (1.0 / vol.actin_volume_scaling)   # 3.9 ** (1/1.2) ~= 3.17
+        room = max(0.0, 1.0 - F / F_max)
+
+        # Formation: Ca/CaM-driven, monomer-supply-limited (S/S0) and room-limited.
+        formation = a.k_polymerization_max * f_CaM * (self.actin_monomer / a.S0) * room
+
+        k_extrude = 1.0 / a.tau_extrude
+        extrusion = k_extrude * (1.0 - conf) * self.actin_enlargement      # CLEARING: unconfined -> shaft
+        retention = a.k_stabilization_max * conf * self.actin_enlargement  # confined -> stable
+
+        # Dynamic pool: homeostatic baseline treadmilling (self-maintaining; outside the S economy).
+        d_dynamic = a.k_polymerization_baseline - a.k_depolymerization * self.actin_dynamic
+
+        d_enlarge = formation - extrusion - retention
+        d_stable  = retention - a.k_destabilization * self.actin_stable
+
+        # Monomer pool: shaft buffers it toward S0 (fast exchange); formation draws it down.
+        # Extruded enlargement and destabilized stable exit to the large shaft (not tracked here).
+        d_monomer = a.k_exchange * (a.S0 - self.actin_monomer) - formation
+
+        # Euler integration. No hard clip: extrusion clears unconfined enlargement and the room
+        # term stops formation at F_max.
+        self.actin_dynamic     = max(0.0, self.actin_dynamic + d_dynamic * dt)
+        self.actin_enlargement = max(0.0, self.actin_enlargement + d_enlarge * dt)
+        self.actin_stable      = max(0.0, self.actin_stable + d_stable * dt)
+        self.actin_monomer     = max(0.0, self.actin_monomer + d_monomer * dt)
+        self.actin_total       = self.actin_dynamic + self.actin_enlargement + self.actin_stable
+
+        # Invasion reach (0-1): "sufficient F-actin reorganization" (Honkura threshold).
+        denom = max(1e-6, a.E_ref - a.invasion_threshold)
+        self.E_invasion = float(np.clip((self.actin_enlargement - a.invasion_threshold) / denom, 0.0, 1.0))
         
     def _update_volume(self, dt: float):
         """
@@ -468,6 +488,10 @@ class SpinePlasticityModule:
     def get_state(self) -> Dict:
         """Get current state as dictionary"""
         return {
+            'actin_enlargement': self.actin_enlargement,
+            'E_invasion': self.E_invasion,
+            'actin_monomer': self.actin_monomer,
+            'confinement': self.confinement,
             'actin_dynamic': self.actin_dynamic,
             'actin_stable': self.actin_stable,
             'actin_total': self.actin_total,

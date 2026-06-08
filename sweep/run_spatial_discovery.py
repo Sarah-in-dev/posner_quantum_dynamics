@@ -320,12 +320,9 @@ def step_network_per_synapse(network, dt, per_syn_stimuli):
     for i, syn in enumerate(network.synapses):
         syn.step(dt, per_syn_stimuli[i])
 
-    # Backbone Fröhlich condensation update — must run after per-synapse
-    # step (so _network_modulation is fresh) and before the entanglement
-    # tracker (which now reads backbone eta for cross-synapse bond rate).
-    # Gated on _backbone_frohlich being non-None (only true when params
-    # has dendritic_backbone.enabled=True at initialize() time).
-    if getattr(network, '_backbone_frohlich', None) is not None:
+    # Backbone condensation update — must run after per-synapse step
+    # (so calcium/MT state is fresh) and before the entanglement tracker.
+    if network.params is not None and hasattr(network.params, 'dendritic_backbone') and network.params.dendritic_backbone.enabled:
         network._update_backbone_field()
 
     # Network-level entanglement (every 10 steps)
