@@ -480,7 +480,7 @@ class Model6QuantumSynapse:
                 n_tryptophans=n_trp_effective,
                 ca_spike_active=ca_spike_active,
                 network_modulation=self._network_modulation,  # REVERSE COUPLING
-                backbone_eta=self._backbone_eta if self._mt_invaded else 0.0
+                backbone_eta=self._backbone_eta * getattr(self.spine_plasticity, 'E_invasion', 0.0)
             )
             # Cross-region: emit photons based on tryptophan state
             if self.cross_region_enabled:

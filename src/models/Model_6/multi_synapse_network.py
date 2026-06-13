@@ -90,6 +90,7 @@ class NetworkEntanglementTracker:
     # K_DISENTANGLE_BASE matches the old k_disentangle base (= 0.1).
     K_ENTANGLE_EM_BASE: float = 0.5
     K_DISENTANGLE_BASE: float = 0.1
+    WERNER_ENTANGLEMENT_BOUND: float = 0.5  # Werner state entangled iff F > 1/2
 
     def __init__(self, coupling_length_um: float = 5.0, 
                  j_coupling_threshold: float = 5.0,
@@ -279,19 +280,23 @@ class NetworkEntanglementTracker:
                     k_cross = (self.K_ENTANGLE_EM_BASE
                                * eta_factor * w_spatial * P_product)
 
+                    # Werner fidelity F = P_S_i*P_S_j*w_spatial;
+                    # weak/long-range bonds are low-fidelity.
+                    F_werner = P_product * w_spatial
+
                     bond_exists = key in self.cross_synapse_bonds
                     if not bond_exists:
                         p_form = 1.0 - np.exp(-k_cross * dt)
                         if np.random.random() < p_form:
-                            self.cross_synapse_bonds[key] = P_product
+                            self.cross_synapse_bonds[key] = F_werner
                     else:
                         k_diss = self.K_DISENTANGLE_BASE * (1.0 - eta_factor * P_product)
                         p_diss = 1.0 - np.exp(-max(k_diss, 0.0) * dt)
                         if np.random.random() < p_diss:
                             self.cross_synapse_bonds.pop(key, None)
                         else:
-                            # Update weight (P_S drifts as coherence evolves)
-                            self.cross_synapse_bonds[key] = P_product
+                            # Update fidelity (P_S drifts as coherence evolves)
+                            self.cross_synapse_bonds[key] = F_werner
 
     def _calculate_coupling(self, d_i: dict, d_j: dict) -> float:
         """
@@ -457,13 +462,19 @@ class NetworkEntanglementTracker:
             if px != py:
                 parent[px] = py
 
-        # Union all bonded pairs
+        # Union all bonded pairs — intra by bare existence, cross by Werner bound
         bonded_ids = set()
-        for id_i, id_j in self.entanglement_bonds:
+        for id_i, id_j in self.intra_synapse_bonds_cache:
             if id_i in parent and id_j in parent:
                 union(id_i, id_j)
                 bonded_ids.add(id_i)
                 bonded_ids.add(id_j)
+        for (id_i, id_j), fidelity in self.cross_synapse_bonds.items():
+            if fidelity > self.WERNER_ENTANGLEMENT_BOUND:
+                if id_i in parent and id_j in parent:
+                    union(id_i, id_j)
+                    bonded_ids.add(id_i)
+                    bonded_ids.add(id_j)
 
         # Group bonded dimers by root
         clusters = {}

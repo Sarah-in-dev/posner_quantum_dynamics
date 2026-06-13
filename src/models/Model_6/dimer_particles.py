@@ -401,7 +401,10 @@ class DimerParticleSystem:
                 # === PATHWAY 2: EM-mediated entanglement (continuous) ===
                 # Rate proportional to field strength - no threshold
                 # Field creates coherent environment for spin coupling
-                em_coupling_rate = k_entangle_em_base * (collective_field_kT / reference_kT) * coherence_factor
+                # Spatial selectivity: dipole-dipole 1/r³ falloff beyond coupling_length
+                r_ij = float(np.linalg.norm(dimer_i.position - dimer_j.position))
+                g = (self.coupling_length / max(r_ij, self.coupling_length)) ** 3
+                em_coupling_rate = k_entangle_em_base * (collective_field_kT / reference_kT) * coherence_factor * g
                 
                 if bond is None:
                     # Try to form new bond via EM coupling
