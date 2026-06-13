@@ -134,7 +134,8 @@ def run_condition(label, params, stimuli, T_drive=15.0, dt=0.005, log_interval=5
         print()
 
     print(f"{'='*110}")
-    print(f"CONDITION {label}: {{'A': 'syn 0-2 driven, 3-5 rest', 'BOTH': 'all 6 driven'}[label]}")
+    _desc = {'A': 'syn 0-2 driven, 3-5 rest', 'BOTH': 'all 6 driven'}[label]
+    print(f"CONDITION {label}: {_desc}")
     print(f"{'='*110}")
 
     header = (f"{'t':>5s}  "
