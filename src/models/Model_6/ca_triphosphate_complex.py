@@ -384,9 +384,22 @@ class CalciumPhosphateDimerization:
             0
         )
     
+        # === ACP SUPERSATURATION GATE (B1) ===
+        # Nucleation only above S=1. Reads trivalent PO4^3- derived from the HPO4^2-
+        # arg (po4_conc) at rest pH 7.35; B2/B3 will plumb the live pH-driven PO4^3-
+        # (research-log D5/D6/D7). Ksp=1e-26 = model current; validate vs the Ksp BAND
+        # (D4), not a sharp line. Gates FORMATION only (dissolution unchanged): below
+        # threshold existing dimers dissolve but none form.
+        if po4_conc is not None:
+            po4_trivalent = po4_conc * 10.0 ** (7.35 - 12.4)   # HPO4^2- -> PO4^3-
+            S_gate = (ca_conc ** 3 * po4_trivalent ** 2 / 1e-26) ** 0.2
+            gate = (S_gate > 1.0).astype(float)
+        else:
+            gate = 1.0
+
         # Apply dimer fraction to split formation between dimers and trimers
-        dimer_formation = (deterministic_formation + stochastic_formation + nucleation_contribution) * dimer_fraction
-        trimer_formation = (deterministic_formation + stochastic_formation + nucleation_contribution) * (1 - dimer_fraction)
+        dimer_formation = (deterministic_formation + stochastic_formation + nucleation_contribution) * dimer_fraction * gate
+        trimer_formation = (deterministic_formation + stochastic_formation + nucleation_contribution) * (1 - dimer_fraction) * gate
 
         # === STOCHASTIC DISSOCIATION ===
         # Add noise to dissolution rate
