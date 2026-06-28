@@ -155,7 +155,7 @@ class AnalyticalNanodomainCalculator:
     Physics basis (Naraghi & Neher 1997):
     
     Steady-state nanodomain around point source:
-        [Ca](r) = [Ca]_rest + i_Ca / (4π × D_eff × r)
+        [Ca](r) = [Ca]_rest + i / (z·F·4π·D_ca·r) · exp(-r/λ)   # FREE D_ca in prefactor
     
     With buffered diffusion:
         D_eff = D_free / (1 + κ_s)
@@ -163,8 +163,9 @@ class AnalyticalNanodomainCalculator:
         κ_s ≈ 60 (buffer capacity)
         D_eff ≈ 3.6 μm²/s
         
-    Decay length (pump equilibration):
-        λ = √(D_eff / k_pump) ≈ 100-200 nm
+    Decay length (BUFFER capture, not pump): λ = √(D_ca / (k_on·[B])) ≈ 117 nm
+        k_on = 2.7e7 (calbindin, Nägerl 2000); [B] = κ_s·Kd ≈ 600 µM.
+        Read radius floored at the grounded ≈5.5 nm scaffold-channel distance (D11).
     """
     
     def __init__(self, params: CalciumParameters, dx: float):
@@ -179,10 +180,14 @@ class AnalyticalNanodomainCalculator:
         self.kappa_s = params.buffer_capacity_kappa_s  # ~60
         self.D_eff = self.D_free / (1 + self.kappa_s)  # ~3.6 μm²/s
         
-        # Pump parameters for decay length
-        # λ = √(D_eff / k_pump), typical k_pump ~ 400/s gives λ ~ 100nm
-        k_pump = params.pump_vmax / params.pump_km  # Effective first-order rate
-        self.decay_length = np.sqrt(self.D_eff / max(k_pump, 1))  # meters
+        # Buffer-set nanodomain length (Naraghi & Neher 1997): λ = √(D_ca / (k_on·[B])).
+        # Uses FREE D_ca (buffering enters via λ, NOT the prefactor) and the endogenous
+        # fast-buffer on-rate (calbindin-D28k, Nägerl et al. 2000); [B] = κ_s·Kd ≈ 600 µM
+        # (κ_s=60 authoritative). Replaces the prior pump-set λ (~190 nm; wrong length
+        # scale — pump equilibration vs buffer capture). research-log B2.
+        self.k_on_buffer = 2.7e7                     # M⁻¹s⁻¹ (Nägerl et al. 2000)
+        B_sites = self.kappa_s * params.buffer_kd    # ≈600 µM endogenous buffer sites
+        self.decay_length = np.sqrt(self.D_free / (self.k_on_buffer * B_sites))  # ≈117 nm
         
         # Baseline
         self.ca_baseline = params.ca_baseline  # 100 nM
@@ -207,19 +212,16 @@ class AnalyticalNanodomainCalculator:
         if channel_current <= 0:
             return 0.0
         
-        # Empirically calibrated to validated results
-        # Accounts for finite channel open time (~0.5 ms) and buffering
-        ca_per_channel = 0.5e-6  # 0.5 μM per open channel at source
-        
-        # Scale with current (0.3 pA is reference)
-        ca_peak = ca_per_channel * (channel_current / 0.3e-12)
-        
-        # Spatial decay - exponential with pump-set decay length
-        r_min = self.dx  # Minimum = one grid spacing (~4nm)
+        # Grounded Naraghi-Neher point source (replaces the calibrated 0.5 µM snapshot):
+        #   [Ca](r) = i / (z·F·4π·D_ca·r) · exp(-r/λ);  ×1e-3 converts mol/m³ → M.
+        # FREE D_ca in the 1/r prefactor; buffering is carried by λ (self.decay_length).
+        # r floored at the grounded scaffold-channel distance ≈5.5 nm (FRET, CaV2.2;
+        # research-log D11; 5–20 nm uncertainty) — within Naraghi-Neher LBA validity,
+        # so the 1/r is well-defined (no sub-nm divergence).
+        r_min = 5.5e-9
         r = max(distance_m, r_min)
-        
-        # Pure exponential decay (not 1/r which diverges)
-        return ca_peak * np.exp(-r / self.decay_length)
+        amp = channel_current / (self.z * self.F * 4 * np.pi * self.D_free * r) * 1e-3
+        return amp * np.exp(-r / self.decay_length)
     
     def calculate_field_at_points(self, channel_positions: np.ndarray,
                                 channel_states: np.ndarray,
@@ -255,13 +257,13 @@ class AnalyticalNanodomainCalculator:
         dist_grid = np.sqrt(np.sum(diff**2, axis=2))  # (n_open, n_points)
         dist_m = dist_grid * dx
         
-        # Vectorized contribution calculation
-        ca_per_channel = 0.5e-6  # Calibrated to match validated results
-        ca_peak = ca_per_channel * (open_currents[:, np.newaxis] / 0.3e-12)
-        
-        r_min = dx
+        # Grounded Naraghi-Neher point source per channel (vectorized): free D_ca in the
+        # 1/r prefactor, buffering in λ. r floored at the grounded ≈5.5 nm scaffold-channel
+        # distance (research-log D11). Replaces the calibrated 0.5 µM snapshot.
+        r_min = 5.5e-9
         r = np.maximum(dist_m, r_min)
-        contributions = ca_peak * np.exp(-r / self.decay_length)
+        amp = open_currents[:, np.newaxis] / (self.z * self.F * 4 * np.pi * self.D_free * r) * 1e-3
+        contributions = amp * np.exp(-r / self.decay_length)
         
         # Sum over all channels
         ca_field += np.sum(contributions, axis=0)

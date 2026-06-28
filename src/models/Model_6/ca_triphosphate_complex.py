@@ -358,12 +358,16 @@ class CalciumPhosphateDimerization:
         nucleation_events = np.random.rand(*self.grid_shape) < (self.nucleation_probability * dt)
         nucleation_events = nucleation_events & template_sites & (self.pnc_concentration > 1e-7)  # Need PNC substrate
     
-        # 3. Ca/P ratio determines dimer vs trimer formation
-        # If po4_conc not provided, assume all form dimers (backward compatibility)
-        if po4_conc is not None:
-            dimer_fraction = self.calculate_dimer_fraction(ca_conc, po4_conc)
-        else:
-            dimer_fraction = np.ones_like(ca_conc)
+        # 3. SPECIES = DIMER (the operative coherent qubit).
+        # The prior bulk-Ca/P split is physically invalid (dimer-chemistry skill §3):
+        # the Ca₆ dimer and Ca₉ trimer are BOTH Ca/P=1.5 products, so solution Ca/P cannot
+        # select between them. The real determinant — aggregation extent — is ungroundable
+        # (literature aggregation rate spans ~ns→hours; research-log D15), so a formation
+        # split would be tuning. Selection happens DOWNSTREAM by coherence: the dimer holds
+        # entanglement ~hundreds of s; the Ca₉ trimer decoheres sub-second (Agarwal 2023) and
+        # is computationally inert. So formation produces the dimer; trimer formation is out
+        # of scope (transient / inert / unquantifiable). MODELED choice, flagged. research-log D16.
+        dimer_fraction = np.ones_like(ca_conc)
     
         # 4. Combine deterministic growth + stochastic nucleation
         # Deterministic component (averaged behavior) - NOW USES PNCs
