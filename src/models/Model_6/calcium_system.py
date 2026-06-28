@@ -229,10 +229,10 @@ class CalciumDiffusion:
         
         # Solve quadratic for new free calcium
         # [Ca]free = (-b + sqrt(b² - 4ac)) / 2a
-        # where a=1, b=(Kd + B_tot + Ca_tot), c=-Ca_tot*Kd
-        
+        # where a=1, b=(Kd + B_tot - Ca_tot), c=-Ca_tot*Kd
+
         a = 1.0
-        b = self.params.buffer_kd + self.buffer + ca_total
+        b = self.params.buffer_kd + self.buffer - ca_total
         c = -ca_total * self.params.buffer_kd
         
         # Quadratic formula (take positive root)
