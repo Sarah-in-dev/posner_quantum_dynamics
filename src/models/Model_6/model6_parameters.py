@@ -137,6 +137,12 @@ class CalciumParameters:
     # NMDA blocker flag (APV/AP5)
     nmda_blocked: bool = False
 
+    nmda_fraction: float = 0.5   # fraction of channels that are NMDAR (rest are VGCC)
+    mg_conc_mM: float = 1.0      # extracellular [Mg2+] (mM) for NMDAR Mg-unblock B(V)
+
+    tau_nmda: float = 0.166      # s — NMDAR glutamate-engaged occupancy decay = the coincidence
+                                 # window; adult CA1 NMDAR-EPSC deactivation ~166 ms (weighted GluN2A/2B)
+
 @dataclass
 class ATPParameters:
     """

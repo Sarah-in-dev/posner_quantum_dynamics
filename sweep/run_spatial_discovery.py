@@ -45,6 +45,7 @@ from model6_parameters import Model6Parameters
 from model6_core import Model6QuantumSynapse
 from multi_synapse_network import MultiSynapseNetwork
 from spatial_environment import SpatialEnvironment, Agent
+from presynaptic_release import PresynapticRelease
 
 
 # =============================================================================
@@ -356,7 +357,12 @@ def activations_to_stimuli(activations, reward=False):
     stimuli = []
     for act in activations:
         if act > 0.05:
-            voltage = -70e-3 + act * 60e-3  # 0->-70mV, 1.0->-10mV
+            # Synaptic-input depolarization is SUBTHRESHOLD. Established BTSP
+            # grounding (input-engine sessions): local synaptic regime ~-60..-40 mV;
+            # the plateau (~-20 mV, a SEPARATE instructive event) is not this knob.
+            # Peak activation maps to the top of the subthreshold band, -40 mV.
+            # Was -10 mV, which illegally merged the plateau into the synaptic knob.
+            voltage = -70e-3 + act * 30e-3  # 0->-70mV (rest), 1.0->-40mV (subthreshold peak)
         else:
             voltage = -70e-3
         stimuli.append({'voltage': voltage, 'reward': reward})
@@ -369,7 +375,7 @@ def get_synaptic_strengths(network):
     return np.clip(strengths - 1.0, 0, None)
 
 
-def make_network(n_synapses=40, feedback_enabled=False):
+def make_network(n_synapses=40, feedback_enabled=False, seed=0):
     """Create n-synapse network for spatial discovery."""
     params = Model6Parameters()
     params.em_coupling_enabled = True
@@ -383,6 +389,10 @@ def make_network(n_synapses=40, feedback_enabled=False):
     for syn in network.synapses:
         syn.set_microtubule_invasion(True)
     network.disable_auto_commitment = True
+    # Per-synapse presynaptic stochastic release (stimulus-construction layer).
+    # Independent reproducible RNG stream per synapse derived from `seed`.
+    _release_seeds = np.random.SeedSequence(seed).spawn(n_synapses)
+    network.presynaptic_release = [PresynapticRelease(seed=s) for s in _release_seeds]
     return network
 
 
@@ -420,9 +430,13 @@ def run_trial(network, env, agent, trial_num, agent_dt=0.5,
         active_mask = activations > 0.05
 
         for _ in range(physics_steps_per_agent_step):
-            # Step only active synapses
+            # Step presynaptic release for ALL synapses so RRP/facilitation recover
+            # even while a synapse is silent; inject the cleft event as glutamate for
+            # active synapses, and step only active synapses.
             for i, syn in enumerate(network.synapses):
+                glu_event = network.presynaptic_release[i].step(activations[i], physics_dt)
                 if active_mask[i]:
+                    stimuli[i]['glutamate'] = glu_event
                     syn.step(physics_dt, stimuli[i])
 
             # Entanglement tracker still runs on all synapses (every 10th step)
@@ -450,6 +464,9 @@ def run_trial(network, env, agent, trial_num, agent_dt=0.5,
             # Deliver dopamine — one reward step
             reward_activations = env.get_activations(agent.position)
             reward_stimuli = activations_to_stimuli(reward_activations, reward=True)
+            for i in range(len(network.synapses)):
+                reward_stimuli[i]['glutamate'] = network.presynaptic_release[i].step(
+                    reward_activations[i], physics_dt)
             step_network_per_synapse(network, physics_dt, reward_stimuli)
             found_goal = True
             trajectory.append(agent.position.copy())
@@ -480,7 +497,7 @@ def run_experiment(n_trials=25, seed=42, n_features=40, trial_time_budget=90.0):
     """Run the full spatial discovery experiment."""
     rng = np.random.default_rng(seed)
     env = SpatialEnvironment(n_features=n_features, seed=seed)
-    network = make_network(n_synapses=env.n_features)
+    network = make_network(n_synapses=env.n_features, seed=seed)
     agent = Agent()
 
     # Print environment summary
@@ -513,6 +530,10 @@ def run_experiment(n_trials=25, seed=42, n_features=40, trial_time_budget=90.0):
 
         # Inter-trial gap
         analytical_gap(network, 30.0)
+        # Advance presynaptic release through the inter-trial silence (RRP recovers,
+        # facilitation relaxes) — the analytical gap does not touch these modules.
+        for _r in network.presynaptic_release:
+            _r.advance_silent(30.0)
 
         all_trials.append(result)
 

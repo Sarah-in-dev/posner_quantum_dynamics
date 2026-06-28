@@ -71,7 +71,19 @@ class CalciumChannels:
         self.Ea_gating = 60000.0  # J/mol (~Q10 = 2.5 for channel kinetics)
         
         self.time_open = np.zeros(self.n_channels)
-        
+
+        # Channel-type split: NMDAR (glutamate-gated, Mg-unblock current) vs VGCC (voltage-gated)
+        n_nmda = int(round(getattr(params, 'nmda_fraction', 0.5) * self.n_channels))
+        self.is_nmda = np.zeros(self.n_channels, dtype=bool)
+        self.is_nmda[:n_nmda] = True
+        self.mg_conc_mM = getattr(params, 'mg_conc_mM', 1.0)
+        self.V_half = -0.020   # VGCC Boltzmann midpoint (V)
+        self.V_slope = 0.006   # VGCC Boltzmann slope (V)
+
+        # NMDAR glutamate-engaged occupancy (scalar; cleft glutamate floods the active zone).
+        # Fast bind to the cleft level, slow deactivation at tau_nmda -> the coincidence window.
+        self.g_engaged = 0.0
+
         logger.info(f"Initialized {self.n_channels} calcium channels")
     
     def apply_temperature_scaling(self, T: float):
@@ -86,42 +98,46 @@ class CalciumChannels:
         self.alpha = self.alpha_ref * scale_factor
         self.beta = self.beta_ref * scale_factor
         
-    def update_gating(self, dt: float, voltage: Optional[float] = None):
+    def update_gating(self, dt, voltage=None, glutamate=0.0):
+        """Stochastic gating for two channel populations.
+
+        NMDAR (is_nmda True): opening gated by presynaptic glutamate (the agonist);
+          conducting current scaled by the voltage-dependent Mg-unblock B(V)
+          (Jahr & Stevens 1990). Calcium needs glutamate AND depolarization -> coincidence.
+        VGCC (is_nmda False): opening gated by voltage (Boltzmann); fixed current when open.
         """
-        Stochastic channel gating with realistic kinetics
-        """
-        # APV blocks NMDA - force all channels closed
-        if getattr(self.params, 'nmda_blocked', False):
-            self.state[:] = False
-            self.current[:] = 0.0
-            return
-            
+        nmda_blocked = getattr(self.params, 'nmda_blocked', False)
+        base = self.params.single_channel_current
+
         if voltage is not None:
-            V_threshold = -0.050  # -50 mV
-            V_half = -0.020     # -20 mV
-            V_slope = 0.006    # 6 mV slope     
-            # Boltzmann activation
-            P_open_voltage = 1.0 / (1.0 + np.exp(-(voltage - V_half) / V_slope))
-            
-            # Modulate rates
-            alpha_eff = self.alpha * P_open_voltage
-            beta_eff = self.beta * (1 - P_open_voltage)
+            P_open_v = 1.0 / (1.0 + np.exp(-(voltage - self.V_half) / self.V_slope))
+            V_mV = voltage * 1e3
+            B = 1.0 / (1.0 + np.exp(-0.062 * V_mV + 1.2726) * self.mg_conc_mM)
         else:
-            alpha_eff = self.alpha
-            beta_eff = self.beta
-        
-        # Stochastic transitions
-        for i in range(self.n_channels):
-            if self.state[i]:  # Channel open
-                self.time_open[i] += dt
-                if np.random.rand() < (1 - np.exp(-beta_eff * dt)):
-                    self.state[i] = False
-                    self.current[i] = 0.0
-                    self.time_open[i] = 0.0
-            else:  # Channel closed
-                if np.random.rand() < (1 - np.exp(-alpha_eff * dt)):
-                    self.state[i] = True
-                    self.current[i] = self.params.single_channel_current
+            P_open_v = 0.0
+            B = 0.0
+
+        # `glutamate` is now the cleft-glutamate event this step (brief, 0..1). The receptor
+        # holds the memory: occupancy binds fast to the cleft level, then decays at tau_nmda
+        # (~166 ms) once glutamate clears -> the NMDAR coincidence window. Sustained cleft
+        # glutamate pins occupancy at the cleft level (identical to the old instantaneous g_bind).
+        g_cleft = 0.0 if nmda_blocked else float(np.clip(glutamate, 0.0, 1.0))
+        tau_nmda = getattr(self.params, 'tau_nmda', 0.166)
+        self.g_engaged = max(self.g_engaged * np.exp(-dt / tau_nmda), g_cleft)
+        g_bind = self.g_engaged
+
+        alpha_eff = np.where(self.is_nmda, self.alpha * g_bind,        self.alpha * P_open_v)
+        beta_eff  = np.where(self.is_nmda, self.beta, self.beta * (1.0 - P_open_v))
+
+        r = np.random.rand(self.n_channels)
+        opening = (~self.state) & (r < (1.0 - np.exp(-alpha_eff * dt)))
+        closing = ( self.state) & (r < (1.0 - np.exp(-beta_eff  * dt)))
+        self.state = (self.state & ~closing) | opening
+
+        self.current = np.where(self.state,
+                                np.where(self.is_nmda, base * B, base),
+                                0.0)
+        self.time_open = np.where(self.state, self.time_open + dt, 0.0)
                     
     def get_open_channels(self) -> np.ndarray:
         return np.where(self.state)[0]
@@ -368,7 +384,8 @@ class AnalyticalCalciumSystem:
         
         # 1. Update channel gating (stochastic - identical to original)
         voltage = stimulus.get('voltage', None)
-        self.channels.update_gating(dt, voltage)
+        glutamate = stimulus.get('glutamate', 0.0)
+        self.channels.update_gating(dt, voltage, glutamate)
         
         # 2. Calculate nanodomain calcium at local points (FAST!)
         # channel_gain scales effective current (equivalent to more channels
