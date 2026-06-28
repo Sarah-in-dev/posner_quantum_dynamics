@@ -129,8 +129,7 @@ class CalciumPhosphateDimerization:
         self.pnc_lifetime = np.zeros(grid_shape)
         
         # Base rate at reference temperature (37°C = 310.15 K)
-        self.k_base_ref = 8e5  # M⁻¹s⁻¹ at 310.15 K
-        self.k_base = self.k_base_ref  # Current effective rate
+        # k_base_ref assigned below from Smoluchowski diffusion limit × productive fraction
         self.T_ref = 310.15  # K (37°C)
         self.Ea_aggregation = 50000.0  # J/mol (~Q10 = 2.0)
         
@@ -146,10 +145,21 @@ class CalciumPhosphateDimerization:
         # Convert to M⁻¹s⁻¹
         N_A = 6.022e23
         k_pairwise_M = k_pairwise * N_A
-        
-        
+
+        # Productive fraction: only a small fraction of diffusion-limited PNC encounters
+        # yield a stable cluster. The cluster is metastable (ACP/Posner is thermodynamically
+        # unstable) and Garcia 2019 finds the clusters are a minor species, so net formation
+        # is far below the diffusion ceiling. This productive fraction is the one bounded
+        # free parameter: bounded above by "minor species" (<~few %), below by favorable
+        # formation. Starting estimate ~1%.
+        self.productive_fraction = 0.01
+        self.k_base_ref = self.productive_fraction * k_pairwise_M  # ≈1.9e4 M⁻¹s⁻¹
+        self.k_base = self.k_base_ref
+
         # Dissociation: classical rate modulated by singlet probability
-        self.k_classical = 0.05  # s⁻¹ (bare rate without quantum protection)
+        self.k_classical = 0.005  # s⁻¹; cluster lifetime τ≈200s, within the minutes-to-hours
+        # range of Turhan et al. 2024 cluster lifetimes. Bare classical reverse rate, before
+        # coherence (singlet) protection.
         self._mean_singlet_prob = 0.25  # thermal equilibrium default
 
         # Stochastic parameters
@@ -329,28 +339,6 @@ class CalciumPhosphateDimerization:
         # This should be ~0.5 everywhere
 
         # =====================================================================
-        # NEW: CALCIUM THRESHOLD FOR FORMATION
-        # =====================================================================
-        # Only form NEW dimers when calcium is elevated
-        # Below threshold, existing dimers persist but no new ones form
-        ca_formation_threshold = 1e-6  # 1 µM - need calcium spike to form dimers
-        
-        if np.max(ca_conc) < ca_formation_threshold:
-            # No new formation at rest - only dissociation
-            dissolution_noise = 1.0 + np.random.normal(0, self.dissolution_noise_sigma, self.grid_shape)
-            dissolution_noise = np.maximum(dissolution_noise, 0.1)
-
-            singlet_excess = max(0.0, (self._mean_singlet_prob - 0.25) / 0.75)
-            k_diss = self.k_classical * (1.0 - singlet_excess)
-
-            self.dimer_concentration -= k_diss * self.dimer_concentration * dissolution_noise * dt
-            self.trimer_concentration -= k_diss * 10.0 * self.trimer_concentration * dissolution_noise * dt
-            
-            self.dimer_concentration = np.maximum(self.dimer_concentration, 0)
-            self.trimer_concentration = np.maximum(self.trimer_concentration, 0)
-            return  # Skip formation steps
-    
-        # =====================================================================
         # STEP 2: SLOW PNC AGGREGATION (RATE-LIMITING, STOCHASTIC)
         # =====================================================================
     
@@ -400,22 +388,17 @@ class CalciumPhosphateDimerization:
         dimer_formation = (deterministic_formation + stochastic_formation + nucleation_contribution) * dimer_fraction
         trimer_formation = (deterministic_formation + stochastic_formation + nucleation_contribution) * (1 - dimer_fraction)
 
-        # === CALCIUM-DEPENDENT SCALING (Fix for voltage sensitivity) ===
-        # Scale formation by calcium level to create proper IO curve
-        # Without this, template enhancement causes saturation at any calcium level
-        ca_peak_uM = np.max(ca_conc) * 1e6  # Convert to μM
-        ca_half_max_uM = 8.0  # Half-maximal calcium (tune for IO curve steepness)
-        calcium_scaling = ca_peak_uM / (ca_half_max_uM + ca_peak_uM)  # Michaelis-Menten
-        dimer_formation = dimer_formation * calcium_scaling
-        trimer_formation = trimer_formation * calcium_scaling
-
         # === STOCHASTIC DISSOCIATION ===
         # Add noise to dissolution rate
         dissolution_noise = 1.0 + np.random.normal(0, self.dissolution_noise_sigma, self.grid_shape)
         dissolution_noise = np.maximum(dissolution_noise, 0.1)  # Keep positive
 
         singlet_excess = max(0.0, (self._mean_singlet_prob - 0.25) / 0.75)
-        k_diss = self.k_classical * (1.0 - singlet_excess)
+        # Detailed balance: the template is a kinetic catalyst (Tao 2010, dimensionality
+        # reduction), so it accelerates BOTH aggregation and de-aggregation equally and does
+        # not shift the equilibrium. Applying it to formation only was the thermodynamic
+        # inconsistency that drove the runaway.
+        k_diss = self.k_classical * (1.0 - singlet_excess) * template_enhancement
 
         dimer_dissociation = k_diss * self.dimer_concentration * dissolution_noise
         trimer_dissociation = k_diss * 10.0 * self.trimer_concentration * dissolution_noise  # Trimers less stable
