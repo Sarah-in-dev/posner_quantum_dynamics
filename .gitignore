@@ -55,3 +55,7 @@ checkpoints/
 *.png
 *.json
 *.txt
+# generated probe outputs
+sweep/*.npz
+# machine-local Claude config (skills is a symlink)
+.claude/
