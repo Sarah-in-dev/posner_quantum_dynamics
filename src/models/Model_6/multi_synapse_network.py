@@ -41,6 +41,7 @@ import logging
 from model6_parameters import (
     compute_metabolic_power, P_BASAL_W, bose_einstein_occupation, hbar,
 )
+from entanglement_topology import compute_betti, compute_synapse_quotient_betti
 
 logger = logging.getLogger(__name__)
 
@@ -196,7 +197,10 @@ class NetworkEntanglementTracker:
                 'n_total_dimers': n,
                 'n_entangled_network': n if n == 1 else 0,
                 'n_bonds': 0,
-                'f_entangled': 0.0
+                'f_entangled': 0.0,
+                'betti0': 0,
+                'betti1': 0,
+                'component_sizes': [],
             }
 
         # Update entanglement bonds
@@ -212,12 +216,17 @@ class NetworkEntanglementTracker:
             entangled_ids.add(bond[1])
         
         f_entangled = len(entangled_ids) / n if n > 0 else 0.0
-        
+
+        topo = self.compute_entanglement_topology()
+
         return {
             'n_total_dimers': n,
             'n_entangled_network': len(largest_cluster),
             'n_bonds': len(self.entanglement_bonds),
-            'f_entangled': f_entangled
+            'f_entangled': f_entangled,
+            'betti0': topo.betti0,
+            'betti1': topo.betti1,
+            'component_sizes': topo.component_sizes,
         }
     
     def _update_entanglement(self, dt: float, coupling_weights=None):
@@ -494,6 +503,21 @@ class NetworkEntanglementTracker:
         if not clusters:
             return set()
         return max(clusters, key=len)
+
+    def compute_entanglement_topology(self, crosscheck: bool = False):
+        """
+        Cheap Betti0/Betti1 of the Werner-thresholded entanglement graph.
+        Betti0 == len(_find_all_clusters()); Betti1 = independent loops
+        (closed entanglement paths). See entanglement_topology.py for why
+        this is the honest first instrument (vs persistent-homology vineyards).
+        """
+        return compute_betti(
+            self.all_dimers,
+            self.intra_synapse_bonds_cache,
+            self.cross_synapse_bonds,
+            werner_bound=self.WERNER_ENTANGLEMENT_BOUND,
+            crosscheck=crosscheck,
+        )
     
     def _has_bond(self, id_i, id_j) -> bool:
         key = (min(id_i, id_j), max(id_i, id_j))
@@ -1491,9 +1515,36 @@ class MultiSynapseNetwork:
         # Q2 field from entangled dimer network
         U_single_kT = 6.6
         q2_field = U_single_kT * np.sqrt(n_entangled_network) if n_entangled_network > 0 else 0.0
-        
+
+        # Cheap topology of the Werner-thresholded entanglement graph.
+        # betti1 = independent loops (closed entanglement paths). betti0 == n
+        # connected components. See entanglement_topology.py.
+        # Raw whole-graph Betti is dominated by within-spine clique-fill; the
+        # synapse-quotient Betti is the honest cross-synapse lens (loops that
+        # span synapses). Surface BOTH, clearly labelled.
+        topo_betti0 = topo_betti1 = 0
+        topo_component_sizes: List[int] = []
+        cross_betti0 = cross_betti1 = 0
+        if hasattr(self, 'entanglement_tracker') and self.entanglement_tracker.all_dimers:
+            tr = self.entanglement_tracker
+            _topo = tr.compute_entanglement_topology()
+            topo_betti0 = _topo.betti0
+            topo_betti1 = _topo.betti1
+            topo_component_sizes = _topo.component_sizes
+            _cross = compute_synapse_quotient_betti(
+                tr.all_dimers, tr.cross_synapse_bonds,
+                werner_bound=tr.WERNER_ENTANGLEMENT_BOUND,
+            )
+            cross_betti0 = _cross.betti0   # connected synapse-clusters
+            cross_betti1 = _cross.betti1   # closed cross-synapse loops (the signal)
+
         return {
             'n_synapses': self.n_synapses,
+            'betti0_raw': topo_betti0,
+            'betti1_raw': topo_betti1,
+            'raw_component_sizes': topo_component_sizes,
+            'betti0_cross': cross_betti0,
+            'betti1_cross': cross_betti1,
             'total_dimers': sum(dimer_counts),
             'mean_dimers_per_synapse': np.mean(dimer_counts),
             'std_dimers_per_synapse': np.std(dimer_counts),
