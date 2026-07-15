@@ -42,6 +42,7 @@ made, not just what it was.
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| D18 | 2026-06-28 | **Near-critical variability CHARACTERIZED — dimer nucleation is an ALL-OR-NONE bistable switch** (D17's "criticality" confirmed mechanistically). New single-synapse probe (`sweep/criticality_variability_probe.py`), N≈120/condition, reseeded global RNG isolates the stochastic gate from the agent/structural/start-position confounds in the 5-trial run. Across the subthreshold drive band the peak-dimer distribution is **bimodal with a FORBIDDEN GAP**: replicates land at silent/fizzle (≤~8 dimers) or **full (~125–150)**, NEVER between — **0 of 480** in 11–120. ON-amplitude is **quantal** (~135, drive- AND duration-independent → a real attractor = the supersaturation runaway); drive/duration/input-noise tune only **P(catch)**, a sharp sigmoid. Critical point ≈ **−43 mV / ~570 µM** (just under the 716 µM gate; matches D11/D12 616 µM→S≈0.91). Susceptibility (Fano = var/mean) peaks ~120–148 at the midpoint. Mechanism: stochastic channel-opening **COINCIDENCE** (`analytical_calcium_system.py:132`) intermittently crosses S>1; once caught it runs to the attractor. Explains the D17 trial spread (9/1/31/23/22 = many such switches integrated over a 60 s traversal). **Controls PASS:** gap survives 0.25–2.0 s durations (not a window artifact) AND presynaptic-release stochasticity (not a constant-glutamate artifact). **Altitude:** a CLASSICAL stochastic nucleation criticality on the **(A)** floor — says nothing about **(B)**. Probe + scratch data uncommitted. | [GROUNDED probe + controls] | E1·L |
 | D17 | 2026-06-28 | **FULL INTEGRATION VALIDATION — the grounded stack works end-to-end in the live network.** `run_spatial_discovery`, 5 trials, 20 synapses, B1+B2a+D16 live. Runs clean. Dimer formation **EMERGENT, BOUNDED, rise-and-fall** (end-of-trial totals 9/1/31/23/22; peak transient 318; no runaway → resolves the parked unbounded-accumulation problem). **LOCALIZED** (1/1/5/4/3 of 20 synapses). **Plasticity ACCUMULATES across traversals** (max spine vol 1.63→1.90→2.59→2.59→2.67) and the agent **FOUND the goal in trial 3** (t=62 s) — formation→spine-growth→behavior closes. Stochastic/near-critical (unseeded channel gating → trial-to-trial variability = predicted criticality). First run that is emergent + bounded + rise/fall. (Earlier expectation of ~0 dimers was WRONG — B2a's grounded amplitude lets stochastic coincident openings cross the gate at subthreshold V.) **Live edits: B1 committed; B2a+D16 uncommitted.** | [GROUNDED integration] | E1·K |
 | D16 | 2026-06-28 | **Species blocker (D13) RESOLVED — Option B outcome.** Dropped the invalid bulk-Ca/P sigmoid in `update_dimerization`; `dimer_fraction = 1` (formation → dimer). Grounding chain: Ca/P invalid (skill §3) + aggregation-rate ungroundable so a split would be tuning (D15) + **coherence selects the dimer downstream** (dimer ~100s s, trimer sub-second; Agarwal). MODELED choice, flagged in code. Validated: integration loop now forms 49 µM dimer (matches A3's 47 µM), S pins at 1.0, P_struct stabilizes 0.81 mM → grounded Ca→gate→dimers→SOC, correct species. **Live edit, uncommitted.** (Dead `calculate_dimer_fraction` recompute at ~L425 now orphaned — harmless, clean later. Canonical-skill §2.2/§3 owes the "formation species-selection ungroundable; coherence is the selector" keystone.) | [GROUNDED; MODELED choice] | E1·K |
 | D15 | 2026-06-28 | **Option-B research: species determinant is AGGREGATION EXTENT (kinetic), and it does NOT cleanly favor the dimer.** Lit (Garcia/Mancardi 2019; Posner & Betts; CaP nucleation MD): growth ion-complex → dimer (2 units, early/metastable) → Ca₉ Posner (3 units) → ACP ("glass of Posner clusters"); higher supersaturation + time + dehydration drive aggregation FORWARD → at high nanodomain Ca the principled determinant favors the TRIMER, opposite the model's goal. **Agarwal is SILENT on which forms** (pure coherence argument) — "dimer is the qubit" ≠ "dimer is what forms". Routes to dimer-dominance are all unestablished hypotheses: (a) kinetic trapping in the transient nanodomain (aggregation timescale not pinned in lit); (b) coherence-protected persistence (model already dissolves trimers 10×); (c) template size-stabilization. ⇒ **Whether dimers DOMINATE formation in vivo is an OPEN keystone the program had assumed.** Decision pending: A (assert dimer as Agarwal-grounded modeling choice, flagged) vs B-kinetic (model aggregation kinetics + nanodomain transient, let species emerge — risks showing trimer-dominance). | [GROUNDED lit; CONTESTED keystone] | E1·K |
@@ -305,6 +306,103 @@ gating → coincidence + clustering required. No tuned value (D_ca, k_on, κ_s·
 sourced). **Remaining Phase B:** B2b — multi-file PO₄³⁻ plumb (D7) so the gate reads live pH-driven
 PO₄³⁻; B3 — conservation feedback → live SOC; then a full `run_spatial_discovery` integration run.
 
+#### K. Species blocker → resolution → full integration (D13–D17)
+- **D13 blocker:** B2a-grounded calcium (Ca/P>0.5) flipped the bulk-Ca/P sigmoid to the INERT trimer
+  (integration loop: 0.19 mM P consumed but only 2 nM dimer ≈ 31 µM trimer).
+- **D14:** the SOC loop is already closed by B1+B2a+existing consumption plumbing (S pins 1.0,
+  P_struct stabilizes) — **no B3 edit needed.**
+- **D15 (Option-B research):** species selection = aggregation extent (kinetic); aggregation rate is
+  ungroundable (~ns at high SS → trimer; up to hours via Ca/Pi control → dimer), so a formation split
+  would be tuning. Agarwal is SILENT on which forms.
+- **D16 (resolution):** drop the invalid Ca/P sigmoid → `dimer_fraction=1`; the operative species is
+  selected DOWNSTREAM by coherence (dimer persists ~100s s, trimer decoheres sub-second). Loop now
+  forms 49 µM dimer (= A3's 47 µM), S=1, P_struct 0.81 mM.
+- **D17 (full integration):** `run_spatial_discovery` 5 trials × 20 synapses — EMERGENT, BOUNDED
+  (end totals 1–31, peak 318, no runaway), LOCALIZED (1–5/20 synapses), plasticity ACCUMULATES across
+  traversals (spine 1.63→2.67), agent FOUND goal in trial 3. First emergent + bounded + rise/fall run.
+  Validates the **(A)** coherence-gated floor; the **(B)** genuine-quantum claim is untouched.
+
+**Session close (2026-06-28):** the calcium→dimer coupled revalidation is LANDED and integration-
+validated. Committed `2ab02d8` ("dimer working system" = B2a calcium + D16 species + this log) on top
+of B1 (`49c7453`). Open: B2b PO₄³⁻ plumb + pH-sign (D5/D6/D7); skill updates; orphaned
+`calculate_dimer_fraction` (~L425); characterize the near-critical variability. See the session handoff.
+
+#### L. Near-critical variability — the all-or-none switch (D18) · 2026-06-28 (cont. after close)
+
+Follow-on to D17's parenthetical "stochastic/near-critical." D17's trial-to-trial spread
+(9/1/31/23/22 dimers) conflates three sources — genuine per-traversal nucleation, evolving
+structural/learned state, and re-randomized start positions — so it cannot be read as a clean
+criticality signal. A criticality claim is a **distribution** claim and needs many independent
+samples under controlled drive.
+
+- **Instrument** (`sweep/criticality_variability_probe.py`, `[GROUNDED probe]`): ONE synapse
+  (config identical to the network's — EM on, P31, feedback OFF, MT-invaded), held at a FIXED
+  subthreshold drive for a fixed episode, dimer count recorded; repeated N≈120× with the global
+  `np.random` reseeded per replicate. This isolates the gate's stochasticity (channel-gating CTMC
+  `analytical_calcium_system.py:132` + dimerization noise `ca_triphosphate_complex.py:405,410`)
+  from the agent/structural/start-position confounds. Glutamate held constant (sustained agonist)
+  so the control parameter is drive voltage alone; presynaptic-release stochasticity is excluded by
+  design (added back in the control). Order-parameter proxy = peak nanodomain [Ca] vs the S>1 gate.
+
+- **Result — bistable switch with a forbidden gap** (N=120/drive, peak-dimer count):
+
+  | act | V (mV) | peak [Ca] µM | P(any nucleation) | P(full ≥60) | Fano (var/mean) |
+  |----:|-------:|-------------:|------------------:|------------:|----------------:|
+  | 0.70–0.80 | −49…−46 | 423–466 | 0.00 | 0.00 | 0 (hard zero) |
+  | 0.85 | −44.5 | 515 | 0.19 | — | 2.4 |
+  | 0.88 | −43.6 | 562 | 0.28 | 0.07 | 122 |
+  | **0.90** | **−43.0** | **568** | **0.30** | **0.11** | **119** |
+  | 0.92 | −42.4 | 600 | 0.40 | 0.13 | **148** ← peak |
+  | 0.95 | −41.5 | 632 | 0.76 | 0.35 | 96 |
+  | 1.00 | −40.0 | 715 | 1.00 | 0.75 | 65 |
+
+  Across the four high-N drives, **0 of 480 replicates** landed in 11–120 dimers. Replicates are
+  either *silent/fizzle* (0, or a transient ≤~8 that dissolves) or *full* (~125–151). The empty
+  middle is the unstable separatrix of a bistable system — all-or-none, not a fat tail (Sarle
+  bimodality coeff 0.77–0.98, all > 0.555). The ON-state is **quantal** (~135 dimers, ~drive-
+  independent): the supersaturation runaway has a fixed attractor; drive tunes only `P(catch)`.
+  Critical point ≈ −43 mV / ~570 µM, just under the 716 µM gate (consistent with D11/D12).
+
+- **Mechanism:** subthreshold drive makes channel openings rare and uncoupled; the nanodomain only
+  crosses S>1 when openings happen to **coincide and cluster**. Below threshold this ~never happens
+  (hard zero); near threshold it happens stochastically (the switch); once S>1 is crossed, the gate
+  opens and supersaturation runs to the attractor. This is the place-cell all-or-none / BTSP one-
+  shot form (`experiment-design-patterns`) at the mechanistic level, and it **explains the D17
+  spread**: a 60 s multi-feature traversal integrates many such independent switches across synapses.
+
+- **Controls (both PASS):**
+  - *Duration sensitivity* (act 0.90, durations 0.25/0.5/1.0/2.0 s, N=100): the gap holds at every
+    duration (fizzle max 3→6, full 125→232); duration does **not** scale the ON-amplitude — it only
+    raises `P(catch)` (0.03→0.06→0.09→0.19). Confirms the attractor is real and the 1 s window is not
+    an artifact.
+  - *Presynaptic-on* (`--presynaptic`, the real stochastic cleft-glutamate layer added back, N=100):
+    the gap survives (act 0.90: fizzle max 10, full 126–148, Fano 118); the critical point barely
+    moves. A second independent noise source does not smear the bistability. Confirms it is not an
+    artifact of the constant-glutamate idealization.
+
+- **Altitude (LOCKED):** this is a **classical** stochastic nucleation criticality on the **(A)**
+  coherence-gated floor (channel coincidence → supersaturation gate). It is NOT a quantum effect and
+  says nothing about the **(B)** genuine-quantum claim. Do not describe it in (B)'s language.
+
+- **Experimental prediction (falsifiable; for a future (B)/lab build).** If dimer (Posner-precursor)
+  formation at a spine is the gated supersaturation switch this model implies, then under graded,
+  controlled Ca influx (e.g. graded uncaging / graded depolarization at a single spine):
+  1. the **formation order parameter is bimodal** — events are all-or-none, not graded — with a
+     **quantal "ON" amount** that is ~independent of the drive level;
+  2. **P(ON) is a sharp sigmoid** of Ca drive (Hill-steep), centered just below the ACP S=1 gate;
+  3. **trial-to-trial variance (Fano) peaks at the midpoint** of that sigmoid (critical fluctuations);
+  4. the signatures are **invariant to stimulus duration** (duration shifts P(ON), not the ON amount)
+     and to upstream input noise.
+  **Kill conditions:** a graded (unimodal, drive-proportional) formation amount, or a variance that
+  does not peak at the P(ON)=0.5 drive, falsifies the gated-switch picture. **Controls to run in a
+  (B) build:** P32 isotope (must NOT change the *classical* switch — separates (A) from (B)); Ksp-band
+  sweep (D4) — the critical drive should track the band, not a single line.
+
+- **Provenance:** probe `sweep/criticality_variability_probe.py` (uncommitted); analysis + JSON in
+  session scratch (uncommitted). `experiment-design-patterns` owes a pointer to this prediction +
+  its controls. No model code was edited for this characterization (the `--presynaptic` flag is the
+  only probe-side addition).
+
 ---
 
 ## REFERENCES (with what each grounds)
@@ -329,8 +427,12 @@ PO₄³⁻; B3 — conservation feedback → live SOC; then a full `run_spatial_
 - **Eggermann, Bucurenciu, Goswami, Jonas** (Nat Rev Neurosci) — nanodomain Ca-channel↔sensor coupling, tens of nm. (Pin 1 / D11) https://www.nature.com/articles/nrn3125
 - **Tang & Blanpied 2016** (Nature) — trans-synaptic nanocolumn alignment, tens of nm. (Pin 1 / D11) https://www.nature.com/articles/nature19058
 - **Naraghi & Neher 1997** (J Neurosci 17:6961) — linearized buffer approximation; [Ca²⁺] at the channel mouth; 5–50 nm nanodomain validity. (Pin 1 / D11; the closed form A1/A2/A3 use) https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6868209/
+- **Garcia/Mancardi et al. 2019** (CaP PNC simulation) — ion-complex → dimeric prenucleation species; dimerization favorable to Ca/HPO₄ 1:2; "repetition of dimerization unlikely the only mechanism". (D15) https://pmc.ncbi.nlm.nih.gov/articles/PMC7011744/
+- **Detection of Posner's clusters during CaP nucleation, MD** (J Mater Chem B, C7TB01199G) — Posner-like clusters assemble in ~0.5–1 ns at high supersaturation; no clean dimer-intermediate sequence. (D15) https://pubs.rsc.org/en/content/articlehtml/2017/tb/c7tb01199g
+- **Agarwal, Kattnig, Aiello, Banerjee 2023** (J Phys Chem Lett 14:2518; arXiv:2210.14812) — Ca₆ dimer holds entanglement ~100s s, Ca₉ Posner trimer decoheres sub-second; SILENT on which forms. (D16) https://arxiv.org/abs/2210.14812
 
 ### In-repo provenance
-- A2 probe: `sweep/supersaturation_gate_probe.py` (this session). A1: `sweep/nanodomain_closedform_probe.py`.
+- A2 probe: `sweep/supersaturation_gate_probe.py`. A3: `sweep/phosphate_conservation_probe.py`. A1: `sweep/nanodomain_closedform_probe.py`.
 - Speciation source: `src/models/Model_6/atp_system.py:364-401`. Params: `model6_parameters.py:193,209-211,824`.
 - Baseline commits: `a992ee7` (chemistry), `95990fd` (input-engine), `0ef0e0e` (calcium probe/PDE).
+- Phase B commits: `f0aaffd` (A2+A3 probes), `49c7453` (B1 gate), `e9bb2c3` (log D1–D11), **`2ab02d8`** ("dimer working system" = B2a calcium grounding + D16 species fix + log D12–D17).
