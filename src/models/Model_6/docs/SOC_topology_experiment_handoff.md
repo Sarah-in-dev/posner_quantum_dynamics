@@ -73,15 +73,55 @@ repo-root-relative and wrong until 2026-07-16.)
    below the Werner bound). ⇒ Stage-2 betti1_cross=6 is a trustworthy topological
    measurement; the "K4 completeness" caveat is retired.
 
+6. **(2026-07-16) The partition IS a coherence-set distance graph — and the SOC
+   sweep is RETIRED.** `F = P_S_i·P_S_j·w` with `w = exp(-d/5µm)`, cut at `F>0.5`,
+   is algebraically a distance rule: bond iff `d < d* = 5·ln(P_product/0.5)`.
+   Measured P_S≈0.998 ⇒ **d* = 3.45µm**. Two theorems fall out of the Werner bound,
+   neither tuned: (a) `w≤1 ⇒ F≤P_S²`, so `F>0.5` requires **P_S > 1/√2 ≈ 0.7071** —
+   a hard coherence floor below which the cross-synapse partition cannot exist at
+   any distance; (b) the radius SHRINKS as coherence decays (3.47µm at P_S=1 → 0 at
+   0.7071), so the partition must fragment **far-pairs-first**.
+   Confirmed against a pre-registered 8-synapse ladder (`sweep/coherence_radius_probe.py`,
+   ~43 s): 7/7 gaps called correctly, exact predicted edge list, `betti0_cross=3`,
+   `component_sizes=[3,3,2]`, `betti1_cross=0`, crosscheck ok. It **retrodicts
+   finding 5 with no free parameters** (chain: 2.5<3.45 bonds, next-nearest 5.0
+   doesn't → the 5 observed path edges; ring: hexagon side 2.5 bonds, chord 4.33 and
+   opposite 5.0 don't → the 6 observed edges).
+
+7. **(2026-07-16) `_update_entanglement` vectorised** (862481d). Physics unchanged;
+   23–43× and growing with dimer count; cost linear in cross-pairs. The compute wall
+   is no longer the binding constraint (T2: ~12 h → ~1–3.5 h). Do NOT cap per-spine
+   dimers as a shortcut — a quotient edge needs any of d² cross-pairs to clear
+   Werner, so the cap moves the quotient topology and is not physics-neutral.
+
 ## The remaining tasks (dedicated thread)
 
-- **SOC drive×damping sweep.** Vary drive and damping (Q); look for a POWER-LAW in
-  the `betti0_cross` component-size distribution (drive-independent attractor =
-  SOC), vs a single tuned fixed point. This is the original SOC falsifier, now
-  measurable because the topology instrument is validated.
-- **Natural emergence.** Let η climb on its own (no clamp) — needs the compute-
-  wall fix (analytical-gap acceleration on the drive phase / cap per-spine bonds /
-  Fargate) to reach the ~30 s ignition time.
+- **~~SOC drive×damping sweep~~ — RETIRED 2026-07-16, on structural grounds, for
+  ~0 compute.** A power law in `betti0_cross` component sizes cannot arise here.
+  (a) *1D forbids it:* the honest dendrite is 1D, connectivity is decided entirely
+  by consecutive gaps, so clump size is exactly geometric `P(k)=p^(k-1)(1-p)` —
+  exponential tail (verified: geometric fit R²=0.97–0.996 at every density, beating
+  the power-law fit every time). Regular spacing is worse — binary, no distribution
+  at all. 2D near percolation DOES give a power law, but it is pure geometry: no
+  drive, no η, nothing quantum. (b) *D18 forbids it:* nucleation is an all-or-none
+  bistable switch with a forbidden gap and a QUANTAL drive-independent ON amplitude
+  — a characteristic scale, where SOC requires scale-freedom.
+  **Two "SOC" claims were conflated:** *SOC-chemistry* (phosphate depletion → S
+  self-organises to 1) is ESTABLISHED (D8/D14) and stands; *SOC-topology* (power-law
+  clump sizes) is what this task chased. It inherited the name.
+
+- **Coherence-radius, dynamic half (the real next experiment).** Does the partition
+  fragment far-pairs-first as P_S decays, and die at P_S=1/√2? Pre-registered
+  edge-loss order on the ladder rig: gap 3.0 breaks at P_S=0.9545, 2.8 at 0.9356,
+  2.5 at 0.9080, 2.0 at 0.8637, all gone by 0.7071. **Discriminating:** a classical
+  scalar eligibility trace decays uniformly and carries no spatial structure, so it
+  cannot produce a spacing-ordered fragmentation. Needs a run long enough for P_S to
+  move (at 0.08 s it hasn't: measured 0.9987) — now one background job.
+
+- **Natural emergence.** Let η climb on its own (no clamp). ~1–3.5 h post-
+  vectorisation; a background job, not a blocker. If it needs to be faster, the
+  target is the bond DICT (O(live bonds) Python writes per step), not the pair
+  arithmetic.
 
 ## The original next task (Stage 2, pre-result — kept for context)
 
