@@ -361,73 +361,113 @@ class DimerParticleSystem:
         - Birth entanglement from shared pyrophosphate (Fisher 2015)
         - Cavity protection analogy (Putz et al. 2014, Nature Physics)
         - Field provides coherent environment, not direct coupling
+
+        VECTORISED 2026-07-16 (physics unchanged). The scalar all-pairs double loop
+        was 79% of a full net.step (~241k np.linalg.norm calls per step) and became
+        the binding constraint once the dissolution-dt fix let dimers persist. Every
+        quantity factorises over the pair index: coherence_factor is the outer product
+        of singlet_probability, same_burst/both_template are outer comparisons, and
+        the 1/r^3 falloff is a pairwise distance matrix. Same rates, same pathways,
+        same branch precedence (Pathway 1 short-circuits Pathway 2 and disentanglement,
+        exactly as the `continue` did), same ONE-uniform-draw-per-active-pair.
+
+        BIT-IDENTICAL to the scalar loop for a given seed. The draws are taken only for
+        active pairs, in triu (i<j row-major) order — which is the scalar loop's exact
+        iteration order — and MT19937 yields the same stream whether consumed as a block
+        or one at a time. Verified against a verbatim reimplementation of the original:
+        identical bond sets and strengths across gated, field-off, saturated, and mixed
+        regimes at 3%/15%/49% occupancy.
         """
         n = len(self.dimers)
         if n < 2:
             return
-        
+
         # EM-mediated entanglement: rate scales with field strength
         # Reference scale: 20 kT is strong field (full MT invasion + activity)
         reference_kT = 20.0
         k_entangle_em_base = 1.0  # Base rate at reference field (1/s)
-        
-        for i in range(n):
-            for j in range(i + 1, n):
-                dimer_i = self.dimers[i]
-                dimer_j = self.dimers[j]
-                
-                # Both must maintain singlet state (P_S > 0.5)
-                if not dimer_i.is_entangled or not dimer_j.is_entangled:
-                    self._remove_bond(dimer_i.id, dimer_j.id)
-                    continue
-                
-                bond = self._get_bond(dimer_i.id, dimer_j.id)
-                coherence_factor = dimer_i.singlet_probability * dimer_j.singlet_probability
-                
-                # === PATHWAY 1: Birth entanglement (shared pyrophosphate origin) ===
-                birth_window = 0.1  # 100ms - same ATP hydrolysis burst
-                same_burst = abs(dimer_i.birth_time - dimer_j.birth_time) < birth_window
-                both_template = dimer_i.template_bound and dimer_j.template_bound
-                
-                if same_burst and both_template and bond is None:
-                    # Immediate entanglement from shared origin
-                    time_factor = 1.0 - abs(dimer_i.birth_time - dimer_j.birth_time) / birth_window
-                    k_eff = self.k_entangle * time_factor * coherence_factor
-                    p_entangle = 1 - np.exp(-k_eff * dt)
-                    if np.random.random() < p_entangle:
-                        self._create_bond(dimer_i.id, dimer_j.id, strength=coherence_factor)
-                    continue
-                
-                # === PATHWAY 2: EM-mediated entanglement (continuous) ===
-                # Rate proportional to field strength - no threshold
-                # Field creates coherent environment for spin coupling
-                # Spatial selectivity: dipole-dipole 1/r³ falloff beyond coupling_length
-                r_ij = float(np.linalg.norm(dimer_i.position - dimer_j.position))
-                g = (self.coupling_length / max(r_ij, self.coupling_length)) ** 3
-                em_coupling_rate = k_entangle_em_base * (collective_field_kT / reference_kT) * coherence_factor * g
-                
-                if bond is None:
-                    # Try to form new bond via EM coupling
-                    p_entangle = 1 - np.exp(-em_coupling_rate * dt)
-                    if np.random.random() < p_entangle:
-                        self._create_bond(dimer_i.id, dimer_j.id, strength=coherence_factor)
-                else:
-                    # Update existing bond strength
-                    bond.strength = coherence_factor
-                
-                # === DISENTANGLEMENT ===
-                # Weaker field = less protection = faster decay
-                if bond is not None:
-                    # Base disentanglement from decoherence
-                    k_decohere = 0.01 * (1 - coherence_factor)
-                    
-                    # Field provides protection - stronger field = slower decay
-                    protection_factor = collective_field_kT / reference_kT
-                    k_disentangle = k_decohere / (1 + protection_factor)
-                    
-                    p_disentangle = 1 - np.exp(-k_disentangle * dt)
-                    if np.random.random() < p_disentangle:
-                        self._remove_bond(dimer_i.id, dimer_j.id)
+        birth_window = 0.1        # 100ms - same ATP hydrolysis burst
+
+        ids = np.fromiter((d.id for d in self.dimers), dtype=np.int64, count=n)
+        P = np.fromiter((d.singlet_probability for d in self.dimers), dtype=float, count=n)
+        births = np.fromiter((d.birth_time for d in self.dimers), dtype=float, count=n)
+        tmpl = np.fromiter((d.template_bound for d in self.dimers), dtype=bool, count=n)
+        pos = np.asarray([d.position for d in self.dimers], dtype=float)
+
+        iu, ju = np.triu_indices(n, k=1)
+
+        # Both must maintain singlet state (P_S > 0.5) — Dimer.is_entangled
+        ent = P > 0.5
+        both_ent = ent[iu] & ent[ju]
+
+        coh = P[iu] * P[ju]                       # coherence_factor
+        dbirth = np.abs(births[iu] - births[ju])
+        same_burst = dbirth < birth_window
+        both_tmpl = tmpl[iu] & tmpl[ju]
+
+        # Existing bonds -> pair-index mask, built from the SPARSE bond dict
+        # (O(n_bonds), never O(n^2) dict lookups). triu pair index for a<b:
+        #   p = a*n - a*(a+1)/2 + (b - a - 1)
+        idx_of = {int(d.id): k for k, d in enumerate(self.dimers)}
+        has_bond = np.zeros(iu.size, dtype=bool)
+        bond_at = {}
+        for (ka, kb), bond in self._bond_lookup.items():
+            a, b = idx_of.get(int(ka)), idx_of.get(int(kb))
+            if a is None or b is None:
+                continue
+            if a > b:
+                a, b = b, a
+            p = a * n - a * (a + 1) // 2 + (b - a - 1)
+            has_bond[p] = True
+            bond_at[p] = bond
+
+        # --- Not both entangled: drop any bond, and take no further action ---
+        for p in np.nonzero(~both_ent & has_bond)[0]:
+            self._remove_bond(int(ids[iu[p]]), int(ids[ju[p]]))
+
+        # One uniform draw per ACTIVE pair, resolving whichever single branch that
+        # pair reaches. Gated (not-both-entangled) pairs consume NO draw — exactly as
+        # the scalar loop's `continue` skipped theirs. Draws land in triu (i<j
+        # row-major) order, which is the scalar loop's iteration order, and MT19937
+        # yields the same stream drawn as a block or one at a time — so this
+        # reproduces the original BIT-FOR-BIT, not merely in distribution.
+        R = np.zeros(iu.size)
+        R[both_ent] = np.random.random(int(both_ent.sum()))
+
+        # === PATHWAY 1: Birth entanglement (shared pyrophosphate origin) ===
+        # Fires only when no bond exists yet; short-circuits everything below.
+        p1 = both_ent & same_burst & both_tmpl & ~has_bond
+        time_factor = 1.0 - dbirth / birth_window
+        k_eff = self.k_entangle * time_factor * coh
+        form1 = p1 & (R < (1.0 - np.exp(-k_eff * dt)))
+        for p in np.nonzero(form1)[0]:
+            self._create_bond(int(ids[iu[p]]), int(ids[ju[p]]), strength=float(coh[p]))
+
+        # === PATHWAY 2: EM-mediated entanglement (continuous) ===
+        # Rate proportional to field strength - no threshold. Field creates a
+        # coherent environment for spin coupling. Spatial selectivity: dipole-dipole
+        # 1/r³ falloff beyond coupling_length.
+        p2 = both_ent & ~p1
+        diff = pos[iu] - pos[ju]
+        r_ij = np.sqrt(np.einsum("ij,ij->i", diff, diff))
+        g = (self.coupling_length / np.maximum(r_ij, self.coupling_length)) ** 3
+        em_rate = k_entangle_em_base * (collective_field_kT / reference_kT) * coh * g
+
+        form2 = p2 & ~has_bond & (R < (1.0 - np.exp(-em_rate * dt)))
+        for p in np.nonzero(form2)[0]:
+            self._create_bond(int(ids[iu[p]]), int(ids[ju[p]]), strength=float(coh[p]))
+
+        # === DISENTANGLEMENT === (existing bonds only; weaker field = less protection)
+        protection_factor = collective_field_kT / reference_kT
+        k_disentangle = (0.01 * (1.0 - coh)) / (1.0 + protection_factor)
+        held = p2 & has_bond
+        diss = held & (R < (1.0 - np.exp(-k_disentangle * dt)))
+        for p in np.nonzero(diss)[0]:
+            self._remove_bond(int(ids[iu[p]]), int(ids[ju[p]]))
+        # Survivors refresh strength (scalar order updated then maybe removed; the
+        # update is moot for the removed ones, so only survivors need writing).
+        for p in np.nonzero(held & ~diss)[0]:
+            bond_at[p].strength = float(coh[p])
     
     def _get_bond(self, id_i: int, id_j: int) -> Optional[EntanglementBond]:
         key = (min(id_i, id_j), max(id_i, id_j))
