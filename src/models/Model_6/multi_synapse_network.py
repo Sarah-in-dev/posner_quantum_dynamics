@@ -250,6 +250,21 @@ class NetworkEntanglementTracker:
         - The entanglement_bonds property exposes the union of both bond
           classes for callers that need all bonds (e.g. connected-component
           partitioning).
+
+        Vectorised 2026-07-16 (physics unchanged). The scalar all-pairs double
+        loop paid O(n_dimers^2) in Python while discarding the intra pairs it
+        iterated. The rates factorise per synapse pair — eta and mt_invaded are
+        per-SYNAPSE (collect_dimers reads them once per synapse and copies them
+        onto every dimer dict), w_spatial is per synapse pair, and only P_S is
+        per-dimer — so k_cross and F_werner are outer products over the two
+        spines' P_S vectors. Same rate constants, same Werner fidelity, same
+        one-uniform-draw-per-pair-per-step semantics.
+
+        NOT bit-reproducible against the old loop for a given seed: the draws
+        are the same in number and distribution but are consumed as a block per
+        synapse pair rather than one at a time, so the RNG stream order differs.
+        Equivalence is therefore established distributionally, plus exactly in
+        the saturated (p_form->1) and gated (mt_invaded False) limits.
         """
         # Prune cross-synapse bonds for dimers that no longer exist
         current_ids = {d['global_id'] for d in self.all_dimers}
@@ -261,51 +276,81 @@ class NetworkEntanglementTracker:
         # Cross-synapse formation only runs when caller supplied coupling_weights.
         # (Backward compat: if caller doesn't pass it, no cross bonds form —
         # the test then exercises the intra-synapse path only.)
-        if coupling_weights is not None:
-            n = len(self.all_dimers)
-            for i in range(n):
-                d_i = self.all_dimers[i]
-                for j in range(i + 1, n):
-                    d_j = self.all_dimers[j]
+        if coupling_weights is None:
+            return
 
-                    # Skip intra-synapse — owned by DimerParticleSystem
-                    if d_i['synapse_idx'] == d_j['synapse_idx']:
-                        continue
+        # Bucket dimers by synapse. Order within a bucket fixes the row/col index.
+        by_syn: Dict[int, list] = {}
+        for d in self.all_dimers:
+            by_syn.setdefault(d['synapse_idx'], []).append(d)
+        syn_indices = sorted(by_syn)
 
-                    key = (min(d_i['global_id'], d_j['global_id']),
-                           max(d_i['global_id'], d_j['global_id']))
+        # Bucket existing cross bonds by synapse pair — O(n_bonds), sparse.
+        existing_by_pair: Dict[Tuple, list] = {}
+        for key in self.cross_synapse_bonds:
+            (sa, _), (sb, _) = key
+            existing_by_pair.setdefault((sa, sb), []).append(key)
 
-                    # Hard gate: both spines must have invading MTs
-                    if not (d_i['mt_invaded'] and d_j['mt_invaded']):
+        for ai in range(len(syn_indices)):
+            for bi in range(ai + 1, len(syn_indices)):
+                a, b = syn_indices[ai], syn_indices[bi]   # a < b
+                A, B = by_syn[a], by_syn[b]
+                if not A or not B:
+                    continue
+
+                # Hard gate: both spines must have invading MTs. Per-synapse, so
+                # one representative dimer answers for the whole block.
+                if not (A[0]['mt_invaded'] and B[0]['mt_invaded']):
+                    for key in existing_by_pair.get((a, b), ()):
                         self.cross_synapse_bonds.pop(key, None)
-                        continue
+                    continue
 
-                    # Geometric mean of eta — both synapses must couple
-                    eta_factor = (d_i['eta'] * d_j['eta']) ** 0.5
-                    w_spatial = float(coupling_weights[d_i['synapse_idx'],
-                                                       d_j['synapse_idx']])
-                    P_product = d_i['P_S'] * d_j['P_S']
+                # Geometric mean of eta — both synapses must couple
+                eta_factor = float((A[0]['eta'] * B[0]['eta']) ** 0.5)
+                w_spatial = float(coupling_weights[a, b])
 
-                    k_cross = (self.K_ENTANGLE_EM_BASE
-                               * eta_factor * w_spatial * P_product)
+                P_A = np.array([d['P_S'] for d in A], dtype=float)
+                P_B = np.array([d['P_S'] for d in B], dtype=float)
+                P_product = np.outer(P_A, P_B)
 
-                    # Werner fidelity F = P_S_i*P_S_j*w_spatial;
-                    # weak/long-range bonds are low-fidelity.
-                    F_werner = P_product * w_spatial
+                # Werner fidelity F = P_S_i*P_S_j*w_spatial;
+                # weak/long-range bonds are low-fidelity.
+                F_werner = P_product * w_spatial
 
-                    bond_exists = key in self.cross_synapse_bonds
-                    if not bond_exists:
-                        p_form = 1.0 - np.exp(-k_cross * dt)
-                        if np.random.random() < p_form:
-                            self.cross_synapse_bonds[key] = F_werner
-                    else:
-                        k_diss = self.K_DISENTANGLE_BASE * (1.0 - eta_factor * P_product)
-                        p_diss = 1.0 - np.exp(-max(k_diss, 0.0) * dt)
-                        if np.random.random() < p_diss:
-                            self.cross_synapse_bonds.pop(key, None)
-                        else:
-                            # Update fidelity (P_S drifts as coherence evolves)
-                            self.cross_synapse_bonds[key] = F_werner
+                k_cross = (self.K_ENTANGLE_EM_BASE
+                           * eta_factor * w_spatial * P_product)
+
+                # Since a < b, global_id (a, ·) < (b, ·) always, so the canonical
+                # min/max key is (A-side, B-side) without a per-pair comparison.
+                gid_A = [d['global_id'] for d in A]
+                gid_B = [d['global_id'] for d in B]
+                row = {g: r for r, g in enumerate(gid_A)}
+                col = {g: c for c, g in enumerate(gid_B)}
+
+                exists = np.zeros((len(A), len(B)), dtype=bool)
+                for key in existing_by_pair.get((a, b), ()):
+                    r, c = row.get(key[0]), col.get(key[1])
+                    if r is not None and c is not None:
+                        exists[r, c] = True
+
+                # One uniform draw per pair per step, as in the scalar loop:
+                # it resolves formation where absent and dissolution where present.
+                R = np.random.random((len(A), len(B)))
+
+                p_form = 1.0 - np.exp(-k_cross * dt)
+                k_diss = self.K_DISENTANGLE_BASE * (1.0 - eta_factor * P_product)
+                np.maximum(k_diss, 0.0, out=k_diss)
+                p_diss = 1.0 - np.exp(-k_diss * dt)
+
+                form = (~exists) & (R < p_form)
+                diss = exists & (R < p_diss)
+                # Survivors refresh F (P_S drifts as coherence evolves).
+                write = form | (exists & ~diss)
+
+                for r, c in zip(*np.nonzero(write)):
+                    self.cross_synapse_bonds[(gid_A[r], gid_B[c])] = float(F_werner[r, c])
+                for r, c in zip(*np.nonzero(diss)):
+                    self.cross_synapse_bonds.pop((gid_A[r], gid_B[c]), None)
 
     def _calculate_coupling(self, d_i: dict, d_j: dict) -> float:
         """

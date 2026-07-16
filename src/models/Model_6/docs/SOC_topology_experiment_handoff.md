@@ -16,6 +16,12 @@ invariant first; make it earn before investing in vineyards.**
 - **`multi_synapse_network.py`** — `NetworkEntanglementTracker.compute_entanglement_topology()`;
   Betti fields threaded into `step()` and `get_experimental_metrics()` as
   `betti0_raw / betti1_raw / raw_component_sizes` and **`betti0_cross / betti1_cross`**.
+All sweep scripts below live under **`src/models/Model_6/sweep/`** — NOT the
+repo-root `sweep/` tree (which holds the older `observe_network_partition.py`
+probes). Run them from that directory with the repo venv (`./venv/bin/python`);
+the system scipy lacks `constants.Boltzmann`. (Paths in this doc were
+repo-root-relative and wrong until 2026-07-16.)
+
 - **`sweep/read_live_betti.py`** — drive a short run, read live Betti.
 - **`sweep/soc_pump_threshold_stage1.py`** — cheap analytic pump-threshold sweep.
 - **`sweep/soc_topology_stage2.py`** — full two-cluster ignition run (gated).

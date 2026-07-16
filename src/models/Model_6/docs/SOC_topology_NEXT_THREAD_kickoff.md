@@ -24,9 +24,16 @@ make the natural-emergence run tractable.
     Betti in `step()` + `get_experimental_metrics()` (`betti0_raw/betti1_raw`,
     `betti0_cross/betti1_cross`). Pump: `_update_backbone_field` (line ~1050),
     cross-bond formation gated on `eta_factor=(η_i·η_j)^0.5` (line ~284).
-  - `sweep/soc_pump_threshold_stage1.py` · `sweep/soc_topology_stage2.py` ·
-    `sweep/soc_topology_forced_eta.py` · `sweep/soc_topology_geometry_discriminator.py`
-    (each reproduces in <~2 min).
+  - `src/models/Model_6/sweep/soc_pump_threshold_stage1.py` ·
+    `src/models/Model_6/sweep/soc_topology_stage2.py` ·
+    `src/models/Model_6/sweep/soc_topology_forced_eta.py` ·
+    `src/models/Model_6/sweep/soc_topology_geometry_discriminator.py`
+    (each reproduces in <~2 min; run them from that directory, and use the repo
+    venv — `./venv/bin/python` — the system scipy lacks `constants.Boltzmann`).
+    NOTE: there are TWO `sweep/` trees. The SOC scripts live under
+    `src/models/Model_6/sweep/`; the repo-root `sweep/` holds the older
+    `observe_network_partition.py` / `observe_pathway2_selectivity.py` probes.
+    Paths here were repo-root-relative and wrong until 2026-07-16.
 
 ## What IS (validated, with controls) — do not relitigate, verify
 1. Raw whole-graph Betti1 is dominated by within-spine clique-fill (WRONG lens);

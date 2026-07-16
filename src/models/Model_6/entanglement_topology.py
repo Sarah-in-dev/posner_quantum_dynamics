@@ -19,8 +19,14 @@ free, every timestep — the two Betti numbers of the 1-skeleton:
     Betti0 = V - rank(delta)   = number of connected components
     Betti1 = E - rank(delta)   = number of independent cycles (loops)
 
-where delta is the (unsigned) graph coboundary / incidence operator.  For a
-graph these collapse to the exact combinatorial identities
+where delta is the SIGNED (+1/-1) graph coboundary / incidence operator.  The
+sign is load-bearing, not cosmetic: for the UNSIGNED incidence matrix
+rank = V - b, where b counts only the BIPARTITE components, so Betti0 = V - rank
+silently returns the wrong answer on any graph with an odd cycle.  (The two-
+triangle self-test below is exactly such a graph, which is why it is the test.)
+delta^T delta is then the ordinary graph Laplacian L0 = D - A, and
+Betti0 = dim ker L0 — the standard spectral-graph identity.  For a graph these
+collapse to the exact combinatorial identities
 
     Betti0 = c                    (components)
     Betti1 = E - V + c            (cycle rank)
@@ -233,8 +239,9 @@ def compute_synapse_quotient_betti(
 def _coboundary_crosscheck(node_ids, edges, betti0, betti1, V, E):
     """
     TALON-style proof that the combinatorial count equals the linear-algebra
-    count: build the unsigned incidence matrix delta (E x V), rank via SVD,
+    count: build the SIGNED (+1/-1) incidence matrix delta (E x V), rank via SVD,
     assert Betti0 == V - rank and Betti1 == E - rank.  numpy-only, optional.
+    The sign is required — see the module docstring; unsigned breaks on odd cycles.
     """
     try:
         import numpy as np
