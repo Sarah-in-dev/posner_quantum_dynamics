@@ -417,8 +417,14 @@ class CalciumPhosphateDimerization:
         # inconsistency that drove the runaway.
         k_diss = self.k_classical * (1.0 - singlet_excess) * template_enhancement
 
-        dimer_dissociation = k_diss * self.dimer_concentration * dissolution_noise
-        trimer_dissociation = k_diss * 10.0 * self.trimer_concentration * dissolution_noise  # Trimers less stable
+        # dt is REQUIRED here: k_diss is s^-1 (k_classical declared "s^-1; cluster
+        # lifetime tau~200s" at L160), so the per-step decrement is k_diss*[X]*dt.
+        # Without it dissolution ran once per STEP instead of per SECOND — i.e. 1/dt
+        # too fast (1000x at dt=1e-3) — while every formation term above already
+        # carries its own dt (L353, L358, L374). That asymmetry made the decay
+        # timescale and the formation/dissolution equilibrium both dt-dependent.
+        dimer_dissociation = k_diss * self.dimer_concentration * dissolution_noise * dt
+        trimer_dissociation = k_diss * 10.0 * self.trimer_concentration * dissolution_noise * dt  # Trimers less stable
 
         # Update both species
         d_dimer_dt = dimer_formation - dimer_dissociation  # (you modified this earlier)
