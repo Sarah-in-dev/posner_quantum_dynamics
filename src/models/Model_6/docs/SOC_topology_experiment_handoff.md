@@ -90,9 +90,58 @@ repo-root-relative and wrong until 2026-07-16.)
 
 7. **(2026-07-16) `_update_entanglement` vectorised** (862481d). Physics unchanged;
    23–43× and growing with dimer count; cost linear in cross-pairs. The compute wall
-   is no longer the binding constraint (T2: ~12 h → ~1–3.5 h). Do NOT cap per-spine
+   is no longer the binding constraint *for the cross loop*. Do NOT cap per-spine
    dimers as a shortcut — a quotient edge needs any of d² cross-pairs to clear
    Werner, so the cap moves the quotient topology and is not physics-neutral.
+   **COST CLAIM CORRECTED (same day):** an earlier revision of this line said
+   "T2: ~12 h → ~1–3.5 h." **Wrong** — extrapolated from a microbenchmark of
+   `_update_entanglement` alone. Profiled end-to-end, a full `net.step` in silence is
+   **644 ms**, of which **79% is `dimer_particles.step_entanglement`** (the INTRA bond
+   loop, ~241k `np.linalg.norm` per step). 80 s at dt=1e-3 = **14.3 hours**. The
+   vectorised cross loop was never the dominant term at this scale — Amdahl. The real
+   wall is the INTRA loop, which is topologically IRRELEVANT to the cross-synapse
+   measurement (`compute_synapse_quotient_betti` reads only `cross_bonds`; neither
+   `_update_entanglement` nor `step_coherence` reads intra bonds) — so vectorising or
+   gating it is the highest-leverage perf work left.
+
+8. **(2026-07-16) UNIT BUG: dimer dissolution was missing its `dt`. Found, fixed,
+   verified.** `ca_triphosphate_complex.update_dimerization` RECEIVES `dt` (L303) and
+   every FORMATION term carries it — `k_eff·pnc²·dt` (L353), `rand < p·dt` (L358),
+   `k_eff·pnc²·dt·0.5` (L374) — but DISSOLUTION did not:
+   `dimer_dissociation = k_diss·dimer·noise` (L420) plus the trimer twin (L421), added
+   straight in via `self.dimer_concentration += d_dimer_dt` (L427). `k_diss` is s⁻¹
+   (`k_classical = 0.005`, declared L160 *"s⁻¹; cluster lifetime τ≈200s"*), so the
+   per-step decrement must be `k_diss·[X]·dt`. **Without it dissolution ran per STEP
+   instead of per SECOND — 1/dt too fast, 1000× at dt=1e-3.**
+   **The dt control exposed it:** same 4 s of sim → dimers = 56/619/1501 at
+   dt=1e-3/1e-2/5e-2 (27× spread — impossible for a rate process), while P_S
+   (0.9886/0.9879/0.9802 vs analytic 0.9805) and the edge set were dt-INDEPENDENT.
+   Coherence and Werner paths sound; only the population path was wrong. Pre-fix
+   consequence: in silence dimers collapsed 2314 → 56 in 4 s while P_S was still
+   0.9886 — nothing left to decohere.
+   **FIXED** (`* dt` on L420-421). **VERIFIED:** sustained drive stays **BOUNDED** —
+   peak dimer saturates (µM: 40.5/61.6/94.5/105.6/113.0/123.3/132.3/143.8/150.1/**152.6**,
+   increments collapsing +33 → +7 → +2.4). **⇒ D14's "SOC loop already closed /
+   self-limiting" and D17's "BOUNDED, no runaway" SURVIVE — the phosphate
+   self-limitation is REAL, not an artifact of over-dissolution.**
+   **BUT the operating point moves ~3×:** post-fix driven plateau ~**155 µM** vs
+   A3/D8's **47 µM** and D16's live **49 µM**. Dissolution had been 1000× too strong
+   and was holding the level down, so D16's *"forms 49 µM (matches A3's 47 µM)"* was
+   partly the bug cancelling out. **Bounded: yes. Same operating point: no.**
+   D8/D14/D16/D17 want re-reading against the fix — a physics-conclusions call.
+
+   **CORRECTION — what an earlier revision of this doc got wrong.** It claimed *"the
+   dimer population path is BROKEN — dead `k_dissolution`"* and called it a §6.5
+   construct-validity gap. **Wrong on mechanism.** Dissolution IS implemented, in the
+   OTHER module (`ca_triphosphate_complex.py:418`,
+   `k_diss = k_classical·(1-singlet_excess)·template_enhancement`). The particle-system
+   slaving in `dimer_particles.step_population` is DECLARED DESIGN (L163-165: *"Chemistry
+   determines HOW MANY dimers exist... Particle system tracks WHICH ONES and their
+   quantum state"*) and tracks the chemistry faithfully. `k_dissolution` (L127) is a
+   vestigial duplicate in the wrong module, not a missing mechanism. The template term
+   multiplying dissolution is correct Option-B detailed balance; `(1-singlet_excess)` is
+   real coherence-protected persistence (the D15 hypothesis, implemented). The failure
+   was grepping `RESEARCH_LOG_CALCIUM_DIMER.md` instead of reading D1-D18.
 
 ## The remaining tasks (dedicated thread)
 
@@ -110,18 +159,27 @@ repo-root-relative and wrong until 2026-07-16.)
   self-organises to 1) is ESTABLISHED (D8/D14) and stands; *SOC-topology* (power-law
   clump sizes) is what this task chased. It inherited the name.
 
-- **Coherence-radius, dynamic half (the real next experiment).** Does the partition
-  fragment far-pairs-first as P_S decays, and die at P_S=1/√2? Pre-registered
-  edge-loss order on the ladder rig: gap 3.0 breaks at P_S=0.9545, 2.8 at 0.9356,
-  2.5 at 0.9080, 2.0 at 0.8637, all gone by 0.7071. **Discriminating:** a classical
-  scalar eligibility trace decays uniformly and carries no spatial structure, so it
-  cannot produce a spacing-ordered fragmentation. Needs a run long enough for P_S to
-  move (at 0.08 s it hasn't: measured 0.9987) — now one background job.
+- **Coherence-radius, dynamic half — UNBLOCKED ON PHYSICS by the finding-8 fix; now
+  gated on COMPUTE.** The question stands: does the partition fragment far-pairs-first
+  as P_S decays, and die at P_S=1/√2? Pre-registered from measured T_eff=151.6 s
+  (`sweep/coherence_fragmentation_probe.py`, written before the run and still intact):
+  gap 3.0 breaks at **t=9.5 s**, 2.8 at **13.6 s**, 2.5 at **19.9 s**, 2.0 at
+  **30.4 s**, partition gone at **75.1 s**; the 4.5 gaps have P_S_crit=1.109>1 so they
+  never bond at all — which independently retrodicts the static probe. **Discriminating:**
+  a classical scalar eligibility trace decays uniformly and carries no spatial structure,
+  so it cannot produce a spacing-ordered fragmentation.
+  Pre-fix this was unreachable (population died ~40× faster than coherence). **With the
+  `* dt` fix, dimers persist — which is exactly what the experiment needs.** The blocker
+  moved from physics to compute: persistent dimers make `step_entanglement`'s O(n²) intra
+  loop explode to **~4.4 s/step** (~900 dimers/synapse vs ~56 pre-fix), so an 80 s run is
+  ~98 h. **GATE: vectorise or gate the INTRA loop** — 79% of `net.step`, and topologically
+  irrelevant to `betti*_cross`. Same shape as the cross-loop fix already landed in 862481d.
 
-- **Natural emergence.** Let η climb on its own (no clamp). ~1–3.5 h post-
-  vectorisation; a background job, not a blocker. If it needs to be faster, the
-  target is the bond DICT (O(live bonds) Python writes per step), not the pair
-  arithmetic.
+- **Natural emergence.** Let η climb on its own (no clamp). See the corrected cost in
+  finding 7: 14.3 h at dt=1e-3, and the real wall is the INTRA `step_entanglement` loop
+  (79% of `net.step`), not the vectorised cross loop. Gating/vectorising the intra loop
+  is the highest-leverage perf work left, and it is topologically neutral for
+  `betti*_cross`. Also blocked by finding 8 if the run needs P_S to decay.
 
 ## The original next task (Stage 2, pre-result — kept for context)
 

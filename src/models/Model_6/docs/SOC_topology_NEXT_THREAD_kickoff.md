@@ -124,18 +124,75 @@ structure — it cannot produce a spacing-ordered fragmentation. This is
 `coherence-gated-learning`'s "the eligibility trace IS the persisting topology"
 made measurable.
 
-NEEDS: a run long enough for P_S to actually decay (at 0.08 s it has not moved —
-measured P_S=0.9987). Now ~1–3.5 h post-vectorisation, i.e. one background job.
+**T1′ WAS BLOCKED by a UNIT BUG in dissolution — found, fixed, verified (2026-07-16).**
+Attempted; the run did not survive its own control. What the control found:
 
-**T2 — natural emergence (unchanged, secondary).** Let η climb on its own (no
-clamp) to confirm the ignited-regime topology arises naturally. ~12 h → ~1–3.5 h
-post-vectorisation; a background job, no longer a blocker. If it needs to be
-faster the target is the bond DICT (O(live bonds) Python writes per step), not
-the pair arithmetic — per-synapse-pair arrays instead of a global dict. Do NOT
-cap per-spine dimers as a shortcut: the cap is NOT physics-neutral (a quotient
-edge needs any of d² cross-pairs to clear Werner, so capping d changes the
-quotient topology) and would need its own convergence control. Vectorising
-removed the need for it.
+**The bug: dimer dissolution was missing its `dt`.** In
+`ca_triphosphate_complex.update_dimerization` (which RECEIVES `dt`, L303), every
+FORMATION term correctly carries it — `formation_probability = k_eff·pnc²·dt` (L353),
+`nucleation_events = rand < (p·dt)` (L358), `deterministic_formation = k_eff·pnc²·dt·0.5`
+(L374) — but the dissolution terms did NOT:
+`dimer_dissociation = k_diss·dimer·noise` (L420) and the trimer twin (L421), with the
+result added straight in as `self.dimer_concentration += d_dimer_dt` (L427). `k_diss`
+is s⁻¹ (`k_classical = 0.005`, declared at L160 as *"s⁻¹; cluster lifetime τ≈200s"*),
+so the per-step decrement must be `k_diss·[X]·dt`. **Without it, dissolution ran once
+per STEP instead of per SECOND — 1/dt too fast, i.e. 1000× at dt=1e-3.**
+
+**The dt-independence control is what exposed it:** at an identical 4 s of sim,
+dimers = **56 (dt=1e-3) / 619 (dt=1e-2) / 1501 (dt=5e-2)** — a 27× spread, which no
+rate process can produce. P_S agreed across dt (0.9886/0.9879/0.9802 vs analytic
+0.9805) and the edge set was identical — so the coherence and Werner paths were sound
+and only the population path was dt-dependent. Consequence pre-fix: in silence dimers
+collapsed **2314 → 56 in 4 s** while P_S was still 0.9886, so there was nothing left
+to decohere and the far-pairs-first cascade could not be reached.
+
+**FIXED:** `* dt` on L420-421. **Verified:** under sustained drive the system remains
+**BOUNDED** — peak dimer saturates (µM by t: 40.5 / 61.6 / 94.5 / 105.6 / 113.0 /
+123.3 / 132.3 / 143.8 / 150.1 / **152.6**, increments collapsing +33 → +7 → +2.4).
+**So D14's "SOC loop already closed / self-limiting" and D17's "BOUNDED, no runaway"
+SURVIVE the fix — the phosphate self-limitation is REAL, not an artifact.**
+
+**BUT the operating point moves ~3×:** post-fix the driven plateau is ~**155 µM**
+against A3/D8's **47 µM** and D16's live **49 µM**. Dissolution had been 1000× too
+strong and was holding the level down, so D16's *"integration loop now forms 49 µM
+(matches A3's 47 µM)"* agreement was partly the bug cancelling out. **Bounded: yes.
+Same operating point: no.** D8/D14/D16/D17 need re-reading against the fix — a
+physics-conclusions call, Sarah's, not a code call.
+
+**WHAT I GOT WRONG (recorded so the next thread doesn't inherit it).** An earlier
+revision of this doc claimed *"the dimer population path is BROKEN — dead
+`k_dissolution`"* and called it a §6.5 construct-validity gap. **That was wrong on
+mechanism.** Dissolution IS implemented, in the OTHER module
+(`ca_triphosphate_complex.py:418`, `k_diss = k_classical·(1-singlet_excess)·template_enhancement`).
+The particle-system slaving in `dimer_particles.step_population` is DECLARED DESIGN
+(L163-165: *"Chemistry determines HOW MANY dimers exist... Particle system tracks
+WHICH ONES and their quantum state"*) and tracks the chemistry faithfully.
+`k_dissolution` (L127) is a vestigial duplicate in the wrong module, not a missing
+mechanism. The template term multiplying dissolution is correct Option-B detailed
+balance; `(1-singlet_excess)` is real coherence-protected persistence. The failure was
+grepping `RESEARCH_LOG_CALCIUM_DIMER.md` instead of reading D1-D18.
+
+**T1′ IS NOW UNBLOCKED ON PHYSICS — and re-blocked on COMPUTE.** With dimers persisting,
+`step_entanglement`'s O(n²) intra loop explodes: measured **~4.4 s/step** at ~900
+dimers/synapse (vs 644 ms pre-fix at ~56). T1′'s 80 s run is then ~98 h. **Gate: vectorise
+or gate the INTRA loop** (79% of `net.step`, and topologically irrelevant to
+`betti*_cross`). Pre-registration in `sweep/coherence_fragmentation_probe.py` is intact.
+
+**T2 — natural emergence (secondary).** Let η climb on its own (no clamp).
+**COST CORRECTED 2026-07-16:** an earlier revision of this doc said "~12 h → ~1–3.5 h
+post-vectorisation." **That was wrong** — it extrapolated from a microbenchmark of
+`_update_entanglement` alone. Profiled end-to-end, a full `net.step` in silence is
+**644 ms**, of which **79% is `dimer_particles.step_entanglement`** (the INTRA-synapse
+bond loop: ~241k `np.linalg.norm` calls per step). 80 s at dt=1e-3 = **14.3 hours**.
+The cross-synapse loop that was vectorised was never the dominant term at this scale;
+Amdahl applies. **The real wall is the intra loop** — and it is topologically IRRELEVANT
+to the cross-synapse measurement (`compute_synapse_quotient_betti` reads only
+`cross_bonds`; neither `_update_entanglement` nor `step_coherence` reads intra bonds),
+so vectorising or gating it is the highest-leverage remaining perf work. Do NOT cap
+per-spine DIMERS as a shortcut: a quotient edge needs any of d² cross-pairs to clear
+Werner, so capping d moves the quotient topology and is not physics-neutral. (Gating
+intra BONDS is a different, neutral matter — it changes no dimer count, no P_S, and no
+cross bond — but wants its own control.)
 
 ## Discipline (pre-registered — hold the line)
 If honest values won't ignite the pump, won't form cross-synapse loops, or the
