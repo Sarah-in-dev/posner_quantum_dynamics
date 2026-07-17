@@ -6,18 +6,40 @@ session unless tagged otherwise. Six commits landed, all **LOCAL/UNPUSHED** (ups
 
 ---
 
-## 1. WHAT IS RUNNING RIGHT NOW
+## 1. THE T1′ RUN FINISHED AND **FAILED**. IT PRINTED A FALSE POSITIVE.
 
-`sweep/coherence_fragmentation_probe.py` (T1′), launched under `caffeinate -i`.
+Nothing is running now. The run completed in ~2 h (7137 s).
 
-- **pid 13499**, one core, ~560 MB, ~100% CPU. Started ~1h25m before this doc.
-- **Log:** `/private/tmp/claude-501/-Users-sarahdavidson-posner-quantum-dynamics/53e45e43-3406-40d3-89a1-954119590b6a/scratchpad/T1prime.log`
-  (scratchpad — **copy it somewhere durable if it matters**).
-- **Window:** 0.08 s drive → 35 s silence, dt=1e-3. ETA ~3.4 h total.
-- If it is gone, nothing is lost but time: it is a pure probe, writes no repo state.
+**Its log says `VERDICT: far-pairs-first fragmentation CONFIRMED`. That is FALSE.
+Do not believe it. Do not cite it.** Three compounding defects, all mine:
 
-**Read §3 before interpreting its output. The pre-registered times in the script's
-docstring are MIS-DERIVED. The ORDER prediction is the real test and is unaffected.**
+1. **Only ONE edge "broke"** (gap 3.0 @ t=34.0 s). The verdict's monotonicity check is
+   `all(rows[i] >= rows[i+1] ...)`, which over a single row is **VACUOUSLY TRUE**. One
+   point cannot test an ordering. The script confidently confirmed nothing.
+2. **That one "break" was a FLICKER, not a break.** The log's own next row:
+   ```
+   34.0  ... edges 4   gap3.0@34.0s   <- "broke"
+   34.5  ... edges 5                  <- came BACK
+   ```
+   Bonds keep forming under clamped η and the `step_coherence` noise walk lets P_S
+   wander back over threshold, so edges flicker near d*. The probe's `alive` dict marked
+   the FIRST absence as a permanent break and never un-marked it ⇒ **fabricated data**.
+3. **The window was sized off a mis-derived time** (see §3), so 35 s could only ever
+   catch ~1 of 4 breaks.
+
+**FIXED IN THE PROBE (2026-07-17), so this cannot silently recur:**
+- `CONSECUTIVE_ABSENT = 3` — an edge must be absent 3 consecutive samples to count as
+  broken; returns are logged as `FLICKERS ... NOT breaks`.
+- `MIN_BREAKS = 3` — the verdict now returns **INCONCLUSIVE** on fewer than 3 clean
+  breaks instead of passing vacuously.
+
+**NET SCIENTIFIC RESULT OF T1′ SO FAR: nothing. The order prediction is UNTESTED.**
+The one real datum is weak and directional only: the widest gap (3.0) was the first to
+lose its edge, at t≈34 s. That is consistent with far-pairs-first, and is not evidence
+for it.
+
+**Log (scratchpad, session-scoped — copy it if you want it):**
+`/private/tmp/claude-501/-Users-sarahdavidson-posner-quantum-dynamics/53e45e43-3406-40d3-89a1-954119590b6a/scratchpad/T1prime.log`
 
 ---
 
@@ -96,9 +118,39 @@ to which quantile governs. **Score the order. Do NOT score the times.**
 **What it costs:** the 35 s window (sized off the median times) catches only **2 of 4**
 breaks (~19.3, ~27.7 s). All four needs ~65 s ≈ 6.5 h.
 
-**Decision for the new thread:** accept a 2-point order test from the live run, or
-re-run at 65 s. Recommend: let the 35 s finish (it is nearly free now), then decide
-whether 2 ordered breaks is enough or a 65 s re-run is warranted.
+**AND THE CEILING WAS WRONG TOO — three failed derivations, ending in the data.**
+Predicted gap-3.0 break: median-based **9.5 s** → p95-based **~13 s** → ceiling-based
+**19.3 s** → **OBSERVED 34.0 s**. Cause of the third failure: I ignored the
+**multiplicative noise** in `step_coherence` —
+`noise = 1.0 + 0.01*sqrt(dt)*randn()`, applied to `P_excess` every step. Over 34,000
+steps that compounds into a **±5.8% random walk on P_excess**
+(`0.01*sqrt(dt)*sqrt(n_steps) = 0.058`), which lets outlier dimers sit **ABOVE** the
+analytic ceiling I had called a hard bound: deterministic P_S(34 s) ≤ 0.9218
+(P²=0.8496, cannot clear gap 3.0's 0.9111), but +1σ of the noise walk gives P_S=0.9621
+(P²=0.9256, clears). The physics is fine; my model of it was incomplete three times.
+
+**⇒ THE BREAK TIMES ARE NOT ANALYTICALLY PREDICTABLE HERE.** They are an extreme-value
+statistic over a noisy random walk across hundreds of pairs. **Stop trying to
+pre-register times. Pre-register the ORDER only** — it is the discriminating claim, it
+is robust to which tail governs, and it is what a classical scalar trace cannot produce.
+
+### THE REDESIGN — this is the actual next job
+
+The 2.0–3.0 µm gaps were the root error: they force the cascade out to t≈34–110 s, where
+**both** confounds bite (population collapsing, noise walk dominating). Fix the geometry
+so the whole cascade lands **early**, while the population is >90% alive:
+
+- **Put the gaps just under d\*(0) = 3.45 µm** — e.g. **3.4 / 3.3 / 3.2 / 3.1 µm**
+  (P_S_crit ≈ 0.988 / 0.978 / 0.968 / 0.958). All four then cross threshold in the first
+  seconds, in order, while the population is barely touched. Verify d*(0) against the rig
+  first (`coherence_radius_probe.py` measures P_S; d* = 5·ln(P_product/0.5)).
+- **Keep the 4.5 µm dark controls** — P_S_crit=1.109 > 1, they can never bond, and they
+  independently retrodicted the static probe.
+- **Keep the flicker guard and MIN_BREAKS** (§1) — they are why this can be trusted now.
+- **Replicate.** One run of a stochastic cascade is an anecdote. Several seeds, and score
+  the order per seed.
+- **Sanity-check the window empirically before committing hours**: run 5 s, confirm ≥2
+  breaks have landed, then size the full run.
 
 **The confound, already handled:** dissolution is coherence-PROTECTED
 (`k_diss = k_classical·(1-singlet_excess)·template_enhancement`, and
@@ -166,12 +218,23 @@ The pattern in all four: **inferring instead of measuring, then measuring and be
    Amdahl. Real: 14.3 h; the INTRA loop was 79%.
 3. **"The chain/ring rig sits on a knife-edge (2.5 µm vs 2.41 µm cut)."** WRONG — used an
    assumed P_S=0.90. Real P_S is 0.998 ⇒ d*=3.45 µm, comfortable margins both ways.
-4. **The T1′ break times (§3).** Pre-registered against the median when the mechanism
-   depends on the extreme tail.
+4. **The T1′ break times (§3) — THREE times.** Pre-registered against the median (9.5 s),
+   then the p95 (~13 s), then an "analytic ceiling" (19.3 s). Observed: 34.0 s. Each
+   correction was itself an inference, not a measurement. The third failed because I
+   ignored the multiplicative noise in `step_coherence`, which lets dimers exceed the
+   ceiling I called a hard bound. The lesson is not "use a better statistic" — it is that
+   the times are an extreme-value statistic over a noisy walk and are not analytically
+   predictable. **Pre-register the ORDER; never the times.**
 5. **`collective_field_kT` is 0** (would have licensed an early-exit in the intra loop).
    WRONG — it runs ~21.7. **Measured before acting**; an early-exit would have silently
    deleted Pathway 2.
-6. **First intra vectorisation drew for all pairs** → diverged on gated pairs (42 vs 37).
+6. **The T1′ verdict function passed vacuously.** `all(...)` over one break is True, so
+   the probe printed "far-pairs-first fragmentation CONFIRMED" off a single FLICKER. I
+   wrote a test that could not fail. Guarded now (`MIN_BREAKS=3`, `CONSECUTIVE_ABSENT=3`),
+   but the lesson is the one `session-discipline` names: **shortcuts produce
+   defensible-looking wrong numbers, not working software.** A verdict that cannot return
+   INCONCLUSIVE is not a verdict.
+7. **First intra vectorisation drew for all pairs** → diverged on gated pairs (42 vs 37).
    Caught because an occupancy guard flagged the statistical test as underpowered (0.6%,
    ~3 bonds); re-running at real occupancy exposed it. Fixed to draw only for active
    pairs in triu order ⇒ **bit-identical**.

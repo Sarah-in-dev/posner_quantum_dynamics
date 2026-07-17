@@ -87,6 +87,12 @@ PRED_FLOOR = 75.2
 DRIVE_S, SILENCE_S, DT = 0.08, 35.0, 0.001
 LOG_EVERY = 0.5
 
+# An edge must be absent this many consecutive samples to count as broken (flicker
+# guard), and we need at least this many clean breaks before an order claim means
+# anything. Both learned the hard way on 2026-07-16 — see the handoff.
+CONSECUTIVE_ABSENT = 3
+MIN_BREAKS = 3
+
 
 def observed_edges(tr):
     gid_syn = {d["global_id"]: d["synapse_idx"] for d in tr.all_dimers}
@@ -129,6 +135,7 @@ def main():
     gap_of = {(i, i + 1): GAPS[i] for i in range(len(GAPS))}
     alive = {e: True for e in e0}
     broke_at = {}
+    absent_run, first_absent, flickers = {}, {}, {}
     floor_at = None
 
     print(f"{'t(s)':>7} {'P_S':>8} {'d*(um)':>7} {'dimers':>7} {'b0':>3} {'b1':>3} "
@@ -154,11 +161,28 @@ def main():
             werner_bound=tr.WERNER_ENTANGLEMENT_BOUND)
 
         newly = []
+        # FLICKER GUARD (2026-07-17). An edge is only "broken" after it has been
+        # absent for CONSECUTIVE_ABSENT samples. The first version marked the FIRST
+        # absence as a permanent break and never un-marked it — and the 2026-07-16 run
+        # proved that wrong: gap 3.0 vanished at t=34.0 s and was BACK at t=34.5 s
+        # (edges 4 -> 5). Bonds keep forming under clamped eta and the step_coherence
+        # noise walk lets P_S wander back over threshold, so edges flicker near d*.
+        # A flicker recorded as a break is fabricated data.
         for e in list(alive):
-            if alive[e] and e not in obs:
-                alive[e] = False
-                broke_at[e] = t
-                newly.append(f"gap{gap_of.get(e,'?')}@{t:.1f}s")
+            if not alive[e]:
+                continue
+            if e not in obs:
+                absent_run[e] = absent_run.get(e, 0) + 1
+                if absent_run[e] == 1:
+                    first_absent[e] = t
+                if absent_run[e] >= CONSECUTIVE_ABSENT:
+                    alive[e] = False
+                    broke_at[e] = first_absent[e]
+                    newly.append(f"gap{gap_of.get(e,'?')}@{first_absent[e]:.1f}s")
+            elif absent_run.get(e, 0):
+                flickers[e] = flickers.get(e, 0) + 1
+                newly.append(f"(flicker gap{gap_of.get(e,'?')}@{t:.1f}s)")
+                absent_run[e] = 0
         if floor_at is None and len(obs) == 0:
             floor_at = t
 
@@ -177,12 +201,28 @@ def main():
         p = PRED.get(g)
         rows.append((g, p, br))
         print(f"{g:6.1f} {(f'{p}s' if p else '-'):>10} {br:9.1f}s")
+    if flickers:
+        print("\nFLICKERS (edge vanished then returned — NOT breaks): " +
+              ", ".join(f"gap{gap_of.get(e)}x{n}" for e, n in flickers.items()))
+
+    # A monotonicity check over <MIN_BREAKS points is VACUOUS: with one break
+    # `all(...)` is trivially True. The 2026-07-16 run printed "CONFIRMED" off a
+    # single flicker exactly that way. Refuse to pass on too little data.
     order_ok = all(rows[i][0] >= rows[i + 1][0] for i in range(len(rows) - 1))
-    print(f"\nbreak ORDER monotone in gap (widest first)? {order_ok}")
-    print(f"[{time.time()-t0:.0f}s] "
-          + ("VERDICT: far-pairs-first fragmentation CONFIRMED"
-             if order_ok and rows else
-             "VERDICT: order NOT confirmed — read the table, report honestly"))
+    print(f"\nbreak ORDER monotone in gap (widest first)? {order_ok}  "
+          f"({len(rows)} break(s); need >= {MIN_BREAKS} for this to mean anything)")
+    if len(rows) < MIN_BREAKS:
+        verdict = (f"VERDICT: INCONCLUSIVE — only {len(rows)} clean break(s). A "
+                   f"monotonicity test needs >= {MIN_BREAKS}. NOT a confirmation; "
+                   f"do NOT report the order as tested. Re-run per the handoff "
+                   f"redesign (gaps just under d*(0)=3.45um so the cascade lands "
+                   f"early, while the population is healthy).")
+    elif order_ok:
+        verdict = (f"VERDICT: far-pairs-first fragmentation CONFIRMED over "
+                   f"{len(rows)} breaks")
+    else:
+        verdict = "VERDICT: order FALSIFIED — read the table, report the negative"
+    print(f"[{time.time()-t0:.0f}s] {verdict}")
 
 
 if __name__ == "__main__":
