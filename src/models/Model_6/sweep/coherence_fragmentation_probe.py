@@ -187,3 +187,30 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# =============================================================================
+# ⚠ CORRECTION 2026-07-16 (post-launch) — THE PRE-REGISTERED TIMES ABOVE ARE
+# MIS-DERIVED. DO NOT SCORE THEM. See docs/handoffs/SESSION_HANDOFF_JUL16_TOPOLOGY_DT_FIX.md §3.
+#
+# They were derived from the MEDIAN P_S. But a synapse-quotient edge survives while
+# ANY bonded dimer pair clears F>0.5 — a max over hundreds of pairs, i.e. the EXTREME
+# UPPER TAIL of P_S. T_eff = 216/(spread_factor*template_factor) with spread_factor>=1
+# and template_factor=0.7 => an analytic CEILING T_eff <= 308.6 s (median 151.8,
+# p95 209.9). Near-ceiling dimers hold their edge open long past the median time.
+#
+#   gap    P_S_crit   median T=152 (above)   ceiling T=309 (upper bound)
+#   3.0    0.9545      9.5 s                  19.3 s
+#   2.8    0.9356     13.6 s                  27.7 s
+#   2.5    0.9079     19.9 s                  40.4 s
+#   2.0    0.8637     30.5 s                  61.9 s
+#
+# OBSERVED in the live run: all 5 edges alive at t=18.5 s — consistent with the ceiling,
+# not the median. The physics is fine; the prediction used the wrong statistic.
+#
+# WHAT IS STILL A TEST: the ORDER (widest gap breaks first). It is the discriminating
+# claim — a classical scalar eligibility trace decays uniformly and carries no spatial
+# structure, so it cannot produce a spacing-ordered cascade — and it is robust to which
+# quantile governs. SCORE THE ORDER, NOT THE TIMES.
+#
+# WINDOW: 35 s catches only ~2 of 4 breaks (19.3, 27.7). All four needs ~65 s (~6.5 h).
+# =============================================================================
