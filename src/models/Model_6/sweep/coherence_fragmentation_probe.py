@@ -65,9 +65,26 @@ from soc_topology_geometry_discriminator import build, clamp_eta
 from coherence_radius_probe import ladder_positions, GAPS, d_star
 from entanglement_topology import compute_synapse_quotient_betti
 
-PRED = {3.0: 9.5, 2.8: 13.6, 2.5: 19.9, 2.0: 30.4}
-PRED_FLOOR = 75.1
-DRIVE_S, SILENCE_S, DT = 0.08, 80.0, 0.001
+# Re-measured POST dissolution-dt-fix (fd83460): T_eff = 151.8 s (was 151.6 pre-fix,
+# i.e. unchanged — T_eff depends on J-coupling spread and template binding, not on the
+# chemistry the fix touched). P_S(0) = 0.9987, template_bound fraction 0.977.
+PRED = {3.0: 9.5, 2.8: 13.6, 2.5: 19.9, 2.0: 30.5}
+
+# FLOOR PREDICTION DEMOTED — not a test. P_S hits 1/sqrt(2) at t=75.2 s, but by then
+# only ~1.9% of the population survives (~45 dimers over 8 synapses), because
+# dissolution is coherence-PROTECTED: k_diss = k_classical*(1-singlet_excess)*template_enhancement
+# and singlet_excess(t) = exp(-t/T) exactly, so dissolution ACCELERATES as coherence
+# decays (template_enhancement maxes at 50 at template sites). "Partition gone" at 75 s
+# therefore cannot be separated from "dimers ran out". Reported if reached, never scored.
+PRED_FLOOR = 75.2
+
+# 35 s window: the informative cascade ends at 30.5 s. Analytic population survival
+# (ln(N/N0) = -k_classical*te*[t + T*(exp(-t/T)-1)], te=50):
+#   t= 9.5 s -> 93%   t=13.6 -> 86%   t=19.9 -> 73%   t=30.5 -> 49%   (t=75 -> 1.9%)
+# So every scored break happens while at least half the population is alive. n_dimers is
+# logged as the control: coherence gives SHARP synchronised loss of a whole gap-class at
+# a specific P_S; dimer loss gives SMOOTH erosion tracking the population curve.
+DRIVE_S, SILENCE_S, DT = 0.08, 35.0, 0.001
 LOG_EVERY = 0.5
 
 
