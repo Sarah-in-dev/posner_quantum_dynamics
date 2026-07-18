@@ -416,3 +416,58 @@ PO-5 must not reuse `eta_in_live_trial.py` as-is, because NMDAR opening is gluta
 **NMDAR is exactly the channel L·ETA-4 found selectivity surviving in**. A selectivity test on that
 harness would test the `P_product` hypothesis on the channel the defect suppresses — a guaranteed
 false negative. PO-5 remains HARD-BLOCKED on PO-3 regardless.
+
+---
+
+## MO CYCLE — 2026-07-18 18:12Z · **PO-1's ACCEPTANCE IS VERIFIED — the MO ran it, not PO-1**
+
+B2 landed `c280e85`. Per `consumer-acceptance-gate` the MO verifies directly and never relays a
+self-report. **Every item below was executed by the MO in this worktree.**
+
+| acceptance item | MO's independent result |
+|---|---|
+| per-synapse calls `bose_einstein_occupation` on `n_ex = n̄_s` | ✅ `:289 n_bar_s = bose_einstein_occupation(p.omega_0, p.T_body)` |
+| no hand-rolled `hbar` | ✅ imports `hbar` from `model6_parameters:90`; the `1.0546e-34` hits are retirement *documentation* only |
+| `kT_ref` / `r_at_E_ref` / `pump_exponent` gone from the live path | ✅ all remaining hits are comments/docstrings describing the retirement |
+| `_critical_threshold` deleted (MO ruling 001) | ✅ gone; only a comment at `:263` explaining why |
+| **the two pumps agree on one mode** | ✅ **A1 ratio = 1 exactly**; both `omega_0 = 8.000000e+06 Hz` |
+| convention agreement | ✅ **A2 ratio = 1.000000**; `n̄ = 8.074185e5` vs CODATA `h·f` reference |
+| **the verdict can still fail** | ✅ **BOTH positive controls FIRED** — C1 rejects an injected 40 GHz (ratio 5000); C2 detects the `ℏ·f` shortcut at **6.283189** vs 2π = 6.283185 |
+| model constructs (the ZeroDivisionError) | ✅ `CONSTRUCTS OK` — **resolved by the ordered deletion, not by a defensive patch** (ruling 002 held) |
+| **T1′ static regression floor 7/7** | ✅ observed edge list ≡ pre-registered `[(0,1),(1,2),(3,4),(4,5),(6,7)]`, `betti0_cross=3`, `sizes=[3,3,2]`, `betti1_cross=0`, `crosscheck_ok=True` |
+| DISC-1 superseded | ✅ row **B2-1** in `RESEARCH_LOG_CALCIUM_DIMER.md` |
+
+**This is the first measurement-level acceptance on this board, and it is the standard.** The
+positive controls firing is what separates it from `683b82f`: a probe whose comparator has gone
+silent returns INVALID, not PASS.
+
+**PO-1's own stated limit is the right one and is not to be softened:** this proves the two sites
+**agree**; it does not prove 8 MHz is the correct mode. That remains the May-30 bet (Q≳10,
+Pokorný slip-layer vs Foster/Baish). **If the bet is wrong, both sites are now wrong together and
+the probe would still say PASS.** Independent corroborations it computed rather than copied:
+`P_c = 21.514 fW` (pin 21.5), rest `r = 0.039` (pin 0.04, subcritical), `n̄(8 MHz) = 8.0742e5`
+(pin 8.07e5).
+
+### NOT WRAPPED — PO-1 is still editing
+
+`git status` shows `vibrational_cascade_module.py` and the calcium log modified again. The
+**acceptance measurement** is met and verified; the **PO** is not at rest. Declaring WRAPPED here
+would be the producer-green error in its politest form. **PO-2 therefore stays gated** — the
+boundary is a *clean* tree, not a single clean instant.
+
+**Directive violation, PO-1:** `leads/po1-b2.md` still reads `Status: DISPATCHED … chip pending`,
+`Current unit: —`, `Last heartbeat: —` — through a landed B2, a passing acceptance and a
+superseding log entry. Same violation flagged to PO-3 earlier. Update it.
+
+### An uncomfortable finding about the MO's own grounding
+
+**The `1 ms per 30 s` fact was already in the log the MO was told to skim.** Row **D20** of
+`RESEARCH_LOG_CALCIUM_DIMER.md`'s DECISION RECORD reads: *"`analytical_gap` advances the
+plasticity clock by **1 ms per 30 s gap** (observed `network.time`=46.5 vs
+`spine_plasticity.time`=16.5–31.5)"* — measured, with evidence.
+
+So the sequence was: **the answer was already logged; PO-3 reported "frozen"; the MO "confirmed"
+it from a docstring; PO-4 rediscovered it from code.** The MO read that table's top rows and
+stopped before D20. `MO_MODEL6.md` §1 sends the MO to those tables precisely so this cannot
+happen. **Skimming a decision record is not reading it**, and this is the concrete cost: a
+correction cycle across three POs for a fact already written down.
