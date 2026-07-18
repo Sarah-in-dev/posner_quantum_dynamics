@@ -14,8 +14,23 @@ PROC 1: eta_max 0.09396788  cross_bonds 1848  dimers 796
 PROC 2: eta_max 0.10690230  cross_bonds 1179  dimers 822
 ```
 
-`cross_bonds` spread **1.57×**. Across four driven runs `eta_max` took **0.0 / 0.0709 / 0.0940 /
-0.1069** — **whether the backbone condenses at all was not reproducible at the same seed.**
+**CORRECTED after the fourth run landed — the figure is worse than I first filed.** On the full
+comparable set (one script, one config, four runs):
+
+| run | eta_max | cross_bonds | dimers |
+|---|---|---|---|
+| proc 1 | 0.09396788 | 1848 | 796 |
+| proc 2 | 0.10690230 | 1179 | 822 |
+| in-process A | 0.04873884 | 2578 | 873 |
+| in-process B | 0.10690230 | 1536 | 653 |
+
+**`cross_bonds` spread = 2.19×** (1179 → 2578). **I originally filed 1.57× off two runs; that number
+is superseded by my own later data, not by anyone catching it.** `eta_max` spread is also 2.19×, and
+the Arm A null separately produced `eta_max = 0.0` — so across driven runs the range **includes
+zero**: whether the backbone condenses at all is not reproducible at the same seed.
+
+**Four runs is a RANGE, not a distribution.** It bounds nothing and gives no variance — which is
+exactly why the N-run pass below is still the decision-relevant missing number.
 
 **Root cause SHOWN in code — three unseeded generators, none reachable by `np.random.seed()`:**
 `camkii_module.py:199` · `spine_plasticity_module.py:274` · `multi_synapse_network.py:1188`, each
