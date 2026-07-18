@@ -187,6 +187,49 @@ Tolerance unchanged (**±0.02**). **No formula changes** — AMENDMENT B's expre
 exactly as registered; this re-tests it on clean ground. If any of these four misses, the
 formula is falsified and I register nothing further.
 
+## 1e. AMENDMENT D — 2026-07-18 19:30Z · the HEADLINE separation measurement, registered before running
+
+The board's acceptance (`MO_MODEL6.md` §3 PO-4): *a measurement shows committed vs uncommitted
+spine volume SEPARATING across an honest gap.* Registered here before execution.
+
+**Design.** Both arms start from the identical controlled post-drive state (`E0 = 1.0`
+enlargement), differing ONLY in commitment/confinement. One honest gap of **300 s** (the board's
+`+300 s`), `dt_sub = 1.0` (justified by the convergence check, `0497aa1`). **5 replicates per
+arm** — `_update_volume` injects thermal noise, so a single run cannot support a separation claim.
+
+**The mechanism being tested, stated in advance so it can be wrong.** Commitment does not add
+actin; it **redirects** it. `spine_plasticity_module.py:389-390`: unconfined enlargement extrudes
+to the shaft and is LOST; confined enlargement is retained into `actin_stable`, which decays at
+`k_destabilization = 0.001 s⁻¹` (τ = 1000 s). Volume follows `actin_total`. So across a long gap
+the **uncommitted arm should lose volume and the committed arm should largely keep it** —
+"commitment buys durability, not amplitude", which is D19's independent finding from a different
+probe.
+
+**PRIMARY, registered:**
+- **Sign:** `ΔV = V_committed − V_uncommitted > 0` at +300 s.
+- **Magnitude floor:** `ΔV > 0.26`, i.e. **4σ** on the measured single-run thermal spread
+  (σ = 0.065, from the 5-rep isolated-module reproduction in §4). Registering a floor rather than
+  a target keeps `MO_MODEL6.md` §7's "no constant tuned to a downstream target" intact while
+  still being falsifiable: a separation inside noise is NOT a separation.
+- **NOT registered against 1.291/2.389** — unsourced, per §4 and MO ruling 003.
+
+**NULLS:**
+1. **Uncommitted-pair null** (pre-registered §2 null 3): two *uncommitted* arms, different seeds
+   ⇒ `|ΔV| ≤ 0.26`. If arms that differ only by seed separate as much as arms differing by
+   commitment, the effect is noise and the headline is **FALSIFIED**.
+2. **Frozen-clock control:** on **pre-fix** code the same measurement must yield `ΔV ≈ 0`
+   (within noise), because neither arm's clock runs. This is what "the full model has never been
+   allowed to show it" means, demonstrated rather than asserted.
+
+**POSITIVE CONTROLS** (the L·ETA-4 scar): `_camkii_committed == True` **and** `confinement > 0.5`
+in the committed arm, asserted before ΔV is interpreted. Failure ⇒ **INCONCLUSIVE**, never
+CONFIRMED.
+
+**Registered limit:** volume saturates at the actin-limited ceiling **3.80**
+(`spine_plasticity_module.py:332-333`, per D20 — **not** the 3.9 clip at `:381`). If both arms
+sit at the ceiling the separation is compressed and the measurement is **INCONCLUSIVE by
+saturation**, not negative. Checked and reported explicitly.
+
 ## 2. The null that cannot show the effect
 
 Three, and all three must behave as registered or the run is INCONCLUSIVE:
