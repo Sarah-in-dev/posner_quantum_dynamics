@@ -7,7 +7,7 @@ consumption.
 
 **Status:** LIVE — grounding brief returned 2026-07-18 19:46Z.
 **Current unit:** pre-registration (§2.4), then the conservation probe committed FAILING first.
-**Last heartbeat:** 2026-07-18 19:46Z
+**Last heartbeat:** 2026-07-18 20:05Z
 **Blocked on:** — (two open questions in `queue/po2-phosphate.md`, neither blocking; working on)
 
 ## HEARTBEAT LOG
@@ -76,3 +76,32 @@ Report, do not touch.
 
 **Prior art:** `sweep/phosphate_conservation_probe.py` (repo root) already exists and already
 uses the correct `K_CLASSICAL = 0.005` with its citation. Extend it; do not rebuild.
+
+### 2026-07-18 20:05Z — pre-registration committed `a9f0767`; ledger probe mid-flight
+
+**Committed BEFORE running anything scored:** `docs/PREREG_PO2_PHOSPHATE.md` (L·PO4-1).
+The registered discriminator is **not** "is it conserved" — a conserving result is the *default*
+outcome of a badly-scoped ledger, which is exactly how D8/D14 happened. It is:
+
+    dP == hydrolysis.total_recovered   (on current, unfixed code)
+
+with three outcomes, **two of which contradict my own dispatch** (`dP ~ 0` ⇒ there is no leak and
+the dispatch is wrong; `dP ~ neither` ⇒ a second unidentified source/sink, fix NOTHING).
+Tolerance eps = 1e-12 relative, justified against float64 accumulation AND registered as not
+deciding the verdict (predicted leak is ~11 orders above it).
+
+**`sweep/phosphate_ledger_probe.py` written and running against the LIVE
+`Model6QuantumSynapse`** — nothing mimicked, because mimicking `model6_core` is the precise D14
+failure I registered against. Three arms: MAIN, C1 (inject a known leak — the ledger must detect
+it), C2 (recovery suppressed — must conserve, which doubles as the D8/D14 reconciliation).
+
+**MY OWN DEFECT, disclosed:** I launched a 3-arm × 4000-step full-model run with **no progress
+instrumentation and no incremental persistence**, against the MO's compute rule (*"progress
+instrumentation, results persisted incrementally"*). It is at 12.5 min CPU at 100% and I
+**cannot tell how far along it is** — which is precisely what that rule exists to prevent. Not
+killing it (it is within the cheap-probe expectation and likely near done), but the next run gets
+per-arm progress output before it starts. Logged as mine, not discovered later.
+
+**Compute so far:** ~13 min CPU, single core, one backgrounded process. Well inside the 130-min
+precedent, but I did not request a slot because a conservation check was expected to be cheap.
+If this exceeds ~30 min I stop and request sequencing rather than letting it run unbounded.

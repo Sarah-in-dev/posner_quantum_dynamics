@@ -1,4 +1,25 @@
-# Lead: po1-b2 (PO-1 · B2 — retire the per-synapse pump site) — OWNED BY THIS PO
+# Lead: po1-b2 → **PO-6a** (sweep-harness validity) — OWNED BY THIS PO
+
+## ROTATION — 2026-07-18 19:49:34Z (MO rotation-001, `bdb2d64`)
+
+**B2 CLOSED.** Rotated to **PO-6a — the sweep harness is lying.**
+**Now owns:** `sweep_runner.py`, `quantum_dimensions.py`, the orphan modules.
+**No longer holds:** `vibrational_cascade_module.py` / backbone params (drop a `requests/` file
+like any other PO if they need changing).
+**Unit 1 (live):** dimension-consumer audit — every dimension in `quantum_dimensions.py` either
+demonstrated to reach a live consumer *by measurement*, or marked INERT with `file:line`.
+**Unit 2:** orphan modules + dead fields, `ast`-level proof before any deletion.
+**NOT in scope:** the Q × drive sweep (HARD-blocked on PO-2) · Q6 large-D (escalated to Sarah).
+**Collision watch:** `model6_core.py:84` holds my `em_coupling_module` import but PO-2 is live in
+that file — coordinate via `requests/po2-phosphate/` before touching it at all.
+
+**Heartbeat:** 2026-07-18 19:49:34Z — rotation read, grounding on the two new files done
+(`quantum_dimensions.py` 21 dimensions across 4 groups; `sweep_runner.py` apply path read in
+full). Building the Unit-1 audit harness now.
+
+---
+
+# (Closed) B2 — retire the per-synapse pump site
 
 **Objective (the done-bar, a MEASUREMENT):** the per-synapse site calls
 `bose_einstein_occupation` (`model6_parameters.py:46`) on the `n_ex = n̄_s` form; no

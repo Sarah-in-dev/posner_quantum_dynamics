@@ -123,3 +123,57 @@ paper. That is literature work, not a code change, and it is outside B2's scope.
 **Recommendation:** leave the stated limit standing and schedule the finite-D check as its own
 unit before any η value is used in a paper claim. **Do not close it by raising D** — that is
 tuning a constant to reach an outcome (`MO_MODEL6` §7, first item).
+
+---
+
+## Q7 — [PO-6a Unit 1] The sweep harness is lying: 9 of 19 dimensions are inert. **Two are `critical`.**
+
+**The ask:** (a) note that no sweep result over these nine is interpretable, and (b) rule on
+whether `q2_t2_p31` should be re-pointed at the live field — that one is a physics call.
+
+**Measured** (`sweep/dimension_consumer_audit.py`, commits `9b4819f`, `dbe9548`): read-tracing
+via `__getattribute__` on the params dataclasses and the scenario, driving the real model.
+`reads == 0` is definitive — nothing looked at the value. Three controls pass, including
+calibration against B2 ground truth (`omega_0` LIVE, `D_modes` INERT), so the instrument
+demonstrably discriminates.
+
+| dim | apply site | target | why inert |
+|---|---|---|---|
+| `q1_d_modes` | `:61` | `dendritic_backbone.D_modes` | no consumer |
+| `q1_phi_dissipation` | `:63` | `…phi_dissipation` | no consumer |
+| `q1_chi_redistribution` | `:65` | `…chi_redistribution` | no consumer |
+| `q1_kT_per_modulation` | `:67` | `…kT_per_modulation_unit` | no consumer |
+| **`q2_t2_p31` [CRITICAL]** | `:71` | `quantum.T_singlet_dimer` | only reader is an ORPHAN |
+| `q2_j_coupling_hz` | `:73` | `quantum.J_intrinsic_dimer` | zero readers anywhere |
+| `q2_k_agg_baseline` | `:92-93` | `dimerization.k_agg` | `hasattr` guard is False |
+| **`stim_ca_amplitude` [CRITICAL]** | `:145` | `scenario.ca_amplitude` | code disclaims the mechanism |
+| `stim_burst_duration_ms` | `:145` | `scenario.burst_duration_ms` | hardcoded 40 ms override |
+
+**The one that should worry you most — `q2_t2_p31`.** It is the dimer coherence lifetime,
+declared *"controls eligibility trace window"*: the ~100–200 s window the whole thesis rests
+on. Its only reader is `singlet_dynamics.py:122`, an **orphan module never instantiated**. The
+live coherence path reads a *different* field, `T2_single_P31` (`quantum_coherence.py:59`),
+which **no dimension sweeps**. So the eligibility-trace timescale has never been swept, and a
+sweep that appeared to vary it was varying a dead field. Verified not a short-run artifact:
+150 steps, 1075 dimers, still zero reads.
+
+**`model6-architecture:48` already records this** — *"T2_p31 sweeps `T_singlet_dimer`, not
+`T2_single_P31`"* — filed as a neutral "attribute path correction". The fact was known; it was
+never read as a defect.
+
+**Recommendation:**
+1. **Do not re-point `q2_t2_p31` on my own authority.** Swapping it to `T2_single_P31` changes
+   *what physical quantity the sweep varies* (dimer-singlet lifetime vs single-spin T2 — not
+   the same thing), and the two fields have different defaults (500 s vs 2.0 s). **Physics
+   call, escalating.**
+2. `q2_k_agg_baseline`: fix the guard to `k_base` — mechanical, low risk, mine if you want it.
+3. `stim_ca_amplitude` / `stim_burst_duration_ms`: either wire them or **delete the
+   dimensions**. Leaving them is worse than removing them, because their `condition` strings
+   assert mechanisms the code explicitly disclaims.
+4. Until each is resolved, mark them INERT **in `quantum_dimensions.py` itself**, so no future
+   reader can mistake a flat response for physics. I can do this now on your word — it is
+   annotation, not a physics change.
+
+**Blast radius:** any past sweep interpretation that read a flat response over these as
+"parameter doesn't matter" needs re-reading. I do not know whether any such reading exists;
+that is yours to check.
