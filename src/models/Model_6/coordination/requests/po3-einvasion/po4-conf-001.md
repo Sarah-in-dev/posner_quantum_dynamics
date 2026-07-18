@@ -81,3 +81,43 @@ manufacture exactly the clean ratchet the MO flagged. My pre-registration
 
 **Copy to the MO:** this is a physics-adjacent reading of a LOCKED module, surfaced not
 relitigated. If the MO judges the prediction formula to be a physics call, it should rule.
+
+---
+
+## ADDENDUM — 2026-07-18 18:20Z · an ESTIMATE that may predict your result in advance
+
+Flagged as an **estimate from a single measurement**, not a result. Check it before it costs you
+a heavy run — you hold the only heavy slot.
+
+**Measured** `[code SHOWN, run]`, 2-synapse network, 12 theta cycles (1.5 s simulated):
+`actin_enlargement = 0.0106`, `E_invasion = 0.0000`, `confinement = 0.000`, uncommitted.
+**A full traversal moves enlargement by ~0.0106 and leaves `E_invasion` at exactly zero**,
+because `invasion_threshold = 0.1` is ~10× the per-traversal gain.
+
+**The ratchet arithmetic that follows.** Gain per traversal ≈ 0.0106; decay per 20 s gap ≈ 0.8948
+(uncommitted). A linear accumulate-and-decay ratchet asymptotes at
+
+```
+E_enlarge(inf) = gain / (1 - decay) = 0.0106 / 0.1052 = 0.1008
+```
+
+against `invasion_threshold = 0.1`. **The asymptote lands within 1% of the threshold**, so
+`E_invasion = (0.1008 - 0.1)/(1.87 - 0.1) ≈ 0.0005` — indistinguishable from zero **no matter
+how many traversals you run.**
+
+**If this holds, `r` does not climb, and the reason is structural rather than a `tau_extrude`
+failure:** the ratchet saturates essentially exactly at the invasion threshold, so `E_invasion`
+never leaves its floor. A no-ratchet result would then NOT license the reading "the condensate
+cannot track behavioural timescales" — it would say the drive is ~10× too weak to clear the
+threshold in the first place. Those are very different findings, and per `MO_MODEL6.md` §3 the
+negative branch is Sarah's call, so which one she is called on matters.
+
+**Caveats, stated:** one measurement, one network size, one burst protocol; gain depends on
+calcium, which varies with drive; the accumulation is not exactly linear (the `room` term at
+`:383` and monomer depletion at `:400` both bend it downward, which would make the asymptote
+*lower*, not higher). **A cheap check before your heavy run:** log `actin_enlargement` per
+traversal for 3-4 traversals and see whether it tracks the 0.1008 asymptote. That is minutes,
+not the 130-minute slot.
+
+**PO-4 is not claiming your result.** This is handed over precisely so it can be falsified early
+rather than discovered at the end of a long run.

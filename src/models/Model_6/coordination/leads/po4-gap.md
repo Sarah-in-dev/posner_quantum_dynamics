@@ -5,9 +5,10 @@ with a cited timescale or is excluded with a stated reason — nothing in neithe
 measurement shows **committed vs uncommitted spine volume SEPARATING across an honest gap**.
 Demonstrated failing on the current 1 ms-per-30 s code first.
 
-**Status:** LIVE — brief ACCEPTED by the MO (`d0ed6d8`), all five rulings received.
-**Current unit:** verifying the isolated-module 1.291/2.389 claim, then pre-registration.
-**Last heartbeat:** 2026-07-18 17:58Z
+**Status:** LIVE — pre-registered (`3bf4ad4`) and the probe committed FAILING on current code
+(`806adc7`). Next unit: consolidation, then the honest-gap fix.
+**Current unit:** consolidation (MO ruling 1) — no compute needed.
+**Last heartbeat:** 2026-07-18 18:20Z
 **Blocked on:** — (nothing; K_CLASSICAL is MO-held but does not block my path)
 
 ---
@@ -59,6 +60,51 @@ shared-file hazard is respected). That edit makes the per-synapse pump drive rea
 freezes plasticity — **it freezes the per-synapse pump drive across every silence too.** The two
 defects compose. This raises the priority of the gap fix and is worth the MO's attention when
 sequencing B2 against this PO. Routed to `queue/po4-gap.md`.
+
+### 2026-07-18 18:20Z — pre-registered, and the probe FAILS on current code as required
+
+**L·GAP-1 registered (`3bf4ad4`) then demonstrated failing (`806adc7`).** Per `fa12009`.
+
+| arm | conf | R measured | R registered | verdict |
+|---|---|---|---|---|
+| uncommitted | 0.000 | **0.999994** | 0.8948 | STOPPED CLOCK |
+| committed | 0.976 | **0.999978** | 0.6751 | STOPPED CLOCK |
+
+**The zero-duration null is the sharpest evidence in the run:** `R(0 s) = 0.999994`,
+`R(20 s) = 0.999994`, **ratio = 1.000000.** Retention does not depend on gap duration —
+the signature of a fixed-size tick, not decay. **The whole defect in one number.**
+
+Verdict returned **INCONCLUSIVE**, correctly: null 1 fired, and CONFIRMED is unreachable by
+registration until an honest arm exists. Verdict logic was not rewritten after seeing data; the
+R(0)-vs-R(20) comparison is reported as explicitly post-hoc, outside the verdict.
+
+### FINDING F-4c — a crash in the copy that SURVIVES consolidation
+
+`analytical_gap(net, 0.0)` raised `ZeroDivisionError` (`np.ceil(0/dt_sub) == 0`, then divides).
+**Found by the pre-registered null** — the control that exists to be unable to show an effect
+instead exposed a crash. Guarded with `max(1, ...)`; minimal, my surface, not a physics change.
+**Distinct from the `chi_redistribution` ZeroDivisionError the MO routed in `bcd15b8`**: that one
+dissolves with B2's deletion set; this one is at `run_theta_burst_45s.py:71`, in the copy I am
+keeping, and was in **no** deletion set.
+
+### FINDING F-4d — the compute wall, and why the live drive path cannot carry this measurement
+
+Measured: a 12-cycle theta traversal on a **2**-synapse network = **190.7 s wall for 1.5 s
+simulated (~127× slower than realtime)**. A 20 s full-physics reference ≈ 42 min. And that
+traversal leaves `actin_enlargement = 0.0106`, `E_invasion = 0.0000` — **an order of magnitude
+below `invasion_threshold = 0.1`**. So the live path neither fits the budget nor reaches the
+regime where retention is defined. Probe therefore uses a **controlled initial condition**, with
+the precedent (`model6-dimer-formation-chemistry` §2) and the limit both stated in its docstring.
+**This is a second, independent reason "the full model has never been allowed to show it."**
+
+### FINDING F-4e (ESTIMATE, routed to PO-3) — the ratchet may saturate AT the threshold
+
+Gain ≈ 0.0106/traversal, decay ≈ 0.8948/20 s gap ⇒ asymptote `0.0106/0.1052 = 0.1008` against
+`invasion_threshold = 0.1`. **Lands within 1% of the threshold** ⇒ `E_invasion ≈ 0.0005`,
+indistinguishable from zero for any number of traversals. If it holds, a no-ratchet result means
+**the drive is ~10× too weak to clear the threshold**, NOT that `tau_extrude` fails — two very
+different findings, and the negative branch is Sarah's call. Flagged to PO-3 as an estimate with
+a minutes-long check that could save its 130-minute slot.
 
 ### Next units (none blocked)
 1. Reproduce the isolated-module committed-vs-uncommitted baseline (cheap, no heavy slot).
