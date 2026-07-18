@@ -20,6 +20,23 @@ none of them modifies repo source. Run from this directory with the project venv
 | `probe_templates_and_drive.py` | does the `n_templates` feedback fire, and how large is it? | fires early (V>1.25 by ~8 s); mean rate +1.0–1.5%; template-bound fraction ~2× |
 | `probe_duty.py` | what duty cycle do synapses actually see? | best 0.189, mean 0.037 ⇒ AMPAR onset needs ~159–809 trials |
 
+## POST-FIX NOTE (2026-07-18, after the E2 bug pass)
+
+`probe_latch2.py` has been updated to the new flag name
+(`_network_measurement_performed` → `_coordinated_measurement_performed`) so it still
+runs. **Its result has therefore changed, and that change IS the validation of the fix:**
+
+| | before the fix | after |
+|---|---|---|
+| trial 0 | 1 measurement call | 1 |
+| trial 1 | **0 calls, 1 latch early-return** | **1 call, 0 early-returns** |
+| trial 2 | **0 calls, 1 latch early-return** | **1 call, 0 early-returns** |
+| `meas_time` | frozen at trial 0's 10.5 s | fresh per trial (10.5 → 26.0 → 41.5) |
+| stale re-commitment | yes | no — the token is consumed at commitment |
+
+The numbers quoted in research-log D19 are the BEFORE column. They are the record of the
+defect, not a reproducible current output. Do not re-run this probe expecting D19's table.
+
 ## Caveats carried from the runs
 
 - `probe_latch2.py` uses a **reduced** config (4 synapses, 3 trials, 14 s budget, deterministic

@@ -336,10 +336,13 @@ def step_network_per_synapse(network, dt, per_syn_stimuli):
             coupling_weights=getattr(network, 'coupling_weights', None),
         )
 
-    # Coordinated gate on reward steps
+    # Coordinated gate — called EVERY step, not only reward steps. The gate does its
+    # own reward check; it must also see the falling edge of reward to re-arm its
+    # one-shot measurement latch, otherwise the measurement fires once per experiment
+    # rather than once per reward episode (D19).
     any_reward = any(s.get('reward', False) for s in per_syn_stimuli)
+    network._evaluate_coordinated_gate({'reward': any_reward})
     if any_reward:
-        network._evaluate_coordinated_gate({'reward': True})
         # Propagate commitment
         if not network.network_committed:
             if any(getattr(s, '_camkii_committed', False) for s in network.synapses):
@@ -444,8 +447,15 @@ def run_trial(network, env, agent, trial_num, agent_dt=0.5,
                 network._entanglement_step_counter = 0
             network._entanglement_step_counter += 1
             if network._entanglement_step_counter % 10 == 0:
+                # coupling_weights MUST be passed: _update_entanglement early-returns
+                # without it (multi_synapse_network.py ~:277), so omitting it meant NO
+                # cross-synapse bonds formed during a trial at all — the entanglement
+                # topology, which is supposed to BE the eligibility trace, was built
+                # only on the single reward step that routes through
+                # step_network_per_synapse. See research log D21 (construct-validity #5).
                 network._network_entanglement = network.entanglement_tracker.step(
-                    physics_dt, network.synapses, network.positions
+                    physics_dt, network.synapses, network.positions,
+                    coupling_weights=getattr(network, 'coupling_weights', None)
                 )
             network.time += physics_dt
 

@@ -743,8 +743,12 @@ class MultiSynapseNetwork:
         self.network_commitment_level = 0.0
         self.time = 0.0
 
-        # Network-level measurement tracking
-        self._network_measurement_performed = False
+        # Network-level measurement tracking. One flag PER GATE — sharing one flag
+        # between the coordinated gate and its independent control invalidated the
+        # comparison (D19). Each means "measured once this reward episode"; both
+        # re-arm on the falling edge of reward.
+        self._coordinated_measurement_performed = False
+        self._independent_measurement_performed = False
 
         # Network-level entanglement tracking
         self.entanglement_tracker = NetworkEntanglementTracker(
@@ -957,12 +961,18 @@ class MultiSynapseNetwork:
         # =========================================================================
         # When reward is present, evaluate gates with correlated sampling.
         # This ensures entangled synapses commit/fail together.
-        if stimulus.get('reward', False):
-            if self.use_correlated_sampling:
-                self._evaluate_coordinated_gate(stimulus)
-            else:
-                self._evaluate_independent_gate(stimulus)
+        #
+        # The gate is called UNCONDITIONALLY — it performs its own `reward` check and
+        # early-returns. The outer `if reward` that used to wrap this call meant the
+        # gate was never invoked on a non-reward step, so the falling edge of reward
+        # was never observed and the one-shot measurement latch could never re-arm.
+        # That is what made the latch effectively once-per-experiment (D19).
+        if self.use_correlated_sampling:
+            self._evaluate_coordinated_gate(stimulus)
+        else:
+            self._evaluate_independent_gate(stimulus)
 
+        if stimulus.get('reward', False):
             # Propagate synapse-level commitment to network flag
             if not self.network_committed:
                 if any(getattr(s, '_camkii_committed', False) for s in self.synapses):
@@ -1265,8 +1275,9 @@ class MultiSynapseNetwork:
         self._network_entanglement = ent_metrics
         
         # === COORDINATED THREE-FACTOR GATE ===
-        if reward_present:
-            self._evaluate_coordinated_gate(stimulus)
+        # Unconditional — the gate checks `reward` itself, and needs to SEE the
+        # non-reward steps in order to re-arm its one-shot latch (D19).
+        self._evaluate_coordinated_gate(stimulus)
         
         # Build network state for history and return
         synapse_states = []
@@ -1330,11 +1341,19 @@ class MultiSynapseNetwork:
         """
         dopamine_present = stimulus.get('reward', False)
         if not dopamine_present:
+            # Reward episode over — RE-ARM. The latch below means "measure once per
+            # reward episode", NOT once per network lifetime. It was never re-armed,
+            # so across a multi-trial run the measurement fired on trial 0 and every
+            # later reward returned at the latch (research log D19: observed 1 call in
+            # trial 0, 0 in trials 1-2, while spine volume kept climbing off a stale
+            # gate flag). Re-arming on the falling edge fixes this for every driver,
+            # including ones that never think to reset it.
+            self._coordinated_measurement_performed = False
             return
 
-        if self._network_measurement_performed:
+        if self._coordinated_measurement_performed:
             return
-        self._network_measurement_performed = True
+        self._coordinated_measurement_performed = True
 
         # Ensure dimer registry is current
         self.entanglement_tracker.collect_dimers(self.synapses, self.positions)
@@ -1471,11 +1490,18 @@ class MultiSynapseNetwork:
         """
         dopamine_present = stimulus.get('reward', False)
         if not dopamine_present:
+            # Re-arm — see _evaluate_coordinated_gate. SEPARATE flag: this gate is the
+            # CONTROL condition, and it previously shared `_network_measurement_performed`
+            # with the coordinated gate, so whichever ran first locked the other out for
+            # the network's lifetime. That made the coordinated-vs-independent comparison
+            # — the control for whether the correlated partition matters at all — invalid
+            # by construction (research log D19).
+            self._independent_measurement_performed = False
             return
 
-        if self._network_measurement_performed:
+        if self._independent_measurement_performed:
             return
-        self._network_measurement_performed = True
+        self._independent_measurement_performed = True
 
         # Ensure dimer registry is current
         self.entanglement_tracker.collect_dimers(self.synapses, self.positions)
@@ -1658,6 +1684,9 @@ class MultiSynapseNetwork:
             synapse._camkii_committed = False
             synapse._committed_memory_level = 0.0
             synapse._measurement_performed = False
+            # Was missing: reset() left the measurement token set, so a "reset"
+            # network could still commit off a pre-reset measurement (D19).
+            synapse._measurement_gate_opened = False
 
         # Reset network state
         self._network_state = {
@@ -1671,7 +1700,8 @@ class MultiSynapseNetwork:
         self.time = 0.0
 
         # Network-level measurement tracking
-        self._network_measurement_performed = False
+        self._coordinated_measurement_performed = False
+        self._independent_measurement_performed = False
 
 
 # =============================================================================

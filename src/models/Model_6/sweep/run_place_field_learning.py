@@ -246,7 +246,11 @@ def run_experiment(feedback_enabled=True, n_traversals=None):
         # Reset gate state so each traversal gets a fresh quantum measurement.
         # Spine structural state (volume, AMPAR, actin) is NOT reset —
         # only the commitment flags that gate re-evaluation.
-        network._network_measurement_performed = False
+        # (The measurement latch now re-arms itself on the falling edge of reward —
+        # `_coordinated_measurement_performed` / `_independent_measurement_performed`.
+        # This driver's manual reset of the old single `_network_measurement_performed`
+        # is no longer needed and would now be a no-op, so it is removed rather than
+        # left in place looking effective.)
         network.network_committed = False
         for syn in network.synapses:
             syn._camkii_committed = False

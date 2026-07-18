@@ -614,6 +614,15 @@ class Model6QuantumSynapse:
                 self._camkii_committed = True
                 self._commitment_time = getattr(self, '_measurement_time', self.time)
                 self._committed_memory_level = camkii_state['molecular_memory']
+                # CONSUME the token. It marks "a measurement happened and has not yet
+                # produced a commitment" — the DDSC delay (Jain 2024, 10-100 s) is why
+                # it must outlive the reward episode, but it must NOT outlive the
+                # commitment it licensed. It was previously written True at one site and
+                # never cleared anywhere (not even by reset()), so once a synapse had
+                # measured, every later trial could re-commit off the stale token plus a
+                # purely classical CaMKII calcium integral, with no new measurement.
+                # That is the mechanism behind D19's retracted cross-trial accumulation.
+                self._measurement_gate_opened = False
 
             # --- PHASE 11: SPINE PLASTICITY ---
             if self._camkii_committed:

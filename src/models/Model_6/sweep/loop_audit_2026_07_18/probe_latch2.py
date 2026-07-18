@@ -43,7 +43,7 @@ def install(network):
         C['gate_calls'] += 1
         if not stim.get('reward', False):
             return orig_gate(self, stim)
-        if getattr(self, '_network_measurement_performed', False):
+        if getattr(self, '_coordinated_measurement_performed', False):
             C['gate_latch_early_return'] += 1
             return orig_gate(self, stim)
         C['gate_body_ran'] += 1
@@ -73,7 +73,7 @@ class StraightAgent(Agent):
 
 def snap(network, tag):
     return dict(tag=tag,
-        net_latch=bool(network._network_measurement_performed),
+        net_latch=bool(network._coordinated_measurement_performed),
         net_time=round(float(network.time), 3),
         syn=[dict(i=i,
              gate_opened=bool(getattr(s, '_measurement_gate_opened', False)),

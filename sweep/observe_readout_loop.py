@@ -228,8 +228,10 @@ def run_condition(label, params, stimuli, T_drive=15.0, dt=0.005, log_interval=5
         print(f"    syn {i}: {pca:.3f} uM"
               f"{'  (BELOW 0.5 threshold!)' if pca <= 0.5 else ''}")
 
-    # (3c) Allow a fresh measurement
-    network._network_measurement_performed = False
+    # (3c) Allow a fresh measurement. The latch re-arms on the falling edge of reward,
+    # so drive it false once rather than poking the flag (which is now per-gate and
+    # would silently no-op under the old name).
+    network._evaluate_coordinated_gate({'reward': False})
 
     # (3d) Fire the coordinated gate — quantum measurement + gate evaluation
     network._evaluate_coordinated_gate({'reward': True})

@@ -77,9 +77,25 @@ class T286PhosphorylationParameters:
     LITERATURE SOURCES:
     ------------------
     Rellos et al. 2010 (PLoS Biol 8:e1000426):
-        - Total activation barrier: 23 kT (2.3 kcal/mol at 310K)
-        - Electrostatic component: ~15% based on salt bridge analysis
         - Structure: Dodecameric hub with autoinhibited kinase domains
+        - Reports an energy barrier of ~2.3 kcal/mol for RELEASE OF THE INHIBITORY
+          HELIX / Ca-CaM trapping. At 310 K, kT = 0.616 kcal/mol, so that is
+          **3.73 kT** — see `_update_CaCaM` (~L292), which uses 3.7 kT correctly.
+
+    !! UNGROUNDED — DO NOT CITE RELLOS FOR THIS (flagged 2026-07-18) !!
+        `barrier_total_kT = 23.0` below gates T286 AUTOPHOSPHORYLATION, which is a
+        DIFFERENT reaction from the one Rellos measured, and 23 kT is NOT a value
+        Rellos reports. The old docstring line read "23 kT (2.3 kcal/mol at 310K)",
+        asserting an equivalence that is wrong by 6.2x (2.3 kcal/mol = 3.73 kT;
+        23 kT = 14.2 kcal/mol). Two constants derived from the same sentence of the
+        same paper sat 200 lines apart in this file differing by 6.2x.
+        The VALUE has been left untouched pending a physics decision: it is not
+        absurd (QM/MM kinase phosphoryl-transfer barriers run ~17-22 kcal/mol
+        ~= 28-36 kT), but it has no source, and correcting it to 3.7 would be worse
+        — that would apply the CaM-trapping barrier to the autophosphorylation step.
+        Needs a grounded autophosphorylation barrier, not a units patch.
+        - Electrostatic component: ~15% — also unsourced; the 40/30/15/15 barrier
+          decomposition below has no literature basis found (2026-07-18 audit).
     
     BARRIER COMPOSITION:
     -------------------
@@ -93,7 +109,7 @@ class T286PhosphorylationParameters:
     Maximum enhancement = exp(3.45) = 31.5x
     """
     # Barrier physics
-    barrier_total_kT: float = 23.0      # Total activation barrier (Rellos 2010)
+    barrier_total_kT: float = 23.0      # UNGROUNDED — not from Rellos; see class docstring
     barrier_electrostatic_fraction: float = 0.15  # 15% is electrostatic
     
     # Derived: electrostatic barrier = 23 × 0.15 = 3.45 kT
