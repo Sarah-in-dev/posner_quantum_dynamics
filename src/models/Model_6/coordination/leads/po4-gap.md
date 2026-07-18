@@ -11,7 +11,39 @@ docstring violating the rule it states. **Now closed and mechanically enforced.*
 awaiting MO re-verification.
 **Current unit:** **ROTATION 002 COMPLETE** — `K_CLASSICAL` 0.05 → 0.005 landed with its measured
 delta. No open unit. Awaiting MO verification.
-**Last heartbeat:** 2026-07-18 22:05Z
+**Last heartbeat:** 2026-07-18 22:50Z
+
+### 2026-07-18 22:50Z — ruling 016: failing-first demonstration DONE. **Fix NOT landed**, per sequencing.
+
+**Ready for gen-2's step 2** — it re-runs the concentration-weighted measurement before the fix is
+authorised. The probe prints exactly that measurement at the top so it is re-runnable in one command:
+`sweep/gap_template_symmetry_probe.py`.
+
+**Demonstration (stage 2 isolated, 3 s gap, stage-3 control PASSING 2034 → 2034):**
+
+| syn | R before | R after | S |
+|---|---|---|---|
+| 0 | 2.142083 | 2.142069 | **0.999993772** |
+| 1 | 1.803648 | 1.803636 | **0.999993162** |
+
+registered PRE-FIX `|S−1| < 1e-4` → **measured 6e-6 from 1**; registered POST-FIX **0.997809**,
+~370× further from 1 than the floor. The gap's `k_diss` is a **scalar** and cannot express a
+catalyst at all, while formation honours the symmetry (97.4% `template_bound`).
+
+**Two errors of mine on the way, both caught by controls I wrote, both recorded:**
+
+1. **First run printed "premise wrong"** — my own escape hatch firing. I diagnosed instead of
+   accepting it: `S` was flat at 0/1/5 s and jumped at 8 s and 15 s, coinciding **exactly** with
+   stage-3 particle removals. **Stage 2 was uniform all along, as registered** — the confound was
+   stage 3, which AMENDMENT F scoped OUT and my measurement failed to isolate.
+2. **AMENDMENT G's new control then caught my second error** — I picked a 5 s gap from a scan that
+   counted only syn0; one particle goes network-wide at 5 s. Corrected to 3 s.
+
+Also corrected: verdict text claimed `S = 1.000000000 exactly` while the number is `0.999993772`.
+**Prose overstating its own measurement** is the defect class this PO exists to remove.
+
+**Not claimed, per the ruling's warning:** nothing asserts the post-fix gap behaves *better* — only
+that a LOCKED symmetry is broken.
 
 ### 2026-07-18 22:05Z — rotation 003 was already delivered when the wake arrived; and I found a ~33× error in my own report
 
