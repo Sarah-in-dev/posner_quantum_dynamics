@@ -65,6 +65,7 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| T1'-6 | 2026-07-18 | **CHANNEL SEPARATION — the population confound is measured INERT; §6's conclusion stands, §6's argument is replaced.** Adversarial review charged that dimer loss feeds the same extreme-value statistic that sets `d*_eff`, so it produces far-pairs-first too and replication separates nothing. Pre-registered 4 arms (+2 counterfactual) BEFORE running (`abdb549`). Result: **arm A ≡ arm B bit-identically** (`max|A−B| = 0.000e+00` on every `d*_eff`/`max_pair` sample, 4/4 seeds) and **arm C produces ZERO breaks** while the population falls 2223→~50, retaining **100.0000%** of `max_pair(P_S²)`. Cause, from code: `dimer_particles.py:230-241` removes **lowest-`P_S`-first** (`coherence` is an affine increasing map of `P_S`, :57-62), so attrition is rank-selective and the argmax is the LAST thing removed. The charge additionally fails **under its own assumption**: arm C_rand (uniform random removal) also gives zero breaks — `Δd*_eff = −0.002 µm` against a 1.35 µm span — because `P_S(0)` is packed at its ceiling (median 0.9986, max 1.0), leaving no room below the max. Null arm D clean. **Where it does bite:** arm A_rand (random removal + decay) confirms 4/4 with systematically earlier breaks — a model that removed randomly *would* have a live population channel. **SECONDARY, damaging:** order-recovery power measured **37/40 ≈ 92%** across noise draws (seed 0 = 7/10), not the **10/10** §4 cites — different estimators (this run applies the probe's `CONSECUTIVE_ABSENT=3` guard; the power probe used unguarded first-crossing). Headline unaffected: `p≈3.0×10⁻⁶` is against the classical null, which power does not move, and 4/4 at 92% power has probability 0.72. | [GROUNDED, 4 seeds × 6 arms] | L·T1'-6 |
 | ERR-1 | 2026-07-17 | **CORRECTION — three P_S_crit annotations were arithmetically wrong when first committed.** The wide ladder's critical-coherence values were logged as 2.90µm→0.9327, 2.45→0.8801, 2.00→0.8305. Correct values (`P_S_crit = sqrt(0.5·exp(gap/λ))`, λ=5µm) are **0.9450 / 0.9034 / 0.8637**; 3.35µm→0.9885 was right. Verified against the Jul-16 ladder's values, which were correct (3.0→0.9545, 2.8→0.9356, 2.5→0.9079, 2.0→0.8637 all reproduce exactly). **The T1' result is UNAFFECTED**: these are descriptive annotations only — the probe never reads them, it computes d* at runtime from measured P_S and compares gaps directly, so the 4/4 cascade used the real geometry and the real Werner threshold. Caught when Sarah asked for a from-scratch explanation of the mathematics and the derivation was re-done by hand. Fixed in `sweep/coherence_fragmentation_probe.py` and in T1'-3/L·T1'-3 below. | [GROUNDED, corrected] | — |
 | T1'-5 | 2026-07-17 | **T1' REPLICATION COMPLETE — far-pairs-first CONFIRMED across 4/4 independent seeds; CONCLUSIVE.** Seeds 0,1,2,3 (wide ladder, 90 s, dt=1e-3; seeds 1–3 run in parallel). ALL FOUR broke in the exact pre-registered order **3.35 > 2.90 > 2.45 > 2.00**. Under the classical null (no spatial structure ⇒ break order is a uniformly random permutation of 4 ⇒ 1/24 per seed), 4/4 in order ⇒ **p = (1/24)⁴ ≈ 3.0×10⁻⁶**. Break TIMES scatter seed-to-seed (gap 2.90 broke at 32.5/37.0/42.0/32.5 s; gap 2.45 at 61.5/55.0/54.5/64.5 s) while the ORDER is invariant — vindicating the score-order-not-times decision (L·T1'-2). Replication also DEFEATS the population-collapse confound on the late breaks: uniform dissolution lowers every pair's radius together (edges would die ~simultaneously), so it CANNOT manufacture a consistent gap-spaced order across independent seeds — only the coherence/distance mechanism does. Altitude unchanged: **(A)** — the model's partition carries spatial structure a classical scalar eligibility trace cannot; NOT a claim about quantumness (attribution gap stands; see the epistemic frame). Completes L·T1'-4. | [GROUNDED, 4 seeds] | L·T1'-5 |
 | T1'-4 | 2026-07-17 | **T1' DYNAMIC — far-pairs-first fragmentation CONFIRMED, seed 0 (single seed).** → *completed by T1'-5 (4/4 replication); kept as the trail — the moment the result was one seed and only suggestive.* Wide ladder `[3.35,4.5,2.90,4.5,2.45,4.5,2.00]µm`, 90 s silence, dt=1e-3. All 4 live edges broke in the exact pre-registered gap order — 3.35µm@14.5s, 2.90@32.5s, 2.45@61.5s, 2.00@78.0s — verdict `far-pairs-first order CONFIRMED over 4 breaks`. This is the DISCRIMINATING result: a classical scalar eligibility trace decays uniformly and cannot produce a spacing-ordered cascade. **Single seed ⇒ p≈1/24≈0.042 vs the classical null — suggestive, NOT conclusive** (a 2nd independent seed in order → p≈0.0017). Breaks 1–2 landed at HEALTHY population (1843, 1043 dimers) — clean, coherence-driven; breaks 3–4 at CRATERED population (259, 98) — TIMING confounded by dimer-loss, ORDER preserved (uniform dissolution lowers every pair's radius equally). Guards worked live: 2 flickers (gap3.35, gap2.45) correctly rejected, not scored. Altitude: **(A)** — the partition carries SPATIAL structure; says nothing about **(B)**/quantumness. Ran 2.7 h not the projected ~8 h (O(n²) tracker cost collapsed with the population). `sweep/coherence_fragmentation_probe.py`; log session-scoped. | [GROUNDED, single seed] | L·T1'-4 |
@@ -77,6 +78,89 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·T1'-6 — Channel separation: the population channel does not order, and cannot · 2026-07-18  `[GROUNDED, 4 seeds × 6 arms + 40-draw stability]`
+
+**Outcome under the pre-registered reading (L·T1'-6-PRE, committed before the run at
+`abdb549`): "B orders, C does not ⇒ coherence-driven."** §6's *conclusion* survives. §6's
+*argument* does not, and is replaced below by the property that actually does the work.
+
+`sweep/population_channel_arms.py`; traces persisted to `results/T1prime6_arms/`.
+
+| arm | P_S | population | rule | seed 0 | seed 1 | seed 2 | seed 3 |
+|---|---|---|---|---|---|---|---|
+| A | decays | decays | model | FALSIFIED | CONFIRMED | CONFIRMED | CONFIRMED |
+| B | decays | held | — | FALSIFIED | CONFIRMED | CONFIRMED | CONFIRMED |
+| C | frozen | decays | model | **INCONCLUSIVE (0 breaks)** | 0 breaks | 0 breaks | 0 breaks |
+| D | frozen | held | — | 0 breaks | 0 breaks | 0 breaks | 0 breaks |
+| A_rand | decays | decays | random | CONFIRMED | CONFIRMED | CONFIRMED | CONFIRMED |
+| C_rand | frozen | decays | random | **0 breaks** | 0 breaks | 0 breaks | 0 breaks |
+
+**1. The population channel is EXACTLY inert under the model's own removal rule.**
+Arm A and arm B are **bit-identical**: `max|A−B| = 0.000e+00` across every sample of every
+`d*_eff` and `max_pair(P_S²)` column, in all four seeds. Arm C retains **100.0000%** of
+`max_pair(P_S²)` while the population falls 2223 → ~50. This is the measured consequence of
+`dimer_particles.py:230-241` removing lowest-`P_S`-first: the argmax is the last thing
+removed, so attrition cannot touch the extreme-value statistic that governs edge survival.
+Not "small" — zero.
+
+**2. The criticism is immaterial even under ITS OWN assumption.** Arm C_rand imposes uniform
+random removal — the charge's implicit rule — and still produces **zero breaks**:
+`max_pair(P_S²)` retained 99.92–99.96%, `Δd*_eff = −0.002 µm` against the **1.35 µm** span
+the cascade must traverse (0.15%). The reason is measured, not argued: `P_S(0)` is packed
+against its ceiling (median 0.9986, max 1.0000), so the max over ~50 draws ≈ the max over
+~2200. The extreme-value intuition in step 3 of the charge needs a distribution with room
+below the maximum; this one has none at t=0. **So the charge fails twice over** — once on
+the model's actual removal rule, once on the shape of the `P_S` distribution.
+
+**3. The null is clean.** Arm D produced no breaks in any seed. The rig is not manufacturing
+orderings.
+
+**4. Where population loss DOES bite — reported because it is real.** Arm A_rand (random
+removal *plus* coherence decay) confirmed 4/4 with systematically **earlier** breaks
+(e.g. seed 3: 16.0/33.5/52.5/65.5 s vs arm B's 16.0/37.5/66.5/83.5 s). Once `P_S` spreads
+out under decay, the tail is carried by a few long-`T_eff` dimers, and random removal can
+kill them. So a model that removed dimers randomly *would* have a live population channel —
+it would still order correctly, but the times would be confounded. This model does not
+remove randomly. The distinction belongs in §6 rather than being allowed to read as "the
+criticism was wrong".
+
+**5. SECONDARY, and it damages a different claim: the ladder's order-recovery power is
+~92%, not 10/10.** Across 40 independent noise draws (arm B, 200 s horizon, 4 seeds × 10
+draws): **37 CONFIRMED / 3 FALSIFIED / 0 INCONCLUSIVE**. Seed 0 alone is **7/10** — its
+last two rungs (2.45, 2.00) break within ~1.5 s of each other and invert under some draws,
+which is why arm A/B above show seed 0 FALSIFIED. `RESULTS §4` cites **10/10** for this
+geometry from `order_power_probe.py`. The two numbers are different **estimators**, not a
+contradiction: the power probe uses unguarded first-crossing detection and a different noise
+stream (`seed+10000`), while this run applies the probe's own `CONSECUTIVE_ABSENT=3` guard,
+which is stricter and converts marginal orderings into violations. **The 92% is the better
+number** and §4 should carry it. `[MODELED]` — it is an estimate over noise draws, not a
+property of the published run.
+
+**Does this damage the headline? No, and the arithmetic should be stated rather than
+asserted.** The p-value is computed against the classical null (uniform permutation, 1/24
+per seed); power affects the experiment's *sensitivity*, not the null, so `p ≈ 3.0×10⁻⁶` is
+untouched. At 92% per-seed power, observing 4/4 has probability `0.92⁴ ≈ 0.72` — entirely
+unremarkable. The result is not weakened; the *power claim behind the geometry choice* was
+overstated.
+
+**Replay-vs-rig honesty.** Absolute break times here run LATER than the published rig
+(seed 0: 16.0/41.5/76.5 s vs 14.5/32.5/61.5 s), exactly the documented upper-bound direction
+of the replay (`dstar_eff_replay.py:24-41` — fixed population ⇒ higher max ⇒ later breaks).
+No replay reproduces a published realisation: the rig interleaves its noise draws with
+network stepping. **This instrument is valid for ORDER questions and invalid for times**,
+which is why times are not scored in any arm.
+
+**Carried limitation** `[MODELED]`, pre-declared: N(t) is log-linear through five transcribed
+seed-0 anchors, applied to all four seeds, because the raw logs are gone. Findings 1–3 are
+insensitive to it — arm C's erosion is *exactly zero* under any monotone trajectory, since
+the rule preserves the argmax regardless of how fast the population falls. Finding 4 is
+trajectory-sensitive and is reported as directional, not quantitative.
+
+**Open item this does NOT close:** §6 defends only breaks 1–2 as unconfounded, which is two
+breaks — below the experiment's own `MIN_BREAKS=3` bar. This run makes that defence
+unnecessary (the confound is measured inert, so all four breaks are unconfounded by
+population loss), but §6 must still stop claiming a two-break subset as its control.
 
 ### L·T1'-6-PRE — PRE-REGISTRATION: population vs coherence channel separation · 2026-07-18  `[PRE-REGISTERED — written and committed BEFORE the run]`
 

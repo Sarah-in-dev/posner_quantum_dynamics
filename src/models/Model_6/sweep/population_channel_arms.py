@@ -158,13 +158,21 @@ def extract_population(seed):
 # ---------------------------------------------------------------------------
 # the arm engine
 # ---------------------------------------------------------------------------
-def run_arm(arm, P0, T_eff, syn, seed):
-    """Replay one arm. Returns list of per-sample dicts."""
+def run_arm(arm, P0, T_eff, syn, seed, horizon_s=None, noise_offset=1):
+    """Replay one arm. Returns list of per-sample dicts.
+
+    noise_offset selects the P_S noise stream. It is a FREE CHOICE, not a property of the
+    run: the real rig interleaves its draws with network stepping, so no replay reproduces
+    a specific published realisation. Varying it measures how stable the ORDER is across
+    noise draws — which is the honest question, since the published times are not
+    reproducible by construction.
+    """
+    horizon_s = HORIZON_S if horizon_s is None else horizon_s
     decays_PS = arm in ("A", "B", "A_rand")
     attrition = arm in ("A", "C", "A_rand", "C_rand")
     random_rule = arm.endswith("_rand")
 
-    np.random.seed(seed + 1)
+    np.random.seed(seed + noise_offset)
     n = len(P0)
     n_syn = int(syn.max()) + 1
     masks = [syn == i for i in range(n_syn)]
@@ -183,7 +191,7 @@ def run_arm(arm, P0, T_eff, syn, seed):
     P_S = P0.copy()
     P_excess = P_S - P_THERMAL
 
-    n_steps = int(HORIZON_S / DT)
+    n_steps = int(horizon_s / DT)
     every = int(LOG_EVERY / DT)
     rows = []
 
@@ -356,6 +364,37 @@ def main():
             dr = rr[i][f"dstar_eff_{a}{b}"]
             print(f"{rc[i]['t']:6.1f} {rc[i]['n_dimers']:9d} {dc:10.3f} {dr:14.3f} "
                   f"{dc-d0c:+9.3f} {dr-d0r:+12.3f}")
+    # ---------------- horizon + noise-draw stability control
+    print()
+    print("=" * 100)
+    print("ORDER STABILITY CONTROL — 90 s vs 200 s horizon, and across noise draws")
+    print("=" * 100)
+    print("WHY: the 90 s arms above truncate (order_power_probe.py:47 uses HORIZON_S=200)")
+    print("and use a different noise stream than either the real run or the power probe.")
+    print("Neither is reproducible by construction, so the honest question is how stable")
+    print("the ORDER is across draws. Arm B (coherence-only, no attrition) is the cleanest")
+    print("channel for this. Compare against the published 10/10 power for this ladder.")
+    print()
+    n_ok = n_fals = n_inc = 0
+    for seed in SEEDS:
+        P0, T_eff, syn = extract_population(seed)
+        cells = []
+        for off in range(1, 11):
+            rows = run_arm("B", P0, T_eff, syn, seed, horizon_s=200.0, noise_offset=off)
+            broken, _ = detect_breaks(rows)
+            status, _ = verdict(broken)
+            cells.append({"CONFIRMED": "C", "FALSIFIED": "F",
+                          "INCONCLUSIVE": "i"}[status])
+            n_ok += status == "CONFIRMED"
+            n_fals += status == "FALSIFIED"
+            n_inc += status == "INCONCLUSIVE"
+        print(f"  seed {seed}: " + " ".join(cells)
+              + f"    ({cells.count('C')}/10 order-correct)")
+    tot = n_ok + n_fals + n_inc
+    print(f"\n  TOTAL across {tot} draws: {n_ok} CONFIRMED / {n_fals} FALSIFIED / "
+          f"{n_inc} INCONCLUSIVE   => order recovered {100*n_ok/tot:.0f}%")
+    print("  (C=order correct, F=order violated, i=<3 clean breaks in 200 s)")
+
     print()
     print(f"traces + summary written to {OUT_DIR}")
     print(f"[{time.time()-t0:.0f}s total]")

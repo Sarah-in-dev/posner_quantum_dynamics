@@ -37,6 +37,13 @@ logs/
 results/
 notebooks/results/
 
+# EXCEPTION: scored experiment traces are provenance, not scratch output. The T1' raw
+# logs were lost to session-scoped scratchpad and nothing in that result is
+# independently re-derivable without a re-run. Traces backing a logged finding are
+# tracked from 2026-07-18 on.
+!src/models/Model_6/results/
+!src/models/Model_6/results/**
+
 # HTML files
 *.html
 
