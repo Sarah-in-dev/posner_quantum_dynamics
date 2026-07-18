@@ -260,10 +260,51 @@ def arm_b():
     return v, {'pinned': pin, 'vestigial': ves, 'diffs': d}
 
 
+def arm_a_gate():
+    """ARM A restricted to the ONE discriminator that survives the nondeterminism found
+    on 2026-07-18: `gate_calls` is a pure count of call sites and consumes no RNG, so it
+    is exact where eta/cross_bonds are distributional. Short run: the D19 difference is
+    structural and needs only one reward falling edge, not a condensation regime."""
+    print("=" * 78)
+    print("ARM A (gate) — the RNG-independent discriminator, 0.5 s")
+    print("=" * 78)
+    rsd = sys.modules['rsd_pinned']
+    rpfl = _load(PINNED, 'rpfl_pinned', 'src/models/Model_6/sweep/run_place_field_learning.py')
+    D = 0.5
+
+    base = _run_arm_a(rsd.step_network_per_synapse, duration=D)
+    null = _run_arm_a(rsd.step_network_per_synapse, duration=D)
+    print(f"NULL   RSD vs RSD          : {base['gate_calls']} vs {null['gate_calls']}")
+    if base['gate_calls'] != null['gate_calls']:
+        print(f"ARM A (gate) = {INCONCLUSIVE}: gate count not reproducible against itself.")
+        return INCONCLUSIVE, {}
+
+    pc = _run_arm_a(rsd.step_network_per_synapse, duration=D, gate_on_reward_only=True)
+    print(f"POSCTL reward-only gate    : {base['gate_calls']} vs {pc['gate_calls']} -> "
+          f"{'FIRED' if pc['gate_calls'] != base['gate_calls'] else 'DID NOT FIRE'}")
+    if pc['gate_calls'] == base['gate_calls']:
+        print(f"ARM A (gate) = {ABORT}: positive control did not fire.")
+        return ABORT, {}
+
+    rp = _run_arm_a(rpfl.step_network_per_synapse, duration=D)
+    print(f"\n  RSD  gate_calls = {base['gate_calls']}")
+    print(f"  RPFL gate_calls = {rp['gate_calls']}")
+    v = DIVERGENT if base['gate_calls'] != rp['gate_calls'] else NO_MATERIAL_DIVERGENCE
+    print(f"\n  ARM A (gate) VERDICT = {v}")
+    return v, {'rsd_gate_calls': base['gate_calls'], 'rpfl_gate_calls': rp['gate_calls'],
+               'poscontrol_gate_calls': pc['gate_calls']}
+
+
 if __name__ == '__main__':
+    only = sys.argv[1] if len(sys.argv) > 1 else 'both'
+    if only == 'gate':
+        _load(PINNED, 'rsd_pinned', 'sweep/run_spatial_discovery.py')
+        v, d = arm_a_gate()
+        print(json.dumps(d))
+        sys.exit(0)
     _load(PINNED, 'rsd_pinned', 'sweep/run_spatial_discovery.py')
-    va, da = arm_a()
-    vb, db = arm_b()
+    va, da = arm_a() if only in ('both', 'a') else ('(not run)', {})
+    vb, db = arm_b() if only in ('both', 'b') else ('(not run)', {})
     print()
     print("=" * 78)
     print(f"ARM A (two stepper copies) = {va}")
