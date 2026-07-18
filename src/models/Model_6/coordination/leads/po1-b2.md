@@ -366,3 +366,41 @@ constant; do not route mechanical execution of a verdict already given.
 **Now starting:** the ~151 dead parameter fields (Unit 2's second half) — the last mechanical
 work on this surface. Same AST-level evidence standard as the orphan audit; **nothing touching
 isotopes gets deleted while that gate is down.**
+
+---
+
+## Dead-fields unit — DELIVERED. Heartbeat 2026-07-18 23:11:58Z.
+
+**Commits:** `7c48696` (the audit), `9f5994c` (SWEEP-4 log + backbone reply).
+**Compute: none requested and none needed.** Static AST only — parses files, never imports or
+runs the model, so it was safe alongside PO-5's exclusive heavy slot. Finishing this unit
+needs no run either.
+
+**220 declared fields · 112 live · 108 DEAD.** Worst: `PNCParameters` **8 of 8**,
+`PosnerParameters` 16/18, `MultiSynapseParameters` 12/14, `QuantumParameters` 17/27.
+The substrate audit said ~151 — **not a correction**: different method, and mine over-reports
+liveness by construction, so 108 is a **lower bound**.
+
+**My own control caught a bug in my own instrument.** v1 counted every string literal as use
+and scored the known-dead `kT_per_modulation_unit` LIVE, off `quantum_dimensions.py`'s
+`variable="..."` **metadata**. Left uncaught it would have silently suppressed real dead
+fields — the class the audit exists to find. Narrowed to `getattr`/`setattr`/`hasattr` args;
+both controls pass.
+
+**ROUTED FINDING — ruling 006's defect repeats on the two constants the Werner arithmetic uses:**
+- `singlet_thermal = 0.25` (`:412`) — read **only** by `singlet_dynamics.py:129`, an orphan;
+  live code hardcodes `0.25` in **three** files.
+- `singlet_entanglement_threshold = 0.5` (`:411`) — **DEAD**; live bound is the class constant
+  `WERNER_ENTANGLEMENT_BOUND` (`multi_synapse_network.py:94`).
+
+These are the two numbers that selected 216 s over 500 s, and that I re-derived for the
+ruling-017 annotation. **Routed, not fixed** — no verdict given, and the literals are in PO-5's
+live files. This is the "choice about a load-bearing constant" side of the ruling-017 line.
+
+**New ORPHAN-ONLY class** in the audit: fields live *only* because an orphan reads them. One
+today (`singlet_thermal`) — belongs in the orphan deletion batch, not a separate one.
+
+**State:** nothing in flight, nothing blocked, nothing deleted. `ALL=22 LIVE=15 INERT=7`.
+**What is left on this surface is gated or needs a decision:** the deletions (isotope gate) and
+the seven INERT dimensions. **If the isotope gate lifts I can execute the whole batch — orphan
+modules, orphan-only fields, and the two DELETE-verdict dimensions — as one reviewable commit.**
