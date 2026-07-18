@@ -271,6 +271,55 @@ early return makes survival undefined and the result is **INCONCLUSIVE**, not a 
 formation, which is excluded during silence — so it is a statement about *what survives a
 silence*, not about steady-state dimer population.
 
+## 1g. AMENDMENT F — 2026-07-18 22:30Z · the TEMPLATE-SYMMETRY demonstration, registered before it is built
+
+**MO ruling 016 §3: do NOT land the fix; produce the failing-first demonstration first, and gen-2
+re-runs the measurement before the fix is authorised.** Registered here before the probe exists.
+
+**The ruling, grounded independently** — `quantum-system-canonical:100`, read in the file:
+
+> *"**Template 50× enhancement is a kinetic catalyst applied symmetrically** to formation AND
+> dissolution (detailed balance) … **[GROUNDED — Tao 2010; PROVEN — detailed balance] [LOCKED]**"*
+
+**This is not a new defect — it is a NAMED, ALREADY-FIXED defect recurring at a second site.**
+`model6-dimer-formation-chemistry` §1 describes the original: *"the 50× template enhancement was
+applied to **formation only** … applying it one-sidedly imposes a spurious ~50× equilibrium shift
+toward clusters."* That was repaired in `update_dimerization`. **The gap re-introduces it**, which
+is the same partial-fix shape as substrate-audit item 16.
+
+### DISCRIMINATING QUANTITY — the spatial signature, not a rate
+
+A rate comparison would need a counterfactual run. The **spatial** signature does not:
+
+```
+R = (dimer concentration on TEMPLATED voxels) / (dimer concentration on BARE voxels)
+S = R_after_gap / R_before_gap
+```
+
+- **PRE-FIX (current code):** the gap's `k_diss` is a **scalar** — spatially uniform — so it
+  multiplies every voxel by the identical factor and **`S = 1.000000` EXACTLY.**
+- **POST-FIX (symmetric catalyst):** templated voxels carry `k_diss × te`, so they dissolve faster
+  and **`S < 1` strictly.**
+
+**`S = 1.000000` exactly is the FAILING signature.** No catalysed process leaves a spatial
+distribution perfectly invariant — this is the same shape as the duration-independence
+discriminator in AMENDMENT A, where a suspiciously exact `1.000000` was the defect, not the result.
+
+**Registered PRE-FIX:** `|S − 1| < 1e-9`. **Registered POST-FIX:** `S = exp(−k̄·(te−1)·g)` where
+`k̄` is the measured mean `k_diss` and `te` the measured concentration-weighted enhancement — both
+read from the run, **no free parameter, nothing fitted.**
+
+**POSITIVE CONTROL:** templated **and** bare voxels must both hold non-zero concentration pre-gap,
+else `R` is undefined ⇒ **INCONCLUSIVE**, not a pass.
+
+**Scope:** this measures **stage 2** (the concentration field), which is where the omission lives.
+Stage 3 (particle removal by lowest coherence) is reported separately and is **not** part of the
+registered quantity, since its spatial behaviour is a different mechanism.
+
+**NOT REGISTERED, and deliberately:** whether the post-fix behaviour is *better*. Ruling 016
+warns explicitly — *"if the argument becomes 'and conveniently this makes the gap behave better',
+stop and re-escalate."* The registered claim is only that the locked symmetry is restored.
+
 ## 2. The null that cannot show the effect
 
 Three, and all three must behave as registered or the run is INCONCLUSIVE:
