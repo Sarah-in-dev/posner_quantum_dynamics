@@ -58,6 +58,13 @@ def instrument(dp):
     orig_ent = dp.step_entanglement
     orig_create = dp._create_bond
     orig_remove = dp._remove_bond
+    # AMENDMENT A2.1 (see PREREG §2): the first instrumented run FAILED its own
+    # conservation gate with growing orphans (909 @1.0s, 4851 @2.0s). Cause, traced:
+    # `_remove_all_bonds_for_dimer` (dimer_particles.py:245, called from the death
+    # path at :239) pops `_bond_lookup` DIRECTLY and never routes through
+    # `_remove_bond`, so the wrapper below never saw those removals. Wrapping it too.
+    # This is a fix to the INSTRUMENT, not to the physics; no model file is touched.
+    orig_remove_all = dp._remove_all_bonds_for_dimer
 
     def wrapped_pop(*a, **k):
         state["phase"] = "population"
@@ -87,10 +94,20 @@ def instrument(dp):
         state["origin"].pop(key, None)
         return orig_remove(id_i, id_j)
 
+    def wrapped_remove_all(dimer_id):
+        # Mirror the original's key selection BEFORE it mutates the dict.
+        doomed = [k for k, b in dp._bond_lookup.items()
+                  if b.dimer_i == dimer_id or b.dimer_j == dimer_id]
+        result = orig_remove_all(dimer_id)
+        for k in doomed:
+            state["origin"].pop(k, None)
+        return result
+
     dp.step_population = wrapped_pop
     dp.step_entanglement = wrapped_ent
     dp._create_bond = wrapped_create
     dp._remove_bond = wrapped_remove
+    dp._remove_all_bonds_for_dimer = wrapped_remove_all
     return state
 
 
