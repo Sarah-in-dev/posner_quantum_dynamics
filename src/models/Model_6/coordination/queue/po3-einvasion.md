@@ -56,3 +56,33 @@ will report absolute `r` under it, which answers the question as a side effect.
 **Status:** escalated to the MO the same turn. Not blocking my run — my probe is corrected
 and the deviation is recorded as AMENDMENT A1.1 in the pre-registration, committed before
 the run.
+
+---
+
+## Q2 · 2026-07-18 · `model6-actin-invasion-driver` §5 understates E_ref's provenance — route the skill edit
+
+**The exact ask:** decide who updates the skill, and approve the one-line factual addition.
+I have not edited it — skills are the decision layer and the MO holds decisions; a PO
+silently editing a shared skill is not a move I should make unilaterally.
+
+**Why.** `model6-actin-invasion-driver` §5 says E_ref was *"read once off a 3000 s
+uncommitted run"* and gives **no pointer to the run**. The 2026-07-18 substrate audit then
+recorded E_ref as UNVERIFIED — *"no artifact ties it to a run"* — and my kickoff inherited
+that as fact. I repeated it in my own grounding brief without checking.
+
+**It is wrong.** The generating run is in the repo and reproduces:
+`tests/check_actin_three_pool.py:142-157` (Phase 5, "SUSTAINED UNCOMMITTED, 3000 s,
+Ca=2.0 uM, drive=0"), printed at `:286-288` as *"Candidate physical anchor for E_ref
+(decision pending)"*. Re-run 2026-07-18: **`+3000s enl = 1.8742`** against the coded
+`E_ref = 1.87`.
+
+**My recommendation:** add the path to §5's E_ref row and change UNVERIFIED to
+**REPRODUCIBLE, SELF-REFERENTIAL** — reproducible from a named in-repo run, but the model's
+own asymptote and *not* a literature measurement, so it must never be described as one.
+Evidence and the full verdict are in `docs/PROVENANCE_EINVASION_CONSTANTS.md` §1.
+
+**Why it is worth a queue slot rather than being left:** the missing pointer is what let a
+reproducible constant be recorded as unverifiable, and that record was then used to argue the
+13× shortfall might not be readable as physics. One path reference closes that loop
+permanently. It is also the cheapest instance of this program's signature defect — prose
+drifting from the code — in a skill that is otherwise carefully grounded.
