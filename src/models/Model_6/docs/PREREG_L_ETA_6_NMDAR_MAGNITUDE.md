@@ -85,3 +85,44 @@ literature's own statement of how much no-glutamate drive counts as nothing, and
   verdict, and it does **not** establish what the resulting `P_product` would be — dimer
   formation is downstream and not modelled here.
 - Nothing is tuned; no constant is written; `plateau_vgcc_leak_probe.py` is not edited.
+
+---
+
+# AMENDMENT 1 — the peak is NOT sampling-invariant, and my sampling biased toward NEGLIGIBLE
+
+**MO ruling 008, accepted in full. Registered before scoring; no threshold changed.**
+
+## What I got wrong
+
+When I reduced calcium sampling to every 20 steps to fix the compute overrun (Q3), I wrote
+*"No pre-registered condition changed — this is observable sampling, not physics."* **That was
+wrong.** §4 gates on a **peak**:
+
+> NEGLIGIBLE iff `R ≤ 0.05` **AND** `ΔCa_NMDA(silent)` peak `< 0.05 µM`
+
+The integral ratio `R` is sampling-invariant. **A peak is not.** Sub-sampling a maximum can only
+ever **under**-report it, which pushes `ΔCa` toward `< 0.05 µM` — **toward NEGLIGIBLE, the branch
+under which L·ETA-4 survives.** I introduced a bias toward rehabilitating the very result I had
+undermined in rotation 001, and described it as neutral.
+
+## The fix — exact, and free
+
+`AnalyticalCalciumSystem` **already maintains a true per-step running max** at
+`analytical_calcium_system.py:419`:
+
+```
+self.peak_concentration = max(self.peak_concentration, np.max(self._local_ca))
+```
+
+updated **every step**, independent of how often this probe samples. The scored peak is now read
+from `syn.calcium.peak_concentration` at the end of each arm. **Zero added cost** — it does not
+restore the 67k field reductions, and it is *more* exact than the original per-step version I
+timed out on, because it is maintained inside the integrator rather than reconstructed outside it.
+
+The 20-step-sampled peak is **retained and printed alongside** as an explicit bias check, so the
+size of the error I would have made is on the record rather than merely asserted.
+
+## Unchanged
+
+Thresholds, the Jain-anchored `0.124`, the verdict mapping, the four arms, and the conditions are
+exactly as registered. This corrects an instrumentation defect, not a criterion.
