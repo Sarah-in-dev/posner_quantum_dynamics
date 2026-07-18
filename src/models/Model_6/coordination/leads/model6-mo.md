@@ -50,7 +50,7 @@ line of why-now + "do not reply"). **An idle PO with work available is the MO's 
 
 ---
 
-## WITH SARAH — only two, both genuinely hers
+## WITH SARAH — THREE, all genuinely hers
 
 1. **PO-1 Q1 — the `P_met` drive change.** MO verified the may30 pin states *"per-synapse P_met, NO
    aggregation"* verbatim, so it is pinned not fresh. **MO endorses CONFIRM.** Revert cost: one
@@ -59,6 +59,16 @@ line of why-now + "do not reply"). **An idle PO with work available is the MO's 
    (`above_threshold` flipped at 22.1 because 22.1 *was* `kT_ref`). **Physics bounds it hard:** its
    only consumer is `condensation_boost → k_agg_enhanced → dimer formation`. It never reaches the
    partition. The T1′ corroboration the MO initially worried about is **backbone** η — untouched.
+
+3. **Which pool should ATP recovery debit — metabolic-first or proportional?** *(PO-2 Q2;
+   gen-1 wrongly closed this as "dissolved" and PO-2 measured it back open — see defect #16.)*
+   The debit lands on the **chemically active** structural pool: proportional takes ~99.8% of a
+   debit from it, metabolic-first spares it. **Measured, same seed: structural differs 0.116%
+   between modes — deterministic, not statistical.** PO-2 correctly refuses to claim the ~2.3%
+   downstream dimer difference (sign-test p = 0.25). **Gen-1's read, as input not a ruling:**
+   metabolic-first looks more physical — recovery should take back what hydrolysis just released
+   before drawing on the ~1 mM buffered structural reserve (§2.4). PO-2 is running
+   metabolic-first pre-registered meanwhile; item 1 is unaffected either way.
 
 **Standing suggestion, not a decision:** unpark *"constants centralization"* (`quantum-system-canonical`
 §8) for **physical** constants only. It generated four defects today. Leave probe-local params alone.
@@ -96,10 +106,10 @@ line of why-now + "do not reply"). **An idle PO with work available is the MO's 
 
 ---
 
-## MO DEFECT LEDGER — 15. **The most useful thing in this file. Do not repeat these.**
+## MO DEFECT LEDGER — 16. **The most useful thing in this file. Do not repeat these.**
 
 **The through-line: the MO trusted a document where the discipline says go to the code.** POs caught
-13 of 15; the MO caught 2 while verifying something else.
+14 of 16; the MO caught 2 while verifying something else.
 
 1. Verified **prose against prose** — read `analytical_gap`'s docstring lists, concluded "frozen"; the
    function tail steps 1 ms. Tagged it `[code SHOWN]`. *(PO-4)*
@@ -118,6 +128,14 @@ line of why-now + "do not reply"). **An idle PO with work available is the MO's 
 13. **Collapsed NO CONSUMER vs CONSUMER HARDCODED** — overstated T2/J-coupling to Sarah. *(PO-1)*
 14. **Read a dated log row as live status** — routed an already-fixed defect to PO-4. *(MO, while verifying)*
 15. **Swept two POs' uncommitted files** — later root-caused as the shared-index race, not carelessness. *(PO-5)*
+16. **Verified a premise correctly, then drew a conclusion that did not follow.** Ruling 002 §1 said
+    the ATP-recovery debit *"cannot affect the chemistry, only the ledger."* The premise (ATP-derived
+    Pi lands in a pool speciation ignores) was right; the conclusion was wrong, because the *debit*
+    comes out of the chemically active pool. **PO-2 measured it: 0.116% structural difference.**
+    **A NEW SHAPE — every defect above was reading instead of checking; this one read correctly and
+    reasoned wrongly.** *"Go to the code" would not have caught it; only a measurement did.*
+    **Lesson: verifying a premise is not verifying a conclusion. A ruling that says "therefore this
+    cannot matter" is itself a claim that needs a measurement.** *(PO-2)*
 
 ---
 
