@@ -284,3 +284,108 @@ The program believed the open question was *whether* the two steppers diverged; 
 diverge in two physics-bearing ways **and** that it does not matter to any standing result, because
 every consumer on the board provably runs the same one — so the live hazard was never divergence,
 it was a defective orphan driver nobody imports.
+
+---
+
+# PRE-REGISTRATION — Unit 1 part 2. **Committed BEFORE the probe exists or any run.**
+
+Ruling 018 §3 cleared part 2 with three constraints: verdict must be able to return *no material
+divergence*; pre-register before the run; positive control demonstrated to fire. Ruling 018 §4 added
+a fourth question — whether F-5 and `mo-ruling-014` get stronger or need re-reading.
+
+**Grounding this against the seat's own bar** (`MO_MODEL6.md:53`): *"A verdict that cannot
+distinguish its outcomes is not a result."*
+
+## AN UNPLANNED FINDING FOUND WHILE SCOPING ARM B — recorded here because it changes the unit
+
+Ruling 018 §4 says `resting_leak_probe.py` runs the RSD copy. **True — but not the RSD copy in this
+worktree.** `src/models/Model_6/sweep/resting_leak_probe.py:6-7`, SHOWN:
+
+```python
+GA='/Users/sarahdavidson/posner_quantum_dynamics/.claude/worktrees/gifted-almeida-4e8a7b'
+sys.path.insert(0, GA+'/src/models/Model_6'); sys.path.insert(0, GA+'/sweep')
+```
+
+**It hardcodes an absolute path into a THIRD worktree** — `gifted-almeida-4e8a7b`, at detached HEAD
+`78b30ef`, the tree `board.md` calls *vestigial*. So F-5 was produced by code in a tree nobody is
+working in, imported by a probe living in the tree everyone is working in.
+
+**This is F4's root cause recurring in a new form.** `board.md` §4: *"a check run in the wrong tree
+finds a file absent and concludes consolidation."* Here it is not a file-absence error — it is a
+**silent version skew**, which is worse, because nothing is absent and nothing errors.
+
+**Measured, not assumed** — `sweep/run_spatial_discovery.py` across the two trees:
+- the **`step_network_per_synapse` body is IDENTICAL** across both trees (diff confines to the
+  `analytical_gap` region, lines 52–305 vs 54–67);
+- the vestigial tree still carries the **inlined `analytical_gap` with `K_CLASSICAL = 0.05`** — the
+  value PO-4 corrected to `0.005`. **Irrelevant to F-5, which never calls `analytical_gap`** — but
+  it means that tree is a live copy of a retired defect.
+- **Dependencies DO differ:** `model6_parameters.py` (T_singlet 500 vs 216), `model6_core.py` (the
+  B2 pump-drive rewire), `multi_synapse_network.py` (a warning only).
+- **`spine_plasticity_module.py` — the sole writer of `E_invasion` and `actin_enlargement`, the two
+  quantities F-5 reports — is BYTE-IDENTICAL across the trees.** The only changed line in any diff
+  that mentions `E_invasion` **reads** it as an input to `compute_metabolic_power`; none writes it.
+
+**That is a static argument, and static is not measurement.** It is the premise, not the verdict.
+Arm B measures it.
+
+## ARM A — do the two stepper copies differ in BEHAVIOUR? (part 2 proper)
+
+**Setup:** one tree (pinned), one seed, 2 synapses (cross-bonds need ≥2), identical stimulus
+sequence including at least one reward-on→reward-off transition (required to exercise D19). Short:
+seconds of sim time, no heavy slot.
+
+**Discriminating quantities**, all three recorded per arm:
+1. `eta` on the backbone after N steps.
+2. cross-synapse bond count.
+3. count of `_evaluate_coordinated_gate` invocations (instrumented by wrapper, not by editing model code).
+
+**Pre-registered prediction** (from `quantum-system-canonical:118`, `eta = 0 ⇒ k_cross = 0`):
+RPFL never calls `_update_backbone_field`, so **RPFL `eta` stays exactly 0.0 and its cross-bond
+count stays 0**, while RSD may be nonzero; and **RPFL's gate-call count is strictly less than
+RSD's** across a reward falling edge.
+
+**NULL:** RSD vs RSD — two fresh networks, same seed, same stimuli, both stepped by the *same*
+function. **Must return zero divergence on all three quantities.** If the null diverges, the harness
+is measuring seed/stochastic noise rather than stepper divergence → **INCONCLUSIVE, report nothing
+else.**
+
+**POSITIVE CONTROL, demonstrated to FIRE BEFORE any verdict is reported:** take RSD, wrap it to skip
+`_update_backbone_field`, and run it against unmodified RSD. The verdict function **must return
+DIVERGENT**. If it does not, the instrument cannot see the very difference it exists to detect →
+**ABORT**. *(Scar this guards: a probe printed "selectivity holds" while its own positive control
+never fired.)*
+
+**Verdict function returns exactly one of:** `DIVERGENT` · `NO MATERIAL DIVERGENCE` · `INCONCLUSIVE`
+· `ABORT`. **`NO MATERIAL DIVERGENCE` is a PASS**, per ruling 018 §3 — a confirmed prediction must
+not be written up as a defect discovered.
+
+## ARM B — does the tree skew change what F-5 measured?
+
+**Setup:** replicate `resting_leak_probe.py`'s exact config — 1 synapse, `seed=7`, `dt=0.005`,
+V = −70 mV, `glutamate=0.0`, no reward — and run it **twice**: once importing from the vestigial
+tree (what F-5 actually ran), once from the pinned tree. **I do not edit `resting_leak_probe.py`**;
+it is PO-3's file. I replicate its config in my own probe.
+
+**Discriminating quantity:** `actin_enlargement` and `E_invasion` sampled on a fixed grid, plus the
+**threshold-crossing time** — F-5's actual claim.
+
+**Pre-registered prediction:** **identical to floating-point tolerance**, because the sole writer is
+byte-identical and no diff hunk writes either quantity.
+
+**NULL:** same tree vs same tree at the same seed → must be bit-identical. If not, the model has
+nondeterminism at fixed seed and **the comparison is INCONCLUSIVE** — which would itself be a
+finding worth more than the unit.
+
+**POSITIVE CONTROL:** perturb `invasion_threshold` in one arm and confirm the crossing-time
+comparator reports a difference. If it does not fire → **ABORT**.
+
+**VERDICT MAPS DIRECTLY ONTO RULING 018 §4, and I commit to stating it either way:**
+- crossings agree ⇒ **F-5 and `mo-ruling-014` get STRONGER** — the finding is robust to a
+  dependency skew that could have invalidated it, and the tree skew is a hygiene defect with no
+  results consequence.
+- crossings disagree ⇒ **F-5 NEEDS RE-READING, and so does `mo-ruling-014` built on it** — and I
+  say so plainly regardless of how load-bearing the ruling is.
+
+**Neither arm touches model code.** Both are read-only wrappers. **No de-duplication is proposed** —
+that stays routed to the MO per ruling 018 §5.
