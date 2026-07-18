@@ -230,6 +230,47 @@ CONFIRMED.
 sit at the ceiling the separation is compressed and the measurement is **INCONCLUSIVE by
 saturation**, not negative. Checked and reported explicitly.
 
+## 1f. AMENDMENT E — 2026-07-18 21:15Z · `K_CLASSICAL` 0.05 → 0.005, registered BEFORE the change
+
+MO rotation 002 released the constant. **Grounded independently, not taken from the routing:**
+`quantum-system-canonical` SKILL.md:99 — *"**k_classical = 0.005 s⁻¹** (dissolution; cluster
+lifetime τ ≈ 200 s). **[GROUNDED — Turhan 2024]**"*; `model6-dimer-formation-chemistry` §1 item 4
+records the change **from an uncited `0.05`**. Corroborating third site:
+`sweep/phosphate_conservation_probe.py:69` already runs `0.005`. **One live site remains**
+(`run_theta_burst_45s.py:145`) — a consequence of the consolidation.
+
+**DISCRIMINATING QUANTITY:** dimer **survival fraction** across one gap,
+`S = n_dimers(after) / n_dimers(before)`, measured at the SAME driven state, before and after the
+constant change.
+
+**The bracket, derived from the code and script-computed (no hand arithmetic — the AMENDMENT C
+lesson).** The gap computes `k_diss = K·(1 − se)` with `se = (P_S − 0.25)/0.75`. `P_S` decays
+toward 0.25 across the gap, so `se: se₀ → 0` and `k_diss: K(1−se₀) → K`. Survival is therefore
+bracketed by its two endpoints:
+
+| K | gap | survival bracket (se₀ = 0 → 0.5) |
+|---|---|---|
+| 0.05 | 20 s | **[0.3679, 0.6065]** |
+| 0.05 | 45 s | **[0.1054, 0.3247]** |
+| **0.005** | 20 s | **[0.9048, 0.9512]** |
+| **0.005** | 45 s | **[0.7985, 0.8936]** |
+
+**REGISTERED:**
+1. Measured survival falls **inside its bracket** at both K values and both gap lengths. Outside ⇒
+   the model of the dissolution path is wrong ⇒ **FALSIFIED**, and the constant change is NOT the
+   explanation.
+2. `S(0.005) > S(0.05)` at every gap length, and the **ratio grows with gap length** (the effect
+   compounds in the exponent).
+3. **NOT registered:** any target dimer count. Per §7 LOCKED and the MO's instruction, the delta is
+   **measured and reported, never damped.** A moved standing result is an escalation.
+
+**Positive control:** dimers must exist pre-gap (`n_before ≥ 2`); otherwise the tracker's `n < 2`
+early return makes survival undefined and the result is **INCONCLUSIVE**, not a pass.
+
+**Registered limit:** this measures the gap's dissolution path only. It says nothing about
+formation, which is excluded during silence — so it is a statement about *what survives a
+silence*, not about steady-state dimer population.
+
 ## 2. The null that cannot show the effect
 
 Three, and all three must behave as registered or the run is INCONCLUSIVE:
