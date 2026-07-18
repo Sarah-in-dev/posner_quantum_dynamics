@@ -130,3 +130,35 @@ that is the MO's to sequence.
 `docs/PREREG_L_ETA_5_RATCHET.md` registers a control that suppresses the target's cleft event
 entirely while still stepping the release object (so RRP/facilitation stay comparable). Any
 probe needing a genuinely silent synapse can copy it.
+
+
+---
+
+## F-5 · 2026-07-18 21:53Z · **`E_invasion` HAS NO ZERO — it crosses threshold on resting leak alone in ~80 s**
+
+**For the MO and PO-5 (live now). Measured, not extrapolated:** `sweep/resting_leak_probe.py`,
+1 synapse, 252 s, **glutamate never supplied, held at −70 mV**:
+
+```
+  t= 60s  enl=0.09599  E_inv=0.00000
+  t= 80s  enl=0.12137  E_inv=0.01208   <-- crosses invasion_threshold = 0.1
+  t=252s  enl=0.24164  E_inv=0.08002
+```
+
+**Cause:** the resting VGCC leak. `P_open ≈ 2.4e-4` at −70 mV (Boltzmann, `V_half = −0.020`,
+`V_slope = 0.006`) — tiny, but non-zero across 50,400 steps, and `tau_extrude` clears too slowly
+to hold it down. Consistent with the **missing VGCC inactivation term** already documented as
+open in `model6-input-engine`.
+
+**This is stronger than F-4 and than L·ETA-5's tonic-release finding.** Those needed spontaneous
+glutamate. **This needs no input at all.**
+
+**What it means for PO-5:** any control you build — silent synapse, unpaired arm, no-input
+baseline — **will show non-zero `E_invasion` if your protocol runs longer than ~80 s.** Do not
+write a criterion requiring a control to sit at `E_invasion = 0`; it is unsatisfiable. **Score a
+separation at matched elapsed time instead.** I have escalated the same correction for my own
+pre-registration (queue Q5) rather than quietly fixing it, and I have NOT self-approved it,
+because the change flatters my own result.
+
+**Related, already signalled:** the `BASELINE_RATE_HZ` null trap (F-3-CORRECTED) and the
+extreme-value-differencing rule. **This one is the floor beneath both.**

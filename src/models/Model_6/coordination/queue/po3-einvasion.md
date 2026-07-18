@@ -209,3 +209,52 @@ change conditions away from L·ETA-4's, so it answers a *related* question — *
 want**, and I will not pick unilaterally.
 
 **Not blocking me.** I am not idle on this; say the word and I run it.
+
+---
+
+## Q5 · 2026-07-18 21:53Z · **STOP — do not approve the L·ETA-5 re-run as registered. It would VOID again.**
+
+**This supersedes my earlier "the re-run is one command" claim, which was untested and wrong.**
+
+**The exact ask:** decide the null criterion before any compute is spent. **Do not approve the
+re-run in its current registered form.**
+
+**Why.** I validated AMENDMENT 4 (the corrected null) instead of shipping it on assertion. The
+suppression works — `max_glu = 0.0`, target `E_invasion = 0.0000`, `enl` **12× below** the
+broken null. **But `enl` still rises with glutamate fully suppressed**, so I measured the cause
+(`sweep/resting_leak_probe.py`, 1 synapse, 252 s, glutamate never supplied):
+
+```
+  t= 60s  enl=0.09599  E_inv=0.00000
+  t= 80s  enl=0.12137  E_inv=0.01208   <-- crosses invasion_threshold
+  t=252s  enl=0.24164  E_inv=0.08002
+```
+
+**`E_invasion` crosses `invasion_threshold` in ~80 s from the RESTING VGCC LEAK alone** —
+no glutamate, no activation, `P_open ≈ 2.4e-4` at −70 mV. Consistent with the documented
+missing VGCC inactivation term.
+
+**So PREREG §7's `null_einv > 0.0 → VOID` is unsatisfiable:**
+
+| null | `E_invasion` | §7 verdict |
+|---|---|---|
+| activation floor (as run) | 0.4507 | VOID |
+| + AMENDMENT 4 | ~0.080 | **still VOID** |
+| any construction, this length | > 0 | **VOID** |
+
+**Cost of approving it unchanged: ~90 minutes for a second VOID.**
+
+**My recommendation, which I am deliberately NOT self-approving:** make the null a **separation
+test at matched elapsed time** rather than a zero test. **I am flagging that this change makes my
+own result look better** — separation would go from 1.8× (broken null) to ~10× (AMENDMENT 4
+null). A PO should not approve a criterion change that flatters its own measurement, which is why
+this is your call and not mine.
+
+**Distinct from the L·ETA-6 goalpost move I refused:** there a run was complete and a verdict
+existed, so substituting a criterion would have changed a result. **Here nothing has run and
+nothing is rescored** — this is a pre-registration corrected before its experiment, which is what
+pre-registration is for.
+
+**The finding underneath, which outlives this decision:** **`E_invasion` has no zero.** It
+accumulates past threshold with no input of any kind in ~80 s. That bears on **every** long
+protocol reading `E_invasion` — including PO-5's, which is live now.
