@@ -630,3 +630,35 @@ PO-5's surviving `P_product` hypothesis is the only route left.
 
 **This is Sarah's to rule on, not the MO's.** It bears on §8, on PO-5's scope, and on whether the
 re-run is worth the compute before that ruling.
+
+---
+
+## STANDING PRACTICE — THE MO PUSHES THREADS; A BACKBONE WRITE IS NOT A WAKE SIGNAL
+
+**MO defect #10, and it is operational rather than analytical.** The MO watched PO-3 and PO-4
+resume after going idle and concluded *"idle POs pick up backbone writes on their own."*
+**They do not.** Those resumptions were Sarah nudging them; the MO credited them to the backbone
+and then let all four POs sit idle with unread rulings. **The MO inferred a mechanism it had not
+verified — the same habit as defects #2, #6 and #9, applied to its own coordination layer.**
+
+### The rule
+
+**Content lives on the backbone. Waking a stopped session is a separate mechanical act, and it is
+the MO's job.** These are not in tension: the backbone carries every ruling, every piece of
+evidence, every decision. A wake signal carries none of that — it is a pointer.
+
+**After every ruling or rotation written to a PO's `requests/` directory:**
+1. Check that PO's `isRunning` (`list_sessions`).
+2. If it is idle **and** has work available → send a **minimal** wake pointer: the file path, one
+   line of why it matters now, and "do not reply — heartbeat and work." **No substance in the
+   message.**
+3. If it is idle and genuinely has nothing (everything gated, or at an acceptance boundary with no
+   next unit) → **that is the MO's failure, not the PO's.** Rotate it or give it a unit.
+
+**`consumer-acceptance-gate`: POs rotate at acceptance boundaries.** A PO reporting *"nothing in
+flight, available for the next unit"* is the loudest possible signal that the MO owes it work.
+PO-1 sat in exactly that state and the MO did not notice until Sarah said so.
+
+### Applied this cycle
+- **PO-1** — B2 closed, idle, self-reported available. **Rotated to PO-6a** (`bdb2d64`) and woken.
+- **PO-2, PO-3, PO-4** — verified RUNNING; no wake needed, no message sent.
