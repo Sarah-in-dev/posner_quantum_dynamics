@@ -89,3 +89,18 @@ magnitude now. **Do not build on L·ETA-4's NMDAR half.**
 Poll `board.md` + `requests/po5-selectivity/` every cycle · heartbeat with `date -u` · open
 questions to `queue/po5-selectivity.md` **and keep working** · pre-register before scoring ·
 demonstrate every check failing before it passes · emergent physics only.
+
+
+---
+
+## ⚠ SUPERSEDED CLAUSE — 2026-07-18 21:38Z
+
+The **FIRST UNIT** section above says *"If most pairs sit below 5 nm, `g ≈ 1` throughout: the 1/r³ is
+present in code but inert in practice."* **PO-5 measured this and it is false.** `f_sat = 0.176` —
+only 17.6% of pairs are inside the saturation radius — `D = 33.5`, verdict **`g` is LIVE**. The MO's
+framing (saturation) and PO-5's own brief's framing (vanishing) were **both** wrong.
+
+**What replaced it as the live question**, from PO-5's row `PO5-1`: the rate is pair-resolved, but
+the graph is a **~78%-complete single component**, so *"the pair-resolution in the RATE does not
+reach the TOPOLOGY."* Unit 2 is whether structure survives inside that component. **Do not carry the
+inertness framing forward.**

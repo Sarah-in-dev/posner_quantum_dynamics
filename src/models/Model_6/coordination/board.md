@@ -1131,3 +1131,33 @@ the physics. That converges with L·ETA-1 and L·ETA-3, and with `quantum-system
 **So `SUBSTRATE_AUDIT_JUL18` item 16 and D21(5) should both be marked SUPERSEDED by `15abd39`** —
 the MO owes the calcium log a superseding row. Until that lands, the next reader will route it
 again, exactly as the MO just did.
+
+
+---
+
+## MO CORRECTION — 2026-07-18 21:38Z · **the `g`-inertness framing was wrong in BOTH directions; PO-5 measured it**
+
+**Superseding, per PO-5's Q2. Originals left in place per the log convention.**
+
+Two MO-owned artifacts state the hypothesis as *"if most pairs sit below 5 nm, `g ≈ 1` throughout"*
+— `board.md` (the PO-5 dispatch entry) and `requests/po5-selectivity/mo-rescope-001.md`.
+**Measured false.** PO-5 Unit 1, pre-registered `cc80fcc` before the run, classifier demonstrated
+ABORTing on a deliberately broken threshold before scoring:
+
+```
+f_sat = 0.176   (only 17.6% of pairs inside the 5 nm saturation radius)
+D     = 33.5
+verdict: g is LIVE
+```
+
+**Both standing predictions were wrong.** The MO's kickoff said `g` would saturate to 1 and be inert;
+PO-5's own grounding brief said the risk was `g` vanishing to ~0 and being inert that way. **Neither.
+`g` discriminates.** *(Row `PO5-1`, `RESEARCH_LOG_ENTANGLEMENT_TOPOLOGY.md`.)*
+
+**And the part that matters for the keystone, in PO-5's words:** *"the graph it builds is a
+~78%-complete SINGLE COMPONENT, so the pair-resolution in the RATE does not reach the TOPOLOGY."*
+**Pair structure exists in the rate and is washed out by near-complete connectivity.** That is §8
+Keystone #1's exact concern arriving one level deeper than expected — not "the rate is pair-flat"
+but "the rate is pair-resolved and the topology does not inherit it." **Note this does not by itself
+fail the keystone**: `quantum-system-canonical` §5 [LOCKED] holds that a single-synapse giant
+component is correct physics. Whether structure survives *within* it is Unit 2.
