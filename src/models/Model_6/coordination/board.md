@@ -14,6 +14,7 @@ list. This file is the live registry; that file is the durable plan. Read both.
 | `model6-mo` | the MO itself (meta/coordinator) | GROUNDED — brief committed `093c675` | `board.md`, `MO_MODEL6.md` | 2026-07-18 17:30Z |
 | `po1-b2` | B2 — retire the per-synapse pump site | **BUILDING** — acceptance probe committed FAILING first `fa12009` (mode ratio 5000, FAIL) | `vibrational_cascade_module.py`, backbone params (`model6_parameters.py:759-805`) | 2026-07-18 17:35Z |
 | `po3-einvasion` | E_invasion provenance + the ratchet test | **COMPLETE, STOPPED** — L·ETA-5 scored VOID (MO-verified); acceptance PARTIAL; re-run is Sarah's call | `spine_plasticity_module.py` actin/E_invasion block, its `sweep/` probe | 2026-07-18 17:50Z |
+| `po5-selectivity` | **§8 KEYSTONE** — does which dimers bond depend on INPUT, at pair resolution? | **DISPATCHED — chip pending** (`task_2b2ef4b5`) | Pathway 2 bond formation in `dimer_particles.py`, own `sweep/` probe | 2026-07-18 20:18Z |
 | `po2-phosphate` | the phosphate loop — make the finite pool finite | **DISPATCHED — chip pending** (`task_e54e9c25`) | `atp_system.py`, phosphate path in `model6_core.py` | 2026-07-18 19:05Z |
 | `po4-gap` | the analytical gap, biologically grounded | **DISPATCHED — chip pending** (`task_daa62deb`) | `analytical_gap` in BOTH drivers, `run_theta_burst_45s.py` | 2026-07-18 17:52Z |
 
@@ -904,3 +905,32 @@ the code by the MO. It is quoted, not confirmed. **Nobody act on it until it is.
 
 **Standing instruction to all POs: do not re-plan off this entry.** It corrects the record; the
 decisions are Sarah's and are being walked through now.
+
+---
+
+## PO-5 DISPATCHED — 2026-07-18 20:18Z, on Sarah's re-scope
+
+**Objective:** §8 Keystone #1 — *does which dimers bond depend on INPUT, at pair resolution?*
+**Not** through η, **not** through `P_product`, **no backbone required.**
+
+**It is unblocked and always was.** The PO-3 → PO-5 hard edge is retired: it assumed PO-5 tests
+selectivity through the partition, which §8 never asked for.
+
+**First unit, before any selectivity test:** the `g`-inertness check. `coupling_length = 5.0 nm`
+(`dimer_particles.py:129`) and `g` saturates at 1.0 below it — if intra-synapse `r_ij` mostly sits
+under 5 nm, the 1/r³ is present in code but **inert in practice** and Pathway 2 is flat-rate by a
+different route.
+
+**The kickoff carries the `em_rate` decomposition as the spine of the experiment:** `g` is geometry
+not input; `collective_field_kT` is global hence pair-flat by construction; **`coh` is the only
+factor that can carry input-specific information at pair resolution.**
+
+**Null constraint made explicit, because this board has now failed it three times:** PO-3's ratchet
+null, L·ETA-4's "silent" synapses, and `run_trial`'s inactive synapses were all controls assumed
+silent that were not. **`advance_silent()` is the one correct suppressor in the codebase and is used
+exactly once.** PO-5 is forbidden an activation-floor null.
+
+**Stakes recorded so they are not softened later:** if bonding is pair-flat with respect to input,
+the graph carries no more than active-region density and *"graph as computation"* collapses to
+*"scalar as computation."* **That is a real possible outcome and it is reported as a finding, not
+converted into a protocol problem.**
