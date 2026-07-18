@@ -46,7 +46,9 @@ def analytical_gap(network, gap_duration_s, dt_sub=1.0, diagnostics=False):
     Advance the network through a silent gap analytically.
 
     THE RULE THIS DOCSTRING OBEYS (PO-4, 2026-07-18): every subsystem appears in
-    ONE of the two columns below. Nothing is in neither. The previous version of
+    ONE of the columns below -- ADVANCED with a timescale, or EXCLUDED with a
+    reason. Nothing is in neither. Scored against model6_core.py's thirteen step
+    phases, not against memory. The previous version of
     this docstring listed five ADVANCED items and six EXCLUDED items and left
     actin / E_invasion / CaMKII / DDSC in NEITHER -- so they were silently frozen
     while the prose read as complete. That is this program's characteristic defect
@@ -56,33 +58,67 @@ def analytical_gap(network, gap_duration_s, dt_sub=1.0, diagnostics=False):
 
     ADVANCED during the gap (integrated at dt_sub, with the timescale that makes
     integration necessary):
-      1. P_S decoherence      per-dimer exponential decay toward 0.25, T_eff-scaled
-      2. Dissolution          k_diss = K_CLASSICAL*(1 - singlet_excess)
-      3. Particle removal     track concentration, remove lowest-coherence particles
-      4. Bond cleanup         remove bonds involving P_S < 0.5 dimers
-      5. Stochastic disentanglement   k_decohere = 0.01*(1 - P_Si*P_Sj)
-      6. Actin enlargement    tau_extrude = 180 s unconfined (Honkura 2008, 2-15 min
+      1. P_S decoherence  [PHASE 2]  per-dimer exponential decay toward 0.25, T_eff-scaled
+      2. Dissolution  [PHASE 3]  k_diss = K_CLASSICAL*(1 - singlet_excess)
+      3. Particle removal  [PHASE 3]   track concentration, remove lowest-coherence particles
+      4. Bond cleanup  [PHASE 3]   remove bonds involving P_S < 0.5 dimers
+      5. Stochastic disentanglement  [PHASE 3]   k_decohere = 0.01*(1 - P_Si*P_Sj)
+      6. Actin enlargement / E_invasion  [PHASE 11]   tau_extrude = 180 s unconfined (Honkura 2008, 2-15 min
                               band); ~51 s confined, where commitment redirects the
                               pool into stabilization instead of shaft extrusion
-      7. Spine volume         tau_volume_follow_actin = 5 s (Matsuzaki 2004), follows actin
-      8. CaMKII               Jain 2024's DDSC window is 30-40 s post-induction --
+      7. Spine volume  [PHASE 11]   tau_volume_follow_actin = 5 s (Matsuzaki 2004), follows actin
+      8. CaMKII  [PHASE 10]   Jain 2024's DDSC window is 30-40 s post-induction --
                               INSIDE this interval. Integrated here so delayed
                               commitment can resolve at all; before this fix it could
                               not, in any gap-based experiment.
-      9. DDSC                 tau_rise 15 s / tau_decay 50 s, peak ~35 s
+      9. DDSC  [PHASE 13]   tau_rise 15 s / tau_decay 50 s, peak ~35 s
 
     EXCLUDED, and these are HONEST exclusions -- "settles fast, then clamp" is a
     defensible modelling choice, NOT the silent freeze above. Each carries the
     timescale that justifies it:
-      - Calcium dynamics          at baseline within ~2 s; clamped at baseline
-      - Dopamine                  clears in ~2 s; no reward is delivered in a gap
-      - ATP level                 tau ~ 5 s; re-equilibrates far inside any gap
-      - ATP hydrolysis / phosphate production   no drive at rest
-      - EM field / tryptophan superradiance     no drive at rest
-      - New dimer formation       requires the calcium transient; none at baseline
-      - New bond formation        requires the EM field; none at rest
+      - Calcium dynamics  [pre-PHASE 1]   at baseline within ~2 s; clamped at baseline
+      - Dopamine  [PHASE 8]   clears in ~2 s; no reward is delivered in a gap
+      - ATP level  [pre-PHASE 1]   tau ~ 5 s; re-equilibrates far inside any gap
+      - ATP hydrolysis / phosphate production  [pre-PHASE 1]   no drive at rest
+      - EM field / tryptophan superradiance  [PHASE 6]   no drive at rest
+      - New dimer formation  [PHASE 1]   requires the calcium transient; none at baseline
+      - New bond formation  [PHASE 3]   requires the EM field; none at rest
+      - Quantum measurement gate  [PHASE 9b]   requires dopamine; none is delivered in a gap
       - Network entanglement tracker O(n^2) recalc   deferred to the single tail
                                   refresh below, for cost, not for physics
+
+    EXCLUDED, no integrated state -- these carry no clock. They are recomputed by
+    the tail step from quantities column A has already advanced. Listed because
+    "it has no state" is a REASON, and the rule above admits reasons, not silence.
+    (Added 2026-07-18 on MO ruling 007, which found the first two in NEITHER column
+    -- the exact defect this docstring's own rule exists to prevent, reintroduced
+    at the edge of the fix that removed it elsewhere.)
+      - Template feedback  [PHASE 12]  (model6_core.py:715-727)
+            Gated on spine_volume > 1.5 -- which this function NOW ADVANCES, so
+            unlike before the fix it genuinely IS reached mid-gap (L·GAP-2 measured
+            the committed arm at 1.9312 inside a 300 s gap, and D20 records that
+            this pathway does fire, ~8 s onset).
+            EXCLUDED ANYWAY, and the reason survives that: set_n_templates mutates
+            templates.template_field, and that field is read ONLY at dimer creation
+            (dimer_particles.py:205) to set dimer.template_bound. Formation is
+            excluded in a gap, so the field has NO consumer here -- existing dimers
+            keep the template_bound they were created with, and gap dissolution does
+            not use the template term at all (k_diss is computed inline from
+            K_CLASSICAL and singlet_excess, not via update_dimerization).
+            The pathway is also MEMORYLESS -- phase 12 recomputes n_templates from
+            the CURRENT volume every step, with no latch -- so the tail step's single
+            evaluation from the post-gap volume lands on exactly the value stepping
+            would have produced. Reworking this pathway is NOT PO-4's surface.
+      - Eligibility from the particle system  [PHASE 9]  (model6_core.py:599-628)
+            A derived readout: (mean_P_S - 0.25)/0.75 over existing dimers, whose
+            P_S column A advances. Its ONLY consumer is ddsc.check_trigger (:735),
+            which sits inside `if plateau:` -- and a plateau is stimulus-driven, so
+            it cannot occur during silence. Recomputed at the tail.
+      - Local dimer->tubulin modulation  [PHASE 4]   derived from n_dimers, mean_coherence
+      - Network modulation integration  [PHASE 5]   derived from per-synapse modulations
+      - k_agg forward coupling  [PHASE 7]   derived from E_invasion (advanced) and
+            channel open fraction. NOTE: this row became E_invasion-dependent only at
+            B2 (c280e85); before that the gap's frozen clock would not have touched it.
 
     NOT A PATHWAY, recorded so it is not mistaken for one: quantum_field_kT is
     accepted by spine_plasticity.step at three call sites and read at none --

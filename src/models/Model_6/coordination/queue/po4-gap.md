@@ -108,3 +108,21 @@ Per ruling 004's instruction to report with the `file:line` and leave it:
 
 Second independent defect in a file I am editing; not on my bar; not folded into my diff. Most
 likely PO-5's, since it is the PO that needs cross-synapse bonds to exist.
+
+---
+
+## Q4-6 · 2026-07-18 20:15Z · **Routed, not fixed (MO ruling 007):** duplicate PHASE 9 label in `model6_core.py`
+
+Two step phases carry the same number in the file's own comments:
+
+- `model6_core.py:599` — `# --- PHASE 9: ELIGIBILITY FROM PARTICLE SYSTEM (Agarwal 2023) ---`
+- `model6_core.py:617` — `# --- PHASE 9: THREE-FACTOR GATE WITH PROBABILISTIC QUANTUM MEASUREMENT ---`
+
+Not PO-4's surface; not fixed. Recorded here per the ruling.
+
+**One consequence worth the MO's attention:** the new coverage checker
+(`sweep/gap_phase_coverage_check.py`) has to special-case this collision — it maps the second
+occurrence to a `[PHASE 9b]` tag that exists only in PO-4's docstring, not in `model6_core.py`.
+**That special case is a workaround for the collision and should be deleted when the numbering is
+fixed** (`DUPLICATE_PHASE_ALIASES` at the top of the checker). Flagging so it does not quietly
+become permanent — a workaround nobody remembers is how the last defect survived.

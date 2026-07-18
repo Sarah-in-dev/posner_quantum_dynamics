@@ -55,18 +55,50 @@ from §A so they are not tarred with the silent freeze that §A rows 6–9 used 
 | Quantum measurement gate | — | requires dopamine; none in a gap |
 | Network entanglement tracker O(n²) recalc | — | **cost, not physics** — deferred to the single refresh in the tail, stated plainly rather than dressed as a physical argument |
 
-## C. DERIVED — no integrated state, therefore no clock
+## C. EXCLUDED — no integrated state, therefore no clock
 
-Recomputed from inputs, not integrated. Each is refreshed by the tail step from §A quantities
-the gap has already advanced. Listed so they are not mistaken for omissions.
+**Corrected 2026-07-18 on MO ruling 007.** This section previously sat as a third category,
+"DERIVED", and the **docstring did not carry phases 9 and 12 at all** — so measured against the
+docstring's own two columns, two phases were in **neither**. That is the exact defect this table
+exists to eliminate, reintroduced at the edge of the fix that removed it. **"It has no
+integrated state" is a stated reason, so these belong in the EXCLUDED column** and are now listed
+there in both artifacts.
 
-| phase | quantity | derived from |
+| phase | quantity | reason for exclusion |
 |---|---|---|
-| 4 | local dimer→tubulin modulation | `n_dimers`, `mean_coherence` (both advanced) |
-| 5 | network modulation integration | per-synapse modulations |
-| 7 | `k_agg` forward coupling | `E_invasion`, channel open fraction — **advanced since `c280e85` (B2)** |
-| 9 | eligibility | dimer `P_S` (advanced) |
-| 12 | template feedback | `spine_volume` (advanced) |
+| 4 | local dimer→tubulin modulation | no state; derived from `n_dimers`, `mean_coherence` (both advanced), recomputed at tail |
+| 5 | network modulation integration | no state; derived from per-synapse modulations |
+| 7 | `k_agg` forward coupling | no state; derived from `E_invasion` (advanced) + channel open fraction |
+| **9** | **eligibility from the particle system** | **see below** |
+| **12** | **template feedback** | **see below — its reachability CHANGED with this fix** |
+
+### Phase 12 — template feedback. The substantive one, and this fix created the question.
+
+Gated on `spine_volume > 1.5` (`model6_core.py:715-720`) — **which this gap now advances.** Before
+the fix, volume was frozen and this could not fire in a gap. **After it, it genuinely is reached:**
+L·GAP-2 measured the committed arm at **1.9312 inside a 300 s gap**, and D20 records the pathway
+*does* fire (~8 s onset, roughly doubling the template-bound fraction, raising `T_eff`).
+
+**Excluded anyway, and the reason survives that fact — verified, not assumed:**
+
+1. `set_n_templates` mutates `templates.template_field` (`ca_triphosphate_complex.py:643-670`).
+2. That field is read **only at dimer creation**, to set `dimer.template_bound`
+   (`dimer_particles.py:205`). **Existing dimers are never re-flagged.**
+3. **Formation is excluded in a gap**, so the field has **no consumer** there.
+4. Gap dissolution does **not** use the template term at all — `k_diss` is computed inline from
+   `K_CLASSICAL` and `singlet_excess`, never via `update_dimerization`.
+5. The pathway is **memoryless** — phase 12 recomputes `n_templates` from the *current* volume
+   every step, with no latch — so the tail step's single evaluation from the post-gap volume
+   lands on **exactly** the value stepping would have produced.
+
+**Reworking template feedback is not PO-4's surface.** If the memoryless recompute is itself
+wrong (e.g. it should latch on a mid-gap excursion), that is a separate finding for its owner.
+
+### Phase 9 — eligibility from the particle system
+
+A derived readout, `(mean_P_S − 0.25)/0.75` over existing dimers, whose `P_S` §A advances. Its
+**only** consumer is `ddsc.check_trigger` (`model6_core.py:735`), which sits inside `if plateau:`
+— and a plateau is stimulus-driven, so **it cannot occur during silence.** Recomputed at the tail.
 
 **Note on phase 7:** before B2 this row was inert with respect to the gap. **After B2 the
 per-synapse pump drive reads `E_invasion`** — so the stopped clock would have frozen the *pump

@@ -5,12 +5,43 @@ with a cited timescale or is excluded with a stated reason — nothing in neithe
 measurement shows **committed vs uncommitted spine volume SEPARATING across an honest gap**.
 Demonstrated failing on the current 1 ms-per-30 s code first.
 
-**Status:** **ACCEPTANCE MET — awaiting MO verification.** All five rulings discharged; the
-research-log rows are written. Remaining work is genuinely gated (below).
-**Current unit:** none open. The per-subsystem table the MO named as owed at `5e12712` is
-delivered — `docs/GAP_SUBSYSTEM_TABLE.md` (`34c85c4`). **Nothing further owed by this PO.**
-**Last heartbeat:** 2026-07-18 19:55Z
+**Status:** **CORRECTED 2026-07-18 20:15Z — I claimed "ACCEPTANCE MET, both bars" and one bar
+was NOT met.** MO ruling 007 found **PHASE 12** and **PHASE 9** in neither column, i.e. my
+docstring violating the rule it states. **Now closed and mechanically enforced.** Both bars met;
+awaiting MO re-verification.
+**Current unit:** none open.
+**Last heartbeat:** 2026-07-18 20:15Z
 **Blocked on:** nothing of mine. Three items sit with the MO/Sarah — see "Gated", below.
+
+### The correction — and why it happened is the interesting part
+
+**PHASE 12 template feedback was in neither column, and MY FIX is what made that matter.** It is
+gated on `spine_volume > 1.5`. Before the fix, volume was frozen in a gap so the pathway could
+not fire there. **After the fix it is genuinely reached** — L·GAP-2's committed arm hit 1.9312
+*inside* a 300 s gap, and D20 records the pathway does fire. **I reintroduced this program's
+characteristic defect class at the exact edge of the change that removed it elsewhere**, because
+repairing the clock made a previously-unreachable pathway reachable and I did not re-derive the
+column assignment afterwards.
+
+**Resolved by checking, not assuming** — PHASE 12 is **EXCLUDED**, and the reason survives the
+threshold crossing: `set_n_templates` mutates `templates.template_field`; that field is read
+**only at dimer creation** (`dimer_particles.py:205`); formation is excluded in a gap, so it has
+**no consumer** there; gap dissolution never uses the template term (`k_diss` is inline); and the
+pathway is **memoryless**, so the tail step's single evaluation lands on exactly what stepping
+would give. **PHASE 9** is EXCLUDED too — its only consumer is `ddsc.check_trigger` (`:735`),
+inside `if plateau:`, and plateaus cannot occur in silence.
+
+**The real failure was that the rule was only enforced by someone re-reading it.** It was
+violated twice and a human caught it both times. Added `sweep/gap_phase_coverage_check.py`:
+it parses every `# --- PHASE N ---` marker in `model6_core.py` and fails if any lacks a
+`[PHASE N]` tag in the gap docstring. **14/14 PASS.** It checks *coverage, not correctness* —
+it cannot tell you a timescale is right, only that nothing is silently absent, which is the
+failure mode that actually bit.
+
+**On my own claim:** the MO was right to bounce it and right that a falsifiable claim beats a
+vaguer one. But the status line was wrong and I wrote it, having verified the separation bar and
+then asserted the table bar rather than testing it against the thirteen phases. The checker now
+exists so that assertion is not available to me next time.
 
 ---
 
