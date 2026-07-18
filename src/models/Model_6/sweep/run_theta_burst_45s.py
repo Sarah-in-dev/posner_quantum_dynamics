@@ -130,10 +130,12 @@ def analytical_gap(network, gap_duration_s, dt_sub=1.0, diagnostics=False):
     the tail step. `model6-commitment-pathway` is LOCKED against setting commitment
     outside the CaMKII path, and nothing here writes it.
 
-    K_CLASSICAL = 0.05 below is the rate `model6-dimer-formation-chemistry` RETIRED
-    (to 0.005, cluster lifetime tau ~ 200 s, Turhan 2024). It is MO-held and
-    deliberately untouched by PO-4; every dissolution number this function produces
-    inherits it.
+    K_CLASSICAL = 0.005 s^-1 below is the GROUNDED dissolution rate -- cluster
+    lifetime tau ~ 200 s, Turhan 2024. `quantum-system-canonical` Sec.3 carries it as
+    [GROUNDED - Turhan 2024]; `model6-dimer-formation-chemistry` Sec.1 item 4 records
+    the retirement of the previous **uncited** 0.05. Corrected here 2026-07-18
+    (MO rotation 002); the gap had been running the retired value, so every
+    dissolution number this function produced before that date inherits 0.05.
 
     Sub-interval dt_sub controls accuracy of the coupling between P_S decay and
     dissolution rate, and now also the Euler accuracy of the plasticity advance.
@@ -142,7 +144,8 @@ def analytical_gap(network, gap_duration_s, dt_sub=1.0, diagnostics=False):
     If diagnostics=True, returns a dict with per-stage counts.
     """
     P_THERMAL = 0.25
-    K_CLASSICAL = 0.05  # s^-1, bare dissolution rate
+    K_CLASSICAL = 0.005  # s^-1, bare dissolution rate. Turhan 2024, tau ~ 200 s.
+                         # Was an uncited 0.05 until 2026-07-18 (MO rotation 002).
 
     # A zero-duration gap is a legal call (an empty interval in a protocol loop, and the
     # natural null for any retention measurement). np.ceil(0/dt_sub) == 0 made this raise
