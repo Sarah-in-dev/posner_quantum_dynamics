@@ -5,11 +5,11 @@ with a cited timescale or is excluded with a stated reason — nothing in neithe
 measurement shows **committed vs uncommitted spine volume SEPARATING across an honest gap**.
 Demonstrated failing on the current 1 ms-per-30 s code first.
 
-**Status:** LIVE — pre-registered (`3bf4ad4`) and the probe committed FAILING on current code
-(`806adc7`). Next unit: consolidation, then the honest-gap fix.
-**Current unit:** consolidation (MO ruling 1) — no compute needed.
-**Last heartbeat:** 2026-07-18 18:20Z
-**Blocked on:** — (nothing; K_CLASSICAL is MO-held but does not block my path)
+**Status:** **ACCEPTANCE MET — awaiting MO verification.** All five rulings discharged; the
+research-log rows are written. Remaining work is genuinely gated (below).
+**Current unit:** none open. Standing by for MO verification of `b9ce5d8` / `a1b4317`.
+**Last heartbeat:** 2026-07-18 19:45Z
+**Blocked on:** nothing of mine. Three items sit with the MO/Sarah — see "Gated", below.
 
 ---
 
@@ -106,7 +106,43 @@ indistinguishable from zero for any number of traversals. If it holds, a no-ratc
 different findings, and the negative branch is Sarah's call. Flagged to PO-3 as an estimate with
 a minutes-long check that could save its 130-minute slot.
 
-### Next units (none blocked)
+### 2026-07-18 19:45Z — ACCEPTANCE MET. Both bars, with the route recorded rather than smoothed.
+
+**Bar 1 — every subsystem advances with a cited timescale or is excluded with a stated reason.**
+Done in the docstring (`7b05153`), which now enumerates **nine advanced** items with timescales
+and **eight excluded** with the timescale that justifies each. Honest exclusions relabelled as
+"settles fast, then clamp" (calcium ~2 s, dopamine ~2 s, ATP τ≈5 s, no-drive for EM / new dimer /
+new bond) and thereby separated from the silent freeze. `quantum_field_kT` recorded as **NOT a
+pathway** (D21(1): measured inert) rather than listed as one — the exact defect class the table
+exists to eliminate.
+
+**Bar 2 — committed vs uncommitted spine volume SEPARATING across an honest gap** (`b9ce5d8`):
+`1.9403 ± 0.0187` vs `1.1639 ± 0.0228`, **ΔV = +0.7764** against a pre-registered 4σ floor of
+0.26; seed-only null 53× smaller; both positive controls fired; not ceiling-compressed.
+**Frozen-clock control measured, not asserted: ΔV = +0.000299 — 2595×.**
+
+**Rulings discharged:** 1 consolidation (three consumers, one definition) · 2 dt-convergence
+(`0497aa1`, first-order confirmed, ratio 2.04–2.08) · 3 `K_CLASSICAL` reported untouched ·
+4 DDSC window now reachable, delta reported not damped · 5 no analytic commitment state.
+
+**The route, recorded because it is the evidence:** the first post-fix run returned **FALSIFIED**
+— I had registered the decay of the wrong variable (`E_invasion` is *affine* in
+`actin_enlargement`, `:412`). AMENDMENT B corrected the derivation; **AMENDMENT C then disclosed
+that two of AMENDMENT B's hand-computed numbers were themselves wrong, and that scored against
+what I literally wrote the committed points would MISS.** The 10 s / 60 s re-test exists because
+of that, with predictions emitted by script instead of by hand. **8/8 out-of-sample points pass,
+max error 0.0039 against 0.02.**
+
+### Gated — not mine to close
+
+1. **`K_CLASSICAL`** — MO-held. The gap runs the **retired** rate. After consolidation it is
+   **one** site, so the decision is a one-line change.
+2. **The `E_invasion` architectural reading** — MO escalated to Sarah as a physics call
+   (`r ∝ E_invasion × ca_open` ⇒ a committing synapse loses pump drive). Explicitly not pursued.
+3. **`MO_MODEL6.md` §3 PO-4 owes a correction** — its acceptance numbers are unsourced; the MO
+   said it will correct once PO-4 reports. This is that report.
+
+### Previously listed next units — all now complete
 1. Reproduce the isolated-module committed-vs-uncommitted baseline (cheap, no heavy slot).
 2. Pre-register: discriminating quantity, null, positive control, verdict function.
 3. Commit the measurement **failing on current code** before any physics change (`fa12009` precedent).
