@@ -6,12 +6,46 @@ FALSIFIED and INCONCLUSIVE, with its positive control demonstrated to fire — p
 provenance verdict on `k_polymerization_max` (and `E_ref`, which sits in the load-bearing
 denominator at `spine_plasticity_module.py:411-412`).
 
-**Status:** LIVE. Grounding brief ACCEPTED by the MO. Pre-registration committed (`2084960`)
-and amended pre-run (`2a955fb`). Probe committed (`1b43b89`). **The one backgrounded run is
-in flight.**
-**Current unit:** L·ETA-5 measurement running — drive arm then null arm, 8 traversals each.
-**Last heartbeat:** 2026-07-18, run launched, drive arm traversal 1 in progress.
+**Status:** LIVE. Provenance verdict DELIVERED (`ad7a804`, acceptance item 2). Measurement
+run in flight, drive arm traversal 3.
+**Current unit:** L·ETA-5 — drive arm then null arm, 8 traversals each. Verdict to be scored
+OFFLINE from the persisted per-traversal JSON using the corrected function; the in-run printed
+verdict uses superseded logic and is VOID.
+**Last heartbeat:** 2026-07-18 ~18:10Z. Rulings 002 and 003 absorbed and implemented.
 **Blocked on:** nothing.
+
+## Rulings absorbed
+
+- **Ruling 002 / 003 (retention prediction conditional on confinement) — IMPLEMENTED** as
+  prereg AMENDMENT 2 (`78b30ef`, published `9608e8a`). Ruling 003 supersedes 002 and asks the
+  band centre be re-derived from measured `conf` with the existing tolerance width, at scoring,
+  without killing the run. That is what AMENDMENT 2 does, computed **per gap** rather than at
+  `conf_mean` — strictly finer, identical when `conf` is constant. `rho_ratio = rho/rho_pred(conf)`
+  scored in `[0.89, 1.07]`, which is the original `[0.80, 0.95]` divided by `0.8948` — the same
+  tolerance, carried over rather than re-invented. No constant moved.
+- Ruling 003's credit on GATE 1 is accepted but the CONFINED-RATCHET branch it credits was
+  **deleted** in AMENDMENT 2, because it rested on my own error (below). The corrected GATE 1
+  is unconditional and strictly stronger.
+
+## Errors I made this cycle — recorded, not quietly fixed
+
+1. **F-2 "the gap is frozen" was WRONG.** `analytical_gap`'s tail runs
+   `network.step(0.001, ...)`, so actin advances 1 ms per gap; retention is 0.9999944, not 1.0.
+   I concluded "frozen" from absence in the docstring's two lists without reading the function
+   tail — prose checked against prose, reported by me under a `[code SHOWN]` tag, in a program
+   whose signature defect is exactly that. Caught by PO-4. The decision not to call it stands
+   and is better motivated; only the magnitude was misstated. (CORRECTION 1.)
+2. **My prereg §2(B) mis-derived the committed branch.** I read `:389` (extrusion gated off by
+   `conf`) and stopped, missing `:390` — `conf` gates *retention* ON, which also drains
+   `actin_enlargement`. A committed spine drains **3.54× faster**, not slower. Caught by PO-4.
+   This is the defect class I was dispatched to hunt, committed in the section of my own
+   pre-registration titled "the mechanism, read off the code (not asserted)". (AMENDMENT 2.)
+3. **Process failure: I twice committed to a detached HEAD**, invisible to the MO and Sarah.
+   The Bash working directory persists across calls, so one earlier `cd` silently redirected
+   every later commit. Both batches published (`9608e8a`, and the earlier merge). My loop now
+   verifies the branch before committing.
+
+None of these three changed a constant, and none was found by me first.
 
 ## Run pin — read this before comparing numbers
 
