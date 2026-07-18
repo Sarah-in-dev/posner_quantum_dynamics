@@ -173,7 +173,10 @@ def run(label, n_steps=N_STEPS, suppress_recovery=False, inject_at=None, inject_
         "dP_relative": dP / p0 if p0 else float("nan"),
         "total_recovered": recovered,
         "injected": injected,
-        "predicted_dP": recovered + injected,
+        # NOTE: this prediction is the UNFIXED-code expectation (recovery leaks). On fixed
+        # code the leak term is absent and the residual equals -recovered by construction.
+        # The verdict function does NOT use it as a gate — see AMENDMENT A2.2.
+        "predicted_dP_if_unfixed": recovered + injected,
         "residual_vs_prediction": dP - (recovered + injected),
         "clamp_activations": clamp_hits,
         "conserved_at_eps": abs(dP / p0) <= EPS_REL if p0 else False,
@@ -185,10 +188,40 @@ def run(label, n_steps=N_STEPS, suppress_recovery=False, inject_at=None, inject_
 
 
 def verdict(main, c1, c2):
-    """Registered verdict function. MUST be able to return every one of these."""
-    # INVALID gates first: a control that does not fire makes the run unreadable.
-    if c1["residual_vs_prediction"] / c1["P_initial"] > EPS_REL * 1e6:
-        return "INVALID_C1_BLIND", "positive control injected a known leak the ledger did not report"
+    """
+    Registered verdict function. MUST be able to return every one of these.
+
+    AMENDMENT A2.2 (2026-07-18, disclosed — the C1 gate was DEFECTIVE as first written).
+    It read `c1["residual_vs_prediction"] / c1["P_initial"] > EPS_REL * 1e6` — with no
+    `abs()`, and against a `predicted_dP` of `recovered + injected` that silently assumes
+    recovery LEAKS. Two consequences:
+
+      * On the unfixed code the residual was +3.9e-13 and the gate correctly stayed quiet,
+        so the committed FAILING verdict (LEAK_MATCHES_RECOVERY, 305e096) is UNAFFECTED.
+      * On the FIXED code recovery no longer leaks, so `predicted_dP` over-predicts by exactly
+        the recovery: residual -1.111e-02, i.e. -3.175e-04 relative. Being negative it slipped
+        under a gate missing `abs()`. **With `abs()` it would have returned INVALID_C1_BLIND —
+        a FALSE invalid**, because C1 in substance worked perfectly: it reported dP = 1.000000
+        against an injection of exactly 1.0.
+
+    So the first CONSERVED reading was reached partly by a sign accident, and I am not entitled
+    to keep a pass I got that way. Replaced with a criterion that does not depend on whether the
+    code under test leaks: **the ledger must detect the injection as a DIFFERENCE against the
+    matched main arm.**
+
+        |(dP_C1 - dP_main) - injected| / P_initial  <=  C1_TOL
+
+    Re-scored both ways: unfixed -> 3.6e-06 (passes), fixed -> ~1e-14 (passes). The verdicts
+    stand under the corrected gate; the correction was made before relying on either.
+    """
+    C1_TOL = 1e-4  # loose vs eps by design: this gate asks "did the detector SEE it", not
+                   # "is it conserved". The injection is 1.0 against P~35, so a detector that
+                   # missed it would be off by ~3e-2 relative — 300x this tolerance.
+    c1_detected = (c1["dP"] - main["dP"]) - c1["injected"]
+    if abs(c1_detected) / c1["P_initial"] > C1_TOL:
+        return ("INVALID_C1_BLIND",
+                f"positive control injected {c1['injected']:.3e} but the ledger detected "
+                f"{c1['dP'] - main['dP']:.3e} against the matched main arm")
     if not c2["conserved_at_eps"]:
         return ("INVALID_C2_CRIES_WOLF",
                 "recovery-suppressed arm did not conserve: the ledger itself is wrong, not the code")
@@ -232,7 +265,7 @@ def main():
         print(f"    dP                     : {r['dP']:+.6e}   ({r['dP_relative']:+.3e} relative)")
         print(f"    ATP recovered          : {r['total_recovered']:.6e}")
         print(f"    injected (C1 only)     : {r['injected']:.6e}")
-        print(f"    predicted dP           : {r['predicted_dP']:.6e}")
+        print(f"    predicted dP if unfixed: {r['predicted_dP_if_unfixed']:.6e}")
         print(f"    residual vs prediction : {r['residual_vs_prediction']:+.6e}")
         print(f"    conserved at eps       : {r['conserved_at_eps']}")
         print(f"    clamp activations (C3) : {r['clamp_activations']}")

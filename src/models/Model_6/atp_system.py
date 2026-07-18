@@ -132,21 +132,43 @@ class ATPHydrolysis:
         # Track total
         self.total_consumed += np.sum(delta_atp)
         
-    def update_recovery(self, dt: float):
+    def update_recovery(self, dt: float, available_phosphate: Optional[np.ndarray] = None):
         """
         ATP recovery via mitochondrial synthesis
-        
+
         Rangaraju et al. 2014 Cell:
         "ATP recovers with τ ~ 5 seconds"
         "Mitochondria maintain ATP/ADP ratio ~10:1"
-        
-        Exponential recovery toward baseline
+
+        Exponential recovery toward baseline.
+
+        MASS CONSERVATION (PO-2, 2026-07-18). ADP + Pi -> ATP. This method previously
+        credited ATP and debited ADP while debiting NO phosphate, so every recovery step
+        created phosphate from nothing — measured at exactly `total_recovered` per run
+        (sweep/phosphate_ledger_probe.py, commit 305e096). The finite pool was therefore not
+        finite around the loop, and the SOC reset feedback did not close.
+
+        The fix is stoichiometry, not a correction term: synthesis is now limited by the
+        phosphate actually available, and the caller debits that phosphate. Where there is no
+        Pi, there is no ATP resynthesis — which IS the depletion feedback the SOC engine is
+        supposed to run on, arrived at by conservation rather than installed as a controller
+        (MO_MODEL6.md §7 LOCKED: emergent physics only, no constant tuned to a target).
+
+        Args:
+            dt: Time step (s)
+            available_phosphate: Pi available for synthesis (M), elementwise. If None, the
+                legacy non-conserving behaviour is used — retained ONLY so the ledger probe
+                can still exercise the unfixed path as a control.
+
+        Returns:
+            The ATP actually synthesised (M, elementwise) = the phosphate the caller must
+            debit. Zeros if nothing recovered.
         """
         # FIXED: Only recover where ATP is below baseline
         needs_recovery = self.atp < self.params.atp_concentration
-    
+
         if not np.any(needs_recovery):
-            return  # Nothing to recover
+            return np.zeros_like(self.atp)  # Nothing to recover
     
         # Recovery rate (first-order kinetics)
         # dATP/dt = (ATP_baseline - ATP) / τ
@@ -159,20 +181,31 @@ class ATPHydrolysis:
         max_recovery = self.params.atp_concentration - self.atp
         delta_atp = np.minimum(recovery_rate * dt, max_recovery)
         delta_atp = np.maximum(delta_atp, 0)  # No negative recovery
-    
+
+        # STOICHIOMETRIC LIMIT 1 — ADP. ADP + Pi -> ATP cannot run without ADP. Previously
+        # ADP capped only its own decrement (`adp_consumed`) while ATP was credited the full
+        # delta, so ATP could be synthesised with no ADP to make it from.
+        delta_atp = np.minimum(delta_atp, self.adp)
+
+        # STOICHIOMETRIC LIMIT 2 — Pi. This is the conservation fix. Synthesis cannot exceed
+        # the phosphate available to make it from.
+        if available_phosphate is not None:
+            delta_atp = np.minimum(delta_atp, np.maximum(available_phosphate, 0.0))
+
         self.atp += delta_atp
-    
+
         # Ensure we never exceed baseline
         self.atp = np.minimum(self.atp, self.params.atp_concentration)
-    
-        # ADP is converted back to ATP
-        adp_consumed = np.minimum(delta_atp, self.adp)
-        self.adp -= adp_consumed
+
+        # ADP is converted back to ATP (delta_atp is now <= adp by construction)
+        self.adp -= delta_atp
         self.adp = np.maximum(self.adp, 0)  # No negative ADP
-    
+
         # Track total
         self.total_recovered += np.sum(delta_atp)
-        
+
+        return delta_atp
+
     def update_diffusion(self, dt: float):
         """
         ATP and ADP diffusion
@@ -450,6 +483,56 @@ class PhosphateSpeciation:
         # (phosphate_total was recomputed here; it is now a derived property, so this was the
         #  ONLY site keeping it current and every other mutation left it stale.)
 
+    def available_for_atp_synthesis(self) -> np.ndarray:
+        """
+        Pi available to mitochondrial ATP synthesis (M), elementwise.
+
+        Both pools are physically available to synthesis — the structural/metabolic split is
+        about what participates in POSNER chemistry (see update_speciation, which reads the
+        structural pool only), not about what a mitochondrion can phosphorylate.
+        """
+        return self.phosphate_metabolic + self.phosphate_structural
+
+    def consume_for_atp_synthesis(self, amount: np.ndarray):
+        """
+        Debit Pi consumed by ADP + Pi -> ATP. The other half of the conservation fix.
+
+        METABOLIC-FIRST, structural only as the remainder. Rationale (PO-2, registered in
+        coordination/queue/po2-phosphate.md Q2 BEFORE running): add_phosphate_from_atp sends
+        90% of hydrolysis-released Pi to the metabolic pool, described at its own docstring as
+        "protein binding, rapid cycling" — which is physically the pool mitochondrial
+        resynthesis draws from. The structural pool is the Posner-available one.
+
+        This ordering is also the CONSERVATIVE choice for PO-2's own claim: it leaves the
+        structural pool larger, which makes the SOC depletion feedback WEAKER and therefore
+        harder to claim. Under-claiming the engine is the right direction to err in.
+
+        NOT a tuned partition — there is no fitted coefficient here. If the ruling on Q2 is
+        "proportional" instead, only this method changes.
+
+        Args:
+            amount: Pi to remove (M), elementwise. Must be <= available_for_atp_synthesis().
+        """
+        amount = np.maximum(amount, 0.0)
+
+        from_metabolic = np.minimum(amount, self.phosphate_metabolic)
+        self.phosphate_metabolic -= from_metabolic
+
+        remainder = amount - from_metabolic
+        from_structural = np.minimum(remainder, self.phosphate_structural)
+        self.phosphate_structural -= from_structural
+
+        # If this ever trips, synthesis was not limited by availability upstream and the
+        # ledger will show a leak. Loud, because a silent shortfall is the defect this
+        # whole fix exists to remove.
+        shortfall = remainder - from_structural
+        if np.any(shortfall > 1e-18):
+            logger.warning(
+                "ATP synthesis debited more phosphate than available: max shortfall %.3e M. "
+                "Conservation is violated; check the availability limit in update_recovery.",
+                float(np.max(shortfall)),
+            )
+
     def get_posner_forming_species(self) -> np.ndarray:
         """
         Get the phosphate species that forms Posners
@@ -512,8 +595,17 @@ class ATPSystem:
         # 5. ATP diffusion
         # self.hydrolysis.update_diffusion(dt)
         
-        # 6. ATP recovery (mitochondrial synthesis)
-        self.hydrolysis.update_recovery(dt)
+        # 6. ATP recovery (mitochondrial synthesis) — MASS-CONSERVING as of PO-2 2026-07-18.
+        #    ADP + Pi -> ATP consumes phosphate. Synthesis is limited by the Pi available,
+        #    and that Pi is then debited. Previously ATP was regenerated with no phosphate
+        #    debit at all, creating Pi from nothing every step.
+        #    LIMIT (stated, not hidden): speciation at step 3 and J-coupling at step 4 ran
+        #    BEFORE this debit, so they see the pre-synthesis pool — a one-step lag, not a
+        #    conservation error. The ledger is closed at step boundaries.
+        atp_synthesized = self.hydrolysis.update_recovery(
+            dt, available_phosphate=self.phosphate.available_for_atp_synthesis()
+        )
+        self.phosphate.consume_for_atp_synthesis(atp_synthesized)
         
     def get_j_coupling(self) -> np.ndarray:
         """
