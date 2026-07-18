@@ -65,7 +65,12 @@ from sweep.run_theta_burst_45s import analytical_gap
 N_SYNAPSES = 5
 PLACE_FIELD_DURATION_S = 1.0   # each synapse active for 1s (30cm / 30cm/s)
 DOPAMINE_TIME_S = 3.5          # reward at midway through synapse 3
-PLATEAU_DURATION_S = 0.3       # MODELED/PROVISIONAL — NOT grounded. See wire-3 note.
+# 0.250 s: Bittner/Milstein/Magee 2017 in vivo naturally-occurring plateaus ~265 ms
+# (PMC7289271); this value also already existed in-repo at eligibility_trace.py:53
+# (`plateau_duration_typical`), stranded in an orphaned module. CONTESTED: CA1 slice
+# gives 140 +/- 10 ms (PMC12157498). Honest range ~80-500 ms — sweep, do not trust.
+# (Was 0.3 s, invented 2026-07-18 before the literature pass; replaced.)
+PLATEAU_DURATION_S = 0.250
 END_SILENCE_S = 3.0            # 5.0s total - 5.0s stim = rest at end of track
 TRAVERSAL_DURATION_S = N_SYNAPSES * PLACE_FIELD_DURATION_S + END_SILENCE_S  # 8s
 

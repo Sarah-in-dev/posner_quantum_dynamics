@@ -23,6 +23,41 @@ import h5py
 from datetime import datetime
 
 from model6_parameters import Model6Parameters
+
+# =============================================================================
+# PLATEAU POTENTIAL — the dendrite-wide instructive depolarization (2026-07-18)
+# =============================================================================
+# Applied in step() via a driving-force-scaled combination, NOT summation. See the
+# block in STEP 1 for the algebra and why summation is physically impossible here.
+#
+# PLATEAU_VOLTAGE_V = -20 mV. Grounded three independent ways:
+#   1. Local dendritic plateau measurements: 57.6 +/- 5.5 mV above rest, absolute
+#      range -21 to -10 mV (Antic 2020, PMC8087381; neocortical basal dendrites,
+#      voltage-imaging + model inference). CA1 plateau termination break point
+#      -9.9 +/- 1 mV (J Neurosci 2026, PMC12157498). -20 mV is the CONSERVATIVE end.
+#   2. This repo already named it: sweep/run_spatial_discovery.py:360-365 — "the
+#      plateau (~-20 mV, a SEPARATE instructive event) is not this knob".
+#   3. It coincides with the VGCC Boltzmann midpoint already in
+#      analytical_calcium_system.py:80 (V_half = -0.020 V), written independently.
+#
+# !! SENSITIVITY WARNING !! Because V_half == PLATEAU_VOLTAGE_V, VGCC open
+# probability is at MAXIMUM sensitivity to this value: -20 mV -> P_open 0.50, but
+# -15 mV -> 0.70. The literature pins the plateau only to +/-5-10 mV. Any result that
+# leans on plateau-driven VGCC influx MUST be swept over this value, not reported at
+# a single point. Do NOT tune it to make a downstream number come out.
+#
+# NOTE (somatic vs dendritic): somatic recordings show only ~10-20 mV depolarization
+# with a ~7-fold distance gradient. "Plateaus are 20 mV" from somatic data describes a
+# DIFFERENT quantity. This constant is the LOCAL dendritic value, which is the right
+# frame because the model applies it per-synapse.
+PLATEAU_VOLTAGE_V: float = -20e-3
+PLATEAU_V_REST: float = -70e-3
+PLATEAU_E_SYN: float = 0.0        # AMPA/NMDA reversal potential; the hard bound
+# Duration lives with the drivers, not here (it is a protocol property). Central
+# value 0.250 s: Bittner/Milstein/Magee 2017 in vivo naturally-occurring plateaus
+# ~265 ms (PMC7289271). CONTESTED: CA1 slice gives 140.2 +/- 10.2 ms (PMC12157498);
+# neocortical basal 200-500 ms. The in-vivo/slice discrepancy is unexplained. Honest
+# range ~80-500 ms — sweep it rather than trusting the central value.
 # from calcium_system import CalciumSystem
 from analytical_calcium_system import AnalyticalCalciumSystem as CalciumSystem
 from atp_system import ATPSystem
@@ -319,6 +354,31 @@ class Model6QuantumSynapse:
             self.calcium.channel_gain = spine_vol ** 0.67  # surface area ~ vol^(2/3)
         else:
             self.calcium.channel_gain = 1.0
+
+        # === PLATEAU POTENTIAL -> LOCAL MEMBRANE VOLTAGE (2026-07-18) ===
+        # Until now `plateau_potential` was a BOOLEAN that only gated DDSC (~L656) and
+        # had NO effect on voltage. But a dendritic plateau IS primarily a voltage
+        # event, and its absence is why the pump never reached threshold in a live
+        # trial (research log L·ETA-3: max r = 0.077 vs 1.0, with ca_open 2.7x short).
+        #
+        # NOT SUMMATION. `V_syn + V_plat` is physically impossible at the top of its
+        # own range: max synaptic push (+30 mV) on a -20 mV plateau gives +10 mV, ABOVE
+        # the AMPA/NMDA reversal (~0 mV) that generates the EPSP. The literature's form
+        # is the steady-state conductance divider
+        #     V = (g_L E_L + g_syn E_syn + g_plat E_plat) / (g_L + g_syn + g_plat)
+        # whose voltage-space equivalent is used here. It is sublinear by construction,
+        # HARD-BOUNDED by E_syn, and degrades EXACTLY to plain summation when
+        # V_plat == V_rest — so it changes nothing when no plateau is present.
+        # (Driving-force reduction: Tran-Van-Minh et al. 2015 Front Cell Neurosci;
+        #  above-threshold saturation into duration not amplitude: Major/Polsky/Antic
+        #  2008 J Neurophysiol; EPSPs still add during a plateau: Antic 2020.)
+        if stimulus.get('plateau_potential', False):
+            V_syn = stimulus.get('voltage', PLATEAU_V_REST)
+            scale = ((PLATEAU_E_SYN - PLATEAU_VOLTAGE_V)
+                     / (PLATEAU_E_SYN - PLATEAU_V_REST))
+            stimulus = dict(stimulus)
+            stimulus['voltage'] = (PLATEAU_VOLTAGE_V
+                                   + (V_syn - PLATEAU_V_REST) * scale)
 
         self.calcium.step(dt, stimulus)
         ca_conc = self.calcium.get_concentration()
