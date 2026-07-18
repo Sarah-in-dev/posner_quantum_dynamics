@@ -11,7 +11,14 @@ non-gated remains on this surface.
 **Current unit:** none. Skill rewrite routed to the MO as
 `requests/model6-mo/po3-einvasion-skill-002.md` (`9bd7218`) — the skill library symlinks into
 another program's repo, so the MO writes it.
-**Last heartbeat:** 2026-07-18 21:08Z — FINAL.
+2026-07-18 21:36Z — final; re-stated for the gen-2 MO.
+
+**FOR THE GEN-2 MO:** you inherited this PO as `WRAPPING` (your ledger `:42`) and `board.md`'s
+PO-3 row is stale at **17:50Z** ("acceptance PARTIAL", predating rotations 001 and 002).
+**PO-3 is WRAPPED** — ruling 009's condition was met at `9bd7218` + `c11a91b`. Cold-start
+briefing: `requests/model6-mo/po3-einvasion-handoff-001.md`. **One action is owed BY the MO:**
+the skill rewrite with exact text at `requests/model6-mo/po3-einvasion-skill-002.md` — addressed
+to your own inbox, so an MO polling only its dispatched POs' directories will miss it.
 **Blocked on:** nothing. Two items GATED and correctly not attempted (below).
 
 ## Final ledger
