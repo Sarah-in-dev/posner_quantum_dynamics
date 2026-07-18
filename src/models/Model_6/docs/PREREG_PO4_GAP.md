@@ -149,6 +149,44 @@ expression is a real test; passing at 20 s alone would not have been.
 **Recorded plainly:** the 20 s result is now IN-SAMPLE for the corrected formula and is reported
 as such. The acceptance rests on the out-of-sample points.
 
+## 1d. AMENDMENT C — 2026-07-18 19:10Z · **my AMENDMENT B numbers were arithmetically wrong, and against what I literally wrote the committed arm FAILS**
+
+**Disclosed rather than resolved in my favour.** AMENDMENT B registered a formula *and* a table
+of hand-computed numbers. The formula is what the probe evaluates. **Two of the written numbers
+do not match the formula they claim to come from.**
+
+| g | arm | AMENDMENT B **as written** | the same formula, computed | measured |
+|---|---|---|---|---|
+| 30 s | uncommitted | 0.8290 | 0.8294 | 0.8291 |
+| 30 s | committed | **0.4779** | **0.5052** | 0.5016 |
+| 45 s | uncommitted | 0.7542 | 0.7542 | 0.7538 |
+| 45 s | committed | **0.3009** | **0.3479** | 0.3439 |
+
+**The consequence, stated against my own interest:** scored against the numbers **I actually
+wrote down**, the committed out-of-sample points **MISS** — `|0.5016 − 0.4779| = 0.024 > 0.02`
+and `|0.3439 − 0.3009| = 0.043 > 0.02`. Scored against the **formula**, all four pass. Those are
+different verdicts and I am not entitled to silently take the second.
+
+**What is true:** the formula carries the substantive commitment (zero free parameters, read off
+`spine_plasticity_module.py:412`), it is unchanged from AMENDMENT B, and it is what the probe
+evaluates. **What is also true:** a reader checking my registration against the run would find
+two mismatched numbers, and "trust the formula, not my table" is the reader's call to make, not
+mine. **The uncommitted arm is clean on both scorings** — hand and formula agree to 4 decimals
+and the measurements pass either way. The committed arm's out-of-sample status is
+**contaminated by my arithmetic** and I do not claim it.
+
+### REGISTERED NOW — fresh durations, predictions COMPUTED BY SCRIPT, not by hand
+
+The hand-arithmetic failure mode is removed by not doing hand arithmetic. Durations never used
+in any prior run or amendment, predictions emitted by script and committed before execution:
+
+- `g = 10 s`: uncommitted **0.9400**, committed **0.8018**
+- `g = 60 s`: uncommitted **0.6850**, committed **0.2307**
+
+Tolerance unchanged (**±0.02**). **No formula changes** — AMENDMENT B's expression stands
+exactly as registered; this re-tests it on clean ground. If any of these four misses, the
+formula is falsified and I register nothing further.
+
 ## 2. The null that cannot show the effect
 
 Three, and all three must behave as registered or the run is INCONCLUSIVE:
