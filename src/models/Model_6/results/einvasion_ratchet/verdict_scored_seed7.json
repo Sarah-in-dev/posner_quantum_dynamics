@@ -1,0 +1,8 @@
+{
+ "verdict": "INCONCLUSIVE_NULL_RATCHETED",
+ "n_traversals_drive": 8,
+ "n_traversals_null": 8,
+ "scored_offline": true,
+ "supersedes_in_run_verdict": true,
+ "prereg": "docs/PREREG_L_ETA_5_RATCHET.md (AMENDMENT 2)"
+}
