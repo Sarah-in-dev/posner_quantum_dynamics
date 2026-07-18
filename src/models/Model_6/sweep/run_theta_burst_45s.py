@@ -4,7 +4,8 @@ CA1 Theta Burst — 6 traversals, 45s gaps — ANALYTICAL GAP + VALIDATION
 ========================================================================
 Uses analytical fast-decay during inter-traversal gaps:
   - P_S decoherence decay (per-dimer T_eff)
-  - Coherence-dependent dissolution (k_classical = 0.05 s⁻¹)
+  - Coherence-dependent dissolution (k_classical = 0.005 s⁻¹, Turhan 2024,
+    times the template enhancement -- symmetric with formation per canonical:100)
   - Particle removal for dissolved dimers
   - Bond cleanup for decoherent dimers (P_S < 0.5)
   - Stochastic disentanglement (no EM protection at rest)
@@ -59,7 +60,9 @@ def analytical_gap(network, gap_duration_s, dt_sub=1.0, diagnostics=False):
     ADVANCED during the gap (integrated at dt_sub, with the timescale that makes
     integration necessary):
       1. P_S decoherence  [PHASE 2]  per-dimer exponential decay toward 0.25, T_eff-scaled
-      2. Dissolution  [PHASE 3]  k_diss = K_CLASSICAL*(1 - singlet_excess)
+      2. Dissolution  [PHASE 3]  k_diss = K_CLASSICAL*(1-singlet_excess)*template_enhancement
+                              (template factor restored 2026-07-18, MO ruling 016 --
+                              canonical:100 LOCKS it as symmetric with formation)
       3. Particle removal  [PHASE 3]   track concentration, remove lowest-coherence particles
       4. Bond cleanup  [PHASE 3]   remove bonds involving P_S < 0.5 dimers
       5. Stochastic disentanglement  [PHASE 3]   k_decohere = 0.01*(1 - P_Si*P_Sj)
@@ -103,8 +106,12 @@ def analytical_gap(network, gap_duration_s, dt_sub=1.0, diagnostics=False):
             (dimer_particles.py:205) to set dimer.template_bound. Formation is
             excluded in a gap, so the field has NO consumer here -- existing dimers
             keep the template_bound they were created with, and gap dissolution does
-            not use the template term at all (k_diss is computed inline from
-            K_CLASSICAL and singlet_excess, not via update_dimerization).
+            not use update_dimerization -- k_diss is computed inline. NOTE: as of
+            2026-07-18 that inline form DOES carry template_enhancement (ruling 016),
+            so the template field is now read during a gap. It is still not a
+            CONSUMER of set_n_templates, because the field is only re-read at dimer
+            creation and formation is excluded here -- which is what this exclusion
+            turns on.
             The pathway is also MEMORYLESS -- phase 12 recomputes n_templates from
             the CURRENT volume every step, with no latch -- so the tail step's single
             evaluation from the post-gap volume lands on exactly the value stepping
@@ -222,9 +229,28 @@ def analytical_gap(network, gap_duration_s, dt_sub=1.0, diagnostics=False):
             syn.ca_phosphate.dimerization.set_mean_singlet_probability(mean_ps)
 
             singlet_excess = max(0.0, (mean_ps - P_THERMAL) / 0.75)
-            k_diss = K_CLASSICAL * (1.0 - singlet_excess)
 
-            # Exponential decay of concentration
+            # TEMPLATE SYMMETRY, restored 2026-07-18 (MO ruling 016).
+            # quantum-system-canonical:100 [LOCKED]: "Template 50x enhancement is a
+            # kinetic catalyst applied SYMMETRICALLY to formation AND dissolution
+            # (detailed balance)". This line previously omitted the factor, so the gap
+            # catalysed formation and not dissolution -- which is the SAME thermodynamic
+            # inconsistency model6-dimer-formation-chemistry Sec.1 already repaired in
+            # update_dimerization ("applied to formation only ... imposes a spurious
+            # ~50x equilibrium shift toward clusters"), recurring at a second site.
+            #
+            # It is a FIELD, not a scalar: 1.0 on bare voxels, 50.0 on template voxels.
+            # That matters because dimers are BORN at template sites (formation is itself
+            # catalysed, ca_triphosphate_complex.py:346), so the concentration-weighted
+            # factor is ~33x even though the grid-mean is 1.015 -- measuring the grid mean
+            # is the wrong denominator and understates this by ~33x.
+            #
+            # Restoring a LOCKED symmetry, NOT tuning: no coefficient was chosen to reach
+            # an outcome; the factor is the one formation already uses, on the same field.
+            k_diss = (K_CLASSICAL * (1.0 - singlet_excess)
+                      * syn.ca_phosphate.template_enhancement)
+
+            # Exponential decay of concentration (k_diss is a field ⇒ decay is a field)
             decay = np.exp(-k_diss * actual_dt)
             syn.ca_phosphate.dimerization.dimer_concentration *= decay
             syn.ca_phosphate.dimerization.trimer_concentration *= np.exp(

@@ -58,6 +58,21 @@ N_SYN = 2
 DRIVE_STEPS = 30
 
 
+def fix_is_present():
+    """Which code state is under test. AMENDMENT E's bracket was derived for the
+    NO-TEMPLATE formula; after ruling 016 that premise is void, so a probe that
+    cannot tell the states apart prints a misleading FALSIFIED. Same guard as
+    gap_template_symmetry_probe: match executable code, not the docstring."""
+    lines = open(os.path.join(HERE, 'run_theta_burst_45s.py')).read().split('\n')
+    for i, ln in enumerate(lines):
+        if (ln.lstrip().startswith('k_diss') and '=' in ln
+                and 'K_CLASSICAL' in ln and ln.startswith(' ' * 8)):
+            # the assignment WRAPS -- template_enhancement sits on the continuation
+            # line. Checking only `ln` reported ABSENT on post-fix code.
+            return 'template_enhancement' in ' '.join(lines[i:i + 4])
+    raise RuntimeError("cannot locate the gap's k_diss assignment; refusing to guess")
+
+
 def live_K():
     """Read the constant actually in force, so the run labels itself."""
     src = open(os.path.join(HERE, 'run_theta_burst_45s.py')).read()
@@ -104,6 +119,8 @@ def main():
     print("pre-registered: PREREG_PO4_GAP.md AMENDMENT E, before the constant changed")
     print("=" * 78)
 
+    FIXED = fix_is_present()
+    print(f"CODE STATE: template factor {'PRESENT (post-ruling-016)' if FIXED else 'ABSENT'}")
     rows, fails = [], []
     print(f"\n{'gap':>6}{'n before':>11}{'n after':>10}{'survival':>11}"
           f"{'bracket lo':>13}{'bracket hi':>12}   verdict")
@@ -112,10 +129,18 @@ def main():
         net = driven(seed=17)
         n0 = count(net)
         se0 = max(0.0, (mean_ps(net) - 0.25) / 0.75)
+        # concentration-weighted te -- the physically relevant factor (the grid mean
+        # understates it ~33x; that was PO-4's own denominator error)
+        c0 = np.asarray(net.synapses[0].ca_phosphate.dimerization.dimer_concentration)
+        tef = np.asarray(net.synapses[0].ca_phosphate.template_enhancement)
+        te_eff = float((c0 * tef).sum() / c0.sum()) if c0.sum() > 0 else 1.0
         analytical_gap(net, g, dt_sub=1.0)
         n1 = count(net)
         S = n1 / n0 if n0 else float('nan')
-        lo, hi = np.exp(-K * g), np.exp(-K * g * (1 - se0))
+        # AMENDMENT E's bracket, extended for the template factor when present.
+        # te enters k_diss multiplicatively, so it scales both bracket endpoints.
+        te = te_eff if FIXED else 1.0
+        lo, hi = np.exp(-K * te * g), np.exp(-K * te * g * (1 - se0))
         inside = (lo - 1e-9) <= S <= (hi + 1e-9)
         if n0 < 2:
             fails.append(f"gap {g:.0f}s: n_before={n0} < 2 -- survival undefined")
@@ -134,8 +159,8 @@ def main():
         print("VERDICT: FALSIFIED / INCONCLUSIVE")
         for f in fails:
             print(f"  - {f}")
-        print("  NOTE: outside-bracket means the DISSOLUTION MODEL is wrong. The constant")
-        print("  change would NOT be the explanation, and must not be credited with it.")
+        print("  NOTE: outside-bracket means the DISSOLUTION MODEL is wrong for the code")
+        print("  state named above -- the change under test must NOT be credited with it.")
     else:
         print("VERDICT: survival inside the registered bracket at every gap length")
         for r in rows:
