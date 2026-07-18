@@ -524,7 +524,35 @@ class PhosphateSpeciation:
         """
         amount = np.maximum(amount, 0.0)
 
-        if getattr(self, 'atp_synthesis_debit_mode', 'metabolic_first') == 'proportional':
+        # DEFAULT CHANGED metabolic_first -> structural_first, 2026-07-18, on literature
+        # (PREREG AMENDMENT A2.4). Disclosed rather than silently switched: metabolic-first was
+        # pre-registered on a plausibility argument; the literature contradicts it. See A2.4.
+        mode = getattr(self, 'atp_synthesis_debit_mode', 'structural_first')
+
+        if mode == 'structural_first':
+            # LITERATURE-GROUNDED ARM (2026-07-18, Sarah's instruction to let the physics decide).
+            # F1F0-ATP synthase phosphorylates ADP using INORGANIC phosphate imported by the
+            # mitochondrial phosphate carrier PiC/SLC25A3 (proton-coupled symport). Its substrate
+            # is FREE inorganic Pi. Protein-bound phosphate is NOT a synthase substrate.
+            # In this model `phosphate_structural` IS the free inorganic pool ("Only 'free'
+            # inorganic pool forms Posners", add_phosphate_from_atp) and `phosphate_metabolic`
+            # is protein-bound. So the grounded debit is from STRUCTURAL.
+            # CONSEQUENCE, and it is the physically important one: ATP resynthesis and Posner
+            # formation then compete for the SAME free Pi pool — which is a real depletion
+            # feedback rather than an installed one.
+            from_structural = np.minimum(amount, self.phosphate_structural)
+            self.phosphate_structural -= from_structural
+            remainder = amount - from_structural
+            from_metabolic = np.minimum(remainder, self.phosphate_metabolic)
+            self.phosphate_metabolic -= from_metabolic
+            shortfall = remainder - from_metabolic
+            if np.any(shortfall > 1e-18):
+                logger.warning(
+                    "ATP synthesis debited more phosphate than available: max shortfall %.3e M.",
+                    float(np.max(shortfall)))
+            return
+
+        if mode == 'proportional':
             # Q2 SENSITIVITY ARM (MO ruling 001: "implement neither silently ... if the two
             # choices give different conservation outcomes, that difference is itself a
             # finding"). Debits both pools in proportion to their size.

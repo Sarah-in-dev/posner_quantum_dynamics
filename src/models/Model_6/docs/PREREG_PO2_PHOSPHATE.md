@@ -184,6 +184,53 @@ metabolic and absorbs ~99.8% of a proportional debit. Both predictions confirmed
 **Escalated to Sarah** as a mechanism choice with a chemical consequence. A ruling either way is a
 one-line change in `consume_for_atp_synthesis` and leaves §2's conservation result untouched.
 
+## 6c. AMENDMENT A2.4 — **A2.3's registered choice is OVERTURNED by literature. Default is now structural-first.**
+
+*(2026-07-18, on Sarah's instruction: "go back to the literature and physics and it will give us
+the best answer." Disclosed as a reversal of my own pre-registered choice, not edited over.)*
+
+**A2.3 registered metabolic-first. That was wrong, and it was wrong in the way pre-registration is
+supposed to catch: it was a plausibility argument, not a grounded one.** I reasoned from the
+model's own docstring wording ("rapid cycling") rather than from what ATP synthase actually uses.
+
+**The literature:** F1F0-ATP synthase phosphorylates ADP using **inorganic phosphate**, imported to
+the matrix by the mitochondrial phosphate carrier **PiC/SLC25A3** as a proton-coupled symport —
+the carrier whose loss abolishes oxidative ATP synthesis and causes mitochondrial cardiomyopathy.
+Its substrate is **free inorganic Pi**. **Protein-bound phosphate is not a synthase substrate.**
+Neuronal cytosolic free Pi is low-millimolar and *rises* by millimolar amounts within seconds of
+stimulation (Rosen et al., PNAS 2026), i.e. activity liberates free Pi rather than sequestering it.
+
+**Mapped onto this model:** `phosphate_structural` **is** the free inorganic pool — its own source
+comment reads *"Only 'free' inorganic pool forms Posners"* — and `phosphate_metabolic` is the
+protein-bound one. **So the grounded debit is from STRUCTURAL.**
+
+**The consequence is the physically interesting part:** under structural-first, ATP resynthesis and
+Posner formation **compete for the same free Pi pool.** That is a genuine depletion feedback
+arising from stoichiometry, not an installed one — which is what §7 LOCKED demands of the SOC engine.
+
+**Measured, all three arms, identical seed and configuration:**
+
+| mode | dP (rel) | structural depleted | max S | dimer |
+|---|---|---|---|---|
+| metabolic_first (A2.3) | +9.74e-15 | 0.143% | 1.8341 | 3.7248e-03 |
+| proportional | +1.04e-14 | 0.259% | 1.8341 | 3.8334e-03 |
+| **structural_first (A2.4)** | **+9.54e-15** | **0.264%** | **1.8341** | **3.9747e-03** |
+
+**Conservation is invariant across all three** (all ~1e-14 vs ε=1e-12), so **acceptance item 1 is
+untouched by this reversal.** `max S` is identical in all three, confirming PO2-4's finding that
+the gate is calcium-controlled at this drive.
+
+**Stated against my own interest, because the direction matters:** structural-first depletes the
+free pool ~1.8× faster, which is the direction that would *flatter* my SOC story. **It does not
+rescue it** — 0.264% over 5 s is still nowhere near limiting, and the Pi-availability limit still
+never binds. **The conclusion of PO2-3/PO2-4 is unchanged: conservation MET, self-limiting
+UNEXERCISED.** I am recording the reversal because the literature demands it, not because it helps.
+
+**Proportional is now revealed as a near-equivalent of structural-first** (0.259% vs 0.264%),
+because the structural pool is ~500× the metabolic and therefore absorbs almost all of a
+proportional debit. **Metabolic-first — the choice I registered — is the outlier and the least
+physical of the three.**
+
 ## 7. Limits of this measurement, stated in advance
 
 - It measures **mass conservation of phosphate**, nothing else. Conservation is **necessary, not

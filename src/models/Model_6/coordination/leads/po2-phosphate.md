@@ -7,7 +7,7 @@ consumption.
 
 **Status:** LIVE — grounding brief returned 2026-07-18 19:46Z.
 **Current unit:** pre-registration (§2.4), then the conservation probe committed FAILING first.
-**Last heartbeat:** 2026-07-18 21:27Z
+**Last heartbeat:** 2026-07-18 21:52Z
 **Blocked on:** — (two open questions in `queue/po2-phosphate.md`, neither blocking; working on)
 
 ## HEARTBEAT LOG
@@ -269,3 +269,17 @@ evidence that it DOES. I recommend PO-6 proceed with that stated as a known-open
 **Acceptance unchanged and untouched by any of it:** item 1 (conservation) is the headline and does not depend on the debit choice; item 2 (as replaced by ruling 001) is the consumer trace, met.
 
 **AT REST. Everything remaining is genuinely gated on Sarah:** the debit rule (ruling 003's escalation) · whether J-coupling should depend on phosphate at all — *note ruling 002 §2 withdrew that escalation on canonical §2.2 grounds, so I treat it as closed unless told otherwise* · the ~20-seed run to resolve the downstream dimer difference, which is not on my acceptance and needs its own compute slot. **The MO verifies acceptance; a PO does not mark its own.**
+
+### 2026-07-18 21:52Z — literature resolved BOTH open questions. One overturned my own pre-registration.
+
+**Sarah's steer: go to the literature and physics. Did so. It went against me on the debit rule.**
+
+**Q2/debit rule — SETTLED, and A2.3 REVERSED (amendment A2.4).** F1F0-ATP synthase uses FREE inorganic Pi via PiC/SLC25A3; protein-bound phosphate is not a substrate. The model's free pool is `phosphate_structural`. **So the grounded debit is structural-first — the opposite of what I pre-registered**, which I had argued from the model's own docstring wording rather than from what the enzyme uses. Default changed, disclosed as a reversal. Measured all three arms: conservation invariant (~1e-14, all), maxS identical (1.8341, all), structural depletion 0.143% / 0.259% / 0.264%. **Acceptance item 1 untouched.** Stated against interest: structural-first depletes 1.8x faster — the direction that would flatter my SOC story — and **it still does not rescue it.** Proportional turns out to be a near-equivalent of structural-first; metabolic-first was the outlier.
+
+**Q3/J-coupling — CLOSED on documented physics, not on the MO's withdrawal.** J-coupling is indirect spin-spin coupling through chemical bonds: a property of the molecule, not the solution. ATP's P-O-P coupling ~20 Hz (Cohn & Hughes 1962, the citation the model already carries); free orthophosphate has no intramolecular partner. **Ambient [Pi] cannot set an intramolecular coupling constant, so reading ATP-bound fraction is correct and the docstring was the only error.** Logged PO2-7. Residual gap flagged: Fisher puts the *protection* in cluster incorporation and the model's J has no dimer term — real, larger than my surface, and NOT the same claim as "J should read phosphate".
+
+**NEW ESCALATION (PO2-6), and it is not mine to fix.** Under the grounded debit, hydrolysis credits 90% of Pi to `metabolic` while synthesis draws 100% from `structural` — **`metabolic` becomes a one-way sink.** Measured accumulating to 3.02e-2 while structural drains 0.264%/5 s, extrapolating to **full structural depletion in ~32 min simulated.** A long SOC run would shut formation off by accounting asymmetry rather than physics. **The 90/10 split needs review** — Rosen 2026 has activity RAISING free cytosolic Pi, the opposite of routing 90% to a protein-bound sink. Stated modelling choice; changing it is a physics call. **This is now the most important open item on my surface and it bears directly on PO-6.**
+
+**MO transition noted.** The prior MO was operating as a deliberate antagonist with high context. Its rulings remain on record and I have not rewritten them, but I am no longer treating them as settled authority — Q3 is closed on Cohn & Hughes/Fisher rather than on its withdrawal, and Q2 is closed on PiC/SLC25A3 rather than on its non-binding read (which favoured metabolic-first and was wrong).
+
+**Conservation re-verified after the default change: exit 0, CONSERVED, dP +3.339551e-13 (9.542e-15 rel).**
