@@ -21,12 +21,27 @@ THE CENTRAL CLAIM:
     Spine morphology changes ARE the information storage.
     Volume increase = more AMPAR slots = stronger synapse.
 
-LITERATURE SOURCES:
-    - Matsuzaki et al. 2004 (Nat Neurosci): Spine enlargement kinetics
-    - Bosch et al. 2014 (Neuron): Actin dynamics and phases
-    - Makino & Bhalla 2018: Phase transitions in spine plasticity
-    - Choquet & Bhalla 2025 (EMBO J): AMPAR trafficking review
-    - Tang & bhalla 2017: Spine volume-strength relationship
+LITERATURE SOURCES (audited 2026-07-18 — three of the five below were wrong):
+    - Matsuzaki et al. 2004 (Nature 429:761): spine enlargement, ~3.9x cap. VERIFIED.
+    - Honkura et al. 2008 (Neuron 57:719): three actin pools; stable pool tau ~17 min;
+      enlargement pool extruded unless CaMKII-confined. VERIFIED — and note it does NOT
+      support the fixed 85/15 pool split it is cited for below.
+    - Bosch et al. 2014 (Neuron): actin dynamics and phases. Attributed, not verified.
+    - "Makino & Bhalla 2018" — NOT VERIFIED; appears in no REFERENCES section in this
+      repo and could not be resolved. Affects only the cosmetic `phase` label.
+    - "Choquet & Bhalla 2025 (EMBO J)" — DOES NOT EXIST. Conflation of Nowacka, Getz,
+      Bessa-Neto & Choquet, Phil Trans R Soc B 2024;379:20230220 with Hayer & Bhalla,
+      PLoS Comput Biol 2005;1(2):e20.
+    - "Tang & bhalla 2017" — NOT VERIFIED; resolves to nothing in this repo. The
+      volume-strength relation it is invoked for is Matsuzaki et al., Nat Neurosci
+      2001;4:1086.
+
+NOTE (2026-07-18): `quantum_field_kT` is accepted by step() and read in NO code path.
+Measured bit-identical spine volume for kT in {0, 1, 5, 20, 100}. The
+`ActinParameters` barrier fields below are vestigial — the quantum rate-enhancement
+block that used them was added in 89e62ca and DELETED in 9e4e221; the declarations
+were left behind. The same mechanism is still live in camkii_module.py. Do not read
+this module's docstring as describing an implemented quantum coupling.
 
 """
 
@@ -40,7 +55,13 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# PARAMETERS - ALL FROM LITERATURE
+# PARAMETERS — MIXED PROVENANCE. See the 2026-07-18 audit (research log D20/D21).
+#
+# This header used to read "ALL FROM LITERATURE". That was FALSE. The ACTIN block is
+# genuinely literature-grounded (Honkura 2008, Matsuzaki 2004, Lee 2009, Star 2002,
+# Lei 2017 — see model6-actin-invasion-driver §5, a real provenance table). The AMPAR
+# block and the two durability rates are NOT, and three of the citations attached to
+# them do not exist as written. Corrected in place below; each is now labelled.
 # =============================================================================
 
 @dataclass
@@ -55,8 +76,14 @@ class ActinParameters:
     Transition: Dynamic → Stable via cofilin inhibition (LIMK pathway)
     """
     # Pool baselines (relative units, normalized so total = 1.0 at rest)
-    dynamic_pool_baseline: float = 0.85  # 85% of actin is dynamic at rest (Honkura 2008)
-    stable_pool_baseline: float = 0.15   # 15% is stable (Honkura 2008)
+    # MIS-CITED (corrected 2026-07-18). Honkura 2008 does NOT report a fixed 85/15
+    # split — his finding is that the STABLE POOL'S SIZE SCALES WITH SPINE VOLUME,
+    # i.e. explicitly not a constant fraction. A fixed split contradicts the paper it
+    # cites. The literature does not supply a single number here, because the paper's
+    # result is that there isn't one. Left at 0.85/0.15 pending a decision on whether
+    # to make the split volume-dependent; do NOT cite Honkura for these two values.
+    dynamic_pool_baseline: float = 0.85  # UNGROUNDED as a fixed fraction (see above)
+    stable_pool_baseline: float = 0.15   # UNGROUNDED as a fixed fraction (see above)
     
     # Polymerization (Arp2/3 mediated, calcium/CaMKII dependent)
     # Bosch et al. 2014: maximal polymerization ~2x baseline in first 2 min
@@ -151,8 +178,24 @@ class SpineVolumeParameters:
 @dataclass
 class AMPARParameters:
     """
-    AMPAR trafficking parameters from Bhalla 2014, Choquet & Bhalla 2025
-    
+    AMPAR trafficking parameters.
+
+    CITATIONS CORRECTED 2026-07-18 — the two named above did not exist:
+      * "Bhalla 2014" -> Hayer A & Bhalla US, PLoS Comput Biol 2005;1(2):e20.
+        NOTE the 80-receptor figure is a MODELING CHOICE in that paper ("we maintained
+        the total number of internal plus synaptic membrane receptors at 80 molecules"),
+        not a measurement. Citing it converts an unsourced number into a sourced
+        modeling assumption — better provenance, not better evidence.
+      * "Choquet & Bhalla 2025" -> did not exist; it conflates Nowacka, Getz,
+        Bessa-Neto & Choquet, Phil Trans R Soc B 2024;379:20230220 with the Hayer &
+        Bhalla paper above. Two real papers merged into one fictional one.
+
+    The τ ~ 5 s lateral-diffusion and τ ~ 120 s exocytosis routes below ARE consistent
+    with the measured literature (Patterson et al., PNAS 2010;107:15951 — AMPARs
+    recruited within ~10 s of induction, exocytosis elevated ~1 min; Nowacka/Choquet
+    2024 — early LTP expressed by lateral diffusion trapping, 70-90% pre-existing
+    surface receptors). They are gated out by `ampar_onset_delay` — see its note.
+
     Three trafficking routes:
         1. Lateral diffusion (fast, τ ~ 5s)
         2. Exocytosis (slow, τ ~ 120s)  
@@ -161,7 +204,12 @@ class AMPARParameters:
     Slot model: Spine volume determines available AMPAR slots
     """
     # Baseline counts
-    baseline_AMPAR: float = 80.0         # Bhalla 2014: ~80 AMPARs per spine
+    # Hayer & Bhalla 2005 (a modeling choice there, not a measurement — see docstring).
+    # Experimental range for calibration: Matsuzaki et al., Nat Neurosci 2001;4:1086 —
+    # up to ~150 AMPARs in mushroom spines, sparse-to-zero in thin spines, strongly
+    # volume-dependent. ~80 is a reasonable mid-range mushroom-spine baseline; a FIXED
+    # baseline across a spine population is not.
+    baseline_AMPAR: float = 80.0         # [MODELED, sourced to a model not a measurement]
     
     # Trafficking rates
     k_lateral_diffusion: float = 0.2     # s⁻¹ (τ ~ 5s), extrasynaptic→synaptic
@@ -169,7 +217,9 @@ class AMPARParameters:
     k_endocytosis: float = 0.017         # s⁻¹ (τ ~ 60s), removal
     
     # Slot model
-    # Bhalla 2014: linear relationship V ∝ AMPAR_slots
+    # MIS-CITED (corrected 2026-07-18): this relation is NOT in Hayer & Bhalla 2005 —
+    # that paper's slot count is set by anchor proteins with no volume coupling. The
+    # V ∝ AMPAR relation is real but its source is Matsuzaki et al., Nat Neurosci 2001.
     AMPAR_per_unit_volume: float = 80.0  # At baseline volume
     
     # Activity-dependent trafficking
@@ -415,21 +465,45 @@ class SpinePlasticityModule:
         # Store structural_drive for projected_strength calculation
         self._current_structural_drive = structural_drive
         
-        # AMPAR changes don't begin until ~30 min after structural drive
-        # (PSD assembly requires prior spine structural remodeling)
-        ampar_onset_delay = 1800.0  # 30 minutes
+        # !! CONTRADICTED BY THE LITERATURE (flagged 2026-07-18, NOT yet changed) !!
+        # The stated rationale ("AMPAR changes don't begin until ~30 min after
+        # structural drive") cited "Royal Society, Bhalla 2014", which is not a
+        # citation and resolves to nothing in this repo. The measured onset is
+        # SECONDS, not 30 minutes:
+        #   Patterson et al., PNAS 2010;107:15951 — AMPARs recruited to spines within
+        #     ~10 s of LTP induction, concurrent with the volume increase; exocytosis
+        #     rate up ~5x, decaying to baseline within ~1 min.
+        #   Nowacka/Getz/Bessa-Neto/Choquet, Phil Trans R Soc B 2024;379:20230220 —
+        #     early LTP expressed by lateral diffusion trapping (immediate); 70-90%
+        #     of receptors are pre-existing surface pool.
+        # This gate sits ON TOP of the module's own correctly-grounded rate constants
+        # (k_lateral_diffusion tau~5 s, k_exocytosis tau~120 s) and suppresses them,
+        # which is why AMPAR has never changed in ANY experiment this repo has run
+        # (measured duty cycle => 159-809 trials to reach onset, against n_trials=5).
+        # LEFT IN PLACE pending Sarah's call: removing it changes every result, and
+        # the AMPAR->voltage consumer is separately gated off by spine_calcium_feedback.
+        ampar_onset_delay = 1800.0  # UNGROUNDED and literature-contradicted; see above
         
         if self.time < ampar_onset_delay:
             # No AMPAR changes yet - stay at baseline
             # (Spine volume can change, but AMPAR count doesn't)
             return
         
-        # After onset delay: slow AMPAR accumulation
-        # Literature: full expression takes ~2 hours
-        tau_ampar = 3600.0  # 1 hour
+        # After onset delay: slow AMPAR accumulation.
+        # "Literature: full expression takes ~2 hours" had no reference. Defensible as
+        # the LATE/maintenance phase (Choquet 2024's exocytosis-for-maintenance limb;
+        # Fukazawa et al., Neuron 2003;38:447 on F-actin and late LTP) but it is not a
+        # measured tau from any source found. [MODELED, plausible, unsourced]
+        tau_ampar = 3600.0
         
         # Target AMPAR scales with structural drive
-        max_ampar_increase = 0.35  # 35% max increase (literature-based)
+        # "(literature-based)" was unsupported — no 35% figure appears in any skill,
+        # research log, or handoff in this repo. Audit 2026-07-18 judges it ~3x TOO LOW:
+        # single-spine uncaging LTP gives a sustained volume plateau of ~+120%
+        # (Matsuzaki 2004), and AMPAR number scales with spine head volume (Matsuzaki
+        # et al., Nat Neurosci 2001). Left unchanged pending the same call as the
+        # onset delay above. [UNGROUNDED]
+        max_ampar_increase = 0.35
         target_ampar = p.baseline_AMPAR * (1.0 + structural_drive * max_ampar_increase)
         
         # Exponential approach to target
@@ -525,7 +599,9 @@ class SpinePlasticityModule:
             Projected final strength (1.0 = baseline, 1.35 = max LTP)
         """
         structural_drive = getattr(self, '_current_structural_drive', 0.0)
-        max_strength_increase = 0.35  # 35% max from literature
+        # Duplicate of max_ampar_increase above — same UNGROUNDED 35%, hard-coded in a
+        # second place. If that one is revised, revise this too. [UNGROUNDED]
+        max_strength_increase = 0.35
         
         projected = 1.0 + structural_drive * max_strength_increase
         return projected
