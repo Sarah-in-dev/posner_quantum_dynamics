@@ -7,17 +7,25 @@ verified as a MEASUREMENT at the data level before it is accepted — never "it 
 **Worktree:** `.claude/worktrees/nervous-hertz-7ccff6` (branch `claude/nervous-hertz-7ccff6`).
 **Mode:** supervised autonomy — dispatches without per-PO approval; escalates physics calls.
 
-**Status:** GROUNDED (2026-07-18 17:30 UTC, `date -u` run). Brief below. Next: dispatch PO-1 + PO-3.
+**Status:** RUNNING. Both POs grounded, briefs accepted, resumed to build (`18acd68`).
 
-**Current unit:** posting the grounding brief, then spawning PO-1 (B2) and PO-3 (E_invasion).
-**Last heartbeat:** 2026-07-18 17:30 UTC
-**Blocked on:** nothing.
+**Current unit:** polling the backbone for PO-1's build slices and PO-3's pre-registration
+commit. Next decision point: PO-2 spawns at PO-1's commit boundary (`model6_core.py` hazard).
+**Last heartbeat:** 2026-07-18 17:47 UTC
+**Blocked on:** nothing. One item awaiting Sarah's optional veto (PO-1 `_critical_threshold`).
 
-**Live POs (agentId / task-id → PO):** (none yet — record every handle here; you need it to
-resume a worker that pinged with NEED_GUIDANCE. A worker that pinged and got no reply is
-stalled, not done.)
+**Live POs (session id → PO) — you need these to resume a stalled worker:**
+- `local_e4593171-4394-42ba-8067-c70dc97cc48e` → **PO-1** (B2), worktree `nervous-hertz-7ccff6`
+- `local_b7aeedcf-4425-4416-8389-2a57e288f7b5` → **PO-3** (E_invasion), same worktree
+Chips: `task_274226b1` (PO-1), `task_ead7d588` (PO-3). Both resumed by message 17:47Z after
+each returned its brief and correctly stopped on an open question.
 
-**Landed this run:** (none yet)
+**Landed this run:** `093c675` MO brief · `895d55f` PO registration · `18acd68` rulings +
+findings routed. Worktree topology error found and corrected (see `board.md`).
+
+**Verification owed (do NOT accept on self-report):** PO-1's "two pumps agree on the same mode"
+measurement — I verify the demonstrated FAILING configuration, not the passing run. PO-3's
+verdict function — I verify the positive control fires and the null arm returns negative.
 
 **Notes / decomposition (living — rewrite each cycle):**
 - Board came from the 2026-07-18 substrate audit (`docs/SUBSTRATE_AUDIT_JUL18.md`) plus
