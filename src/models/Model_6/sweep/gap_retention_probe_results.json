@@ -22,7 +22,7 @@
       "E_pre": 0.5084745762711864,
       "E_post": 0.4489424379324236,
       "vol_pre": 1.0,
-      "vol_post": 2.086571501704065,
+      "vol_post": 2.1066123769183873,
       "stopped_clock": false
     },
     "committed": {
@@ -33,7 +33,7 @@
       "E_pre": 0.5084745762711864,
       "E_post": 0.3234298625933405,
       "vol_pre": 1.0,
-      "vol_post": 2.201918128223983,
+      "vol_post": 2.2099686474180897,
       "stopped_clock": false
     },
     "oos_30_uncommitted": {
