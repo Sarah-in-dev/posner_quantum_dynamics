@@ -5,16 +5,31 @@ resolution? Pre-registered, null that cannot show the effect, positive control d
 fire, verdict able to return FALSIFIED.
 
 **Status:** LIVE. Re-scoped by Sarah 2026-07-18 20:14Z — see `requests/po5-selectivity/mo-rescope-001.md`.
-**Current unit:** GROUNDING BRIEF returned; opening UNIT 1 (the `g` measurement).
-**Last heartbeat:** 2026-07-18 20:23Z
+**Current unit:** UNIT 1 COMPLETE (`g`-inertness). Opening UNIT 2 — pathway attribution of the
+realised bond set (Pathway 1 birth vs Pathway 2 EM), which is the prerequisite for the input test.
+**Last heartbeat:** 2026-07-18 20:58Z
 
-**Brief-time finding, ahead of the measurement (`[code SHOWN]`):** `Dimer.position` is in **nm**
-(`dimer_particles.py:30`, `:199-203`), drawn over a grid of `grid_shape=(100,100)` at
-`dx_nm = 4.0` (`:108-112`) — i.e. a **400 × 400 × 20 nm** domain. `coupling_length = 5.0` nm
-(`:129`). So the a-priori risk is **not** `g` saturating at 1.0 as the kickoff anticipated; it is
-`g` being **vanishingly small** (`(5/150)³ ≈ 3.7e-5`) across most of the pair set. Unit 1 measures
-the actual `r_ij` distribution and reports whichever way it lands. It also puts
-`model6-entanglement-partition-werner:60` (*"intra edges at ~7 nm"*) in tension with this geometry.
+**UNIT 1 RESULT — `g` is LIVE, not inert.** Pre-registered `docs/PREREG_PO5_UNIT1_G_INERTNESS.md`
+(`cc80fcc`, before the probe existed); probe `src/models/Model_6/sweep/po5_unit1_g_inertness.py`
+(`1dbef17`); classifier demonstrated ABORTing before it was allowed to score. **`f_sat = 0.176`**
+(registered saturation bar was ≥0.90), `r_p50 = 9.75 nm`, **`D = g_p90/g_p10 = 33.5`**, stable
+across four samples. Log row **PO5-1**.
+
+**Both priors were refuted, including this PO's own.** The board predicted inert-by-saturation
+(`board.md:919-922`); PO-5's brief predicted inert-by-vanishing off the 400 nm birth domain. Dimers
+cluster at templates (`dimer_particles.py:189-196`), so the brief was wrong by ~15× in `r`.
+`model6-entanglement-partition-werner:60`'s *"~7 nm"* is the prose that was right — **no correction
+owed to that skill**, and the tension the brief flagged resolves in its favour.
+
+**The finding that matters, and it relocates the keystone's failure mode:** the graph `g` builds is
+**0.75–0.83 saturated, one connected component, `largest_frac = 1.000`**. A rate varying 33× across
+pairs yields a near-complete graph with a trivial partition. Pair-resolution in the RATE that does
+not survive into the TOPOLOGY buys §8 nothing. **UNVERIFIED and not claimed:** which pathway causes
+the saturation — Unit 2.
+
+**Open, non-blocking:** `queue/po5-selectivity.md` Q2 (three MO-owned artifacts carry the refuted
+inertness framing) and Q3 (does the trivial partition sit inside PO-5's acceptance? — proceeding on
+"yes").
 **Blocked on:** nothing. **The old η/partition gate is RETIRED — PO-5 needs no backbone.**
 
 **Scope change:** `MO_MODEL6.md` §3 scoped PO-5 to selectivity through the partition, gated on η

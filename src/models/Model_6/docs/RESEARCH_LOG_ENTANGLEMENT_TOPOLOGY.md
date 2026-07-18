@@ -65,6 +65,7 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| PO5-1 | 2026-07-18 | **`g` IS LIVE — the 1/r³ is NOT inert, and BOTH standing predictions about it were wrong. But the graph it builds is a ~78%-complete SINGLE COMPONENT, so the pair-resolution in the RATE does not reach the TOPOLOGY.** Pre-registered `docs/PREREG_PO5_UNIT1_G_INERTNESS.md` (committed `cc80fcc` before the run); probe `src/models/Model_6/sweep/po5_unit1_g_inertness.py` (`1dbef17`); classifier demonstrated ABORTing on a deliberately broken threshold before it was allowed to score. Single synapse, -10 mV, 5 s, dt=0.005, 4 sample times. **Measured:** `f_sat = 0.176` (only 17.6% of pairs inside the 5 nm clamp, vs the ≥0.90 registered saturation bar), `r_p10/p50/p90 = 3.70/9.75/16.11 nm`, `r_max = 36.45`, `g_p10..p90 = 2.99e-2 .. 1.00`, **dynamic range `D = 33.5`**, stable to 3 decimals across all four samples. **Verdict `LIVE`-under-stated-conditions.** **Both priors refuted:** the board/kickoff (`board.md:919-922`, `mo-rescope-001.md:55-59`) predicted `g ≈ 1` **inert by saturation** — no, only 17.6% clamp; PO-5's own grounding brief predicted `g ≈ 3.7e-5` **inert by vanishing** off the 400 nm birth domain — no, dimers cluster at templates and sit ~10 nm apart, so the brief's a-priori was wrong by ~15× in `r` and is recorded as such. `model6-entanglement-partition-werner:60`'s *"intra edges at ~7 nm"* is the prose that was RIGHT (`r_p10 = 3.70`, `r_p50 = 9.75`). **THE CONSEQUENCE, which is the finding:** realised intra bond saturation is **0.75–0.83** and the corroborating probe (`sweep/observe_pathway2_selectivity.py`) reads **`comps = 1`, `largest_frac = 1.000`** at t=5 s and t=10 s, with bonded-pair median separation **9.5 nm vs all-pair 10.3 nm** — i.e. the bonded set is barely distinguishable from the all-pairs set. **A rate that varies 33× across pairs is producing a near-complete graph with a trivial partition.** Since the computation IS the partition (`model6-entanglement-partition-werner`, LOCKED), pair-resolution in `em_rate` that does not survive into the component structure buys the keystone nothing. **NOT YET ATTRIBUTED — UNVERIFIED:** whether the saturation is Pathway 1 (birth entanglement, `dimer_particles.py:218-228`, which bonded 94.4% of pairs at the very first sample) or Pathway 2. That separation is PO-5 Unit 2 and no claim is made on it here. **`g` is GEOMETRY, not input — this unit does NOT advance §8's keystone**, it establishes that the later pair-level test is not operating on a constant. | [GROUNDED, measured] | `L·PO5-1` below |
 | AUDIT-1 | 2026-07-18 | **SUBSTRATE AUDIT — full adversarial code audit, `docs/SUBSTRATE_AUDIT_JUL18.md`.** Four parallel read-only agents, `file:line` required for every claim, UNVERIFIED where code could not confirm. **Five headline findings:** (1) **factor-of-2pi error** on the per-synapse pump — `vibrational_cascade_module.py:315` uses `hbar*f` on a LINEAR frequency, n_bar inflated **6.28x**; the backbone pump is CORRECT (`h*f`, `model6_parameters.py:46`). (2) **The calibration fiction survives and is unsweepable** — `kT_ref = 22.1` is a function-body literal (`:246`), invisible to the params dataclass and to sweep_runner; with `r_at_E_ref = 100e9` it makes **r/r_c ~ 1.045 at MT+ an arithmetic identity, not a result**. (3) **Three docstrings assert mechanisms absent from the code** — a Hill function (`multi_synapse_network.py:1332-1334` vs `:1381-1392`), a 30% collapse (`:1423-1425`, `collapse_factor` never read), and "No fitted parameters!" (`:1238-1242`) beside two fitted parameters. (4) **Cited sources contradict their values** — phi/chi cite Zhang 2019 which gives 6 GHz / 0.07 GHz; code uses 10 GHz / 0.05 GHz. (5) **The two pump sites run different threshold physics** — backbone `n_ex = n_bar_s`, per-synapse still Zhang Eq. 4. **WHAT SURVIVES:** the entanglement/partition layer — Werner 0.5 is a THEOREM not a cutoff, eta is exactly `(r-1)/(r+1)` with no fitted curve, commitment is a real CaMKII integrator with a genuine DDSC delay. **Debt REGRESSED:** ~151 dead parameter fields (was ~120), six orphan modules, none removed. Also found: `phosphate_total` goes stale so J-coupling reads a field ignoring dimer consumption; ATP<->Pi is not mass-conserving; `step_with_coordination` and `run_place_field_learning` still form ZERO cross-synapse bonds (a gap in the same-day fix). | [GROUNDED, code SHOWN] | `docs/SUBSTRATE_AUDIT_JUL18.md` |
 | ETA-5 | 2026-07-18 | **THE RATCHET TEST IS VOID — ITS NULL ARM IS THE RESULT: `E_invasion` accumulates WITHOUT ACTIVATION.** Pre-registered (`docs/PREREG_L_ETA_5_RATCHET.md`), 8 traversals x 14 s, 20 s gaps, real physics through every gap (`analytical_gap` deliberately NOT called). **Scored verdict `INCONCLUSIVE — NULL ARM RATCHETED`: the dispatch question is NOT ANSWERED.** The null held the target below the 0.05 activation floor but did NOT suppress presynaptic release (`BASELINE_RATE_HZ = 0.5`, `presynaptic_release.py:124`) — so the 'silent' synapse still received glutamate. **null max `E_invasion` = 0.4507** (registered: must stay 0.0000) and **null `peak_r` gain = 7.46x** — *larger than the driven arm's 5.65x*. **The finding that survives is about the driver itself:** `E_invasion` climbs past `invasion_threshold` on tonic spontaneous release alone, growing even during silent gaps (`rho` up to 2.26), and the driven/undriven separation COLLAPSES with traversal count (6.15x -> 1.70x). This is a stronger, plateau-free version of L·ETA-4: selectivity in the `E_invasion -> r -> eta` channel is weak on this driver's own dynamics. **Driven `r` DID cross threshold** (1.0721 at t3, 1.4050 at t8 — first live-regime crossing after L·ETA-3) but **cross-synapse edges = 0 in BOTH arms**, since `k_cross` ~ sqrt(eta_i*eta_j) and only one feature was driven: **eta != 0 shown, a PARTITION was NOT.** PO-3 -> PO-5 at most PARTIALLY cleared. Not the negative branch (FALSIFIED needed gain < 1.2; measured 5.65x). Even absent the null failure the drive arm would not have CONFIRMED: `peak_r` non-monotone (t3 1.0721 -> t4 0.9911) and `ratio_mean` 1.1080 outside the registered [0.89, 1.07], the calcium-tail overshoot flagged in AMENDMENT A1.2 BEFORE the run. **Three PO-3 errors corrected in-cycle:** the 'frozen gap' claim (wrong — 1 ms/gap, caught by PO-4), the committed-branch retention derivation (wrong — committed spines drain 3.54x FASTER, caught by PO-4, fixed before scoring), and F-3's '~100x NMDAR starvation' (**overstated and inverted** — measured 19x on events, but the old pattern HOLDS each release 100 steps so it delivers MORE exposure; **the L·ETA-3 correction-banner recommendation is WITHDRAWN**). Re-run needs a null suppressing spontaneous release and a gap clearing the calcium tail — protocol changes, not made unilaterally. | [GROUNDED, measured] | L·ETA-5 |
 | ETA-4 | 2026-07-18 | **THE PLATEAU MAKES THE CONDENSATION DRIVE BRANCH-GLOBAL — §8's premise FAILS as written.** Probe `sweep/plateau_vgcc_leak_probe.py`, 7 synapses @1um, ONLY synapse 3 driven, rest silent, with/without plateau. **Selectivity survives in NMDAR exactly as Jain 2024 requires** (silent-synapse NMDAR gain from plateau **-0.0019**, i.e. zero — no glutamate, no current, however depolarized). **But it is destroyed in the VGCC->E_invasion->r channel:** silent-synapse VGCC open fraction **0.0017 -> 0.4783 (+0.492)**, and that propagates — **E_invasion silent 0.0000 -> 0.2115, IDENTICAL to the driven synapse's 0.2115 to four decimals**. `r` silent **0.754-0.822** vs driven **0.812**: the driven synapse is **NOT SEPARABLE** from the silent ones. When r crosses 1 they cross TOGETHER. **VERDICT-LOGIC CORRECTION (important):** the probe's first auto-verdict printed "eta stays SELECTIVE" because eta==0 at silent synapses — but eta==0 at the DRIVEN synapse too (r=0.812<1), so the test was VACUOUS, the 683b82f failure class exactly. Logic corrected to return INCONCLUSIVE-on-eta and to read the DRIVE channel instead. **Consequence:** eta cannot carry input-selectivity once a plateau is present; selectivity must live in `P_product` (the dimer population, which forms only where NMDAR calcium arrived). That is a coherent story but NOT the one §8 is written against — §8 assumes drive patterns the partition THROUGH eta. | [GROUNDED, measured] | L·ETA-4 |
@@ -85,6 +86,95 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·PO5-1 — `g` is LIVE, both priors were wrong, and the pair-resolution does not reach the topology · 2026-07-18 `[GROUNDED, measured]`
+
+**Pre-registered:** `docs/PREREG_PO5_UNIT1_G_INERTNESS.md`, committed `cc80fcc` **before** the probe
+existed. **Probe:** `src/models/Model_6/sweep/po5_unit1_g_inertness.py` (`1dbef17`).
+**Corroborating trace:** `sweep/observe_pathway2_selectivity.py` (pre-existing; PO-5 reused it rather
+than rebuilding, and it is the source of the component counts below).
+**Raw:** `results/po5/unit1_g_inertness.json`, `results/po5/unit1_existing_probe.log`.
+
+#### Why this unit ran first
+
+`dimer_particles.py:453` clamps with `np.maximum`, so every pair closer than
+`coupling_length = 5.0` nm (`:129`) receives `g = 1.0` exactly. The 1/r³ can therefore be present in
+code and still carry no pair information — by saturation (`g ≈ 1` everywhere) or by vanishing
+(`g ≈ 0` everywhere). Which one holds changes the meaning of every later selectivity result.
+
+#### The verdict function was demonstrated failing before it was allowed to pass
+
+`demonstrate_verdict()` runs before the model is constructed and requires all four labels on
+synthetic input with known answers. Shown ABORTing (exit 1, three MISMATCHes) with `SAT_THRESHOLD`
+deliberately set to 0.0, then passing 4/4 at the registered thresholds. Per `MO_MODEL6.md` §2.3 and
+the `683b82f` scar: a verdict that cannot distinguish its outcomes is not a result.
+
+#### Measured — single synapse, −10 mV, 5 s, dt = 0.005
+
+| t | n_ent | n_pairs | f_sat | r_p10 | r_p50 | r_p90 | r_max | g_p10 | g_p90 | D | sat_bonds | verdict |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 0.5 | 1082 | 584821 | 0.1762 | 3.70 | 9.75 | 16.11 | 36.45 | 2.99e-2 | 1.000 | 33.46 | 0.7476 | LIVE |
+| 1.0 | 1080 | 582660 | 0.1761 | 3.70 | 9.74 | 16.11 | 36.45 | 2.99e-2 | 1.000 | 33.44 | 0.7783 | LIVE |
+| 2.5 | 1074 | 576201 | 0.1761 | 3.70 | 9.74 | 16.10 | 36.45 | 3.00e-2 | 1.000 | 33.38 | 0.8315 | LIVE |
+| 5.0 | 1110 | 615495 | 0.1745 | 3.71 | 9.78 | 16.18 | 36.45 | 2.95e-2 | 1.000 | 33.89 | 0.8144 | LIVE |
+
+**`VERDICT: LIVE-under-stated-conditions.`** `f_sat` moves by 0.0017 across the four samples, so the
+quantity is not transient-sensitive at this dt (PREREG §6 asked whether it moves; it does not).
+
+#### Both standing predictions about `g` were wrong, and one of them was PO-5's own
+
+- **The board's:** *"if intra-synapse `r_ij` mostly sits under 5 nm, the 1/r³ is present in code but
+  **inert in practice**"* (`board.md:919-922`; same in `mo-rescope-001.md:55-59`). **Refuted** —
+  only **17.6%** of pairs sit inside the clamp, against a registered saturation bar of 90%.
+- **PO-5's own grounding brief**, which predicted the opposite failure — `g ≈ (5/150)³ ≈ 3.7e-5`,
+  inert by *vanishing*, reasoning from the 400 × 400 × 20 nm birth domain
+  (`dimer_particles.py:199-203`). **Also refuted, and by more.** Dimer births are
+  concentration- and template-weighted (`:189-196`), so dimers cluster far tighter than the domain
+  implies: `r_p50 = 9.75` nm, not ~150. **The brief's a-priori was wrong by roughly 15× in `r`**;
+  recording it because it was stated as a located prediction before the measurement and the trail is
+  worth more than the tidier version.
+- **The prose that was right:** `model6-entanglement-partition-werner:60` — *"their near-field 1/r³
+  coupling is at the nm scale … would wrongly cut working intra edges at ~7 nm."* Measured
+  `r_p10 = 3.70`, `r_p50 = 9.75`. The brief flagged this skill line as in tension with the geometry;
+  **the tension resolves in the skill's favour** and no correction is owed to it.
+
+#### The consequence, which is the actual finding
+
+`g` varies **33×** across the pair set — genuinely pair-resolved, not a constant. And it does not
+matter yet, because of what the graph looks like:
+
+- realised intra bond saturation **0.75 – 0.83** (this probe, four samples);
+- **`comps = 1`, `largest_frac = 1.000`** at t = 5 s and t = 10 s (corroborating probe) — every
+  entangled dimer in **one** connected component;
+- bonded-pair median separation **9.5 nm** vs all-pair median **10.3 nm**; p90 **15.2** vs **16.5**.
+  The bonded set is only marginally closer than the pair set at large.
+
+**A rate that varies 33× across pairs is producing a near-complete graph with a trivial partition.**
+`model6-entanglement-partition-werner` (LOCKED) puts the computation in the **partition** — one
+commit per connected component. Pair-resolution that lives in `em_rate` but does not survive into the
+component structure buys §8's keystone nothing. This does **not** settle the keystone (that needs
+*input*-dependence, and `g` is geometry), but it relocates where the keystone can fail: not at the
+rate, at the realised graph.
+
+It also updates `entanglement-topology-measurement:287-289`'s *"Still at ~77% saturation … F2
+carryover"* (May 14) — **still true today, measured 0.75–0.83**, two months and a 1/r³ landing later.
+
+#### UNVERIFIED — stated as such, not filled in
+
+**Which pathway produces the saturation is not attributed.** The corroborating probe's **first**
+sample, at t = 0.0, already reads `sat = 0.9440` over 493 dimers, and Pathway 1 birth entanglement
+(`dimer_particles.py:218-228`) bonds every template-bound dimer pair born within a 100 ms window with
+no distance term at all — so a Pathway-1 origin is *plausible* and is exactly the kind of plausible
+attribution this program's defect class punishes. **It is not claimed.** Separating Pathway 1 from
+Pathway 2 in the realised bond set is PO-5 Unit 2.
+
+#### Limits
+
+Single synapse, one drive condition (−10 mV sustained), one seed, 5 s. `f_sat` is a property of these
+driving conditions — a different calcium/template regime places dimers differently, so the verdict is
+`LIVE`-**under-stated-conditions** per PO-1's formulation (`board.md:804-806`). `dt-1` records that
+dimer *count* is not converged in the drive transient; `f_sat` is a ratio over pairs and was measured
+stable across four samples, but no dt sweep was run and none is claimed.
 
 ### L·ETA-5 — the ratchet test is VOID; its NULL arm is the result: `E_invasion` accumulates without activation · 2026-07-18  `[GROUNDED, measured]`
 

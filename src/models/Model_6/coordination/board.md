@@ -1086,3 +1086,48 @@ falsified by four instances in one day, three of which cost a PO or the MO a cor
 *physical* constants only (N_A, F, D_ca, T_body, the 20 kT threshold, T_singlet), which are
 unambiguous single-source candidates. **Leave probe-local parameters alone** — `DT` and `SEED`
 differing per experiment is correct, and centralising them would be worse than the disease.
+
+---
+
+## MO CYCLE — 2026-07-18 21:32Z · **PO-4's Q4-5 ACCEPTED — and the unit's premise was the MO's error**
+
+### MO ran the probe independently. Result reproduces exactly.
+
+```
+probe detects the historical omission (failing-first): YES
+coupling_weights reaches _update_entanglement at BOTH driver sites: PASS
+bonds formed: 0
+-> MEASURED ZERO WITH AN IDENTIFIED CAUSE
+blockers: (3) eta = 0 at every synapse -> k_cross ~ sqrt(eta_i*eta_j) = 0
+```
+
+**Per the MO's own acceptance — *"a measured zero with an identified cause is a pass"* — this
+PASSES.** PO-4's limits are stated and correct: 3 synapses, 2.0 s budget, *"measures the CALL PATH,
+not the long-run topology."*
+
+### MO DEFECT #14 — the unit's premise was already fixed before it was dispatched
+
+`git log -S` on the fix string: **`15abd39 fix(model6): items 7, 3, 5`** — the ranked item 7 was
+*"Pass `coupling_weights` in `step_with_coordination` and `run_place_field_learning`."* **That
+landed before this MO session began** and was in the branch history the MO read at boot.
+
+But **D21(5)** (calcium log, same day) still asserts *"No cross-synapse bonds form during trials at
+all — `run_trial` omits `coupling_weights`"* as current, and **the MO routed that to PO-4 as a live
+defect** without checking whether a commit had superseded it.
+
+**The row was accurate when written and stale when routed.** This is the mirror of the MO's earlier
+defects: those were *prose read as code*; this is **a correct record read as current state.** A
+dated decision-record row describes the moment it was written — **it is not a live status.**
+
+*PO-4 lost nothing: it built the failing-first check, verified the call path, and identified the
+real blocker. But it was sent to close a door that was already shut.*
+
+### What the measurement actually established, which is the valuable part
+
+**Bonds are zero, and the sole remaining cause is `eta = 0` at every synapse.** Not a wiring gap —
+the physics. That converges with L·ETA-1 and L·ETA-3, and with `quantum-system-canonical` §4.3
+(falsified today): **eta is a gate, and in a live trial the gate is shut.**
+
+**So `SUBSTRATE_AUDIT_JUL18` item 16 and D21(5) should both be marked SUPERSEDED by `15abd39`** —
+the MO owes the calcium log a superseding row. Until that lands, the next reader will route it
+again, exactly as the MO just did.
