@@ -6,13 +6,33 @@ FALSIFIED and INCONCLUSIVE, with its positive control demonstrated to fire — p
 provenance verdict on `k_polymerization_max` (and `E_ref`, which sits in the load-bearing
 denominator at `spine_plasticity_module.py:411-412`).
 
-**Status:** LIVE. Provenance verdict DELIVERED (`ad7a804`, acceptance item 2). Measurement
-run in flight, drive arm traversal 3.
-**Current unit:** L·ETA-5 — drive arm then null arm, 8 traversals each. Verdict to be scored
-OFFLINE from the persisted per-traversal JSON using the corrected function; the in-run printed
-verdict uses superseded logic and is VOID.
-**Last heartbeat:** 2026-07-18 ~18:10Z. Rulings 002 and 003 absorbed and implemented.
-**Blocked on:** nothing.
+**Status:** **RUN COMPLETE. SCORED VERDICT: `INCONCLUSIVE — NULL ARM RATCHETED` (VOID).**
+Both acceptance items delivered: the measurement (`d75e15a`, L·ETA-5) and the provenance
+verdict (`ad7a804`). **PO-3 has measured and STOPPED.**
+**Current unit:** none — awaiting MO/Sarah on the two decisions below.
+**Last heartbeat:** 2026-07-18, run complete (drive 2455.7 s + null 1356.4 s, one run, cap
+not raised).
+**Blocked on:** nothing. Idle by design — what remains is gated.
+
+## Result in one line
+
+The ratchet question is **NOT ANSWERED**. The null arm suppressed activation but not
+presynaptic release, so a never-activated synapse reached `E_invasion` = 0.4507 and `r` =
+0.978 — it ratcheted *harder* (7.46×) than the driven arm (5.65×). Void on registered terms.
+**The surviving finding is about my own surface:** `E_invasion` accumulates past
+`invasion_threshold` on tonic spontaneous release alone, and the driven/undriven separation
+collapses 6.15× → 1.70× across traversals.
+
+## What needs a decision (NOT taken unilaterally)
+
+1. **A re-run needs two protocol changes** — a null that suppresses spontaneous release
+   (not just activation), and a gap long enough to clear the calcium tail before retention is
+   scored. Both alter a pre-registered design and neither is mine to make. **No second run
+   started; the compute slot is released for PO-1.**
+2. **PO-5's edge is at most PARTIALLY cleared.** `η ≠ 0` was demonstrated live (`r` = 1.4050),
+   but **cross-synapse edges = 0 in both arms** — only one feature was driven and
+   `k_cross ∝ √(η_i·η_j)`. A partition needs ≥2 synapses above threshold at once, which this
+   design excludes by construction. Whether that is enough to start PO-5 is the MO's call.
 
 ## Rulings absorbed
 
