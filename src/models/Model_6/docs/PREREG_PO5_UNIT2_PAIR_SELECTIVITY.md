@@ -216,6 +216,40 @@ starts, the probe runs a **1 s single-arm pre-flight** and asserts the occupied-
 `PREFLIGHT_FAIL` with the observed cell count. A resolution failure is now caught in ~1 minute
 instead of ~50.
 
+## AMENDMENT A2.6 — cell size 8 nm → 6 nm, and the pre-flight now tests the SCORED condition
+
+**A2.5's pre-flight fired on its first use and saved the slot: `cells = 9` against `MIN_CELLS = 10`,
+detected in 57 seconds.** The gate worked. Two corrections follow from it.
+
+**(i) The pre-flight was testing the wrong condition.** It ran 1 s while the scored sample is at 5 s
+— a different system state, with fewer dimers and therefore fewer occupied cells. A gate must test
+the condition it gates. **The pre-flight now runs to the scored duration (5 s) and asserts on the
+scored sample.** It costs ~5 min against a ~50 min matrix.
+
+**(ii) 8 nm sits too close to the boundary to be a sound operating point.** At `cells = 9` versus a
+threshold of 10, the instrument would be one marginal cell away from a structural `INCONCLUSIVE` on
+every run — fragile by construction, independent of any result.
+
+**The selection rule is stated in advance and applied mechanically — it is not a search for a
+passing number.** `CELL_NM` must satisfy, in order: **(1)** above `r_p10 = 3.71 nm`, so a cell is not
+dominated by a single close pair; **(2)** below `r_p50 = 9.78 nm`, so within-cell and between-cell
+remain distinguishable; **(3)** yield comfortably more than `MIN_CELLS = 10` occupied cells at the
+scored sample. All three bounds come from **Unit 1's** independently measured geometry. 8 nm passes
+(1) and (2) and fails (3) empirically at 9 cells; **6 nm passes all three** (~37 cells geometrically
+available across a 36 nm cloud) and is adopted.
+
+**The integrity constraint, stated plainly: no verdict has been computed at ANY cell size.** The
+40 nm run was killed unscored, the 8 nm run aborted at pre-flight before the matrix, and no
+`ratio`, `d_input` or `d_null` has been evaluated on model data at any setting. **It is therefore
+not possible for this choice to have been selected for an outcome** — there is no outcome to select
+for. Every verdict threshold (`RATIO_CONFIRM = 3.0`, `RATIO_FALSIFY = 1.5`, `MIN_OCC = 5`,
+`MIN_CELLS = 10`) and the A2.2 precedence remain untouched.
+
+**If 6 nm also fails pre-flight, PO-5 stops and reports rather than continuing to step the value
+down.** A third adjustment would stop being a geometric derivation and start being a search, and the
+honest report at that point is *"the instrument cannot resolve pair structure in this geometry at the
+registered `MIN_CELLS`"* — which is itself a finding about the measurement, and is reported as one.
+
 ## 7. Compute
 
 Q-A validation and the smoke test are cheap (single short run). **The full Q-B matrix is 9 runs and

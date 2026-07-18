@@ -51,7 +51,8 @@ SUBSET_MIN_BONDS = 1000   # A2.2 sub-set guard
 # AMENDMENT A2.4: was 40.0, which gave cells=4 against MIN_CELLS=10 -> the verdict could
 # only ever return INCONCLUSIVE. 8.0 is derived from Unit 1's measured geometry
 # (r_p10=3.71 < 8.0 < r_p50=9.78; whole cloud r_max=36.45 nm), NOT from any Q-B outcome.
-CELL_NM = 8.0          # cell size; reported with the verdict (PREREG §8)
+CELL_NM = 6.0          # A2.6: 8.0 gave cells=9 vs MIN_CELLS=10. Rule (Unit 1 geometry):
+                       # above r_p10=3.71, below r_p50=9.78, and > MIN_CELLS at the scored sample.
 BIRTH_WINDOW = 0.1
 
 
@@ -339,8 +340,9 @@ def main():
 
     # ---- AMENDMENT A2.5 pre-flight: prove the instrument has resolution before
     # consuming the exclusive slot. A resolution failure now costs ~1 min, not ~50.
-    print("PRE-FLIGHT (A2.5): 1 s run, asserting occupied cells >= MIN_CELLS", flush=True)
-    pf = run_arm("A", 999, 1.0, dt, [1.0], log)
+    print(f"PRE-FLIGHT (A2.5/A2.6): {T}s run at the scored sample, "
+          f"asserting occupied cells >= MIN_CELLS", flush=True)
+    pf = run_arm("A", 999, T, dt, samples, log)   # A2.6: gate the SCORED condition
     pf_cells = pf["snaps"][-1]["mats"]["K"] if pf["snaps"][-1]["mats"] else 0
     print(f"  pre-flight cells={pf_cells} (need >= {MIN_CELLS}), "
           f"elapsed={pf['elapsed_s']:.0f}s", flush=True)
