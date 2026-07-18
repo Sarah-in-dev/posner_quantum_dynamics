@@ -286,3 +286,68 @@ place per the log convention.
    escalation, not a regression.
 5. **Do NOT set commitment state analytically.** `model6-commitment-pathway` is LOCKED against
    it and PO-4 surfaced the lock itself. An honest gap advances CaMKII through its own dynamics.
+
+---
+
+## MO CYCLE — 2026-07-18 18:03Z · a cross-PO catch that would have inverted a verdict
+
+**Routed via `requests/` only. No messages.** `requests/po3-einvasion/mo-ruling-002.md` ·
+`requests/po4-analytical-gap/mo-ruling-003.md`.
+
+### PO-4 → PO-3 (`po4-conf-001`): the 89% retention prediction is CONFINEMENT-CONDITIONAL
+
+PO-4, establishing the timescales its gap fix must advance, found that L·ETA-5's grounded
+prediction `exp(-gap/tau_extrude) ⇒ 0.8948` **is the uncommitted branch only.**
+`actin_enlargement` drains by TWO paths (`spine_plasticity_module.py:388-390`) and commitment
+switches which one runs; `E_invasion` reads `actin_enlargement` alone (`:412`).
+
+**MO re-derived it independently — every number reproduces:**
+
+| state | conf | τ_eff | retention @20 s |
+|---|---|---|---|
+| never committed | 0 | 180.0 s | **0.8948** |
+| committed (steady) | 0.97561 | 50.9 s | **0.6751** |
+
+3.54× faster drain when committed, and `k_unconf = 0.0005 s⁻¹` means confinement **persists**.
+
+**RULED (not a physics call — choosing between two formulas already in the code, no rate
+moves):** PO-3 re-derives its retention prediction conditional on confinement state, logging
+`self.confinement` per traversal, **before scoring L·ETA-5.**
+
+**Why this was urgent.** `master` HEAD carries `64346a0 ... flag the mis-derived T1'
+pre-registration` immediately followed by `683b82f probe(model6): T1' FAILED with a false
+positive`. **A mis-derived pre-registration preceded a false positive in this program's own
+recent history.** Same failure, caught before the run this time. Concretely: had PO-3 scored a
+committed-spine retention of 0.6751 against a predicted 0.8948, it would have read as **ratchet
+FALSIFIED** and its hard stop would have routed a *negative result about the network story* to
+Sarah off a wrong number.
+
+*Neither the MO nor PO-3 caught this. PO-4 found it on someone else's surface, handed it over
+with the evidence and an explicit "your call, not mine", and touched nothing.*
+
+### Q4-1 RULED — B2's acceptance does NOT span a gap
+
+PO-4 flagged that after B2 the per-synapse pump reads `E_invasion`, so the stopped clock would
+freeze **pump drive** across silence too, not just plasticity. Correct. **MO checked the
+specific risk:** `sweep/pump_mode_agreement_probe.py` has zero `analytical_gap` / gap /
+traversal / `step(` references — a static two-site `n̄` comparison. **B2's acceptance is
+uncontaminated.** No re-sequencing. **Standing constraint:** any *pump* measurement spanning a
+multi-trial gap before PO-4 lands carries the 1 ms-per-30 s clock and must say so.
+
+### Q4-2 CONFIRMED — the acceptance bar's own numbers are prose-only, and that is the MO's defect
+
+`MO_MODEL6.md:140`'s "1.291 vs 2.389 at +300 s" has **no artifact** — two hits, both
+coordination prose. **The MO put unsourced numbers into a PO's definition of done.** PO-4's
+reproduction (3.7031 ± 0.0649 committed vs 3.0432 ± 0.0572 uncommitted) disagrees in magnitude
+**and ordering**. Ruled: pre-register against the reproduction; the disagreement is the finding.
+**`MO_MODEL6.md` §3 PO-4 owes a correction once PO-4 reports.**
+
+### ESCALATED TO SARAH — physics, not the MO's to rule
+
+PO-4 measured `E_invasion` **26× higher in the uncommitted arm** (0.8222 vs 0.0313 at 300 s)
+while spine *volume* was higher in the committed arm — the two move in **opposite** directions
+under commitment, because commitment redirects enlargement into `actin_stable` and `E_invasion`
+reads the transient pool only. Since `r ∝ E_invasion × ca_open`, this says **the condensation
+pump is driven by the UNCOMMITTED transient actin pool — a synapse that commits loses pump
+drive.** That is architectural, bears on §8 and on PO-5's `P_product` selectivity hypothesis,
+and is **Sarah's call.** PO-4 is instructed not to pursue it; it is outside its acceptance.
