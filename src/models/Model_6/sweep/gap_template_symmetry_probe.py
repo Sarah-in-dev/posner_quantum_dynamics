@@ -44,6 +44,8 @@ import sys
 import json
 import logging
 
+import re
+
 import numpy as np
 
 logging.disable(logging.INFO)
@@ -67,11 +69,35 @@ from multi_synapse_network import MultiSynapseNetwork
 import run_spatial_discovery as RSD
 from run_theta_burst_45s import analytical_gap
 
-GAP_S = 3.0        # AMENDMENT G: longest gap with ZERO stage-3 removals NETWORK-WIDE
-                   # (5.0 removes 1 particle across the pair; the control caught it)
+GAP_S = 0.1        # AMENDMENT G/H: longest gap with ZERO stage-3 removals.
+                   # PRE-fix this was 3.0 s; POST-fix dissolution is ~33x faster so
+                   # stage 3 fires by 0.25 s and the control (correctly) voided the
+                   # 3.0 s run. Note the PRE-fix verdict is gap-INDEPENDENT: a scalar
+                   # k_diss cannot move the spatial ratio at ANY gap length.
 DRIVE_STEPS = 30
 N_SYN = 2
 TOL_EXACT = 1e-4   # AMENDMENT G: the isolated measurement's own floor is ~1e-5
+
+
+def fix_is_present():
+    """Read the code under test and report WHICH STATE it is in, rather than
+    assuming. The verdict differs by state, so a probe that cannot tell which
+    code it measured prints misleading prose -- the defect class this PO exists
+    to remove."""
+    lines = open(os.path.join(HERE, 'run_theta_burst_45s.py')).read().split('\n')
+    for i, ln in enumerate(lines):
+        # `in_code` guard: line 62 of that file is a DOCSTRING line reading
+        # "k_diss = K_CLASSICAL*(1 - singlet_excess)". Matching it made this
+        # detector report PRE-FIX on post-fix code -- i.e. it read PROSE and
+        # reported it as code state, which is precisely the defect this probe
+        # exists to catch. Require the executable form (leading indent + assignment).
+        if (ln.lstrip().startswith('k_diss') and '=' in ln
+                and 'K_CLASSICAL' in ln and ln.startswith(' ' * 8)):
+            # the assignment may wrap; inspect it and its continuation lines
+            block = ' '.join(lines[i:i + 4])
+            return 'template_enhancement' in block
+    raise RuntimeError("could not locate the gap's k_diss assignment -- "
+                       "the probe cannot report code state and must not guess")
 
 
 def make_network(n=N_SYN):
@@ -146,7 +172,7 @@ def main():
     mean_ps = float(np.mean(ps_vals)) if ps_vals else 0.25
     se = max(0.0, (mean_ps - 0.25) / 0.75)
 
-    analytical_gap(net, GAP_S, dt_sub=1.0)
+    analytical_gap(net, GAP_S, dt_sub=min(1.0, GAP_S))
 
     n_post = sum(len(s.dimer_particles.dimers) for s in net.synapses)
     post = [spatial_ratio(s) for s in net.synapses]
@@ -159,7 +185,7 @@ def main():
         print(f"  templated/bare ratio by a mechanism AMENDMENT F scoped OUT. Shorten the gap.")
         return 2
 
-    print(f"\nSPATIAL SIGNATURE across a {GAP_S:.0f} s gap")
+    print(f"\nSPATIAL SIGNATURE across a {GAP_S:g} s gap")
     print(f"  {'syn':>5}{'R before':>13}{'R after':>13}{'S = after/before':>19}")
     print("  " + "-" * 50)
     Svals = []
@@ -183,25 +209,36 @@ def main():
     print(f"  registered POST-FIX: S == exp(-k_bar*(te-1)*g) = {S_pred_post:.6f}  (te = {te_max:.0f})")
 
     print("\n" + "=" * 78)
-    if uniform:
-        print("VERDICT: LOCKED SYMMETRY IS BROKEN — demonstration FAILS on current code")
-        print(f"  - S = {Svals[0]:.9f} / {Svals[1]:.9f} — within {TOL_EXACT} of 1, i.e. the")
-        print(f"    spatial distribution is UNCHANGED. The gap's k_diss is a SCALAR, so it")
-        print(f"    scales templated and bare voxels identically and CANNOT express a catalyst.")
-        print(f"    (The residual ~6e-6 is the measurement floor, not a catalytic effect:")
-        print(f"    the registered post-fix value is {S_pred_post:.6f}, ~370x further from 1.)")
-        print(f"  - quantum-system-canonical:100 LOCKS the 50x template factor as symmetric")
-        print(f"    across formation AND dissolution (detailed balance). Formation honours it")
-        print(f"    ({tb/max(1,len(parts))*100:.1f}% of particles are template_bound); gap")
-        print(f"    dissolution does not.")
-        print(f"  - This is the SAME defect model6-dimer-formation-chemistry Sec.1 already")
-        print(f"    repaired in update_dimerization, recurring at a second site.")
+    fixed = fix_is_present()
+    print(f"\n  CODE STATE (read from run_theta_burst_45s.py): "
+          f"{'template factor PRESENT (post-fix)' if fixed else 'template factor ABSENT (pre-fix)'}")
+
+    if not fixed and uniform:
+        print("\nVERDICT: LOCKED SYMMETRY IS BROKEN — demonstration FAILS on pre-fix code")
+        print(f"  - S = {Svals[0]:.9f} / {Svals[1]:.9f} — within {TOL_EXACT} of 1: the spatial")
+        print(f"    distribution is UNCHANGED. k_diss is a SCALAR and cannot express a catalyst.")
+        print(f"  - quantum-system-canonical:100 LOCKS the 50x factor as symmetric across")
+        print(f"    formation AND dissolution. Formation honours it ({tb/max(1,len(parts))*100:.1f}%")
+        print(f"    template_bound); gap dissolution does not.")
         rc = 1
+    elif not fixed and not uniform:
+        print("\nVERDICT: PREMISE WRONG — re-escalate, do not land the fix")
+        print("  Pre-fix code moved the spatial ratio, which AMENDMENT F says it cannot.")
+        rc = 3
+    elif fixed and not uniform:
+        d = abs(Svals[0] - S_pred_post)
+        ok = d <= 5e-5
+        print(f"\nVERDICT: {'SYMMETRY RESTORED' if ok else 'RESTORED BUT OFF PREDICTION'}")
+        print(f"  - S = {Svals[0]:.9f} / {Svals[1]:.9f}, i.e. STRICTLY < 1: templated voxels now")
+        print(f"    dissolve faster, which is what a symmetric catalyst does.")
+        print(f"  - registered post-fix {S_pred_post:.6f}; |diff| = {d:.2e} "
+              f"({'within' if ok else 'OUTSIDE'} 5e-5)")
+        print(f"  - stage-3 control PASSED ({n_pre} -> {n_post}), so this is stage 2 alone.")
+        rc = 0 if ok else 1
     else:
-        print("VERDICT: the ratio moved — the gap already expresses spatial dissolution.")
-        print("  If this prints on UNMODIFIED code, AMENDMENT F's premise is wrong and the")
-        print("  ruling should be re-escalated rather than the fix landed.")
-        rc = 0
+        print("\nVERDICT: FIX PRESENT BUT RATIO UNMOVED — the fix is not doing anything")
+        rc = 1
+    print("=" * 78)
     print("=" * 78)
     print("LIMITS: 2 synapses, 30 drive steps, one gap length. Measures STAGE 2 (the")
     print("concentration field) only -- stage 3 particle removal is a different mechanism")
