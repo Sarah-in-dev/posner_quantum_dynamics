@@ -813,3 +813,50 @@ because PO-2 is working the phosphate loop right now; the MO is not treating REA
 harness where two-thirds of its dimensions do not land cannot produce an interpretable result
 regardless of whether the phosphate loop conserves. **Fixing the wiring is now upstream of running
 any sweep**, and it belongs to PO-1's current rotation.
+
+---
+
+## MO CYCLE — 2026-07-18 20:02Z · **PO-5 HAS NO SURVIVING PREMISE. Escalated.**
+
+PO-3's cross-probe audit (`docs/AUDIT_SPONTANEOUS_RELEASE_NULLS.md`, `fcf33b6`) landed. **MO
+verified its three load-bearing code claims directly:**
+
+1. **L·ETA-4's "silent" synapses were not silent.** `plateau_vgcc_leak_probe.py:124-125` sets
+   `acts = np.zeros(N_SYN); acts[DRIVEN] = 1.0` **but constructs a `PresynapticRelease` for every
+   synapse and steps them all** — so the spontaneous floor delivers glutamate to the six synapses
+   the probe calls silent (PO-3 measures 13 events / 12 s). ✅ CONFIRMED
+2. **A suppression mechanism already exists** — `presynaptic_release.py:141` `advance_silent()`,
+   whose docstring states *"Spontaneous baseline release during the gap is neglected"*. Exactly one
+   consumer uses it (`probe_latch2.py`). ✅ CONFIRMED
+3. **D19's mechanism is in the code as described** — `run_spatial_discovery.py:203`, release is
+   stepped for all synapses but `if active_mask[i]:` gates whether the *synapse* advances, so
+   inactive synapses neither decay nor accumulate. ✅ CONFIRMED
+
+### What this does to PO-5 — and the distinction matters
+
+**§8's η route has now failed three independent ways** (L·ETA-4 plateau branch-global; L·ETA-5 the
+driver accumulates with no drive; commitment depletes `E_invasion` 26×). The board's answer to that
+was PO-5's surviving hypothesis: **selectivity lives in `P_product`, because the NMDAR AND-gate is
+intact** — evidenced by L·ETA-4's *silent-synapse NMDAR gain from plateau = −0.0019, i.e. zero*.
+
+**That evidence is now vacuous.** L·ETA-4's row reasons *"no glutamate, so no NMDAR opening"* — and
+the premise is false. The silent synapses received glutamate.
+
+**Be precise about what this is and is not:**
+- **NOT disproven.** `P_product` selectivity may still be correct, and the NMDAR AND-gate may still
+  be intact.
+- **UNSUPPORTED.** The one measurement offered as its positive basis does not establish it.
+- **L·ETA-4's own conclusion survives** on its VGCC evidence — `E_invasion` silent 0.2115 vs driven
+  0.2115. The branch-global finding stands. **This is not a retraction of L·ETA-4.**
+
+**So PO-5 as scoped in `MO_MODEL6.md` §3 has no surviving positive premise** — the η route is dead
+three ways and the `P_product` route is unevidenced. **The MO is NOT re-scoping PO-5. That is
+Sarah's call**, and it now sits above the earlier §8 escalation in consequence.
+
+### The pattern across three POs, worth naming
+
+Three separate probes, three separate POs, and the same defect shape each time: **a control that
+was assumed silent and was not.** PO-3's null (spontaneous release), L·ETA-4's silent synapses
+(spontaneous release), and `run_trial`'s inactive synapses (never stepped at all — D19).
+**"Silent" has meant three different things in this codebase and none of them meant zero input.**
+`advance_silent()` is the one place that gets it right, and it is used once.
