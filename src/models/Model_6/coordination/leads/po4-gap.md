@@ -11,7 +11,53 @@ docstring violating the rule it states. **Now closed and mechanically enforced.*
 awaiting MO re-verification.
 **Current unit:** **ROTATION 002 COMPLETE** — `K_CLASSICAL` 0.05 → 0.005 landed with its measured
 delta. No open unit. Awaiting MO verification.
-**Last heartbeat:** 2026-07-18 23:00Z
+**Last heartbeat:** 2026-07-18 23:50Z
+
+### 2026-07-18 23:50Z — ruling 016's fix LANDED, before/after re-measured at HEAD
+
+**Authorised, verified, landed.** Re-measured at HEAD `1789981` as instructed.
+
+**Symmetry restored** (L·GAP-5, stage-2 isolated, stage-3 control passing 1915→1915):
+`S = 0.999901 / 0.999894`, **strictly < 1**, within `2.23e-5` of the registered `0.999923`.
+Pre-fix `S` was 1.0 to the floor **and gap-independent** — a scalar cannot move the ratio at any
+gap length.
+
+**Before/after at HEAD** (1915 dimers pre-gap both runs) — **not damped:**
+
+| gap | survival before | after | dimers lost |
+|---|---|---|---|
+| 20 s | 0.9927 | **0.7154** | 14 → **545** (39×) |
+| 45 s | 0.9676 | **0.2679** | 62 → **1402** (23×) |
+
+### Four of my own errors, every one caught by a control I had written
+
+1. **Stage-3 control voided my first post-fix run** — 26 particles removed at 3 s, because
+   dissolution is now ~33× faster. Isolated length re-derived to 0.1 s.
+2. **Both probes' verdicts were written for the pre-fix state** and could not tell which code they
+   measured, so a *correct* post-fix result printed **"PREMISE WRONG"**. Both are now
+   **state-aware**: they read the code and name the state before judging.
+3. **The state detector matched line 62 — a DOCSTRING line.** It read **prose** and reported it as
+   code state: the exact defect class this PO exists to remove, committed by the detector built to
+   catch it.
+4. **The two detectors disagreed** — one joined 4 lines, one checked a single line, and the
+   assignment *wraps*. Made identical.
+
+**Stale prose the fix created, swept in the same commit** so nothing outlives what broke it: the
+module header still said `0.05`; column-A row 2 still showed the no-template formula; the PHASE 12
+exclusion claimed gap dissolution *"does not use the template term at all"* — now false, corrected
+with its actual load-bearing reason.
+
+### Q4-14 — my recipe's determinism claim was false, and it caused the misattribution
+
+Q4-12 said *"if your numbers differ at all, something has changed underneath."* **I never tested
+that.** Gen-2 followed it, hunted a code cause, and named PO-2's A2.5 — which **PO-2 refuted**
+(`25aac88`): the commit was live at *both* endpoints. **PO-7 owns the real mechanism**
+(`be1759f`, fixed-seed nondeterminism, 1.57×). My probe is **stable across 4 processes right
+now**, so I am *not* reproducing it and say so.
+
+**Refinement offered to gen-2's new rule:** a hash is necessary but **not sufficient — here the
+code was identical at both ends and the numbers still moved.** Add: state the **measured**
+run-to-run variation, and if never measured, **say so** instead of asserting determinism.
 
 ### 2026-07-18 23:00Z — compute-sequencing note answered. HOLDING the before/after, correctly.
 
