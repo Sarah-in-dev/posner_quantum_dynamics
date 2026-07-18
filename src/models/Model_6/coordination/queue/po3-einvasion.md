@@ -258,3 +258,96 @@ pre-registration is for.
 **The finding underneath, which outlives this decision:** **`E_invasion` has no zero.** It
 accumulates past threshold with no input of any kind in ~80 s. That bears on **every** long
 protocol reading `E_invasion` — including PO-5's, which is live now.
+
+---
+
+## Q6 · 2026-07-18 21:59Z · **PROPOSAL per ruling 014 — separation criterion, arm construction, VOID conditions. GEN-2 RULES; I do not.**
+
+Writing only, nothing run. Every threshold below is either **carried over unchanged** from the
+original pre-registration or **anchored to a model constant** — none is fitted to my data. §6
+discloses what my existing data would score under it, so gen-2 can judge whether the bar is too
+easy. **That disclosure is the point: I benefit from a low bar and should not be the one judging it.**
+
+### 1. Why a level test is not enough, and what the scored quantity should be
+
+The null now accumulates too (resting leak, F-5). So "drive is high" is not the question —
+**"drive accumulates MORE than the leak floor" is.** Scoring levels alone would credit the drive
+arm with the leak's own contribution.
+
+**PRIMARY (proposed): the activity-attributable envelope**
+
+`ΔE[n] = E_inv_drive[n] − E_inv_null[n]`, per traversal `n`.
+
+**Matched elapsed time is automatic**, not an assumption: both arms run identical traversal/gap
+schedules, so traversal `n` is the same wall-clock point in both.
+
+**SECONDARY (reported, not scored):** `ΔR[n] = peak_r_drive[n] − peak_r_null[n]`, since `r` is
+the acceptance quantity. Not scored because `r` is neighbour-coupled and stochastic in `ca_open`
+— L·ETA-5 showed it non-monotone in both arms.
+
+### 2. Proposed thresholds — provenance stated for each
+
+| threshold | value | where it comes from |
+|---|---|---|
+| gain for CONFIRMED | `ΔE[N]/ΔE[1] ≥ 2.0` | **carried over unchanged** from `GAIN_CONFIRM_MIN` |
+| gain for FALSIFIED | `ΔE[N]/ΔE[1] < 1.2` | **carried over unchanged** from `GAIN_FALSIFY_MAX` |
+| level for CONFIRMED | `ΔE[N] ≥ E_inv_null[N]` | **self-scaling, no free parameter**: the activity-attributable component must exceed the leak component measured in the same run |
+| level for FALSIFIED | `ΔE[N] < invasion_threshold` (0.1) | the model's own "sufficient F-actin reorganization" onset, `spine_plasticity_module.py:116` |
+| monotonicity | `ΔE` non-decreasing across all N | **carried over** from the original clause (i) |
+
+**The level-for-CONFIRMED condition is deliberately self-scaling** so it cannot be met by a run in
+which the leak does most of the work, and so **I could not have tuned it** — it is defined against
+a number the run itself produces.
+
+### 3. Proposed VOID conditions (replacing the unsatisfiable `null_einv > 0.0`)
+
+VOID if **any** holds:
+1. **`max_glu` at the target in the null arm ≠ 0.0** — AMENDMENT 4 suppression failed.
+2. **Per-gap clock delta ≠ `GAP_S`** (ruling 004) — the gap is not stepping.
+3. **`E_inv_null[n] ≥ E_inv_drive[n]` at any n** — arms not separated; the drive is doing nothing.
+4. **The null exceeds the independent resting-leak reference by >2×** at matched time — the null
+   has a source other than leak, i.e. it is not the control it claims to be. **Reference: gen-2's
+   own re-run of `resting_leak_probe.py`, not mine.**
+
+### 4. Proposed INCONCLUSIVE conditions
+
+- **Positive control does not fire** — drive arm shows no accumulation over the null (`ΔE[N] ≤ 0`).
+- **`ΔE` gain between 1.2 and 2.0**, or gain ≥ 2.0 with `ΔE` non-monotone.
+- **`ΔE[N] ≥ invasion_threshold` but `< E_inv_null[N]`** — activity contributes measurably but
+  **less than the leak does.** A real and reportable regime, and not a pass.
+
+### 5. It can return every outcome — the check ruling 014 required
+
+| outcome | a concrete result that produces it |
+|---|---|
+| **CONFIRMED** | `ΔE` rises monotonically, `ΔE[8]/ΔE[1] ≥ 2.0`, and `ΔE[8]` exceeds the null's own final `E_invasion` |
+| **FALSIFIED** | `ΔE[8]/ΔE[1] < 1.2` — repeated traversals add nothing beyond the first — **or** `ΔE[8] < 0.1`, activity never reaching the model's own reorganization onset |
+| **INCONCLUSIVE** | `ΔE` grows 1.5× (between the bands), or grows strongly but stays under the leak's contribution |
+| **VOID** | suppression fails, clock stalls, arms cross, or the null exceeds the leak reference |
+
+### 6. **DISCLOSURE — what my existing data would score under this bar**
+
+**Gen-2 should assume I am motivated to propose a bar my data clears, and check this section
+first.** Using L·ETA-5's measured drive arm and an AMENDMENT 4 null estimated at the resting-leak
+level (~0.080 — **estimated, not measured in-network**):
+
+- `ΔE[8] ≈ 0.786 − 0.080 = 0.706`; `E_inv_null[8] ≈ 0.080` ⇒ **level condition passes ~9×over.**
+- `ΔE[1] ≈ 0.194 − small` ⇒ gain ≈ **3.5×**, over the 2.0 bar.
+- ⇒ **my data would likely CONFIRM.**
+
+**That is a bar my own result clears comfortably, which is exactly the objection to my setting
+it.** If gen-2 judges it too easy, the level-for-CONFIRMED condition is the one to tighten — e.g.
+require `ΔE[N] ≥ 3 × E_inv_null[N]`, or require the gain on `ΔE` to exceed the gain the **null
+arm alone** shows (the leak ratchets too, and a drive arm that merely matches the leak's growth
+rate has demonstrated nothing). **I recommend gen-2 consider that last one seriously** — it is
+strictly harder than what I proposed and I would not have chosen it unprompted.
+
+### 7. Not proposed, flagged as open
+
+- Whether the re-run should carry a **third arm** (an in-network resting-leak reference at the same
+  geometry) rather than relying on the 1-synapse probe as reference. **Cost: a third arm, ~40 min.**
+  I have not costed it properly and am not requesting it.
+- Whether `ΔE` should be scored on `E_invasion` or on `actin_enlargement` (which is what actually
+  obeys the exponential — AMENDMENT 2's reasoning). **I lean `actin_enlargement`** for the
+  retention arm and `E_invasion` for the accumulation arm, but this is a real choice and it is
+  gen-2's.
