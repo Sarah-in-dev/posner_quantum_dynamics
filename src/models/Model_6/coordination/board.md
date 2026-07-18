@@ -12,8 +12,8 @@ list. This file is the live registry; that file is the durable plan. Read both.
 | PO | Objective | Status | Owner files | Last update |
 |---|---|---|---|---|
 | `model6-mo` | the MO itself (meta/coordinator) | GROUNDED — brief committed `093c675` | `board.md`, `MO_MODEL6.md` | 2026-07-18 17:30Z |
-| `po1-b2` | B2 — retire the per-synapse pump site | **DISPATCHED — chip pending Sarah's click** (`task_274226b1`) | `vibrational_cascade_module.py`, backbone params (`model6_parameters.py:759-805`) | 2026-07-18 17:35Z |
-| `po3-einvasion` | E_invasion provenance + the ratchet test | **DISPATCHED — chip pending Sarah's click** (`task_ead7d588`) | `spine_plasticity_module.py` actin/E_invasion block, its `sweep/` probe | 2026-07-18 17:35Z |
+| `po1-b2` | B2 — retire the per-synapse pump site | **GROUNDED — brief returned, ACCEPTED; resumed to build** (session `local_e4593171`) | `vibrational_cascade_module.py`, backbone params (`model6_parameters.py:759-805`) | 2026-07-18 17:35Z |
+| `po3-einvasion` | E_invasion provenance + the ratchet test | **GROUNDED — brief returned, ACCEPTED; resumed to pre-register** (session `local_b7aeedcf`) | `spine_plasticity_module.py` actin/E_invasion block, its `sweep/` probe | 2026-07-18 17:35Z |
 
 _(The MO adds a row here + the PO's `leads/`/`queue/` files when it spawns one.)_
 
@@ -23,10 +23,30 @@ its session starts and its `leads/<name>.md` carries a heartbeat. The MO does no
 live off its own spawn call — that would be the producer-green failure applied to dispatch.
 
 **Both kickoffs pin the worktree explicitly** (`cwd` = `.claude/worktrees/nervous-hertz-7ccff6`,
-branch `claude/nervous-hertz-7ccff6`) because master is ~20 commits behind. If the chip opens a
-PO in a *fresh* worktree instead, that PO must re-base onto `claude/nervous-hertz-7ccff6`
-before doing anything — its first grounding step will catch this, since the branch HEAD it
-finds will not match the `e6c7bc5`/`093c675` lineage its kickoff names.
+branch `claude/nervous-hertz-7ccff6`) because master is ~20 commits behind.
+
+### MO ERROR AND CORRECTION — 2026-07-18 17:45Z (worktree topology)
+
+The chips created **fresh** worktrees (`mystifying-lichterman-83f6f5` = PO-1,
+`gifted-almeida-4e8a7b` = PO-3), both branched off `093c675` — i.e. *without* their own
+`leads/`/`queue/` files or these board rows, and without the untracked `.claude/skills`
+symlink. Both POs correctly obeyed the pinned worktree in their kickoff and worked in
+`nervous-hertz-7ccff6` instead, which left **two POs sharing one working tree** — the exact
+collision the surface-ownership map exists to prevent — and that tree at a **detached HEAD**.
+
+**This was the MO's error**, not either PO's: the kickoffs pinned a worktree while the spawn
+mechanism was creating its own, and the note above anticipated only the opposite failure.
+
+**Corrected:** `nervous-hertz-7ccff6` reattached to `claude/nervous-hertz-7ccff6` at `895d55f`
+with a verified-clean tree (`git status --porcelain` → 0 lines; no work lost). `.claude/skills`
+symlinked into all three worktrees.
+
+**Standing arrangement, decided:** both POs continue in `nervous-hertz-7ccff6` on the shared
+branch. Their file sets are disjoint (PO-1: `vibrational_cascade_module.py`,
+`model6_parameters.py`; PO-3: a NEW file under `sweep/`, with zero edits to
+`spine_plasticity_module.py`), and relocating two already-grounded POs mid-flight costs more
+than it buys. **Isolation is by explicit-path commit only — never `git add -A`/`-a`.** The
+`mystifying-*` / `gifted-*` worktrees are vestigial; leave them.
 
 ## Surface-ownership map (collision spine — never edit another owner's files; drop a `requests/` file)
 | Surface | Owner |
@@ -63,3 +83,51 @@ Any physics call · anything on the `MO_MODEL6.md` §7 LOCKED list · anything t
 re-validate a closed result (the T1' probe family is deliberately NMDAR-shut) · a PO moving
 a constant to reach an outcome (bounce first, then report) · any acceptance the MO cannot
 verify directly.
+
+---
+
+## MO RULINGS — 2026-07-18 17:45Z (both briefs ACCEPTED)
+
+Both grounding briefs pass the gate: line-located verbatim quotes, every named skill covered,
+each with a real self-understanding delta. Neither paraphrased. Both are resumed.
+
+**PO-1, open Q1 — delete `_critical_threshold` (`vibrational_cascade_module.py:211-214`)?
+RESOLVED BY THE MO: delete it, and delete the init/`__main__` prints that read it.** This is
+not a fresh physics call — the may30 pin already retired the Zhang Eq. 4 `r_c` as an artificial
+reference scale that →0 in large-D, and that retirement is the stated basis for "there is no
+derivation to do". Keeping a live computation of a retired artificial scale is the
+scaffolding-with-nothing-underneath the log names. *Sarah can veto in one line; flagged to her.*
+
+**PO-1, open Q2 — the ω₀ 40 GHz → 8 MHz change moves downstream chemistry through
+`k_agg_enhanced`. CONFIRMED as proposed: measure and report the delta, do not damp it.**
+Damping it would be tuning a constant to protect a downstream result. If it moves a standing
+result, that is an escalation, not a regression.
+
+**PO-3, open Q1 — the silence model. APPROVED as recommended:** step real physics through the
+gap inside PO-3's own probe; do **not** call `analytical_gap` and do **not** edit it (PO-4's
+surface). State the deviation as a limit of the measurement. Protocol choice inside PO-3's own
+scope, not a physics call.
+
+**PO-3, open Q2 — CONFIRMED:** fixed inter-traversal gap pre-registered as primary; the
+agent's emergent revisit interval reported as descriptive only.
+
+## FINDINGS ROUTED (both escalated to Sarah in chat, 17:45Z)
+
+**F-1 (PO-1) — DISC-1 understates its own scope by one level.** `Model6Parameters` carries no
+`cascade` attribute (one hit in `model6_parameters.py`, a comment at `:784`), so
+`VibrationalCascadeModule.__init__` always constructs `TubulinCascadeParameters()` defaults.
+**The entire per-synapse pump parameter set has never been reachable by `sweep_runner`** — not
+just `kT_ref`. No sweep ever run in this program could have varied it. PO-1 carries this into
+the DISC-1 superseding entry.
+
+**F-2 (PO-3) — `analytical_gap` does not advance spine plasticity at all**
+(`run_spatial_discovery.py:55-78`): actin appears in neither its computed list nor its
+"NOT computed" list, so `E_invasion` is silently **frozen** across every inter-trial gap.
+**Consequence: the shipped multi-trial harness would have shown a ratchet at 100% retention
+instead of the grounded 89% — an artifact of a stopped clock, not evidence of `tau_extrude`.**
+This is the program's characteristic defect class sitting directly in the path of the
+measurement PO-3 was dispatched to make. PO-3 sidesteps it (above) rather than fixing it.
+**The defect itself belongs to PO-4** — see `requests/po4-analytical-gap/mo-f2-001.md`. PO-4 is
+not yet spawned; this is now a required input to its kickoff, and it sharpens PO-4's own
+acceptance bar (`MO_MODEL6.md` §3 PO-4 already names the 1 ms / 30 s clock freeze — F-2 says
+the actin clock is not merely slow there, it does not advance at all).
