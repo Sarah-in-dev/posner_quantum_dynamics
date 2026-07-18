@@ -142,6 +142,49 @@ must produce all four labels:
 
 **If any required label is not produced, the probe aborts and reports nothing else.**
 
+---
+
+## AMENDMENT A2.2 — registered 2026-07-18, BEFORE the Q-B run, per MO ruling 019
+
+Ruling 019 adopts PO-5's recommendation: **whole-set primary, verdict additionally split by
+provenance** — and requires **both pre-registered so the split cannot rescue a whole-set null after
+the fact.** Registering the split and its precedence now.
+
+**PRIMARY (decides the verdict):** `ratio = d_input / d_null` computed over the **whole realised
+bond set**, scored exactly as §5 already registers. **This is the verdict.**
+
+**SECONDARY (reported always, decides nothing):** the same `ratio` computed three more times, over
+the bond sub-sets partitioned by provenance — **P0 birth-inheritance**, **P1 burst**, **P2 EM** —
+using the Unit 2 Q-A instrument, which has passed both its registered gates.
+
+**The precedence rule, registered so it cannot be reinterpreted after seeing the numbers:**
+
+> **A `FALSIFIED` or `INCONCLUSIVE` on the whole set is the verdict, regardless of what any
+> provenance sub-set shows.** A `CONFIRMED` in the P2 (17%) sub-set alongside a whole-set
+> `FALSIFIED` is reported as **"pair-flat overall, with a signal confined to the 17% minority
+> mechanism"** — it is **NOT** reported as the keystone confirmed, and **NOT** promoted to the
+> headline. The split exists to stop a whole-set null *hiding* structure, never to rescue one.
+
+**Sub-set sample-size guard:** a provenance sub-set with fewer than **1000 bonds** at the scored
+sample, or fewer than **10** occupied cells, is reported as `INSUFFICIENT` rather than given a
+verdict. From Q-A, **P1 is expected to trip this** (22 bonds) — registered in advance so its absence
+is not read as a result.
+
+## AMENDMENT A2.3 — the `_remove_dimer` guard, registered 2026-07-18
+
+Ruling 019: *"if Q-B's protocol exercises dimer removal, stop and say so first."*
+
+**Q-B DOES exercise dimer removal** — heavily and unavoidably (see
+`requests/model6-mo/po5-selectivity-005.md`). **But it does not exercise the defective function.**
+The death path at `dimer_particles.py:239` calls `_remove_all_bonds_for_dimer` (`:245`), which
+correctly pops `_bond_lookup`. The defective `_remove_dimer` (`:252-261`) has **no call sites**.
+
+**Rather than rely on that reading, the probe enforces it.** `_remove_dimer` is wrapped on the
+instance with a counter. **If it is ever called, the run aborts immediately and reports
+`INSTRUMENT_INVALID — _remove_dimer called`**, and no verdict is produced. The wrapper calls through
+to the original and alters nothing; it is a tripwire, not a patch. **PO-5 does not fix the defect** —
+it is routed to PO-7.
+
 ## 7. Compute
 
 Q-A validation and the smoke test are cheap (single short run). **The full Q-B matrix is 9 runs and
