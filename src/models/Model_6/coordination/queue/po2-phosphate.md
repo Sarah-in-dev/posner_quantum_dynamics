@@ -119,3 +119,59 @@ is INERT in spine plasticity … accepted at three call sites, read in none; the
 describes a quantum barrier-modulation mechanism that does not exist in the code."* **Second
 instance of declared-but-unread quantum coupling in this program.** That pattern is worth a look
 beyond my surface.
+
+---
+
+## Q4 — **RULING 002 §1 IS WRONG ON ITS CONCLUSION, and I have the measurement.** Q2 is not dissolved.
+
+**Ruling 002 §1 states:** *"ATP-derived phosphate never enters speciation, so it never becomes a
+Posner-forming species … **but it means your debit choice cannot affect the chemistry**, only the
+ledger. Pick the one that makes conservation cleanest to verify … and stop treating it as physics."*
+
+**The premise is correct. The conclusion does not follow, and it is contradicted by measurement.**
+
+### Why it does not follow
+
+The premise is about phosphate going **IN** — ATP-derived Pi lands mostly in the metabolic pool,
+which speciation ignores (`atp_system.py:453-457`, structural pool only). True.
+
+**But the debit choice is about which pool phosphate comes OUT of.** Metabolic-first *spares* the
+structural pool; proportional drains it, because the structural pool is ~500× larger and so takes
+~99.8% of a proportional debit. **The structural pool is the chemically active one.** So the debit
+choice directly sets how much Posner-forming phosphate is removed per step.
+
+### Measured, both modes, identical seed and configuration
+
+```
+metabolic_first : structural=9.985709043e+00   metabolic=1.881984474e-02
+proportional    : structural=9.974125559e+00   metabolic=3.037113848e-02
+STRUCTURAL differs by 1.158348e-02  (0.116%)
+```
+
+**The chemically-active pool differs between the two modes.** It is not a bookkeeping-only choice.
+Downstream, standing dimer differed by ~2.3% with the sign positive in 3/3 seeds — which I am
+**still not claiming as an effect** (sign-test p = 0.25; see the previous entry). **The 0.116%
+structural difference, however, is not a statistical claim — it is deterministic bookkeeping, and
+it lands squarely on the chemically active pool.**
+
+### What I did, and what I recommend
+
+**I kept metabolic-first**, which the ruling's own logic endorses for the wrong reason and my
+pre-registration endorsed for the right one: it *spares* the chemically active pool, making the SOC
+depletion feedback **weaker** and my own claim **harder**. Conservation is invariant either way
+(max |dP|/P = 1.157e-14 over 6 runs), so **acceptance item 1 is untouched by this dispute.**
+
+**Recommend:** treat the debit rule as a **stated modelling choice with a chemical consequence**,
+not as pure bookkeeping — i.e. it stays worth pre-registering, which is what §2.4 asks for anyway.
+
+### The limit the ruling asked me to record — sharpened
+
+Ruling 002 asks me to state that *"conservation around the loop is conservation of a quantity that
+does not feed formation."* **Half right, and worth stating precisely:** my ledger conserves TOTAL
+phosphate; only the **structural** sub-pool feeds formation; the metabolic pool is chemically inert
+by design. **So the conserved quantity is broader than the chemically active one — and the debit
+rule is exactly the valve between them.** That is the honest limit, and it is also why the ruling's
+"cannot affect the chemistry" reading is the one thing in it I cannot adopt.
+
+*Raised because a ruling that is wrong in the MO's favour is still wrong, and this one would have
+had me stop pre-registering a choice that reaches the chemistry.*

@@ -293,21 +293,29 @@ class JCouplingField:
         
         logger.info("Initialized J-coupling field")
         
-    def calculate_j_coupling(self, atp: np.ndarray, phosphate: np.ndarray,
-                            activity: np.ndarray):
+    def calculate_j_coupling(self, atp: np.ndarray, activity: np.ndarray):
         """
-        Calculate J-coupling from local ATP and phosphate concentrations
-        
+        Calculate J-coupling from local ATP concentration and activity.
+
         Key insight from Fisher 2015:
         - ATP-bound phosphates: J = 20 Hz (strong)
         - Free phosphates: J = 0.2 Hz (weak)
         - During activity: ATP hydrolysis releases structured phosphates
         - These maintain J-coupling briefly before dissociating
         - Window of enhanced J provides quantum protection!
-        
+
+        WHY THERE IS NO PHOSPHATE TERM (PO-2, 2026-07-18, MO ruling 002). This method
+        previously took a `phosphate` argument, documented as "Total phosphate field (M)",
+        and NEVER READ IT (AST-verified). The docstring was the error, not the body:
+        J-coupling here is INTRAMOLECULAR — `quantum-system-canonical` §2.2 has the ³¹P
+        entanglement "inherited at 'birth' when two phosphates are released from the same
+        pyrophosphate/ATP — protected by molecular geometry (J-coupling)". Ambient free-
+        phosphate concentration is not what sets it, so reading `atp` (the birth pathway)
+        and not the ambient pool is the defensible physics. The dead parameter is removed
+        rather than wired up; adding a phosphate dependence would be new physics.
+
         Args:
             atp: ATP concentration field (M)
-            phosphate: Total phosphate field (M)
             activity: Activity field (0 or 1)
         """
         # Fraction of phosphate that's ATP-bound
@@ -407,12 +415,13 @@ class PhosphateSpeciation:
         tracks every mutation of either pool, including dimer consumption/dissolution applied
         directly to `phosphate_structural` by model6_core.
 
-        NOTE for whoever wires this next: as of 2026-07-18 this property's only consumer is
-        `ATPSystem.step` passing it to `JCouplingField.calculate_j_coupling`, which does NOT
-        read its `phosphate` argument (AST-verified; the argument is dead and its docstring
-        claims a dependency the body does not have). So correcting this value changes no
-        current behaviour — it is fixed because a wrong field is a trap for the next consumer,
-        not because a live consumer was misreading it. See coordination/queue/po2-phosphate.md Q3.
+        NOTE for whoever wires this next: as of 2026-07-18 this property has **NO consumer at
+        all**. Its only reader was `ATPSystem.step` passing it into `calculate_j_coupling`'s
+        `phosphate` parameter, which never read it (AST-verified); that dead parameter has now
+        been removed per MO ruling 002, since J-coupling is intramolecular. So deriving this
+        correctly changes no current behaviour — it is kept because a wrong field is a trap for
+        the next consumer, and pH buffering is its intended use. See
+        coordination/queue/po2-phosphate.md Q3 and requests/po2-phosphate/mo-ruling-002.md.
         """
         return self.phosphate_structural + self.phosphate_metabolic
 
@@ -599,9 +608,13 @@ class ATPSystem:
         self.phosphate.update_speciation(pH)
         
         # 4. Calculate J-coupling field (quantum protection!)
+        # NOTE: `phosphate.phosphate_total` was passed here into a parameter that was never
+        # read (PO-2 2026-07-18, MO ruling 002). Removed rather than wired up — J-coupling is
+        # intramolecular; see calculate_j_coupling. This leaves the derived `phosphate_total`
+        # property with NO consumer at all; it is retained as a correct derived accessor for
+        # pH-buffering use rather than deleted, but nothing reads it today.
         self.j_coupling.calculate_j_coupling(
             self.hydrolysis.atp,
-            self.phosphate.phosphate_total,
             self.hydrolysis.activity_field
         )
         
