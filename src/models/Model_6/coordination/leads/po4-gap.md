@@ -9,9 +9,49 @@ Demonstrated failing on the current 1 ms-per-30 s code first.
 was NOT met.** MO ruling 007 found **PHASE 12** and **PHASE 9** in neither column, i.e. my
 docstring violating the rule it states. **Now closed and mechanically enforced.** Both bars met;
 awaiting MO re-verification.
-**Current unit:** **Q4-5 COMPLETE** (`b8fa9a1`); **ruling 006's outstanding clause discharged**
-(`9a4208d`). No open unit. Awaiting MO verification.
-**Last heartbeat:** 2026-07-18 21:05Z
+**Current unit:** **ROTATION 002 COMPLETE** — `K_CLASSICAL` 0.05 → 0.005 landed with its measured
+delta. No open unit. Awaiting MO verification.
+**Last heartbeat:** 2026-07-18 21:35Z
+
+### 2026-07-18 21:35Z — rotation 002 done: the retired rate is out, and the delta is measured
+
+**Grounded independently before touching it** (not from the routing): canonical §3 line 99 gives
+`0.005 [GROUNDED — Turhan 2024]`; the chemistry skill records retirement of an **uncited** `0.05`;
+`sweep/phosphate_conservation_probe.py:69` already ran `0.005` — a third corroborating site.
+**One live site**, because of the consolidation.
+
+**Pre-registered the bracket BEFORE the change** (AMENDMENT E, script-computed — the AMENDMENT C
+lesson), then measured before and after at the same driven state (2034 dimers pre-gap):
+
+| gap | lost @ 0.05 | lost @ 0.005 | **loss ratio** | survival 0.05 → 0.005 |
+|---|---|---|---|---|
+| 20 s | 141 | 15 | **9.40×** | 0.9307 → 0.9926 |
+| 45 s | 539 | 66 | **8.17×** | 0.7350 → 0.9676 |
+
+Inside the registered bracket at both rates and both gaps, so the dissolution model is not
+falsified and **the constant is the explanation** for the move.
+
+**The framing that matters, and it cuts against the easy read:** survival moved **6.7%** at 20 s
+while dimers lost fell **9.4×**. **Quoting survival alone would make a 10× physics change look
+like noise.** Not exactly 10× because `k_diss = K·(1−se)` and fresh dimers enter at `se ≈ 0.997` —
+coherence protection suppresses dissolution at gap entry and `K` only dominates as `P_S` decays.
+The shortfall *is* that suppression, not an error.
+
+**NOT DAMPED.** Every multi-trial dissolution number produced before today inherits `0.05`.
+
+**Caught myself asserting instead of measuring:** I wrote into the separation probe that the
+correction "does not move" the headline, reasoning from the observable's type. That is the exact
+thing this PO keeps finding in other people's prose, so I tested it — **ΔV = +0.7764 at `0.05` vs
++0.7727 at `0.005`, difference 0.0037, inside thermal noise.** Invariance now rests on a re-run,
+not on an argument.
+
+**Propagated** the correction into my own artifacts (`GAP_SUBSYSTEM_TABLE.md`,
+`gap_separation_probe.py`); **annotated rather than rewrote** the prereg's §6 limit, since it was
+true for every run above it. **Routed, not edited:** `board.md`, `MO_MODEL6.md:130` and
+`mo-f2-001.md` still say `0.05` is live — MO-owned.
+
+**Commit rule adopted:** `git commit -m "..." -- <paths>`, verified with `git show --stat HEAD`
+after every write. Six commits this cycle, each carrying only its intended files.
 
 ### 2026-07-18 21:05Z — found and closed an instruction I had NOT discharged
 
