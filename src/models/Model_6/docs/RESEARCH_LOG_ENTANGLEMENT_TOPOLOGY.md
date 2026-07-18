@@ -78,6 +78,72 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 ## THE LOG (newest first)
 
+### L·T1'-6-PRE — PRE-REGISTRATION: population vs coherence channel separation · 2026-07-18  `[PRE-REGISTERED — written and committed BEFORE the run]`
+
+**This entry is committed before the arms are run. Nothing below has been observed.**
+
+**The charge.** Adversarial review of `RESULTS_T1prime_far_pairs_first.md` §6. §6 defends
+the ordering with *"Dissolution is spatially uniform — it lowers every pair's effective
+radius equally... It cannot generate a consistent spacing-ordered cascade."* The refutation,
+assembled from §4's own physics: (1) edge survival is governed by
+`d*_eff = λ·ln(max_pair(P_S²)/0.5)`, an EXTREME-VALUE statistic; (2) bonded pairs scale
+~N², and N falls 2200→98; (3) the max of fewer draws is smaller, so `d*_eff` contracts from
+population loss ALONE; (4) any contracting radius crosses gaps in width order (§2).
+⇒ dissolution is uniform in RATE but not order-neutral in EFFECT, and replication across
+seeds does not separate the channels.
+
+**Grounding finding that motivates the arms** `[GROUNDED, code]`: step (3) assumes RANDOM
+removal. `dimer_particles.py:230-241` removes `sorted(self.dimers, key=lambda d: d.coherence)`
+from index 0 — i.e. LOWEST-coherence first — and `coherence` is a strictly increasing affine
+map of `P_S` (`dimer_particles.py:57-62`). Attrition is therefore **rank-selective**: the
+survivor set is the top-n by current `P_S` and the argmax is the last thing removed. This is
+also the only live attrition path (`step_population` is called every step at
+`dimer_particles.py:602`; `_remove_dimer` at :252 has no callers). If that reading is right,
+the population channel should be *unable* to erode `max_pair(P_S²)` at all. **The arms are
+run anyway, because an argument from code is not a measurement.**
+
+**The arms** (`sweep/population_channel_arms.py`, replay — not fresh 2.7 h/seed sims), seeds
+0–3, wide ladder, 90 s, guards `CONSECUTIVE_ABSENT=3` / `MIN_BREAKS=3`, verdict can return
+CONFIRMED / FALSIFIED / INCONCLUSIVE:
+
+| arm | P_S decays | population decays | attrition rule | purpose |
+|---|---|---|---|---|
+| A | yes | yes | model (top-n) | reproduce the published result |
+| B | yes | **held** | — | coherence-only channel |
+| C | **frozen** | yes | model (top-n) | population-only channel |
+| D | **frozen** | **held** | — | null — ordering here means the rig is broken |
+| A_rand | yes | yes | **random** | the criticism's world, full |
+| C_rand | **frozen** | yes | **random** | the criticism's world, isolated |
+
+A_rand/C_rand are outside the pre-registered four; they exist so "is the N-dependence
+material?" gets a NUMBER under the criticism's own assumption rather than a dismissal.
+
+**PRE-REGISTERED READING OF OUTCOMES** (committed before looking):
+- **B orders, C does not** ⇒ coherence-driven. §6's conclusion stands; its *argument* is
+  rewritten on the rank-selectivity ground, which is the property that actually does the work.
+- **C orders, B does not** ⇒ the result is population-driven. §6 is REFUTED and the
+  coherence claim in §1/§5 must be retracted or restated. This entry commits us to reporting
+  that outcome if it occurs.
+- **BOTH order** ⇒ degenerate channels; T1′ cannot separate them. §6 must say so plainly and
+  the claim narrows to "spatially structured", not "coherence-driven".
+- **D orders** ⇒ rig artifact. Everything downstream is suspect; stop and report.
+- **C_rand orders while C does not** ⇒ the criticism is valid *in general* and refuted *for
+  this model specifically*, by the rank-selective removal rule. That distinction gets stated
+  explicitly rather than being allowed to read as "the criticism was wrong".
+
+**LIMITATION, pre-declared** `[MODELED]`: the population trajectory N(t) is NOT replayed
+from physics — the raw run logs were session-scoped scratchpad and are GONE. N(t) is
+log-linear interpolation through five transcribed seed-0 anchors from L·T1'-4 (2200 at t=0;
+1843/1043/259/98 at 14.5/32.5/61.5/78.0 s), applied to **all four seeds** because seeds 1–3
+trajectories were never persisted. So the C arms test whether the population channel orders
+**at all**, not seed-specific timing. Times are not scored in any arm. From this run on,
+traces are persisted to a tracked path (`src/models/Model_6/results/T1prime6_arms/`).
+
+**Known live tension to address regardless of outcome:** §6 defends only breaks 1–2 as
+unconfounded, which is TWO breaks — below the experiment's own `MIN_BREAKS=3` sufficiency
+bar. The unconfounded subset does not score under the probe's own rule. This must be stated
+in §6 explicitly, not left implicit.
+
 ### L·T1'-5 — T1' replication complete: 4/4 seeds far-pairs-first, CONCLUSIVE · 2026-07-17  `[GROUNDED, 4 seeds]`
 
 Seeds 1–3 run in parallel (3 cores, ~2.7 h wall; parallelism cost ~nothing — each ran at
