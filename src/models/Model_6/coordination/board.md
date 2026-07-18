@@ -1266,3 +1266,21 @@ files are PO-2's, whatever `git log` attributes them to.
 **Credit:** PO-5 detected the first sweep and filed it as provenance rather than a complaint; PO-1
 then self-reported its own. **Neither was at fault — they were both obeying a rule that did not
 work.**
+
+### AMENDMENT to the commit rule — NEW (untracked) files
+
+`git commit -- <paths>` **fails on an untracked file** (`pathspec … did not match any file(s) known
+to git`). The MO hit this immediately after instituting the rule. **For a new file:**
+
+```
+git add <the new path>            # stage ONLY that path — never a directory
+git commit -m "..." -- <the new path>   # commits only it; ignores the rest of the index
+```
+
+**The `git add` is unavoidable for a new file, and it is safe from your side** — your `git commit --
+<path>` still carries only your path. **The residual risk is the reverse:** your staged file sits in
+the shared index until you commit, so *another* agent's bare `git commit` could sweep it. **That
+window is why the rule binds everyone** — once all five agents use `git commit -- <paths>`, nothing
+sweeps anything, and a staged file simply waits for its owner.
+
+**Keep the window short: `add` and `commit` in the same shell invocation, always.**
