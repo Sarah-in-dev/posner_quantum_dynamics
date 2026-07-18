@@ -388,7 +388,34 @@ class QuantumParameters:
     
     # Characteristic singlet lifetimes (emergent from J-coupling spread)
     # These replace the old T2 values for coherence decay
-    T_singlet_dimer: float = 500.0   # s (dimers: ~100-1000s from Agarwal)
+    #
+    # CORRECTED 500.0 -> 216.0 on 2026-07-18 (MO ruling 006, from the SWEEP-2 finding).
+    # This field previously declared 500.0 s while the code RAN 216.0 s — the live value was
+    # a hardcoded literal in two places (dimer_particles.py, quantum_coherence.py) and this
+    # field was read only by singlet_dynamics.py, an orphan module never imported. So the
+    # declared value was not the simulated value, and anything quoting 500 s as the model's
+    # dimer coherence time was quoting a number the model never used.
+    #
+    # 216 s is the correct value, and NOT merely because it is the one that was running.
+    # From the model's own constants — P_S thermal floor 0.25 and the Werner separability
+    # floor 1/sqrt(2) — P_S crosses the Werner floor at:
+    #     T_singlet = 216 s  ->  107.0 s      T_singlet = 500 s  ->  247.6 s
+    # `quantum-system-canonical` puts the coherence window at ~100-200 s and calls its
+    # mapping to the BTSP window the load-bearing correspondence. 107 s is inside that band;
+    # 247.6 s is not. So 216 s is the value that makes the ontology's central correspondence
+    # hold, and the old 500 s would have broken it. The 500 cited "~100-1000s from Agarwal",
+    # a range so wide it constrains nothing.
+    #
+    # DIRECTION OF FIX IS ONE-WAY: the parameter was moved to match the physics. Do NOT
+    # adjust the 216 s to match a declared number — that is tuning a constant to reach an
+    # outcome (MO_MODEL6 §7).
+    T_singlet_dimer: float = 216.0   # s — P31 dimer singlet lifetime (Agarwal; dipolar
+                                     # relaxation only). THE single source: dimer_particles
+                                     # and quantum_coherence both read this field. Do not
+                                     # re-introduce a local literal.
+    T_singlet_dimer_P32: float = 0.4 # s — P32 control (quadrupolar relaxation dominates).
+                                     # The isotope kill-switch weights these two by
+                                     # environment.fraction_P31.
     T_singlet_trimer: float = 0.5    # s (trimers: <1s from Agarwal)
     
     # Dipolar relaxation (from Agarwal MD simulations)

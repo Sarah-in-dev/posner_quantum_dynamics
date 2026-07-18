@@ -194,13 +194,21 @@ EFFECT_CASES = [
     ("q1_n_tryptophan",     "tryptophan.n_trp_baseline", 50,     500,   "collective_field_kT"),
     ("q1_f_coherent_base",  "tryptophan.f_coherent",     0.04,   0.10,  "collective_field_kT"),
     ("q2_phosphate_initial","phosphate.phosphate_total", 0.0001, 0.010, "n_dimers"),
+    # Resolved from INERT by MO ruling 006 — kept here as a REGRESSION GUARD. If the
+    # de-duplication is ever reverted to local literals, this stops moving and the audit
+    # says so. The effect is small at short horizons BY CONSTRUCTION: T_singlet is a ~100 s
+    # time constant and the probe runs 40 ms, so what is demonstrated is that the parameter
+    # reaches the physics with the right sign, not the magnitude a real sweep would see.
+    ("q2_t2_p31",           "quantum.T_singlet_dimer",   50.0,   500.0, "mean_P_S"),
 ]
 
 
 def _observables(syn):
     import numpy as _np
+    _d = syn.dimer_particles.dimers
     return {
-        "n_dimers": len(syn.dimer_particles.dimers),
+        "mean_P_S": round(float(_np.mean([x.singlet_probability for x in _d])), 12) if _d else -1.0,
+        "n_dimers": len(_d),
         "collective_field_kT": round(float(getattr(syn, '_collective_field_kT', 0.0)), 6),
         "em_field_trp": round(float(getattr(syn, '_em_field_trp', 0.0)), 3),
         "k_enhancement": round(float(getattr(syn, '_k_enhancement', 0.0)), 9),

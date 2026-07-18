@@ -60,15 +60,15 @@ INERT_DIMENSIONS: Dict[str, str] = {
         "(1) NO CONSUMER. dendritic_backbone.chi_redistribution: declaration only, zero reads.",
     "q1_kT_per_modulation":
         "(1) NO CONSUMER. dendritic_backbone.kT_per_modulation_unit: declaration only.",
-    "q2_t2_p31":
-        "(2) CONSUMER HARDCODED — and the values disagree. The live dimer singlet lifetime "
-        "is a hardcoded literal T_singlet_P31 = 216.0 s, duplicated at "
-        "dimer_particles.py:288 and quantum_coherence.py:107. The parameter this dimension "
-        "writes, quantum.T_singlet_dimer = 500.0, is read ONLY by singlet_dynamics.py:122 — "
-        "an orphan module never imported. So the declared value (500 s) is not the value the "
-        "physics runs (216 s), and the sweep varies the dead one. NOT re-pointed here: "
-        "wiring it means turning a literal in PO-5's live file into a params read, and the "
-        "dimension's own label 'current default 500s' is wrong. ROUTED, not fixed.",
+    # q2_t2_p31 — RESOLVED 2026-07-18 (MO ruling 006), no longer inert. It was
+    # CONSUMER-HARDCODED: the live dimer singlet lifetime was a literal T_singlet_P31 = 216.0
+    # duplicated in dimer_particles.py and quantum_coherence.py, while the parameter this
+    # dimension writes (quantum.T_singlet_dimer) said 500.0 and was read only by an orphan.
+    # Fixed one-way — the PARAMETER moved to the physics (500 -> 216), never the reverse —
+    # and both literals now read the single field. Demonstrated live: driving
+    # T_singlet_dimer 50/216/500 moves mean P_S 0.998512/0.998893/0.998949, monotonic in the
+    # physically correct direction, with de-duplication verified bit-identical to pre-change.
+    # 216 s is load-bearing for quantum-system-canonical §2.2 — do NOT retune it.
     "q2_j_coupling_hz":
         "(1) NO CONSUMER, and the parameter is scale-mismatched to the thing it names. "
         "quantum.J_intrinsic_dimer = 15.0 Hz has ONE write (sweep_runner.py:73) and ZERO "

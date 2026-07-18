@@ -282,12 +282,18 @@ class DimerParticleSystem:
         # Singlet dynamics parameters (from Agarwal 2023)
         P_S_thermal = 0.25  # Thermalized (maximally mixed) state
         
-        # ISOTOPE-SPECIFIC singlet lifetimes
+        # ISOTOPE-SPECIFIC singlet lifetimes — READ FROM PARAMS, not hardcoded.
         # P31: T_singlet ~216s (Agarwal - dipolar relaxation only)
         # P32: T_singlet ~0.4s (quadrupolar relaxation dominates)
-        T_singlet_P31 = 216.0  # s
-        T_singlet_P32 = 0.4    # s
-        
+        #
+        # De-duplicated 2026-07-18 (MO ruling 006). These were literals here AND in
+        # quantum_coherence.py — two copies of one physical constant, which is the same
+        # defect class as the two coupling_length constants. Values are unchanged
+        # (216.0 / 0.4); the single source is now model6_parameters.QuantumParameters.
+        # getattr defaults keep older param objects working.
+        T_singlet_P31 = getattr(self.params.quantum, 'T_singlet_dimer', 216.0)
+        T_singlet_P32 = getattr(self.params.quantum, 'T_singlet_dimer_P32', 0.4)
+
         # Get isotope fraction from params
         fraction_P31 = getattr(self.params.environment, 'fraction_P31', 1.0)
         
