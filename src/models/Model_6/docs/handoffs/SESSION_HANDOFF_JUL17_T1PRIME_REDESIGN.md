@@ -1,24 +1,37 @@
 # SESSION HANDOFF — 2026-07-17 — T1′ redesigned, wide-ladder run LAUNCHED
 
 **For a new thread.** Everything below is measured against code/data this session unless
-tagged otherwise. All commits are **LOCAL/UNPUSHED** (upstream `origin/master` at
-`029f52b`). A run is **LIVE** — see §7.
+tagged otherwise. Branch `claude/nervous-hertz-7ccff6` is **PUSHED** through `64711d4`;
+three later commits (research log, replication, ERR-1 correction) are **local-only**.
+Upstream `origin/master` is untouched at `029f52b`.
+
+**STATUS: T1′ IS COMPLETE AND CONCLUSIVE — 4/4 seeds, far-pairs-first, p≈3×10⁻⁶.**
+Nothing is running. See §7 for the result table. The authoritative record is the research
+log `docs/RESEARCH_LOG_ENTANGLEMENT_TOPOLOGY.md` (entries T1'-1…T1'-5, dt-1, ERR-1) —
+read that before this handoff; this doc is the session narrative, the log is the provenance.
 
 Companion: `SESSION_HANDOFF_JUL16_TOPOLOGY_DT_FIX.md` (the failed run + the dt fix). This
 handoff supersedes that one's §3 REDESIGN plan — **that plan was wrong; see §2 here.**
 
 ---
 
-## 1. WHERE T1′ STANDS
+## 1. WHERE T1′ STANDS — **DONE. CONFIRMED. CONCLUSIVE.**
 
 T1′ asks: as coherence decays, does the entanglement partition fragment FAR-PAIRS-FIRST
 (largest gap first)? It is the discriminating experiment — a classical scalar eligibility
 trace decays uniformly and carries no spatial structure, so it CANNOT produce a
 spacing-ordered cascade.
 
-**The order is STILL UNTESTED.** A wide-ladder seed-0 run is LIVE (§7). Net scientific
-result on the hypothesis so far: unchanged — nothing yet. What this session produced is a
-*trustworthy, powered, correctly-sized* experiment and the instruments that justify it.
+**ANSWERED: yes.** Four independent seeds, all four breaking in the exact pre-registered
+order 3.35 → 2.90 → 2.45 → 2.00 µm. p = (1/24)⁴ ≈ 3.0×10⁻⁶ against the classical null.
+Full table and the confound argument in §7 and in research-log entry T1'-5.
+
+**Altitude (do not inflate):** this is the **(A)** reading — the *model's* partition
+carries spatial structure a classical scalar trace cannot. It is a discrimination win for
+the theory of expected operation. It is **NOT** a quantumness claim; the attribution gap
+(`quantum-computation-and-attribution` §5) is untouched. Sarah's locked frame: *"we will
+never be able to model quantum in a silicon system, but we can model how the system expects
+to work."*
 
 ---
 
@@ -137,25 +150,43 @@ these reached a false CONFIRMED.
 
 ---
 
-## 7. THE LIVE RUN
+## 7. THE COMPLETED RUNS — 4/4, all in the pre-registered order
 
-- **T1′ wide-ladder, seed 0**, 90 s silence window, dt=0.001.
-- Launched under `caffeinate -i` (no sleep) + `nohup` (survives closed terminal), one
-  core, ~425 MB.
-- **Log:** `scratchpad/T1prime_wide_seed0_90s.log` (session-scoped — copy it to keep it).
-- t=0 pre-checked: 4 live edges formed, 3 dark controls dark, 2223 dimers.
-- ~8 h projected (measured 321 s wall per sim-second at ~2.2k dimers).
-- **Score the ORDER only:** predicted 3.35 → 2.90 → 2.45 → 2.00. A correct order with ≥3
-  clean breaks is p≈0.04 vs the classical null; a second seed takes it to p≈0.002.
-- Watch `n_dimers`: if the population craters before the cascade finishes the run is
-  confounded and only the order survives. Uniform dissolution PRESERVES the order (lowers
-  every pair's radius equally); only total collapse destroys it.
+Wide ladder `[3.35, 4.5, 2.90, 4.5, 2.45, 4.5, 2.00]µm`, 90 s silence, dt=0.001, under
+`caffeinate` + `nohup`. Seed 0 ran alone (~2.7 h); seeds 1–3 ran in PARALLEL on separate
+cores (~2.7 h wall for all three — parallelism cost ~nothing: each held ~355 s/sim-s, the
+same rate seed 0 ran at alone, ~490 MB each).
+
+| seed | gap 3.35 | gap 2.90 | gap 2.45 | gap 2.00 | verdict |
+|---|---|---|---|---|---|
+| 0 | 14.5 s | 32.5 s | 61.5 s | 78.0 s | CONFIRMED |
+| 1 | 14.0 s | 37.0 s | 55.0 s | 82.5 s | CONFIRMED |
+| 2 | 14.0 s | 42.0 s | 54.5 s | 71.0 s | CONFIRMED |
+| 3 | 11.0 s | 32.5 s | 64.5 s | 82.0 s | CONFIRMED |
+
+**Order invariant; times not** — gap 2.90 broke anywhere from 32.5 to 42.0 s across seeds.
+That is the score-order-never-times decision vindicated in data, not argument.
+
+**The population confound, and why replication closes it.** Breaks 3–4 land in a cratered
+population (~2200 → <100 dimers), so their TIMES are confounded by dimer-loss. Their ORDER
+is not: dissolution is spatially UNIFORM, so it drives edges toward dying *together*, not
+in gap-spaced order. It cannot fake a consistent gap-ordered cascade across four
+independent stochastic realizations; only the coherence/distance mechanism does.
+
+**Guards worked live:** flickers were caught and NOT scored (seed 0 flickered on gap 3.35
+at t=14.0 before its real break at 14.5). The verdict function that CAN return INCONCLUSIVE
+returned CONFIRMED honestly — the opposite of the Jul-16 failure.
+
+Logs are session-scoped scratchpad (`T1prime_wide_seed{0,1,2,3}_90s.log`) — **copy them if
+you want them**. The durable record is research-log entry T1'-5.
 
 ---
 
 ## 8. OPEN ITEMS
 
-1. **Score the live seed-0 run** (order only). If confirmed, run seed 1 for p≈0.002.
+0. **T1′ is CLOSED** — 4/4 confirmed, documented (research log T1'-1…T1'-5). Do not re-run
+   it, re-tune it, or "improve" the geometry. If anyone wants more seeds the machinery
+   takes `--seeds N M ...`, but the result does not need them.
 2. **D8/D14/D16/D17 re-read** against the ~3× operating-point shift — physics call, NOT
    reopened by dt (§4). Sarah's.
 3. **Physics ECS account.** The AWS credentials on this machine reach ONLY an unrelated
