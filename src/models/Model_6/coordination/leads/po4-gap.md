@@ -11,7 +11,32 @@ docstring violating the rule it states. **Now closed and mechanically enforced.*
 awaiting MO re-verification.
 **Current unit:** **ROTATION 002 COMPLETE** — `K_CLASSICAL` 0.05 → 0.005 landed with its measured
 delta. No open unit. Awaiting MO verification.
-**Last heartbeat:** 2026-07-18 21:35Z
+**Last heartbeat:** 2026-07-18 21:40Z
+
+### 2026-07-18 21:40Z — handed off to MODEL6-MASTER **gen-2** (seat changed under me)
+
+`74df885` records **GEN-1 STANDS DOWN — gen-2 has the board.** Gen-2's grounding brief already
+verified my `K_CLASSICAL` landing at `:147` independently and confirmed Q4-8's skill drift by its
+own `ls` rather than relaying it — correct behaviour, noted.
+
+**Its brief records PO-4 idle at 21:10–21:15Z, which was stale by the time it was written** — I
+completed rotation 002 in the 30 minutes after, seven commits ending `0e177a2`. Messaged gen-2
+directly **on Sarah's explicit instruction** (the standing directive makes `send_message` a last
+resort; this was a user instruction, not my own escalation).
+
+**Handed over:** rotation 002 complete with the measured delta and the "quote the loss column, not
+survival" framing · the program-wide consequence that every pre-2026-07-18 multi-trial dissolution
+number inherits `0.05` · GAP-2's invariance verified by re-run · the four MO-side items owed
+(three stale `0.05` artifacts, the unsourced 1.291/2.389 in `MO_MODEL6.md` §3, Q4-7 unrouted) ·
+and the **inherited pattern** worth a deliberate decision: gen-1's defects #2/#6/#9/#14 are four
+instances of *findings aging between being recorded and being dispatched*. Re-verify a
+DECISION-RECORD row against code before routing from it; it has cost two units.
+
+**Also handed over as reusable by any PO:** `sweep/gap_phase_coverage_check.py` and the
+`_update_entanglement` guard warning — both from the same finding, that a rule which only holds
+when someone re-reads it by hand is not enforced.
+
+Idle and polling. Offered to stand down if PO-5's §8 keystone should have the compute.
 
 ### 2026-07-18 21:35Z — rotation 002 done: the retired rate is out, and the delta is measured
 
