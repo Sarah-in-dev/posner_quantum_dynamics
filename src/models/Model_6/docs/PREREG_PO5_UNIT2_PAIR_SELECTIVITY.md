@@ -185,6 +185,37 @@ instance with a counter. **If it is ever called, the run aborts immediately and 
 to the original and alters nothing; it is a tripwire, not a patch. **PO-5 does not fix the defect** —
 it is routed to PO-7.
 
+## AMENDMENT A2.4 — cell size corrected 40 nm → 8 nm, registered 2026-07-18 BEFORE any scoring
+
+**The first Q-B launch was KILLED by PO-5 after 3 of 9 runs (~11 min), unscored.** Reason: with
+`CELL_NM = 40.0` the probe reported **`cells = 4`** occupied cells against a registered
+`MIN_CELLS = 10`, so `classify()` would have returned **`INCONCLUSIVE` regardless of the physics.**
+That is a verdict that cannot distinguish its outcomes — the exact failure `MO_MODEL6.md` §2.3 and
+the `683b82f` scar exist to prevent — and it would have consumed ~50 min of the exclusive slot to
+produce a guaranteed non-result.
+
+**The new value is derived from Unit 1's independently-measured geometry, NOT from any Q-B outcome.**
+`L·PO5-1`, four samples: `r_p10 = 3.71`, `r_p50 = 9.78`, `r_p90 = 16.18`, **`r_max = 36.45 nm`** —
+the entire intra-synapse dimer cloud spans ~36 nm, so a 40 nm cell is larger than the whole object
+being binned. `CELL_NM = 8.0` is chosen because it sits **above `r_p10`** (so a cell is not dominated
+by a single close pair) and **below `r_p50`** (so within-cell and between-cell are distinguishable),
+giving ~4–5 cells per axis across the cloud and an expected ~20 occupied cells at `MIN_OCC = 5`.
+
+**No verdict threshold moves.** `RATIO_CONFIRM = 3.0`, `RATIO_FALSIFY = 1.5`, `MIN_OCC = 5`,
+`MIN_CELLS = 10` and the A2.2 precedence are all unchanged. `CELL_NM` is a **resolution** parameter,
+not a scoring threshold, and it is corrected because at 40 nm the instrument had no resolution at
+all. **Nothing was scored at 40 nm; there is no result to compare against and none is being
+discarded.**
+
+**Disclosure standard applied:** this is registered here, before the re-run, rather than noted
+afterwards — and the killed run's log is preserved at `results/po5/unit2_qb_KILLED_cell40.log`.
+
+**A2.5 — a pre-flight gate is added so this class of waste cannot recur.** Before the 9-run matrix
+starts, the probe runs a **1 s single-arm pre-flight** and asserts the occupied-cell count clears
+`MIN_CELLS`. If it does not, the probe **aborts before consuming the slot** and reports
+`PREFLIGHT_FAIL` with the observed cell count. A resolution failure is now caught in ~1 minute
+instead of ~50.
+
 ## 7. Compute
 
 Q-A validation and the smoke test are cheap (single short run). **The full Q-B matrix is 9 runs and

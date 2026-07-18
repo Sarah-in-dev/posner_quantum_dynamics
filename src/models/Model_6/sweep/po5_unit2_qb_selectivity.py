@@ -48,7 +48,10 @@ RATIO_FALSIFY = 1.5
 MIN_OCC = 5            # min dimers in a cell for it to be scored
 MIN_CELLS = 10         # min occupied cells, else INCONCLUSIVE
 SUBSET_MIN_BONDS = 1000   # A2.2 sub-set guard
-CELL_NM = 40.0         # cell size; reported with the verdict (PREREG §8)
+# AMENDMENT A2.4: was 40.0, which gave cells=4 against MIN_CELLS=10 -> the verdict could
+# only ever return INCONCLUSIVE. 8.0 is derived from Unit 1's measured geometry
+# (r_p10=3.71 < 8.0 < r_p50=9.78; whole cloud r_max=36.45 nm), NOT from any Q-B outcome.
+CELL_NM = 8.0          # cell size; reported with the verdict (PREREG §8)
 BIRTH_WINDOW = 0.1
 
 
@@ -333,6 +336,20 @@ def main():
     print("PO-5 UNIT 2 · Q-B — pair-level input selectivity")
     print(f"  T={T}s dt={dt} cell={CELL_NM}nm  arms: A(seeds {SEEDS_A}) B({SEEDS_B}) NULL({SEEDS_NULL})")
     print("=" * 78, flush=True)
+
+    # ---- AMENDMENT A2.5 pre-flight: prove the instrument has resolution before
+    # consuming the exclusive slot. A resolution failure now costs ~1 min, not ~50.
+    print("PRE-FLIGHT (A2.5): 1 s run, asserting occupied cells >= MIN_CELLS", flush=True)
+    pf = run_arm("A", 999, 1.0, dt, [1.0], log)
+    pf_cells = pf["snaps"][-1]["mats"]["K"] if pf["snaps"][-1]["mats"] else 0
+    print(f"  pre-flight cells={pf_cells} (need >= {MIN_CELLS}), "
+          f"elapsed={pf['elapsed_s']:.0f}s", flush=True)
+    if pf_cells < MIN_CELLS:
+        print(f"\nPREFLIGHT_FAIL: {pf_cells} occupied cells < MIN_CELLS={MIN_CELLS}. "
+              f"The verdict could only return INCONCLUSIVE. Aborting BEFORE the matrix.",
+              flush=True)
+        sys.exit(1)
+    print("  pre-flight PASS — the instrument has resolution. Starting matrix.\n", flush=True)
 
     plan = ([("A", s) for s in SEEDS_A] + [("B", s) for s in SEEDS_B] +
             [("A", s) for s in SEEDS_NULL])
