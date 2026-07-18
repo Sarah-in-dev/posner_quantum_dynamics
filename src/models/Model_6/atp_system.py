@@ -515,12 +515,25 @@ class PhosphateSpeciation:
         """
         amount = np.maximum(amount, 0.0)
 
-        from_metabolic = np.minimum(amount, self.phosphate_metabolic)
-        self.phosphate_metabolic -= from_metabolic
+        if getattr(self, 'atp_synthesis_debit_mode', 'metabolic_first') == 'proportional':
+            # Q2 SENSITIVITY ARM (MO ruling 001: "implement neither silently ... if the two
+            # choices give different conservation outcomes, that difference is itself a
+            # finding"). Debits both pools in proportion to their size.
+            avail = self.phosphate_metabolic + self.phosphate_structural
+            safe = np.where(avail > 0, avail, 1.0)
+            frac_met = np.where(avail > 0, self.phosphate_metabolic / safe, 0.0)
+            from_metabolic = np.minimum(amount * frac_met, self.phosphate_metabolic)
+            self.phosphate_metabolic -= from_metabolic
+            remainder = amount - from_metabolic
+            from_structural = np.minimum(remainder, self.phosphate_structural)
+            self.phosphate_structural -= from_structural
+        else:
+            from_metabolic = np.minimum(amount, self.phosphate_metabolic)
+            self.phosphate_metabolic -= from_metabolic
 
-        remainder = amount - from_metabolic
-        from_structural = np.minimum(remainder, self.phosphate_structural)
-        self.phosphate_structural -= from_structural
+            remainder = amount - from_metabolic
+            from_structural = np.minimum(remainder, self.phosphate_structural)
+            self.phosphate_structural -= from_structural
 
         # If this ever trips, synthesis was not limited by availability upstream and the
         # ledger will show a leak. Loud, because a silent shortfall is the defect this

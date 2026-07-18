@@ -7,7 +7,7 @@ consumption.
 
 **Status:** LIVE — grounding brief returned 2026-07-18 19:46Z.
 **Current unit:** pre-registration (§2.4), then the conservation probe committed FAILING first.
-**Last heartbeat:** 2026-07-18 20:34Z
+**Last heartbeat:** 2026-07-18 20:52Z
 **Blocked on:** — (two open questions in `queue/po2-phosphate.md`, neither blocking; working on)
 
 ## HEARTBEAT LOG
@@ -135,3 +135,44 @@ physics call — this one gates my item 2.**
 loop that creates mass. **I do NOT declare the edge cleared** — that is the MO's call, and it
 should weigh that depletion feedback is unexercised in the tested regime. Recommend PO-6 be
 unblocked for the sweep while treating "does the pool actually deplete" as an open input.
+
+### 2026-07-18 20:52Z — MO ruling 001 received and discharged (Q1, Q3); Q2 sensitivity running
+
+**Polled `requests/po2-phosphate/` — ruling 001 was waiting. All three questions ruled.**
+
+**Q3 — CONFIRMED, and the MO traced it one step further than I did.** My acceptance item 2 is
+**REPLACED** with: *"Establish, and report with `file:line` evidence, whether `phosphate_total`
+has any live consumer after your fix — and state plainly that J-coupling does not read phosphate."*
+
+**DISCHARGED. Verified independently by AST rather than relaying the MO's line numbers**
+(a PO relaying an unverified number is defect #8's shape, one level down):
+
+```
+derived property defined : atp_system.py:402
+reads of the property    : atp_system.py:591   (self.phosphate.phosphate_total)
+                           -> passed into calculate_j_coupling's DEAD  parameter
+repo-wide, excluding params.phosphate_total : NO other read exists
+```
+
+**So the derived `phosphate_total` has NO live consumer. It is computed, passed, and dropped.**
+And plainly, as instructed: **J-coupling does not read phosphate.** `SUBSTRATE_AUDIT_JUL18`
+item 11's causal claim is false, and my defect-1 fix is correct hygiene that fixed **no live bug**
+— already stated that way in commit `837a511` and research-log row PO2-2.
+
+**Q1 — clamp is a domain constraint, not the pin's forbidden cap; instrument it. ALREADY
+DISCHARGED** before the ruling landed: C3 counts activations and reports them with the
+conservation result — **0 activations in every arm, every run.**
+
+**Q2 — pick a defensible pool, pre-register it, and report whether the two differ.**
+Implemented metabolic-first as pre-registered; proportional added as a switchable sensitivity arm.
+**Answer to the MO's actual question: conservation is IDENTICAL under both** — `+9.745e-15` vs
+`+1.035e-14` relative, both under ε=1e-12. That is structural, not empirical: the ledger sums
+both pools and the total debited is the same either way; only the split moves.
+
+**One observation I am NOT claiming.** At n=1 the modes differ downstream — structural pool by
+0.12%, standing dimer by 2.9% (3.7248e-3 met-first vs 3.8334e-3 proportional). **A single sample
+is not a mechanism** — that is precisely the error PO-3 withdrew F-3 over (*"I read a single
+sample as confirmation of a mechanism I had not measured"*), and D18 established this system is
+near-critical and bistable with large between-seed variance, which is exactly where n=1 misleads.
+**Running 3 seeds, backgrounded, persisted incrementally. If it does not resolve, I report the
+difference as UNRESOLVED rather than as an effect.**
