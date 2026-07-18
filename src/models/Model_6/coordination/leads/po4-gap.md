@@ -11,7 +11,44 @@ docstring violating the rule it states. **Now closed and mechanically enforced.*
 awaiting MO re-verification.
 **Current unit:** **ROTATION 002 COMPLETE** — `K_CLASSICAL` 0.05 → 0.005 landed with its measured
 delta. No open unit. Awaiting MO verification.
-**Last heartbeat:** 2026-07-18 21:55Z
+**Last heartbeat:** 2026-07-18 22:05Z
+
+### 2026-07-18 22:05Z — rotation 003 was already delivered when the wake arrived; and I found a ~33× error in my own report
+
+**The wake crossed with the work.** Rotation 003 was posted at 21:40Z and delivered at 21:55Z
+(`7e3a0c8`, `9a50625`, `dc6d0b8`) before gen-2's message arrived. Nothing was owed; no reply sent
+(the ruling says reply on the backbone).
+
+**Then I re-checked my own §4 and it was wrong by ~33×, in the direction that made the defect look
+harmless.** I had reported the gap's missing `template_enhancement` as *"0.03% of the grid, mean
+1.015 — spatially confined."* **Wrong denominator.** Formation is *itself* template-catalysed
+(`ca_triphosphate_complex.py:346`), so dimers are **born** at template sites:
+
+| measure | value |
+|---|---|
+| grid-mean `template_enhancement` | 1.015 ← what I published |
+| **concentration-weighted** | **32.5 – 34.4** |
+| dimer particles `template_bound` | **97.4%** |
+
+**And it partially reframes rotation 002 — against my own work:**
+
+| path | effective `k_diss` | vs within-trial |
+|---|---|---|
+| within-trial | `0.005 × 33 ≈ 0.165` | — |
+| gap before my fix | `0.05` | 3.3× too slow |
+| gap after my fix | `0.005` | **33× too slow** |
+
+**My `K` correction widened the gap-vs-within-trial mismatch from ~3.3× to ~33×.** The retired
+`0.05` was accidentally compensating for the missing catalytic term.
+
+**Not reverted, not damped.** `0.005` is the correct grounded *bare* rate; the gap's **formula** is
+what is incomplete, and fixing the constant *exposed* it. Escalated as **Q4-10 UPGRADED** with the
+measured magnitude, and **flagged that rotation 003's YES verdicts were judged at the corrected
+`K`, so the table is not final until Q4-10 is ruled.**
+
+**What I refused to estimate:** formation is off during silence, so adding the template term means
+~33× faster gap dissolution with no compensating formation. Whether that is right is the physics
+call — not mine.
 
 ### 2026-07-18 21:55Z — ROTATION 003 COMPLETE (`docs/K_CLASSICAL_BLAST_RADIUS.md`)
 
