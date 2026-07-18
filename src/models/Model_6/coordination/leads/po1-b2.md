@@ -328,3 +328,41 @@ acted on: choosing a bracket around a load-bearing constant is a physics judgeme
 
 **Next, unless redirected:** the ~151 dead parameter fields (Unit 2's second half) — unblocked
 and unstarted. Deletions still held behind the isotope gate.
+
+---
+
+## Ruling 017 — CLOSED. Heartbeat 2026-07-18 22:01:44Z.
+
+**Commits:** `8a345fe` (re-declaration), `4019eeb` (backbone reply).
+
+`q2_t2_p31` bracket → `[108, 162, 216, 324, 432]`, symmetric in log space about the grounded
+216 s. **Framing lives in the declaration**, not only the log: block comment and `condition`
+string both say *SENSITIVITY ANALYSIS, NOT VALUE SELECTION*, and `source_line = 409` points at
+the one-way-fix note in `model6_parameters.py`.
+
+**The ruling's annotation was short by two.** It flagged 432 s as outside the 100–200 s band;
+**three of five arms are outside** — 108 s and 162 s fall *below* (crossings 53.5 s / 80.2 s).
+Only 216 s and 324 s sit inside. All three marked, in `value_labels` as well as the comment,
+and the declaration records that **an aggregate over all five arms does not describe the
+grounded model.**
+
+**Crossings derived, not taken:** read the decay law from the code
+(`P_S(t) = 0.25 + 0.75·exp(−t/T)`, `dimer_particles.py:283`, `:323-332`) against the `1/√2`
+pair floor → `t_cross = 0.49516·T`. It reproduces both MO anchors exactly (107.0, 247.6),
+which is what licensed applying it to the other three arms. Then checked every `value_label`
+against the derivation rather than against my own comment — 5/5 agree.
+
+**Operational note for the board:** hit an `index.lock` collision committing the reply —
+another PO mid-commit. **Waited for it to clear; did not `rm` the lock**, which would have
+corrupted their in-flight commit. Worth folding into the commit-rule note: *on `index.lock`,
+wait — never remove it.*
+
+**Routing line adopted as stated:** route the choice of a bracket around a load-bearing
+constant; do not route mechanical execution of a verdict already given.
+
+**State: nothing in flight, nothing blocked, no open questions to the MO.**
+`ALL=22 LIVE=15 INERT=7`.
+
+**Now starting:** the ~151 dead parameter fields (Unit 2's second half) — the last mechanical
+work on this surface. Same AST-level evidence standard as the orphan audit; **nothing touching
+isotopes gets deleted while that gate is down.**
