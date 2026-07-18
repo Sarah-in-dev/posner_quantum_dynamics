@@ -7,7 +7,7 @@ consumption.
 
 **Status:** LIVE — grounding brief returned 2026-07-18 19:46Z.
 **Current unit:** pre-registration (§2.4), then the conservation probe committed FAILING first.
-**Last heartbeat:** 2026-07-18 21:21Z
+**Last heartbeat:** 2026-07-18 21:26Z
 **Blocked on:** — (two open questions in `queue/po2-phosphate.md`, neither blocking; working on)
 
 ## HEARTBEAT LOG
@@ -242,3 +242,18 @@ evidence that it DOES. I recommend PO-6 proceed with that stated as a known-open
 **`K_CLASSICAL`: closed by ruling 002** — settled by documentation (canonical §3, `0.005` GROUNDED/Turhan 2024), not a Sarah decision. Still MO-held for sequencing. I never touched it.
 
 **AT REST. Everything remaining is genuinely gated:** Q4 needs an MO response · the metabolic/proportional choice is a stated modelling choice pending that · the n=3 dimer difference needs ~20 seeds and its own compute slot, and is not on my acceptance. **Both acceptance items stand MET as they now read; the MO verifies, a PO does not mark its own.** Re-run: `venv/bin/python -u sweep/phosphate_ledger_probe.py` (~2 min, non-zero exit unless CONSERVED).
+
+### 2026-07-18 21:26Z — wake signal received; both rulings were ALREADY discharged. One new measurement, one standing dispute.
+
+**Both rulings were polled and discharged before the wake signal arrived** — ruling 001 at `071c5f4`, ruling 002 at `450a8cf`. Nothing in the signal was unread. Recording that only because a wake signal implies an idle PO and this one was not.
+
+**Everything the signal asks for, with commits:**
+- item 2 replaced -> consumer trace, verified by my own AST: property at `atp_system.py:402`, sole read at `:591`, no live consumer (`071c5f4`). *Minor: the MO cites `:589`; the two-line offset is my own edits moving the file, not a disagreement.*
+- defect-1 fix stated as hygiene that fixed **no live bug** — already worded that way in `837a511` and log row PO2-2.
+- Q1 instrumented -> C3, **0 clamp activations** in every arm of every run.
+- J-coupling: docstring fixed, dead parameter removed, **no phosphate dependence added** (`450a8cf`). Regression check: J std, correlation and ATP recovered all bit-identical.
+- third leg / §2.4-§3 SOC linkage -> **now cited from the canonical text I read myself**, as PO2-3 and PO2-4.
+
+**NEW, and it sharpens my own prior row.** Canonical §88 says PO4(3-) is the genuinely limiting species, so PO2-3's pool-fraction framing was the coarser proxy. Measured live: **max S = 1.8341, S>1 on 51.6% of steps, but only 0.066% of the grid** — the gate IS engaged, firing in nanodomain hotspots. **But `S ∝ P^0.4`**, so the measured 0.143% depletion moves S by 0.057%, while calcium swings orders of magnitude (`S ∝ Ca^0.6`). **Halving S by phosphate alone needs 82.3% depletion = ~48 min simulated.** So the gate is **calcium-controlled, not phosphate-limited, at this drive.** Logged as PO2-4. Does not falsify SOC — locates what a real test needs, and is the sharpest input I have for PO-6.
+
+**STANDING DISPUTE, unchanged and now restated by the MO without having seen it — queue Q4.** Ruling 002 §1 dissolves Q2 because "your debit choice cannot affect the chemistry, only the ledger". The premise is right and concerns phosphate going IN; **the debit governs which pool it comes OUT of**, and the structural pool is the chemically active one (~500x larger, so it absorbs ~99.8% of a proportional debit). Measured: **structural differs 0.116% between modes** — deterministic, not statistical. Acceptance item 1 is untouched either way (max |dP|/P = 1.157e-14 across 6 runs), so this changes nothing about the headline; it changes whether the debit rule deserves pre-registration. **I kept metabolic-first, which spares the chemically active pool and so makes my own claim harder.**
