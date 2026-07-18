@@ -232,6 +232,34 @@ def main():
     print(f"  {'PASS — clocks agree' if clock_honest else 'FAIL — the plasticity clock lags the network clock'}")
     clock = dict(net_advance=net_adv, sp_advance=sp_adv, honest=bool(clock_honest))
 
+    # ---- MO RULING 006: the consumer path must advance by gap_duration_s, NOT 2x.
+    # run_place_field_learning.py carried an inline 20 s plasticity advance that
+    # compensated for the old frozen gap. With stage 6 live it would DOUBLE-advance
+    # (40 s per 20 s gap). The workaround was removed in 7b05153; this asserts the
+    # EXPECTED VALUE rather than merely that the clock moved, which is what the
+    # ruling asked for -- "moved" cannot distinguish 1x from 2x.
+    INTER_TRAVERSAL_S = 20.0   # run_place_field_learning.py:86
+    np.random.seed(42)
+    net_pf = make_network()
+    set_arm(net_pf, True)
+    t_pf = read(net_pf)[0]['sp_time']
+    analytical_gap(net_pf, INTER_TRAVERSAL_S, dt_sub=1.0)   # the consumer's exact call
+    adv_pf = read(net_pf)[0]['sp_time'] - t_pf
+    ratio_pf = adv_pf / INTER_TRAVERSAL_S
+    single = abs(adv_pf - INTER_TRAVERSAL_S) < 0.01
+    print(f"\nMO RULING 006 — consumer path advances ONCE, not twice:")
+    print(f"  run_place_field_learning gap call: analytical_gap(net, {INTER_TRAVERSAL_S:.0f}, dt_sub=1.0)")
+    print(f"  spine_plasticity.time advanced = {adv_pf:.4f} s")
+    print(f"  expected 1x = {INTER_TRAVERSAL_S:.4f} s   |   a double-advance would read "
+          f"{2*INTER_TRAVERSAL_S:.4f} s")
+    print(f"  ratio to gap_duration_s = {ratio_pf:.6f}")
+    print(f"  -> {'PASS (single advance)' if single else 'FAIL — NOT a single advance'}")
+    if not single:
+        failures.append(f"consumer path advanced {adv_pf:.4f}s for a {INTER_TRAVERSAL_S}s gap")
+    results['ruling006_consumer_single_advance'] = dict(
+        advance=float(adv_pf), expected=INTER_TRAVERSAL_S, ratio=float(ratio_pf),
+        passed=bool(single))
+
     # ---- PRIMARY PRE-FIX DISCRIMINATOR (PRE-REGISTERED, AMENDMENT A, on MO ruling 005).
     # Promoted out of the post-hoc block and INTO the verdict. Needs no predicted value,
     # and no decay model can produce it: retention independent of gap duration is the
