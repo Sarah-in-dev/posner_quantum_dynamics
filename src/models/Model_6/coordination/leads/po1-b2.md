@@ -289,3 +289,42 @@ can rule it out if their numbers move. Their active regions untouched.
 `q2_j_coupling_hz`, `q2_k_agg_baseline`, `stim_ca_amplitude`, `stim_burst_duration_ms`
 (queue Q7/Q9 — each needs a decision, not a wiring change).
 **Deletions still held** pending the isotope question, per rotation-002 and ruling 006.
+
+---
+
+## Ruling 012 — all four CLOSED. Heartbeat 2026-07-18 21:45:19Z.
+
+**Commits:** `b860d49` (the four fixes), `73bfd63` (backbone reply,
+`requests/model6-mo/po1-reply-ruling012.md`). **INERT 8 → 7.**
+
+| ruling | action | evidence |
+|---|---|---|
+| §1 `q2_t2_p31` | moot, NOT re-pointed | already live at `3632fce`; bracket question returned to MO |
+| §2 `q2_k_agg_baseline` | DELETE verdict recorded, guard NOT fixed | units argument in registry; held behind isotope gate |
+| §3 `stim_ca_amplitude` | DELETE verdict recorded, NOT wired | wiring would reinstate the Naraghi-Neher anti-pattern |
+| §3 `stim_burst_duration_ms` | **WIRED** | bit-identical at default; 20/40/100/200 ms → 127/217/396/432 dimers |
+| §4 defect class | both guards RAISE | `sweep_runner.py:92`, `exp_sensitivity_analysis.py:176-179`; 44 sites untouched |
+
+**Burst-duration default moved 50.0 → 40.0 one-way** — 50 was declared and never simulated;
+40 ms is what ran *and* is the grounded value (4 pulses at 100 Hz = canonical theta burst).
+Keeping 50.0 would have silently changed every future default run from 4 pulses to 5.
+Bit-identity verified against git before claiming behaviour was preserved.
+
+**Two disclosures carried to the MO rather than left for it to find:**
+- `exp_sensitivity_analysis` could **not** be exercised — matplotlib is broken in this venv
+  (`pyparsing ImportError`) on **unmodified** code. `py_compile` only.
+- The same function has a sibling block **silently dropping a spec right now**
+  (`coupling.k_agg_baseline` does not resolve). Ruling named `:176-179`; I kept to it and
+  routed the rest rather than expanding scope.
+
+**One correction accepted:** I had framed `stim_ca_amplitude` as "wire it or delete it".
+Wiring it was never legitimate — the MO's reading is right and mine was half-wrong.
+
+**Open, not blocking:** the `q2_t2_p31` bracket `[50,100,200,500]` tops out at the **retired**
+500 s, whose Werner crossing (247.6 s) falls outside the ontology's band — a sweep would sample
+a configuration where the central correspondence fails, with nothing warning. Recommended
+re-declaring symmetrically around 216 s as *sensitivity analysis, not value selection*. Not
+acted on: choosing a bracket around a load-bearing constant is a physics judgement.
+
+**Next, unless redirected:** the ~151 dead parameter fields (Unit 2's second half) — unblocked
+and unstarted. Deletions still held behind the isotope gate.
