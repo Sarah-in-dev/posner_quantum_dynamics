@@ -551,3 +551,77 @@ activity ratchet `E_invasion` above what tonic release alone produces"* — it d
 tonic release should be absent from the model. **The L·ETA-5 finding that tonic release alone
 carries `E_invasion` past `invasion_threshold` stands on its own and is not undone by fixing
 the control.**
+
+---
+
+# AMENDMENT 5 — **AMENDMENT 4 IS NECESSARY BUT NOT SUFFICIENT.** The re-run would fail again.
+
+**Found by validating my own deliverable before it was used, which I should have done before
+declaring it ready.** I told the MO and Sarah that with AMENDMENT 4 registered *"the re-run is
+one command rather than a design cycle."* **That was an untested claim and it is wrong.**
+
+## What validating AMENDMENT 4 showed
+
+Smoke test (2 traversals, suppression on): the suppression itself **works** —
+`max_glu = 0.0`, `E_invasion = 0.0000`, target `enl` 0.024 against the broken null's 0.280 at
+the same traversal (**12× lower**). But `enl` was **still rising** with glutamate fully
+suppressed (0.0096 → 0.0241).
+
+## The decisive measurement (`sweep/resting_leak_probe.py`, 1 synapse, 252 s, MEASURED not extrapolated)
+
+A synapse held at −70 mV with **glutamate never supplied at all**:
+
+```
+  t(s)        enl     E_inv  crossed?
+    60    0.09599   0.00000     False
+    80    0.12137   0.01208      True     <-- crosses invasion_threshold = 0.1
+   252    0.24164   0.08002      True
+```
+
+**`E_invasion` crosses `invasion_threshold` at t ≈ 80 s and reaches 0.080 over the protocol,
+driven by the RESTING VGCC LEAK alone** — `P_open ≈ 2.4e-4` at −70 mV (Boltzmann,
+`V_half = −0.020`, `V_slope = 0.006`), small but non-zero across 50,400 steps. Consistent with
+the known open item in `model6-input-engine`: **VGCC has no inactivation term.**
+
+## Consequence — the registered null criterion is unsatisfiable
+
+PREREG §7 voids the measurement on `null_einv > 0.0`. **`E_invasion` has no true zero in this
+model over protocols of this length.** So the corrected null still voids the run:
+
+| null construction | null `E_invasion` | verdict under §7 |
+|---|---|---|
+| activation floor (L·ETA-5, as run) | 0.4507 | VOID |
+| + AMENDMENT 4 suppression | ~0.080 | **still VOID** |
+| any construction, this protocol length | > 0 | **VOID** |
+
+**A criterion that no experiment can satisfy is not a criterion.** This is the same defect class
+as L·ETA-6's peak criterion — unsound by construction — found this time *before* spending the
+compute rather than after.
+
+## RECOMMENDED FIX — proposed, NOT self-approved
+
+**The null criterion should be a SEPARATION test, not a zero test:** score whether the driven
+arm exceeds the null **at matched elapsed time**, rather than requiring the null to sit at zero.
+
+**Why this is not the goalpost move I refused in L·ETA-6:** there I had a completed run and a
+scored verdict, and substituting a criterion would have changed that verdict. Here **nothing has
+been run and nothing is being rescored** — this is a pre-registration being corrected before its
+experiment, which is what pre-registration is for. **The distinction is that no result exists
+yet.** I am registering the proposal and explicitly **not** approving it.
+
+**What the separation would likely show, flagged as EXPECTATION not measurement:** L·ETA-5's
+broken null gave drive 0.786 vs null 0.4405 = **1.8×**. Against an AMENDMENT 4 null at ~0.080 the
+separation would be **~10×** — a strong, interpretable result. **That is exactly why I must not
+approve my own criterion change: the change makes my result look better.** MO/Sarah decide.
+
+## Escalated, and the re-run should NOT be approved as registered
+
+**Do not spend ~90 minutes of compute on the L·ETA-5 re-run until the null criterion is
+resolved.** It would return VOID a second time. Queued as **Q5**.
+
+## The finding underneath, which outlives this probe
+
+**`E_invasion` accumulates past `invasion_threshold` with no glutamate and no activation of any
+kind** — from resting VGCC leak alone, in ~80 s. This is stronger than L·ETA-5's tonic-release
+result and it bears on **every** measurement that reads `E_invasion` over a long protocol,
+including PO-5's. **`E_invasion` has no zero.**
