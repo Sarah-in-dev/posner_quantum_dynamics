@@ -150,7 +150,7 @@ has any live consumer after your fix — and state plainly that J-coupling does 
 ```
 derived property defined : atp_system.py:402
 reads of the property    : atp_system.py:591   (self.phosphate.phosphate_total)
-                           -> passed into calculate_j_coupling's DEAD  parameter
+                           -> passed into calculate_j_coupling's DEAD 'phosphate' parameter
 repo-wide, excluding params.phosphate_total : NO other read exists
 ```
 
