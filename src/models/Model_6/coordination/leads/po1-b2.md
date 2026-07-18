@@ -131,3 +131,51 @@ wrong, both sites are now wrong *together*, and this probe would still report PA
 **Compute:** stayed inside the light budget — probe 1 s, T1′ probe 7 s, one 98 s bounded
 single-synapse smoke, one backgrounded baseline killed once it had answered its question.
 PO-3's heavy slot untouched.
+
+---
+
+## PO-6a Unit 2 — orphan-module audit (AST-level). **The board's list is wrong.**
+
+**Heartbeat:** 2026-07-18 (see commit timestamps) — Unit 1 delivered; Unit 2 audited, deletions
+deliberately HELD (reasons below).
+
+Proved at AST level across **134 parsed files** (import/ImportFrom nodes, not text grep), with
+the import *context* resolved so a guarded or conditional import is not miscounted as live:
+
+| module | verdict | evidence |
+|---|---|---|
+| `eligibility_trace` | **TRUE ORPHAN** — no importer anywhere | deletable; isotope constraint cleared (below) |
+| `singlet_dynamics` | **TRUE ORPHAN** — no importer anywhere | deletable, but **held** — see Q7 |
+| `calcium_system` | **NOT AN ORPHAN** | imported at `analytical_calcium_system.py:535`, inside `create_calcium_system()` → `else` of `if use_analytical` — a **live conditional fallback** |
+| `implicit_diffusion` | **NOT AN ORPHAN** | imported by `calcium_system.py:28` — dependency of the above |
+| `em_coupling_module` | imported, never instantiated | `model6_core.py:84` — **PO-2 holds that file**; request filed at `requests/po2-phosphate/po1-6a-001.md` |
+
+**This is why the MO required AST-level proof.** The board lists six orphan modules; deleting
+`calcium_system` on that say-so would have broken `analytical_calcium_system.py` — a **live**
+module — via its `use_analytical=False` fallback. A text grep would have shown the same import
+without revealing it sits on a reachable branch. The second `calcium_system` import
+(`:588`) *is* dead-safe — `if __name__ == '__main__'` inside a `try` — which is exactly the
+distinction that decides whether deletion is safe, and exactly what grep cannot see.
+
+**The MO's named constraint is CLEARED.** `eligibility_trace.py` carries a P31/P32
+parameterisation (`PhosphorusIsotope` enum, `create_P31_module`/`create_P32_module`), but the
+isotope kill-switch does **not** depend on it: the live control is the continuous
+`environment.fraction_P31` (`model6_parameters.py:896`), consumed at `dimer_particles.py:292,301`
+and `model6_core.py:297`, with a preset at `model6_parameters.py:950`. That path is strictly more
+general — it supports mixtures, not just two discrete isotopes — and is what the live probes use.
+
+**Deletions HELD this cycle, deliberately, not from caution-as-stalling:**
+1. `singlet_dynamics` is the **only reader of `T_singlet_dimer`**, which is the subject of open
+   **Q7**. Deleting it now would destroy the evidence for a question the MO/Sarah has not yet
+   answered. It goes when Q7 resolves — and if `q2_t2_p31` is re-pointed, the deletion becomes
+   trivially safe.
+2. `eligibility_trace` is clear to delete on the MO's word. Holding one cycle so the deletion
+   lands as its own reviewable commit alongside `singlet_dynamics`, per the "commit deletions
+   separately so a revert is surgical" instruction.
+3. `calcium_system` / `implicit_diffusion` — **KEEP, with the reason recorded above.** Retiring
+   them requires first establishing that `create_calcium_system(use_analytical=False)` is never
+   called, which is a separate determination, not a deletion.
+
+**Worth preserving before `eligibility_trace` goes:** it carries isotope T2 figures (P31 ~68 s,
+P32 ~0.3 s) that differ from the live `T_singlet_P31/P32`. Provenance, not code — I will log the
+numbers in the research log as part of the deletion commit rather than lose them.
