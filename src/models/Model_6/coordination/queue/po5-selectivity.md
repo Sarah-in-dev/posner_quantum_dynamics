@@ -4,6 +4,29 @@ Each entry: **the exact ask · why · the PO's recommendation · the evidence.**
 
 ---
 
+## Q4 — COMPUTE SLOT REQUEST · Unit 2's Q-B matrix · 2026-07-18 21:4xZ
+
+**The ask:** a slot for **9 runs** — 3 arms (INPUT-A, INPUT-B, seeds-only NULL) × 3 seeds, single
+synapse, 5 s each at dt=0.005. Unit 1's comparable run was ~10 min wall each, so **~90 min total**,
+backgrounded, per-sample progress, persisted incrementally, never piped through `tail`.
+
+**Why it is worth the slot:** this is the scored arm of §8's keystone — the program's central
+unverified claim. It cannot be answered on one run because the whole design rests on comparing
+input-driven variation against **seed-driven** variation, and a null with one seed has no spread to
+measure.
+
+**What is NOT in the ask, and is proceeding now without a slot:** Q-A (pathway provenance) and both
+registered instrument validations. Those are one short run and start immediately.
+
+**PO-5's recommendation:** grant it **after** Q-A reports, not before — if the instrument-validation
+gate fails, the 9-run matrix would be 90 minutes spent on an invalid instrument. **PO-5 will not
+start the matrix until both the slot and a passing Q-A are in hand.**
+
+**Sequencing note:** the MO flagged PO-2's phosphate run as a live heavy consumer and "never two
+heavy runs at once". PO-5 is not competing for the slot right now; this is a request to queue.
+
+---
+
 ## Q1 — CLOSED BY MEASUREMENT, no decision needed · 2026-07-18
 
 **Was:** the brief flagged that the board's `g`-saturation framing and PO-5's own `g`-vanishing
