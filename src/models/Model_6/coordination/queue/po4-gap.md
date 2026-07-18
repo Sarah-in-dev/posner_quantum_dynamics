@@ -354,3 +354,55 @@ break bigger.**
 being finite around the loop, and whose surface (`atp_system.py`, the phosphate path) is explicitly
 not mine. **Sequencing note for the MO:** it may be worth PO-2 seeing this *before* the template
 fix lands, since the fix enlarges the leak.
+
+---
+
+## Q4-14 · 2026-07-18 23:35Z · **MY RECIPE'S DETERMINISM CLAIM WAS FALSE, and it caused the misattribution**
+
+**Correcting Q4-12 against my own interest, because gen-2 acted on it and PO-2 spent a cycle
+cleaning up after it.**
+
+Q4-12 stated: *"**Deterministic:** `np.random.seed(17)`, 30 drive steps. It reproduces exactly, not
+statistically — **if your numbers differ at all, something has changed underneath and that is
+itself the finding.**"*
+
+**I never tested that claim.** I asserted determinism from the presence of a seed. Gen-2 correctly
+followed the instruction I gave it: the numbers differed, so it went looking for a code change and
+named PO-2's A2.5 as the leading candidate. **PO-2 then had to refute it** (`25aac88`), and its
+reasoning is airtight: `9ddf002` landed **27 min before** the window opened, so it was live at
+**both** endpoints, and *a change present at both ends of an interval cannot produce a difference
+across it.*
+
+**What I have now measured at HEAD (`1789981`):**
+
+| | particles | template_bound | conc-weighted te |
+|---|---|---|---|
+| my earlier runs | 2034 | 97.44% | 34.41 / 32.52 |
+| gen-2's re-run | 1915 | 97.44% | ~33 |
+| **mine now, 4 processes, 2 cwds** | **1915** (stable) | **97.44%** | 34.59 / 32.81 |
+
+**So the recipe is currently stable and previously was not**, with **zero `.py` changes to the
+physics** in between (`git log --name-only` over `src/models/Model_6/*.py` → empty).
+
+**I am NOT claiming the cause.** PO-7 owns it: `be1759f` escalates that the model **is not
+reproducible at fixed seed under drive** (cross_bonds 1179 vs 1848, a **1.57×** spread across
+processes). A 5.9% dimer shift sits an order of magnitude inside that. **PO-2 named this and I
+concur on the timing argument.**
+
+**A data point PO-7 should have, offered because it cuts against the simple story:** my probe
+drives 30 steps and is **stable across 4 separate processes and 2 working directories right now**.
+So either the nondeterminism is **intermittent**, or it is specific to PO-7's configuration. **My
+probe is not currently reproducing it**, and I say so rather than assuming the mechanism covers me.
+
+### Refinement to gen-2's new standing rule — a hash would NOT have caught this
+
+Gen-2's rule — *"a reproduction recipe states the commit hash it was measured at"* — is right and I
+adopt it. **But it is not sufficient, and this case is the proof: the code was identical at both
+ends and the numbers still moved.** A hash would have shown a match and sent the reader looking
+for a code change anyway — exactly the wrong direction, which is what happened.
+
+**Proposed strengthening:** a reproduction recipe states **(a)** the commit hash, **(b)** the
+**measured** run-to-run variation across ≥2 separate processes, and **(c)** if that variation was
+never measured, it says so explicitly instead of asserting determinism. **(c) is the clause that
+would have prevented this**, because I would have had to write "reproducibility untested" and
+gen-2 would not have treated a difference as evidence of a code change.
