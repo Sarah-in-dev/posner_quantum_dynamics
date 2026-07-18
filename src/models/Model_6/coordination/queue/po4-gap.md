@@ -242,3 +242,50 @@ quarantine is the MO's routing call, and it crosses into PO-6's folded ownership
 
 **Incidental, checked because it could have been serious:** **zero** live sweep probes import
 `matplotlib`, so the broken install bites no PO work. One line for the ledger, not an alarm.
+
+---
+
+## Q4-10 **UPGRADED** · 2026-07-18 22:05Z · the template omission is **~33×**, not 1.015× — and my `K` fix widened the mismatch
+
+**This supersedes Q4-10's magnitude. The physics call is unchanged; its urgency is not.**
+
+**I published a misleading number and am correcting it before anyone acts on it.** I reported the
+template omission as *"1.0 everywhere except 3 voxels at 50.0 — 0.03% of the grid, mean 1.015 …
+spatially confined."* **The grid fraction is the wrong denominator.** Formation is itself
+template-catalysed (`ca_triphosphate_complex.py:346`), so **dimers are born at template sites**:
+
+| measure | value |
+|---|---|
+| grid-mean `template_enhancement` | 1.015 ← what I reported |
+| **concentration-weighted** | **32.5 – 34.4** ← what matters |
+| dimer *concentration* on templated voxels | 64 – 68% |
+| dimer *particles* `template_bound` | **97.4%** |
+
+**Effective dissolution coefficients:**
+
+| path | coefficient | vs within-trial |
+|---|---|---|
+| within-trial | `0.005 × 33 ≈ 0.165` | — |
+| gap **before** rotation 002 | `0.05` | 3.3× too slow |
+| gap **after** rotation 002 | `0.005` | **33× too slow** |
+
+**My own fix widened the gap-vs-within-trial mismatch from ~3.3× to ~33×.** The retired `0.05` was
+accidentally closer to the within-trial effective rate — a wrong bare constant partially
+compensating for a missing catalytic term.
+
+**I am NOT proposing a revert and have not damped anything.** `0.005` is the grounded **bare**
+rate and belongs there; the gap's *formula* is what is incomplete. Correcting the constant
+**exposed** this rather than causing it. Reported per rotation 002's standing instruction.
+
+**What I am NOT doing, deliberately:** formation is OFF during silence, so adding the template
+term means ~33× faster gap dissolution with **no compensating formation**. Whether that is correct
+physics — the catalytic surface is still present in silence — or whether the gap needs a different
+treatment entirely, **I do not know and will not estimate.** That is the call.
+
+**PO-4's recommendation:** route to Sarah or the chemistry owner as a **physics call with a
+measured magnitude**, not a hygiene item. If it lands it is a one-line change at the same single
+site, and `sweep/gap_dissolution_probe.py` measures its delta with no modification.
+
+**Consequence for the blast-radius table if it lands:** the whole enumeration would need re-running
+against the new effective rate. **The table's YES verdicts were judged at the corrected `K` and
+would need re-derivation**, so do not treat rotation 003 as final until Q4-10 is ruled.
