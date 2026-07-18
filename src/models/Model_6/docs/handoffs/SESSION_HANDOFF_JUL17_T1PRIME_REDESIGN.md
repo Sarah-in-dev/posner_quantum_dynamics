@@ -182,13 +182,51 @@ you want them**. The durable record is research-log entry T1'-5.
 
 ---
 
-## 8. OPEN ITEMS
+## 8. THE NEXT WORK PHASE (directive) — INPUT-SELECTIVITY OF THE PARTITION
 
-0. **T1′ is CLOSED** — 4/4 confirmed, documented (research log T1'-1…T1'-5). Do not re-run
-   it, re-tune it, or "improve" the geometry. If anyone wants more seeds the machinery
-   takes `--seeds N M ...`, but the result does not need them.
-2. **D8/D14/D16/D17 re-read** against the ~3× operating-point shift — physics call, NOT
-   reopened by dt (§4). Sarah's.
+**T1′ is CLOSED.** 4/4 confirmed, documented (research log T1'-1…T1'-5). Do not re-run it,
+re-tune it, or "improve" the geometry. The machinery takes `--seeds N M ...` if more are
+ever wanted; the result does not need them.
+
+**The next phase is the SELECTIVITY keystone, re-asked at network scale.** Rationale, and
+it follows directly from what T1′ proved:
+
+- T1′ established that the partition encodes **DISTANCE** — which synapse is near which.
+  But distance is **anatomy**: fixed before the experiment starts, not computed by it.
+- For *"the topology IS the computation"* the partition must encode **INPUT** — which
+  synapses were driven, in what pattern — not merely the wiring diagram it was handed.
+  Until that is shown, we have "the graph faithfully reflects where things are," which is
+  necessary but weaker than the thesis.
+- This is the program's own flagged keystone: `quantum-computation-and-attribution` §7 #1
+  — *"needs pair-level selectivity (which dimers bond depends on input), not just
+  gate-level... If formation is gate-selective but pair-flat, the graph carries no more
+  than its active-region density and 'graph as computation' collapses to 'scalar as
+  computation.' Verify before resuming graph-as-computation."*
+
+**RECONCILE FIRST — do not skip this.** §7 #1 is written about the INTRA-synapse layer
+(Pathway 2, dimer-dimer inside a spine, "still a blob" at ~77% saturation). But
+`model6-entanglement-partition-werner` §1 is LOCKED and LATER, and says the partition lives
+at NETWORK scale — one synapse = one nanodomain = one component — and explicitly forbids
+manufacturing sub-clusters inside a spine to make the partition non-trivial. So the intra
+blob that #1 treats as a defect is plausibly correct physics, and #1's framing predates the
+lock. **Working reading (VERIFY against both skills before building):** the selectivity
+question survives but must be asked at CROSS-synapse scale — *does the partition
+discriminate INPUT PATTERNS beyond (geometry × which-regions-had-eta>0)?* Gate-level input
+dependence is already established (the two-cluster validation: A-only → {0,1,2,3}, B-only →
+{4,5,6,7}, BOTH → two components). The open question is whether anything finer survives.
+
+**Design constraints inherited from T1′ — reuse, do not reinvent:**
+- Fixed geometry across conditions; vary only the DRIVE. Geometry must not be a free
+  variable or you re-measure T1′.
+- Pre-register the discriminating quantity BEFORE running. Score a structural invariant
+  (component membership / betti0), never times.
+- Keep a null condition that CANNOT show the effect, the way the 4.5 µm dark controls
+  could never bond.
+- Guards stay: a verdict that cannot return INCONCLUSIVE is not a verdict.
+
+**Then (Sarah's calls, not the thread's):** D8/D14/D16/D17 re-read against the ~3×
+operating-point shift — a physics-conclusions call, and NOT reopened by dt (research-log
+dt-1 measured the saturated operating point converged to ~5%).
 3. **Physics ECS account.** The AWS credentials on this machine reach ONLY an unrelated
    (non-research) production account — zero posner/model6/quantum ECS clusters,
    task-defs, or ECR images, even inactive. The physics ECS (if it exists) is a SEPARATE
