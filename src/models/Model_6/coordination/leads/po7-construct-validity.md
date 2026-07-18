@@ -564,3 +564,73 @@ by design (Jain 2024) — but I have **not** measured it. **NEEDS MEASUREMENT.**
 
 **The hazard this seat was opened on is retired. A larger one was found on the way, and it is
 escalated rather than fixed.**
+
+---
+
+# HEARTBEAT 2026-07-18 — ruling 023 received. **HOLDING. No unit started, no generator seeded.**
+
+**Compliance first, so it is not buried:** no new unit opened · the three generators are **untouched**
+· `test_learning_pathway.py` still never re-run · nothing de-duplicated · PO-4's four modified files
+in this tree left alone.
+
+## 1. THE BOUNDARY CORRECTION IS ACCEPTED — and it is sharper than either of us wrote
+
+**My "driven vs resting" boundary is FALSIFIED by the MO's measurement,** and the falsification is
+clean: a 2-synapse, 30-drive-step run reproduced to the last particle (1915, te 34.59/32.81, twice at
+`3928f2d`, both outcomes pre-registered). **Driven is not sufficient for nondeterminism. My boundary
+was drawn from two regimes and generalised past both.**
+
+**But the MO's replacement — "which MODULES a run reaches" — does not survive the code either, and
+this matters because it would send the next unit the wrong way.** Established by read, no run:
+
+- `model6_core.py:679` steps CaMKII **every step**, under a comment that says so explicitly:
+  *"runs every step regardless of gate"*.
+- The draws inside are gated on `p.stochastic`, and **`p.stochastic` defaults to `True`** —
+  `camkii_module.py:70,129,153` and `spine_plasticity_module.py:175`.
+
+**So PO-4's probe DOES reach two of the three generators, and DOES draw from them every step — and
+it is still bit-identical.** Reach is therefore not the discriminator.
+
+**The correct boundary is per-OUTPUT dependence, not per-run reach.** Three distinct cases, and only
+the third is nondeterministic:
+
+| | case | example, measured |
+|---|---|---|
+| (a) | the generator is never drawn | not yet observed in any run |
+| (b) | **drawn, but the measured quantity has no dependence path from the draw** | Arm B: `spine_plasticity` draws every step, yet `E_invasion`/`actin_enlargement` are bit-identical — the draw lands only on `spine_volume` (`:441-442`). **PO-4's probe is also (b).** |
+| (c) | drawn, and the measured quantity depends on it | my 45 s arm: `eta`, `cross_bonds` |
+
+**This is the same shape as my Arm B prediction, which is why I believe it:** I predicted from
+`:441-442` that `E_invasion` would be immune *while the generator was still being drawn*, and then
+measured it immune. **PO-4's probe is that prediction holding a second time on a different output.**
+
+**Consequence for the next unit, stated so it is ready and NOT started:** a module-reach trace would
+report PO-4's probe as at-risk and be **wrong**. The question is which *outputs* carry a dependence
+path — answerable either statically (taint from each `self.rng` draw to each reported quantity) or
+empirically (per-output repeat runs). **I am not choosing between them tonight and not running
+either.**
+
+## 2. ONE CORRECTION OWED TO RULING 023 ITSELF — my own number, superseded before you quoted it
+
+Ruling 023 §1 and §3 cite **1.57×** on `cross_bonds`, and §3 builds the new standing rule on it:
+*"a quoted delta smaller than the seed-to-seed spread is indistinguishable from noise — and PO-7 has
+measured that spread at up to 1.57×."*
+
+**That figure is mine and I superseded it at `306840b`, probably after 023 was drafted.** The
+comparable four-run set gives **2.19×** (`cross_bonds` 1179 → 2578); `eta_max` spread is also 2.19×
+(0.0487 → 0.1069) and the range **includes 0.0** counting the Arm A null.
+
+**The standing rule is strengthened, not weakened — but the number inside a standing rule should be
+the right one**, and a rule quoting a superseded figure is the drift this seat exists to catch.
+**Routed as a correction to the MO's artifact, not edited by me.**
+
+## 3. WHAT I AM NOT DOING, EXPLICITLY
+
+- **Not seeding the three generators.** Agreed on every ground given — and the one I would add is
+  that `p.stochastic = True` is a **declared modelling choice**, so seeding is a decision about which
+  stochasticity is physics (DDSC, Jain 2024, `quantum-system-canonical:131`) and which is accidental.
+  That is Sarah's call, not a hygiene fix.
+- **Not starting the boundary unit** despite having its correct shape above.
+- **Not touching PO-5's or PO-3's surfaces**, and not re-running anything of PO-4's.
+
+**Status:** Unit 1 COMPLETE and ACCEPTED. **HOLDING for Sarah's ruling on the seeding question.**
