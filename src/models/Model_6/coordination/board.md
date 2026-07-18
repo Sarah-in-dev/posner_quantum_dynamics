@@ -13,7 +13,8 @@ list. This file is the live registry; that file is the durable plan. Read both.
 |---|---|---|---|---|
 | `model6-mo` | the MO itself (meta/coordinator) | GROUNDED — brief committed `093c675` | `board.md`, `MO_MODEL6.md` | 2026-07-18 17:30Z |
 | `po1-b2` | B2 — retire the per-synapse pump site | **BUILDING** — acceptance probe committed FAILING first `fa12009` (mode ratio 5000, FAIL) | `vibrational_cascade_module.py`, backbone params (`model6_parameters.py:759-805`) | 2026-07-18 17:35Z |
-| `po3-einvasion` | E_invasion provenance + the ratchet test | **BUILDING** — pre-registration committed `2084960` (retention fraction, predicted 0.8948) | `spine_plasticity_module.py` actin/E_invasion block, its `sweep/` probe | 2026-07-18 17:50Z |
+| `po3-einvasion` | E_invasion provenance + the ratchet test | **COMPLETE, STOPPED** — L·ETA-5 scored VOID (MO-verified); acceptance PARTIAL; re-run is Sarah's call | `spine_plasticity_module.py` actin/E_invasion block, its `sweep/` probe | 2026-07-18 17:50Z |
+| `po2-phosphate` | the phosphate loop — make the finite pool finite | **DISPATCHED — chip pending** (`task_e54e9c25`) | `atp_system.py`, phosphate path in `model6_core.py` | 2026-07-18 19:05Z |
 | `po4-gap` | the analytical gap, biologically grounded | **DISPATCHED — chip pending** (`task_daa62deb`) | `analytical_gap` in BOTH drivers, `run_theta_burst_45s.py` | 2026-07-18 17:52Z |
 
 _(The MO adds a row here + the PO's `leads/`/`queue/` files when it spawns one.)_
