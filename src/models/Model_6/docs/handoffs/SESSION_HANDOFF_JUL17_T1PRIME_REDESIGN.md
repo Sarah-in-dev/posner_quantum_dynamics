@@ -184,6 +184,17 @@ you want them**. The durable record is research-log entry T1'-5.
 
 ## 8. THE NEXT WORK PHASE (directive) — INPUT-SELECTIVITY OF THE PARTITION
 
+> **UPDATE, same day — the block below is LIFTED IN PRINCIPLE. Read L·ETA-2 first.**
+> The input-engine integration was finished (glutamate wired into the live stimulus;
+> `plateau_potential` wired). Re-measured: `r` 0.3509 → **1.6234**, `eta` 0.0000 →
+> **0.2376** — the pump ignites, and drive DOES move eta. So "vary only the DRIVE" is
+> satisfiable and L·ETA-1's shortfall was an artifact of an incomplete input path, not a
+> property of the model. **One precondition remains before designing the selectivity
+> test:** that measurement is a characterization rig at act=1.0 sustained across 7
+> co-driven synapses @1 µm. Whether eta clears threshold under spatial discovery's actual
+> Gaussian activations is **UNMEASURED**. Measure it in a live trial first.
+>
+> *Superseded original block, kept for the trail:*
 > **BLOCKED as of 2026-07-18 — read `RESEARCH_LOG_ENTANGLEMENT_TOPOLOGY.md` L·ETA-1 before
 > acting on anything below.** This section's design constraint "vary only the DRIVE" is
 > currently **unsatisfiable**: `eta` is measured pinned at 0 under every drive the model
