@@ -7,7 +7,7 @@ consumption.
 
 **Status:** LIVE — grounding brief returned 2026-07-18 19:46Z.
 **Current unit:** pre-registration (§2.4), then the conservation probe committed FAILING first.
-**Last heartbeat:** 2026-07-18 20:05Z
+**Last heartbeat:** 2026-07-18 20:34Z
 **Blocked on:** — (two open questions in `queue/po2-phosphate.md`, neither blocking; working on)
 
 ## HEARTBEAT LOG
@@ -105,3 +105,33 @@ per-arm progress output before it starts. Logged as mine, not discovered later.
 **Compute so far:** ~13 min CPU, single core, one backgrounded process. Well inside the 130-min
 precedent, but I did not request a slot because a conservation check was expected to be cheap.
 If this exceeds ~30 min I stop and request sequencing rather than letting it run unbounded.
+
+### 2026-07-18 20:34Z — ACCEPTANCE: item 1 MET, item 2 NOT MET (and cannot be, without a physics ruling)
+
+**Item 1 — conservation. MET, shown failing first.**
+`dP` +1.098435e-02 (LEAK_MATCHES_RECOVERY, `305e096`) → +3.410605e-13 (CONSERVED, `11aec6f`).
+Leak removed 3.221e10×. Tolerance ε=1e-12 relative, stated and justified, and empirically
+validated by C2's 1.1e-14 noise floor. All three controls fired.
+
+**The cheat-check passed:** ATP recovered is **bit-identical** before/after
+(1.098435256113e-02), so conservation was not bought by damping recovery.
+**Which is also the limit:** the Pi limit never bound, so **depletion feedback is NOT
+demonstrated.** Conservation is necessary, not sufficient, for SOC.
+
+**Item 2 — J-coupling tracks dimer consumption. NOT MET.** `calculate_j_coupling` never reads
+its `phosphate` argument (AST-proven). The dispatch's stated mechanism is false; the fix cannot
+deliver the bar. Reported unmet rather than substituting a weaker passing demonstration.
+Escalated as queue Q3 — physics call.
+
+**Deliverables landed:** prereg `a9f0767` · failing probe `305e096` · defect 1 `837a511` ·
+defect 2 `11aec6f` · research log rows PO2-1 and PO2-2.
+
+**Open, all in queue/po2-phosphate.md, none blocking me:** Q1 clamp semantics (C3 shows 0
+activations, so off the critical path) · Q2 metabolic-first vs proportional (implemented as
+recommended; only `consume_for_atp_synthesis` changes if ruled otherwise) · **Q3 the J-coupling
+physics call — this one gates my item 2.**
+
+**On the PO-2 → PO-6 edge:** conservation is fixed, so the sweep would no longer measure a
+loop that creates mass. **I do NOT declare the edge cleared** — that is the MO's call, and it
+should weigh that depletion feedback is unexercised in the tested regime. Recommend PO-6 be
+unblocked for the sweep while treating "does the pool actually deplete" as an open input.
