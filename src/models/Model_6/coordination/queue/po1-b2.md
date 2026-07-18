@@ -177,3 +177,51 @@ never read as a defect.
 **Blast radius:** any past sweep interpretation that read a flat response over these as
 "parameter doesn't matter" needs re-reading. I do not know whether any such reading exists;
 that is yours to check.
+
+---
+
+## Q8 — [PO-6a Unit 3] The model's dimer coherence time is 216 s hardcoded; the parameter says 500 s.
+
+**The ask:** rule on which number is the model's dimer singlet lifetime, and whether the two
+hardcoded literals should be promoted to parameters.
+
+**Measured.** The live path uses `T_singlet_P31 = 216.0` s (`dimer_particles.py:288`,
+duplicated `quantum_coherence.py:107`). The declared parameter `quantum.T_singlet_dimer` is
+**500.0** s and is read only by `singlet_dynamics.py:122`, an orphan never imported.
+
+**Why this is bigger than the sweep bug that surfaced it:** the eligibility-trace window is
+the load-bearing quantity of the whole thesis (~100–200 s, Agarwal). **216 s is inside that
+band; 500 s is not.** Any document, figure or claim quoting 500 s as the model's dimer
+coherence time is quoting a number the model does not use. I have not audited which
+documents do — that is worth someone checking.
+
+**Recommendation:** keep 216 s (it is the Agarwal-cited value and it is what has actually
+been simulated), retire the 500 s field with the orphan, and promote the literals to
+`params.quantum.T_singlet_P31/P32` defaulting to 216.0/0.4 so behaviour is unchanged. Then
+`q2_t2_p31` can be re-pointed and the INERT mark cleared. **Routed to PO-5** — it is their
+live file — with no urgency attached.
+
+**Also:** the same two literals are duplicated across two files, so any future change must
+hit both or they silently diverge.
+
+---
+
+## Q9 — [PO-6a Unit 3] `q2_k_agg_baseline` cannot be fixed mechanically; its values are for a different quantity.
+
+**The ask:** decide what this dimension is supposed to vary.
+
+`sweep_runner.py:92` guards on `hasattr(dimerization,'k_agg')` → False, so the write never
+executes. **But re-pointing it at the real attribute would be worse than leaving it dead:**
+`k_base = 18918.67 M⁻¹s⁻¹`, while the dimension's declared values are
+`[0.001, 0.005, 0.01, 0.05]` — which match `k_classical = 0.005` exactly. The values were
+written for a **dissolution** rate and duplicate `q2_k_classical`.
+
+**Recommendation:** delete `q2_k_agg_baseline` as a mis-specified duplicate, OR re-declare it
+with values on the `k_base` scale (~1e3–1e5) if an aggregation-rate sweep is actually wanted.
+**Do not "fix the guard"** — that injects values six orders of magnitude off and would
+produce a response curve that looks like physics. Marked INERT meanwhile.
+
+**Defect class, as requested:** 46 `hasattr`-guarded assignment blocks exist, but most are
+legitimate (optional-subsystem reads, lazy-init). The defect is the subset guarding
+**application of an external input**: `sweep_runner.py:92` and
+`exp_sensitivity_analysis.py:176-179`. Those should raise, not skip.
