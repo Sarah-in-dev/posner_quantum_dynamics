@@ -157,6 +157,22 @@ an honest gap — the full model has never been allowed to show it.
 > loses pump drive.** Escalated to Sarah as a physics call; bears on §8 and on PO-5.
 
 ### PO-5 — selectivity, re-asked where it can survive
+
+> **RE-SCOPED BY SARAH — 2026-07-18 20:14Z. The text below is SUPERSEDED; kept per the log
+> convention.** PO-5 now tests **§8's keystone as actually written**: *does which dimers bond
+> depend on INPUT, at pair resolution?* — `requests/po5-selectivity/mo-rescope-001.md`.
+>
+> **Why.** §8 is `quantum-system-canonical` §8 Keystone #1, and it **mentions η nowhere**. Its
+> owning section (`quantum-computation-and-attribution` §7 #1) states the keystone is
+> **"Single-synapse-scale — needs no backbone."** So the η/partition framing below, and the
+> "blocked on PO-3" edge, were never what §8 required. **PO-5 is UNBLOCKED.**
+>
+> **The `P_product` hypothesis below is also retired.** `P_product` is the dimer population
+> "which forms only where NMDAR calcium arrived" — i.e. **which regions are eligible**, §8's
+> **gate-level**, which §8 says *"collapses to 'scalar as computation.'"* It answers the wrong
+> question. Its supporting evidence is independently vacuous (F-4: L·ETA-4's silent synapses were
+> not silent).
+
 **Coordinates:** the keystone → input-selectivity → but not through η.
 **Why now:** L·ETA-4 measured the plateau raising the condensation drive branch-wide —
 silent-synapse `E_invasion` **identical to the driven one to four decimals**, `r` not
@@ -190,9 +206,10 @@ isotope kill-switch control wants it before deleting.
 - **PO-2 → PO-6.** The sweep tests self-organization; if the phosphate loop is not
   mass-conserving the SOC engine does not exist and the sweep measures nothing. **Hard
   block, and it outranks the missing Q dimension.**
-- **PO-3 → PO-5.** At η = 0 there is no partition to be selective (L·ETA-3: zero
-  cross-synapse edges all trial). Selectivity cannot be tested until a live regime reaches
-  threshold. **Hard block.**
+- **PO-3 → PO-5. RETIRED 2026-07-18 (Sarah).** This edge assumed PO-5 tests selectivity through
+  the partition. §8 does not ask for that and its keystone is single-synapse-scale, needing no
+  backbone — so PO-5 does not wait on η reaching threshold. The *observation* (η = 0 ⇒ zero
+  cross-synapse edges) stands and is still true; it simply does not gate PO-5.
 - **PO-1 ∥ everything.** B2 touches `vibrational_cascade_module.py` and the backbone
   parameter block; no other PO owns those. Runs in parallel.
 - **PO-4 ∥ PO-1, PO-2.** Different files; but PO-4's `K_CLASSICAL` decision touches

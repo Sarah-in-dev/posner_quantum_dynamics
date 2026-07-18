@@ -52,3 +52,70 @@ balance, the log records the gap (§7 LOCKED, and the temptation my kickoff name
 
 **Not blocking** — I pre-register metabolic-first as primary and report the proportional variant
 as a sensitivity, so a ruling either way is absorbed without a re-run.
+
+---
+
+## Q3 — **MY ACCEPTANCE ITEM 2 CANNOT BE MET AS WRITTEN.** J-coupling does not read phosphate at all.
+
+**This is a physics call and a correction to my own dispatch. Escalating, not deciding.**
+
+### The finding, AST-proven (not read off a docstring)
+
+`atp_system.py:263-306`, `calculate_j_coupling(self, atp, phosphate, activity)`:
+
+```
+signature args : ['self', 'atp', 'phosphate', 'activity']
+names loaded   : ['K_bind', 'activity', 'activity_enhancement', 'atp', 'frac_atp_bound', 'np', 'self']
+  atp        -> READ
+  phosphate  -> *** NEVER READ ***
+  activity   -> READ
+```
+
+The body computes `frac_atp_bound = atp / (atp + K_bind)` and an activity multiplier. **The
+`phosphate` argument is dead.** Its own docstring at `:277` declares *"phosphate: Total phosphate
+field (M)"* — **prose describing a dependency the code does not have.** I verified by AST rather
+than by reading the body, because "the MO read `analytical_gap`'s docstring and was wrong" is the
+named scar of this session and I am not entitled to repeat it in the other direction either.
+
+### What this does to the dispatch
+
+My acceptance item 2 reads *"J-coupling demonstrably tracks dimer consumption"*, and both
+`MO_MODEL6.md` §3 PO-2 and my kickoff state the mechanism as: `phosphate_total` goes stale ⇒
+*"J-coupling (`atp_system.py:485`) reads a phosphate field that ignores dimer consumption."*
+
+**That mechanism is false.** J-coupling does not read a phosphate field that ignores dimer
+consumption; it reads **no phosphate field**. Fixing the staleness therefore **cannot** make
+J-coupling track consumption. Measured, before any fix: `corr(J, cumulative PO4 consumed) =
+-0.069` with `J std = 9.4e-02` — the field varies, just not with phosphate. **That correlation
+will still be ~0 after defect 1 is fixed**, and I register that prediction here, before fixing.
+
+### And it downgrades defect 1's severity — honestly
+
+`grep --include="*.py" "phosphate_total"` over the repo: the instance field's **only** consumer is
+`atp_system.py:485`, i.e. the dead argument. (The other hits are `params.phosphate_total`, a
+different object — the initial-condition parameter, which `sweep_runner.py:77` does sweep.)
+
+**So the stale `phosphate_total` is currently INERT: a real correctness bug with no live
+consumer.** I will still fix it — a wrong field is a trap for the next consumer, and the fix is
+structural — but I will **not** claim I fixed a live defect, and the research-log row will say so.
+
+### PO's recommendation
+
+**Fix the staleness (mine, cheap, structural). Do NOT wire `phosphate` into the J-coupling
+physics — that is Sarah's call, not mine.** Making J-coupling depend on phosphate concentration
+would change the quantum-protection mechanism itself (Fisher 2015 `J_PP_atp` = 20 Hz vs
+`J_PO_free` = 0.2 Hz weighting). That is new physics, not a correctness fix, and §7 LOCKED plus my
+own "escalate, do not decide" boundary both put it out of my reach. **I flag additionally that
+the intended physics may well be that the ATP-bound *fraction* should be computed against the
+phosphate pool rather than against a fixed `K_bind = 1e-3` — but "may well be" is exactly the
+inference I am not entitled to act on.**
+
+**Consequence for my acceptance:** item 2 is **NOT MET and cannot be met without a physics
+ruling.** I am reporting it unmet rather than substituting a weaker demonstration that would pass.
+Item 1 (conservation) is unaffected and I am proceeding with it.
+
+**Related precedent, for whoever rules:** this is the same shape as D21(1) — *"`quantum_field_kT`
+is INERT in spine plasticity … accepted at three call sites, read in none; the module docstring
+describes a quantum barrier-modulation mechanism that does not exist in the code."* **Second
+instance of declared-but-unread quantum coupling in this program.** That pattern is worth a look
+beyond my surface.
