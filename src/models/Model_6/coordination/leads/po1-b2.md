@@ -232,3 +232,48 @@ retains live consumers including the gate at `model6_core.py:734`.
 **Open with Sarah/MO:** Q7 (nine inert), Q8 (216 vs 500 s — the one that matters beyond the
 harness), Q9 (`k_agg` mis-specified). **Deletions still held** pending the isotope question,
 per rotation-002.
+
+---
+
+## Ruling 006 — CLOSED. Heartbeat 2026-07-18 21:07:09Z.
+
+**Commits:** `3632fce` (the fix), `adbf37a` (log + PO-5 disclosure). Both made with
+`git commit -m "..." -- <paths>`; verified each touched only my listed files.
+
+**Done, in the ruled order:**
+1. **Parameter moved to the physics, one-way.** `quantum.T_singlet_dimer` 500.0 → **216.0**.
+   Never the reverse. Provenance and the Werner-crossing arithmetic recorded at the field.
+2. **De-duplicated.** The 216.0/0.4 literals in `dimer_particles.py:288` and
+   `quantum_coherence.py:107` now read `QuantumParameters`. Watch-out for anyone following:
+   the two sites hold **different param objects** — `dimer_particles` has `Model6Parameters`
+   (needs `.quantum`), `quantum_coherence` has `QuantumParameters` directly. Added
+   `T_singlet_dimer_P32 = 0.4` so the isotope control is a parameter too.
+3. **`q2_t2_p31` is live.** Read-trace 0 → **48** reads. Effect demonstrated: driving
+   50/216/500 moves `mean_P_S` 0.998512/0.998893/0.998949 — monotonic, correct sign.
+   Audit INERT **9 → 8**.
+
+**Bit-identity verified before claiming behaviour was preserved:** post-change
+`(695, 0.998892874976)` == pre-change baseline from git, same seed/steps, twelve decimals.
+The de-duplication changed nothing — which was the whole requirement.
+
+**Limit I am stating rather than letting the number flatter the result:** the effect is small
+at short horizons *by construction* — `T_singlet` is a ~100 s time constant and the probe runs
+40 ms. What is demonstrated is that the parameter reaches the physics with the right sign, not
+the magnitude a real sweep would see.
+
+**Retained as a regression guard:** the `q2_t2_p31` effect case stays in the audit, so if the
+de-duplication is ever reverted to local literals the audit stops moving and says so.
+
+**216 s is not to be retuned** — Agarwal-grounded, load-bearing for `quantum-system-canonical`
+§2.2 (now tagged DERIVED on the strength of this finding).
+
+**Boundary note:** I edited PO-5's `dimer_particles.py` (six lines, `:288-289`) after the MO
+reassigned the change to me, superseding my own request 001 which had asked PO-5 to do it.
+Disclosed in `requests/po5-selectivity/po1-6a-002.md` with the bit-identity evidence so they
+can rule it out if their numbers move. Their active regions untouched.
+
+**Remaining INERT: 8.** `q1_d_modes`, `q1_phi_dissipation`, `q1_chi_redistribution`,
+`q1_kT_per_modulation` (no consumer — and B2 established these do no physics at all);
+`q2_j_coupling_hz`, `q2_k_agg_baseline`, `stim_ca_amplitude`, `stim_burst_duration_ms`
+(queue Q7/Q9 — each needs a decision, not a wiring change).
+**Deletions still held** pending the isotope question, per rotation-002 and ruling 006.
