@@ -9,8 +9,31 @@ Demonstrated failing on the current 1 ms-per-30 s code first.
 was NOT met.** MO ruling 007 found **PHASE 12** and **PHASE 9** in neither column, i.e. my
 docstring violating the rule it states. **Now closed and mechanically enforced.** Both bars met;
 awaiting MO re-verification.
-**Current unit:** **Q4-5 COMPLETE** (`b8fa9a1`) — awaiting MO verification. No open unit.
-**Last heartbeat:** 2026-07-18 20:58Z
+**Current unit:** **Q4-5 COMPLETE** (`b8fa9a1`); **ruling 006's outstanding clause discharged**
+(`9a4208d`). No open unit. Awaiting MO verification.
+**Last heartbeat:** 2026-07-18 21:05Z
+
+### 2026-07-18 21:05Z — found and closed an instruction I had NOT discharged
+
+Re-polling my own `requests/` directory (not because I was told to) surfaced **ruling 006**,
+which carried a clause I had missed: *"your post-fix measurement must show plasticity advancing
+by `gap_duration_s`, **not 2×** — … **if you assert the expected value** rather than merely that
+it moved."*
+
+**My clock check asserted `spine_time == network_time` — a real assertion, but it only ever
+exercised `analytical_gap` directly.** It never exercised the `run_place_field_learning` consumer
+path, which is precisely where the double-advance lived. So the guarantee the ruling asked for was
+not demonstrated on the path that needed it. Now it is:
+
+```
+run_place_field_learning gap call: analytical_gap(net, 20, dt_sub=1.0)
+spine_plasticity.time advanced = 20.0010 s
+expected 1x = 20.0000 s   |   a double-advance would read 40.0000 s
+ratio = 1.000050   -> PASS (single advance)
+```
+
+The 0.0010 s excess is the tail step's 1 ms sync. **"It moved" could not distinguish 1× from 2×;
+the value can** — which was the ruling's whole point.
 
 ### 2026-07-18 20:58Z — Q4-5 done. The answer was not the one the unit assumed.
 
