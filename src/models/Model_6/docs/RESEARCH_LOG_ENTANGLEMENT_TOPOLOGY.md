@@ -65,7 +65,8 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
-| T1'-4 | 2026-07-17 | **T1' DYNAMIC — far-pairs-first fragmentation CONFIRMED, seed 0 (single seed).** Wide ladder `[3.35,4.5,2.90,4.5,2.45,4.5,2.00]µm`, 90 s silence, dt=1e-3. All 4 live edges broke in the exact pre-registered gap order — 3.35µm@14.5s, 2.90@32.5s, 2.45@61.5s, 2.00@78.0s — verdict `far-pairs-first order CONFIRMED over 4 breaks`. This is the DISCRIMINATING result: a classical scalar eligibility trace decays uniformly and cannot produce a spacing-ordered cascade. **Single seed ⇒ p≈1/24≈0.042 vs the classical null — suggestive, NOT conclusive** (a 2nd independent seed in order → p≈0.0017). Breaks 1–2 landed at HEALTHY population (1843, 1043 dimers) — clean, coherence-driven; breaks 3–4 at CRATERED population (259, 98) — TIMING confounded by dimer-loss, ORDER preserved (uniform dissolution lowers every pair's radius equally). Guards worked live: 2 flickers (gap3.35, gap2.45) correctly rejected, not scored. Altitude: **(A)** — the partition carries SPATIAL structure; says nothing about **(B)**/quantumness. Ran 2.7 h not the projected ~8 h (O(n²) tracker cost collapsed with the population). `sweep/coherence_fragmentation_probe.py`; log session-scoped. | [GROUNDED, single seed] | L·T1'-4 |
+| T1'-5 | 2026-07-17 | **T1' REPLICATION COMPLETE — far-pairs-first CONFIRMED across 4/4 independent seeds; CONCLUSIVE.** Seeds 0,1,2,3 (wide ladder, 90 s, dt=1e-3; seeds 1–3 run in parallel). ALL FOUR broke in the exact pre-registered order **3.35 > 2.90 > 2.45 > 2.00**. Under the classical null (no spatial structure ⇒ break order is a uniformly random permutation of 4 ⇒ 1/24 per seed), 4/4 in order ⇒ **p = (1/24)⁴ ≈ 3.0×10⁻⁶**. Break TIMES scatter seed-to-seed (gap 2.90 broke at 32.5/37.0/42.0/32.5 s; gap 2.45 at 61.5/55.0/54.5/64.5 s) while the ORDER is invariant — vindicating the score-order-not-times decision (L·T1'-2). Replication also DEFEATS the population-collapse confound on the late breaks: uniform dissolution lowers every pair's radius together (edges would die ~simultaneously), so it CANNOT manufacture a consistent gap-spaced order across independent seeds — only the coherence/distance mechanism does. Altitude unchanged: **(A)** — the model's partition carries spatial structure a classical scalar eligibility trace cannot; NOT a claim about quantumness (attribution gap stands; see the epistemic frame). Completes L·T1'-4. | [GROUNDED, 4 seeds] | L·T1'-5 |
+| T1'-4 | 2026-07-17 | **T1' DYNAMIC — far-pairs-first fragmentation CONFIRMED, seed 0 (single seed).** → *completed by T1'-5 (4/4 replication); kept as the trail — the moment the result was one seed and only suggestive.* Wide ladder `[3.35,4.5,2.90,4.5,2.45,4.5,2.00]µm`, 90 s silence, dt=1e-3. All 4 live edges broke in the exact pre-registered gap order — 3.35µm@14.5s, 2.90@32.5s, 2.45@61.5s, 2.00@78.0s — verdict `far-pairs-first order CONFIRMED over 4 breaks`. This is the DISCRIMINATING result: a classical scalar eligibility trace decays uniformly and cannot produce a spacing-ordered cascade. **Single seed ⇒ p≈1/24≈0.042 vs the classical null — suggestive, NOT conclusive** (a 2nd independent seed in order → p≈0.0017). Breaks 1–2 landed at HEALTHY population (1843, 1043 dimers) — clean, coherence-driven; breaks 3–4 at CRATERED population (259, 98) — TIMING confounded by dimer-loss, ORDER preserved (uniform dissolution lowers every pair's radius equally). Guards worked live: 2 flickers (gap3.35, gap2.45) correctly rejected, not scored. Altitude: **(A)** — the partition carries SPATIAL structure; says nothing about **(B)**/quantumness. Ran 2.7 h not the projected ~8 h (O(n²) tracker cost collapsed with the population). `sweep/coherence_fragmentation_probe.py`; log session-scoped. | [GROUNDED, single seed] | L·T1'-4 |
 | T1'-3 | 2026-07-17 | **The trustworthy rebuild — geometry chosen for POWER, not for "early breaks".** The Jul-16 redesign premise ("gaps just under d*(0) so the cascade lands early") was FALSIFIED, measured not argued: edge survival is governed by the P_S TAIL (max over bonded pairs), which decays ~3.6× slower than the median — an 8 s null showed the median radius below all 4 gaps while all 4 edges lived. Worse, each synapse's tail is set by its own frozen-at-creation `T_eff`, giving ~0.29µm between-synapse d*_eff scatter, so rungs finer than that are decided by luck. **Measured order-test power (10 seeds via the validated d*_eff replay): tight 0.10µm rungs 6/10, medium 0.25µm 5/10, WIDE 0.45µm 10/10.** Geometry set to the wide ladder — 0.45µm rungs clear the scatter. Cost: cascade lands later (~90 s), accepted for a resolvable order. | [GROUNDED, 10-seed replay] | L·T1'-3 |
 | T1'-2 | 2026-07-17 | **d*(0) MEASURED = 3.4521µm (median), NOT assumed.** Rig = the confirmed static-probe rig, t=0.08 s, n≈2200. P_S median 0.9987, min 0.9922, max 1.0 ⇒ d* min 3.387 / median 3.452 / max 3.466 µm. The SPREAD is the load-bearing fact (two prior wrong claims came from assuming P_S). d*_eff replay (`sweep/dstar_eff_replay.py`) VALIDATED against the real rig (median P_S matches to <0.0005); its P_S→d*_eff mapping is UNVALIDATED by construction (no honest cascade datum — the only candidate, "gap 3.0 broke @34 s", is the retracted Jul-16 FLICKER) ⇒ it emits an UPPER BOUND on break times, never a prediction to score. | [GROUNDED] | L·T1'-2 |
 | dt-1 | 2026-07-17 | **dt convergence — the order test is honest at production dt, and the operating point survives.** P_S and the Werner edge set are dt-CONVERGED (`d*_med=3.45`, `edges=5` at every dt from 1e-4 to 5e-3), so the ORDER test reads converged quantities at dt=1e-3. The dimer COUNT is NOT converged in the drive transient (~+38% at dt=1e-3 vs 1e-4; dt=1e-2 OVERFLOWS — do not use) — explicit-Euler error on stiff formation, NOT a new bug. BUT the saturated OPERATING POINT is converged to ~5% (plateau 156.7µM @dt=5e-4 vs 163.9 @dt=1e-3): at saturation formation balances the correctly-dt-scaled dissolution, so the transient inflation cancels. **The ~155µM operating point is NOT a dt artifact.** (Corrects an in-session over-extrapolation of the 38% to the operating point.) Does NOT reopen D8/D14/D16/D17 on dt grounds. | [GROUNDED] | L·dt-1 |
@@ -76,7 +77,53 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 ## THE LOG (newest first)
 
+### L·T1'-5 — T1' replication complete: 4/4 seeds far-pairs-first, CONCLUSIVE · 2026-07-17  `[GROUNDED, 4 seeds]`
+
+Seeds 1–3 run in parallel (3 cores, ~2.7 h wall; parallelism cost ~nothing — each ran at
+the same ~355 s/sim-s as seed 0 alone). All four seeds broke in the exact pre-registered
+order. **The order is invariant; the times are not** — which is the whole methodology,
+borne out:
+
+| seed | gap 3.35 | gap 2.90 | gap 2.45 | gap 2.00 | order |
+|---|---|---|---|---|---|
+| 0 | 14.5 s | 32.5 s | 61.5 s | 78.0 s | ✓ |
+| 1 | 14.0 s | 37.0 s | 55.0 s | 82.5 s | ✓ |
+| 2 | 14.0 s | 42.0 s | 54.5 s | 71.0 s | ✓ |
+| 3 | 11.0 s | 32.5 s | 64.5 s | 82.0 s | ✓ |
+
+**Statistical standing.** Pre-registered discriminating claim: as coherence decays the
+partition fragments in gap order, widest first. Classical null: a scalar eligibility trace
+decays uniformly, carries no spatial structure, so the break order is uninformative — a
+uniformly random permutation of the 4 rungs, P(exact order) = 1/24 per seed. Observed 4/4
+⇒ **p = (1/24)⁴ ≈ 3.0×10⁻⁶**. Conclusive by any reasonable threshold.
+
+**Why replication is more than 4× the confidence.** Two objections a single seed could not
+answer, both closed by the replication:
+1. *Luck.* At the measured 10/10 geometry power (L·T1'-3), one in-order seed is already
+   unlikely by chance; four independent ones is decisive.
+2. *The population-collapse confound.* Breaks 3–4 land in a cratered population, so their
+   TIMES are confounded by dimer-loss. But dimer-loss is spatially UNIFORM — it lowers
+   every pair's radius together, which drives edges toward dying *simultaneously*, not in
+   gap-spaced order. A consistent gap-ordered cascade across four independent stochastic
+   realizations is the signature of the coherence/distance mechanism specifically; uniform
+   dissolution cannot fake it repeatably. So the ORDER result is clean even though the late
+   TIMES are confounded (and the times were never scored anyway).
+
+**What it establishes / does not.** Establishes: the model's entanglement partition
+fragments with SPATIAL structure — far pairs decouple first — the discriminating behavior a
+classical scalar trace cannot produce; this is now a conclusive result for the *model*.
+Does NOT establish quantumness: this is the **(A)** reading (one shared coin per component,
+classical common-cause), and per the epistemic frame the result is a discrimination win for
+the theory of expected operation, not a claim about nature (the attribution gap is
+untouched). Next candidate work: L·T1'-4's caveats are retired; open directions are the
+small-N non-classicality witness (the **(B)** question, separate build) and folding this
+into the coherence-gated-learning discrimination story.
+
 ### L·T1'-4 — T1' dynamic: far-pairs-first CONFIRMED, seed 0 · 2026-07-17  `[GROUNDED, single seed]`
+
+*→ Completed by L·T1'-5 (4/4 replication, conclusive). Retained as the trail: the point at
+which the result was a single seed (p≈0.042) and honestly only suggestive — we replicated
+rather than declaring victory on one run.*
 
 **The claim under test.** As coherence decays, d* shrinks, so the cross-synapse partition
 must fragment in GAP ORDER — widest gap first. This is the discriminating claim for the
