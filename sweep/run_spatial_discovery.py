@@ -477,6 +477,14 @@ def run_trial(network, env, agent, trial_num, agent_dt=0.5,
             for i in range(len(network.synapses)):
                 reward_stimuli[i]['glutamate'] = network.presynaptic_release[i].step(
                     reward_activations[i], physics_dt)
+                # WIRE 3 (2026-07-18): the dendrite-wide instructive PLATEAU, delivered
+                # to EVERY synapse — not only the active ones — because it is a dendritic
+                # event, not a synaptic one (model6-input-engine BTSP section; Jain 2024
+                # measures it as dendritic and non-synapse-specific). Read at
+                # model6_core.py:647 to trigger DDSC. No driver had ever set it, so the
+                # DDSC path — the model's whole delayed-commitment mechanism — had never
+                # fired in any learning run.
+                reward_stimuli[i]['plateau_potential'] = True
             step_network_per_synapse(network, physics_dt, reward_stimuli)
             found_goal = True
             trajectory.append(agent.position.copy())

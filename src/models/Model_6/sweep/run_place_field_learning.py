@@ -43,6 +43,17 @@ from model6_parameters import Model6Parameters
 from model6_core import Model6QuantumSynapse
 from multi_synapse_network import MultiSynapseNetwork
 
+# WIRE 1 (2026-07-18): presynaptic glutamate. `analytical_calcium_system` defaults
+# `glutamate = 0.0`, so a driver that passes voltage only leaves the NMDAR half of the
+# 25/25 channel population permanently shut — half the calcium, and a metabolic-power
+# keystone (`compute_metabolic_power` reads `get_open_fraction()`) that is silently
+# glutamate-starved. This driver passed voltage only. Same module and same transfer the
+# spatial-discovery driver already uses — replicated, not reinvented.
+_REPO_SWEEP = os.path.normpath(os.path.join(MODEL6_DIR, '..', '..', '..', 'sweep'))
+if _REPO_SWEEP not in sys.path:
+    sys.path.insert(0, _REPO_SWEEP)
+from presynaptic_release import PresynapticRelease
+
 # Import analytical_gap from the interval sweep module
 from sweep.run_theta_burst_45s import analytical_gap
 
@@ -54,6 +65,7 @@ from sweep.run_theta_burst_45s import analytical_gap
 N_SYNAPSES = 5
 PLACE_FIELD_DURATION_S = 1.0   # each synapse active for 1s (30cm / 30cm/s)
 DOPAMINE_TIME_S = 3.5          # reward at midway through synapse 3
+PLATEAU_DURATION_S = 0.3       # MODELED/PROVISIONAL — NOT grounded. See wire-3 note.
 END_SILENCE_S = 3.0            # 5.0s total - 5.0s stim = rest at end of track
 TRAVERSAL_DURATION_S = N_SYNAPSES * PLACE_FIELD_DURATION_S + END_SILENCE_S  # 8s
 
@@ -88,6 +100,11 @@ def make_network(feedback_enabled=True):
     for syn in network.synapses:
         syn.set_microtubule_invasion(True)
     network.disable_auto_commitment = True
+    # WIRE 1: one presynaptic terminal per synapse. Independent seeds so the
+    # per-synapse heterogeneity (pv0, RRP size, peak rate) is drawn independently,
+    # as PresynapticRelease intends.
+    network.presynaptic_release = [PresynapticRelease(seed=1000 + i)
+                                   for i in range(N_SYNAPSES)]
     return network
 
 
@@ -193,6 +210,13 @@ def run_traversal(network, traversal_idx):
         if is_reward:
             dopamine_delivered = True
 
+        # WIRE 3: dendrite-wide plateau, coincident with the instructive event.
+        # PLATEAU_DURATION_S is MODELED/PROVISIONAL — the 2026-07-18 literature pass
+        # pinned the DDSC response (Jain 2024: peak 30-40 s post-induction) but did NOT
+        # pin the plateau's own duration. Flagged as ungrounded; do not cite it.
+        is_plateau = (t >= DOPAMINE_TIME_S
+                      and t < DOPAMINE_TIME_S + PLATEAU_DURATION_S)
+
         # Build per-synapse stimuli
         stimuli = []
         for i in range(N_SYNAPSES):
@@ -209,7 +233,23 @@ def run_traversal(network, traversal_idx):
             else:
                 voltage = -70e-3
 
-            stimuli.append({'voltage': voltage, 'reward': is_reward})
+            # WIRE 1: activation drives presynaptic release, which supplies the
+            # glutamate half of the NMDAR coincidence. In-field = the active synapse.
+            act = 1.0 if i == active_syn else 0.0
+            stim = {'voltage': voltage, 'reward': is_reward}
+            glu_event = network.presynaptic_release[i].step(act, DT)
+            if glu_event:
+                stim['glutamate'] = glu_event
+
+            # WIRE 3: the plateau is a SEPARATE, DENDRITE-WIDE instructive event
+            # (model6-input-engine BTSP section: "a global, dendrite-wide instructive
+            # plateau potential", explicitly not the synaptic voltage knob). It is read
+            # at model6_core.py:647 to trigger DDSC and was set by NO driver, so the
+            # DDSC path had never fired in any learning run.
+            if is_plateau:
+                stim['plateau_potential'] = True
+
+            stimuli.append(stim)
 
         step_network_per_synapse(network, DT, stimuli)
 
