@@ -143,12 +143,12 @@ def main():
     pre, post = run_arm(False, 0.0)
     r_null = post[0]['E'] / pre[0]['E'] if pre[0]['E'] > 0 else float('nan')
     ok_null1 = abs(r_null - 1.0) < 1e-9
-    print(f"\nNULL 1  zero-duration gap      R = {r_null:.9f}   "
-          f"(registered: exactly 1.0)  {'PASS' if ok_null1 else 'FAIL'}")
+    print(f"\nNULL 1  zero-duration gap      R = {r_null:.9f}")
+    print(f"        registered PRE-FIX : R(0) == R(20)   (duration-independent tick)")
+    print(f"        registered POST-FIX: R(0) == 1.0     (a 0 s gap advances nothing)")
     if not ok_null1:
-        inconclusive.append("null-1 zero-duration gap decayed")
-        print("        ^ NOT a harness bug. The gap's TAIL runs network.step(0.001, ...)")
-        print("          unconditionally, so even a 0 s gap advances the spine by 1 ms.")
+        print("        R(0) != 1.0 -> consistent with the PRE-FIX branch. The gap's TAIL runs")
+        print("        network.step(0.001, ...) unconditionally, so even a 0 s gap ticks 1 ms.")
 
     # ---- The two arms
     print(f"\n{'arm':<14}{'conf':>8}{'E pre':>10}{'E post':>10}{'R meas':>11}"
@@ -194,16 +194,20 @@ def main():
     print(f"  {'PASS — clocks agree' if clock_honest else 'FAIL — the plasticity clock lags the network clock'}")
     clock = dict(net_advance=net_adv, sp_advance=sp_adv, honest=bool(clock_honest))
 
-    # ---- POST-HOC DIAGNOSTIC — declared post-hoc, NOT pre-registered, and it does
-    # NOT enter the verdict. Reported because it is the sharpest single discriminator
-    # the run produced: if the clock is stopped, retention is independent of gap length.
+    # ---- PRIMARY PRE-FIX DISCRIMINATOR (PRE-REGISTERED, AMENDMENT A, on MO ruling 005).
+    # Promoted out of the post-hoc block and INTO the verdict. Needs no predicted value,
+    # and no decay model can produce it: retention independent of gap duration is the
+    # signature of a fixed-size tick.
     r20 = results['uncommitted']['R']
-    print(f"\nPOST-HOC (not pre-registered, not in the verdict):")
+    ratio = r20 / r_null if r_null else float('nan')
+    duration_independent = abs(ratio - 1.0) < 1e-5
+    print(f"\nPRIMARY PRE-FIX DISCRIMINATOR (pre-registered, AMENDMENT A):")
     print(f"  R(gap=0 s)  = {r_null:.6f}")
     print(f"  R(gap=20 s) = {r20:.6f}")
-    print(f"  ratio       = {r20 / r_null if r_null else float('nan'):.6f}")
-    print("  A 0 s gap and a 20 s gap retain the SAME fraction. Retention does not")
-    print("  depend on gap duration -- the signature of a fixed-size tick, not decay.")
+    print(f"  ratio       = {ratio:.6f}")
+    print(f"  registered PRE-FIX : ratio == 1.0 (+/-1e-5) -> duration-independent tick")
+    print(f"  registered POST-FIX: ratio  < 1.0           -> a longer gap retains less")
+    print(f"  -> {'DEFECT SIGNATURE PRESENT' if duration_independent else 'clock responds to duration'}")
 
     # ---- VERDICT (pre-registered Sec.5)
     print("\n" + "=" * 78)
@@ -211,10 +215,14 @@ def main():
     if inconclusive:
         v = "INCONCLUSIVE"
         why = inconclusive
-    elif both_stopped:
+    elif both_stopped and duration_independent and not clock_honest:
         v = "DEFECT REPRODUCED — the clock is stopped"
-        why = [f"R = {results[k]['R']:.6f} >= {R_STOPPED_CLOCK} in the {k} arm; "
-               f"registered honest value was {results[k]['R_pred']:.4f}" for k in results]
+        why = ([f"duration-independence: R(0)/R(20) ratio = {ratio:.6f} (registered 1.0) "
+                f"-- no decay model produces this",
+                f"clock delta: spine_plasticity.time advanced {sp_adv:.4f} s while "
+                f"network.time advanced {net_adv:.4f} s (ratio {sp_adv/net_adv:.6f})"] +
+               [f"R = {results[k]['R']:.6f} >= {R_STOPPED_CLOCK} in the {k} arm; "
+                f"registered honest value was {results[k]['R_pred']:.4f}" for k in results])
     elif failures:
         v = "FALSIFIED"
         why = failures

@@ -64,6 +64,46 @@ are not usable as a target.
 
 ---
 
+## 1b. AMENDMENT A — 2026-07-18 18:25Z, on MO ruling 005, BEFORE the post-fix run
+
+**Registered before the fix exists, and it does not weaken any tolerance.** The MO ran the probe
+itself and found a design fault in the null arm, not in the reproduction.
+
+**The fault:** §2 null 1 registered *"zero-duration gap ⇒ R exactly 1.0."* That encodes the
+assumption **gap=0 ⇒ no advance — which is precisely the property the defect removes.**
+`analytical_gap`'s tail runs `network.step(0.001, ...)` unconditionally, so under the defective
+code a 0 s gap still ticks 1 ms and `R = 0.999994` is the *correct* value for that code. A null
+that can only be satisfied after my own fix cannot serve as a control in the pre-fix
+demonstration — it forces INCONCLUSIVE where a clean reproduction was wanted.
+
+**AMENDED — the null is now registered conditional on code state, both branches exact:**
+
+- **PRE-FIX:** `R(gap=0) == R(gap=20)`, both `= exp(-0.001/tau_eff)`. The tick is
+  duration-independent, so the two must be equal.
+- **POST-FIX:** `R(gap=0) == 1.0` exactly. A zero-duration gap advances nothing.
+  *(This is §2 null 1 unchanged, now scoped to the post-fix arm.)*
+
+**PROMOTED — duration-independence becomes the PRIMARY PRE-FIX DISCRIMINATOR.** In the first run
+this quantity sat outside the verdict labelled post-hoc:
+
+```
+R(gap=0 s) = 0.999994 ;  R(gap=20 s) = 0.999994 ;  ratio = 1.000000
+```
+
+**Registering it rather than continuing to cite it informally.** It needs no predicted value and
+no decay model can produce it: retention independent of gap duration is the signature of a
+fixed-size tick. Registered as `ratio == 1.0` to within 1e-5 pre-fix, and **strictly < 1.0**
+post-fix (a 20 s gap must retain strictly less than a 0 s gap once the clock runs).
+
+**Unchanged by this amendment:** `R_STOPPED_CLOCK = 0.99`, the clock-delta gate, the
+confinement-conditional predictions, the ±0.02 tolerance, and the §6 limits including the
+`K_CLASSICAL` deferral.
+
+**Note on provenance:** ruling 005 refers to "AMENDMENT 2's formula" for the confinement arms.
+No AMENDMENT 2 exists in this document — this is AMENDMENT A, the first. The confinement formula
+is §1's, authored here. Recorded because a citation to an artifact that does not exist is the
+same defect class this PO was dispatched to fix, and it should be caught in both directions.
+
 ## 2. The null that cannot show the effect
 
 Three, and all three must behave as registered or the run is INCONCLUSIVE:

@@ -1,7 +1,10 @@
 {
-  "verdict": "INCONCLUSIVE",
+  "verdict": "DEFECT REPRODUCED \u2014 the clock is stopped",
   "why": [
-    "null-1 zero-duration gap decayed"
+    "duration-independence: R(0)/R(20) ratio = 1.000000 (registered 1.0) -- no decay model produces this",
+    "clock delta: spine_plasticity.time advanced 0.0010 s while network.time advanced 20.0010 s (ratio 0.000050)",
+    "R = 0.999994 >= 0.99 in the uncommitted arm; registered honest value was 0.8948",
+    "R = 0.999978 >= 0.99 in the committed arm; registered honest value was 0.6751"
   ],
   "gap_s": 20.0,
   "results": {
@@ -13,7 +16,7 @@
       "E_pre": 0.5084745762711864,
       "E_post": 0.508471439553763,
       "vol_pre": 1.0,
-      "vol_post": 0.9997469059587153,
+      "vol_post": 0.9998952604569286,
       "stopped_clock": true
     },
     "committed": {
@@ -24,7 +27,7 @@
       "E_pre": 0.5084745762711864,
       "E_post": 0.5084634778922255,
       "vol_pre": 1.0,
-      "vol_post": 1.0003600856139567,
+      "vol_post": 1.0009497127191471,
       "stopped_clock": true
     }
   },
