@@ -131,3 +131,60 @@ measurement PO-3 was dispatched to make. PO-3 sidesteps it (above) rather than f
 not yet spawned; this is now a required input to its kickoff, and it sharpens PO-4's own
 acceptance bar (`MO_MODEL6.md` §3 PO-4 already names the 1 ms / 30 s clock freeze — F-2 says
 the actin clock is not merely slow there, it does not advance at all).
+
+---
+
+## STANDING DIRECTIVE — THE CONTINUOUS POLL LOOP (MO defect, corrected 2026-07-18 17:50Z)
+
+**This was missing from both kickoffs and that is an MO defect, named in the method:**
+`consumer-acceptance-gate:34` — *"Every PO kickoff mandates the continuous poll loop ... A
+kickoff without the poll mandate is bounced before spawn. (Scar: 2026-07-10 — the mandate
+existed in memory, was omitted from a kickoff, and the PO sat idle with a GO signal in its
+inbox.)"* Both POs returned their brief, correctly stopped on an open question, and then sat
+idle — because nothing told them to keep polling. The MO then had to spend human clicks on
+`send_message` to restart them. **The messaging cost was self-inflicted.** It ends here.
+
+### Binding on every PO, from now, without re-dispatch
+
+1. **Poll this board and your own `requests/` directory at the top of every cycle**, and again
+   before you would otherwise end a turn. `board.md` is the MO's channel to you. A ruling
+   addressed to you lands here, not in your inbox.
+2. **Do not end your turn on an open question.** Write the question to `queue/<you>.md` with
+   your recommendation, then **pick up the next non-blocked unit** and keep working. Idling
+   with an unanswered question is the failure this directive exists to prevent.
+3. **Only stop when everything remaining is genuinely gated** — a Sarah decision, a hard
+   dependency edge, or your acceptance is met. Then say so explicitly in `leads/<you>.md` and
+   name what would unblock you.
+4. **Heartbeat every cycle** into `leads/<you>.md` with a UTC timestamp from `date -u`. The MO
+   polls those files; a stale heartbeat is how it detects a stalled PO.
+5. **`send_message` to the MO is a last resort, not the channel.** It costs Sarah a click.
+   Write to the backbone; the MO is polling continuously.
+
+### Binding on the MO (this seat)
+
+Poll the backbone and the branch continuously — every PO commit, every `leads/`/`queue/`
+write, every new `requests/` file. Do not wait to be told. **An idle PO means the MO failed to
+give it work.** Verify every claim against the code before accepting it; relaying a PO's
+self-report as a finding is the producer-green failure one level up.
+
+## MO VERIFICATIONS — 2026-07-18 17:50Z (both PO findings re-checked against the code)
+
+The MO does not relay. Both findings were re-verified independently:
+
+- **F-1 CONFIRMED.** `grep -n cascade model6_parameters.py` → a single hit, a comment at `:784`.
+  `vibrational_cascade_module.py:589-592` reads `if hasattr(params, 'cascade')` … `else:
+  self.cascade_params = TubulinCascadeParameters()`. The attribute does not exist, so the
+  `else` branch always fires. PO-1's read is exact.
+- **F-2 CONFIRMED AND WIDENED — see the addendum in `requests/po4-analytical-gap/mo-f2-001.md`.**
+  The docstring's two lists omit actin entirely, as PO-3 said. **But `analytical_gap` is
+  DUPLICATED** — `sweep/run_spatial_discovery.py:55` and
+  `src/models/Model_6/sweep/run_theta_burst_45s.py:44` — so a fix to one leaves the other live,
+  which is *exactly* the partial-fix shape audit item 16 already recorded on this same pair of
+  files. Neither PO caught the duplicate.
+
+**Navigation hazard, MO-found, binding on all POs:** there are **two `sweep/` trees** and they
+are not copies — `./sweep/` (19 entries) and `./src/models/Model_6/sweep/` (26 entries), with 18
+files existing only in the former (including `run_spatial_discovery.py`,
+`test_learning_pathway.py`, `verify_metabolic_wiring.py`). **A bare `sweep/...` reference is
+ambiguous in this repo.** Every path in a PO return must be repo-root-relative. The MO hit this
+resolving PO-3's own citation, which did not resolve as written.
