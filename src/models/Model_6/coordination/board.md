@@ -1035,3 +1035,54 @@ given the precise version.
 
 **PO-1's taxonomy is adopted board-wide:** NO CONSUMER vs CONSUMER HARDCODED are different defects
 with different fixes, and collapsing them — as the MO did — loses the distinction that matters.
+
+---
+
+## MO PROACTIVE SWEEP — 2026-07-18 21:18Z · **the duplicated-constant class, and a PARKED item that is now generating defects**
+
+Three separate defects today shared one shape, so the MO swept for the class instead of waiting for
+a fourth. **AST scan over every module: 85 identifiers are assigned a numeric literal in more than
+one module.** Most are legitimately probe-local (`DT`, `SEED`, `N_TRAVERSALS` — different
+experiments, correctly different). **These are not:**
+
+### LIVE and DISAGREEING
+
+**`K_CaHPO4` — 588 live vs 470 cited. This is `SUBSTRATE_AUDIT_JUL18` item 13, still open.**
+- `ca_triphosphate_complex.py:62` — `self.K_CaHPO4 = 588.0`, and it is **used** at `:85`
+  (`ion_pair_conc = self.K_CaHPO4 * ca_conc * hpo4_conc`).
+- `atp_system.py:555` and `model6_parameters.py:215` **both quote McDonogh 2024: "K_CaHPO4 = 470 M⁻¹
+  at pH 7.3."**
+- **The live value contradicts the source the code itself cites, by 25%**, in the ion-pair step that
+  feeds the ACP nucleation gate. **MO-held; unowned surface** (`ca_triphosphate_complex.py` is not on
+  any PO's map). Not assigned this round — recorded so it stops being rediscovered.
+
+**`V_slope` — 0.006 vs 0.012, a factor of 2.** `analytical_calcium_system.py` vs `calcium_system.py`.
+**`calcium_system.py` is NOT a clean orphan** — `analytical_calcium_system.py:535,588` imports it
+inside functions. Consistent with PO-1's finding that the board's orphan list is wrong. Flagged to
+PO-1's Unit 2, since deletion decisions depend on it.
+
+### AGREEING, but duplicated with no single source — these WILL drift
+
+`N_A = 6.022e23` (3 modules) · `F = 96485.0` (2) · `D_ca = 2.2e-10` (2) · `T = 310.0/310.15`
+(**already disagreeing, twice inside `em_tryptophan_module.py` alone**) · **`FIELD_THRESHOLD_KT =
+20.0` (2)** — and that last one is the 20 kT condensation threshold `quantum-system-canonical` §4.1
+calls *"the condensation threshold, emergent, not a prescribed barrier."*
+
+### The point, and it is Sarah's call
+
+**`quantum-system-canonical` §8 lists "constants centralization" under *Parked*.**
+
+**That parked item generated four defects today**, all found independently by different POs:
+1. `T_singlet` — 216 s hardcoded twice vs a declared 500 s that contradicts the ontology's band.
+2. `coupling_length` — 5.0 **nm** (intra) vs 5.0 **µm** (cross): same name, same number, factor of
+   1000, different layers.
+3. `phosphate_total` — **two different objects** sharing one name (params initial condition vs the
+   derived `ATPSystem` property).
+4. `K_CaHPO4` — 588 live vs 470 cited, open since the audit.
+
+**A park is a judgement that an item is not currently costing anything.** That judgement is now
+falsified by four instances in one day, three of which cost a PO or the MO a correction cycle.
+**Whether to unpark it is Sarah's — parked items are hers.** The MO's recommendation: unpark for the
+*physical* constants only (N_A, F, D_ca, T_body, the 20 kT threshold, T_singlet), which are
+unambiguous single-source candidates. **Leave probe-local parameters alone** — `DT` and `SEED`
+differing per experiment is correct, and centralising them would be worse than the disease.
