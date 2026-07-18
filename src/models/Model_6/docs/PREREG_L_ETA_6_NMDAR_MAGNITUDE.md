@@ -126,3 +126,68 @@ size of the error I would have made is on the record rather than merely asserted
 
 Thresholds, the Jain-anchored `0.124`, the verdict mapping, the four arms, and the conditions are
 exactly as registered. This corrects an instrumentation defect, not a criterion.
+
+---
+
+# AMENDMENT 2 — the PEAK criterion is UNSOUND as I registered it (found by measuring)
+
+**Registered at scoring, against my own design. The threshold values are NOT changed; the
+peak-based criterion is declared unsound and the verdict falls to EQUIVOCAL rather than being
+rescored on a substitute.**
+
+## What the measurement showed
+
+Plateau-OFF arms, complete:
+
+```
+NMDAR charge   silent(mean) 1.2202e-14   driven 8.3237e-13   R = 0.0147
+dCa_NMDA silent: peak -14.65496 uM   mean +0.51161 uM
+silent Ca peak  intact 148.3818 uM   blocked 163.0368 uM   (EXACT per-step max)
+```
+
+**`ΔCa` peak is NEGATIVE: blocking NMDAR *raised* the peak by 14.65 µM.** Blocking a calcium
+source cannot causally raise calcium. That is not a bug in the model — it is a **defect in my
+criterion.**
+
+## Why the criterion is unsound
+
+§3 defined `ΔCa_NMDA(silent) = [Ca](intact) − [Ca](blocked)` **as a peak**. A peak is an
+**extreme-value statistic**, and the two arms are **independent stochastic realizations**
+(channel gating draws `np.random.rand(n_channels)` every step). A difference of maxima across
+independent runs is dominated by realization variance and carries **no sign guarantee** — which
+is exactly what the −14.65 µM demonstrates.
+
+The **mean** difference over the same arms is `+0.51 µM` — positive, as physics requires, and a
+statistic that averages rather than maximizes. The **integral ratio `R` is likewise sound**: it
+integrates over the whole run and is what I should have made the sole primary quantity.
+
+**This is not the same defect as AMENDMENT 1.** AMENDMENT 1 fixed *sampling* of the peak, and
+that fix was correct — `peak_concentration` (`analytical_calcium_system.py:419`) is the true
+per-step running max of exactly the field `get_concentration()` returns (`:416` populates the
+field from the same `_local_ca`), so the quantities are comparable. **The peak was measured
+correctly. The peak was the wrong thing to difference.**
+
+## Consequence for the verdict — EQUIVOCAL, for TWO independent reasons
+
+1. **The scored condition (plateau ON) was not measured.** Those arms cost >10× the plateau-OFF
+   arms and stalled (>12 min without reaching step 400 of 2400, zero progress in a 90 s window);
+   killed per the compute cap and my own Q3 commitment.
+2. **One of the two registered criteria is unsound**, so even a completed plateau-ON run could
+   not have been scored as registered.
+
+**I am not substituting the mean for the peak and rescoring.** Swapping a criterion after seeing
+that the registered one gives an uncomfortable answer is the goalpost move this program's
+pre-registration discipline exists to prevent, regardless of how defensible the substitute is.
+Any re-scoring is a fresh registration.
+
+## What is REPORTABLE, with its status stated
+
+- **`R = 0.0147` at plateau OFF — MEASURED, SOUND, but NOT the scored condition.** It sits below
+  the NEGLIGIBLE threshold (`R ≤ 0.05`).
+- **`ΔCa` mean `= +0.51 µM` at plateau OFF — MEASURED, SOUND, NOT REGISTERED as a criterion.**
+  Noted because it is **not obviously small**: it is ~half of `K_calcium_poly = 1.0 µM`, the
+  `f_CaM` half-activation. **It is not scored and I draw no verdict from it.**
+- **Both are plateau OFF.** `B(−20)/B(−70) = 20.6×`, so the NMDAR component under plateau is
+  expected to be substantially larger — **expected, not measured.** I have been wrong four times
+  this session extrapolating instead of measuring and I am not doing it a fifth time on the
+  question Sarah's PO-5 decision rests on.

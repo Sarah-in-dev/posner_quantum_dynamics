@@ -102,17 +102,28 @@ def main():
     print(f"  L·ETA-4 conditions: {N_SYN} synapses @1um, ONLY {DRIVEN} driven (act=1.0), "
           f"T={T_S}s, dt={DT}, seed={SEED}, plateau={PLATEAU_VOLTAGE_V*1e3:.0f}mV")
     print()
+    import json
+    OUT = os.path.join(M6, 'results', 'nmdar_magnitude'); os.makedirs(OUT, exist_ok=True)
     arms = {}
-    for pl in (False, True):
+    # ARM_SET is overridable so the cheap (plateau OFF) pair can be run alone. The
+    # plateau ON arms cost >10x and must be MO-sequenced (see queue Q4).
+    ARM_SET = os.environ.get('ARMS', 'off').lower()
+    pls = (False,) if ARM_SET == 'off' else ((True,) if ARM_SET == 'on' else (False, True))
+    for pl in pls:
         for nb in (False, True):
             print(f"  RUNNING plateau={int(pl)} nmda_blocked={int(nb)} ...", flush=True)
             import time as _t; _t0=_t.time()
             arms[(pl, nb)] = run(pl, nb)
             print(f"  done plateau={int(pl)} nmda_blocked={int(nb)} in {_t.time()-_t0:.1f}s", flush=True)
+            # INCREMENTAL PERSIST — a kill must not cost completed arms (L·ETA-5 lesson).
+            with open(os.path.join(OUT, f'arm_pl{int(pl)}_nb{int(nb)}.json'), 'w') as fh:
+                json.dump({k: (v.tolist() if hasattr(v, 'tolist') else v)
+                           for k, v in arms[(pl, nb)].items()}, fh, indent=1)
     print()
     silent = [i for i in range(N_SYN) if i != DRIVEN]
 
-    for pl in (False, True):
+    R_on = dca_on = None
+    for pl in pls:
         a = arms[(pl, False)]; b = arms[(pl, True)]
         tag = "PLATEAU ON " if pl else "PLATEAU OFF"
         print("-"*100)
@@ -132,6 +143,8 @@ def main():
               f"vs exact {dca_pk:+.5f} uM — sampling bias check]")
         if pl:
             R_on, dca_on = R, dca_pk
+        else:
+            R_off, dca_off = R, dca_pk
     print("-"*100)
 
     # ---- PRE-REGISTERED VERDICT (thresholds from the prereg, §4) ----
@@ -141,11 +154,25 @@ def main():
     print("="*100)
     print("VERDICT — thresholds fixed in the pre-registration, before measuring")
     print("="*100)
-    print(f"  R (silent/driven NMDAR charge, plateau ON) : {R_on:.4f}")
-    print(f"  dCa_NMDA(silent) peak, plateau ON          : {dca_on:+.5f} uM")
+    if R_on is not None:
+        print(f"  R (silent/driven NMDAR charge, plateau ON) : {R_on:.4f}")
+        print(f"  dCa_NMDA(silent) peak, plateau ON          : {dca_on:+.5f} uM")
+    else:
+        print("  plateau-ON arms NOT RUN (scored condition unmeasured)")
     print(f"  NEGLIGIBLE iff R <= {NEG_R} AND dCa < {NEG_CA} uM")
     print(f"  MATERIAL   iff R >= {MAT_R} OR  dCa >= {MAT_CA} uM   (Jain 2024: 7/56.3 = 0.124)")
     print()
+    if R_on is None:
+        print("  => EQUIVOCAL — SCORED CONDITION NOT MEASURED. The plateau-ON arms, which are")
+        print("     the pre-registered scored condition, were not completed (>10x the cost of")
+        print("     plateau-OFF; killed per the compute cap). Plateau-OFF numbers above are")
+        print("     REAL but are NOT the scored quantity. Cannot determine whether L·ETA-4's")
+        print("     -0.0019 survives. Escalated with cost; not guessed.")
+        print()
+        print(f"  plateau-OFF (measured, NOT scored): R = {R_off:.4f}, dCa peak = {dca_off:+.5f} uM")
+        print()
+        print("SCORED VERDICT: EQUIVOCAL_SCORED_CONDITION_NOT_MEASURED")
+        return
     if R_on <= NEG_R and dca_on < NEG_CA:
         v = "NEGLIGIBLE"
         print("  => NEGLIGIBLE. L·ETA-4's -0.0019 SURVIVES as approximately correct: the")
