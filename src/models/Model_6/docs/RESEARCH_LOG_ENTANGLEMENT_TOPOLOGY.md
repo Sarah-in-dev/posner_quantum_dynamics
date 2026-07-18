@@ -65,6 +65,7 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| ETA-3 | 2026-07-18 | **eta does NOT clear in a LIVE trial — the pump is capable, the PROTOCOL is not.** L·ETA-2's flagged precondition, measured and negative (`sweep/eta_in_live_trial.py`). Real spatial-discovery trial, input engine fully wired: **max r = 0.0768 vs threshold 1.0 (13x short), eta = 0.0000, zero synapses condensed, ZERO cross-synapse edges all trial.** Attribution — both factors of `r ∝ E_invasion x ca_open` fall short roughly multiplicatively: **E_invasion 0.0868 (rig 0.35, 4x short)** and **ca_open 0.140 (rig 0.38, 2.7x short)**. Mechanism read off the trace: E_invasion is exactly 0 for the first ~34 s then climbs 0.011->0.052->0.075 and is STILL RISING at trial end — it is the actin integrator and needs sustained activity (~45-60 s per model6-actin-invasion-driver), but a navigating agent gives each feature only a brief transient; and only 1-4 of 12 features are active at once with max_act mostly <0.35, so the -70+act*30 mV map leaves B(V) negligible. **The constraint is DWELL and CO-ACTIVATION, not physics.** Levers (Sarah's call): slower agent, denser/clustered features so neighbours co-drive the aggregation, longer trials, or the plateau carrying the depolarization. **DO NOT raise the synaptic voltage** — the -40 mV cap deliberately keeps the plateau out of the synaptic knob. §8 stays blocked IN PRACTICE, for a better-understood reason than ETA-1 gave. | [GROUNDED, measured] | L·ETA-3 |
 | ETA-2 | 2026-07-18 | **THE PUMP IGNITES — L·ETA-1 SUPERSEDED.** Input engine finished (glutamate into every learning driver; plateau_potential wired), eta re-measured on the same rig: NMDAR open fraction **0.0000 -> 0.3806**, **r 0.3509 -> 1.6234** (4.63x, threshold is 1.0), **eta 0.0000 -> 0.2376**. Condensation fires. The gain is entirely `ca_open`, not `E_invasion` (which moved 1.02x): the NMDAR half of the 25/25 population is no longer structurally shut, and 0.3806 is almost exactly the 0.33 equilibrium `model6-input-engine` predicts from alpha/beta at saturating glutamate. **Nothing tuned.** Bonus check: the naturally-driven eta lands within 9% of the **0.26 the topology probes CLAMP to** — the imposed stand-in matches a driven value, a retroactive check on T1's operating point. **WIRE 3: DDSC fires for the first time ever** — triggered False without plateau, True with it; the >=20 kT field gate is not binding. **LIMITS:** characterization rig at act=1.0 sustained, 7 synapses @1um — NOT a live-trial measurement, and whether eta clears threshold under spatial-discovery's Gaussian activations is UNMEASURED. Plateau duration is MODELED/PROVISIONAL (0.3 s, ungrounded). T1' probes deliberately NOT wired (would invalidate a closed result — open decision). | [GROUNDED, measured] | L·ETA-2 |
 | ERR-2 | 2026-07-18 | **CORRECTION — ETA-1 overstates its conclusion; its measurements were taken with NMDARs SILENT.** `eta_probe.py:68` drives voltage-only (`{"voltage": v, "reward": False}`); `analytical_calcium_system` defaults `glutamate=0.0`, so only 25 of 50 channels conducted. `model6-input-engine` documents this as a KNOWN OPEN INTEGRATION GAP and predicted the symptom verbatim — *"will show reduced calcium and lower E_invasion ... NOT a regression. Do not read it as one"* — and states that `get_open_fraction()` IS the `ca_open_fraction` feeding `compute_metabolic_power`. So the term setting `r` was measured with its glutamate contingency unsatisfied. **SURVIVES:** the arithmetic, the `d*`/row-sum geometry, the duty-cycle analysis, and the identity that eta=0 ⇒ no cross-synapse bonds. **DOES NOT SURVIVE:** "the pump does not ignite" as a claim about the model — measured `r` is a **LOWER BOUND**, and ETA-1's three-way fork is premature because it presumes a complete input path. **Grounding failure:** `model6-input-engine` was not read before dispatching the measurement; it owns the input path and carries a "READ THIS before any full-model run" section naming this exact misreading. Supersede with L·ETA-2 after the integration is finished and eta re-measured. | [GROUNDED, code SHOWN] | L·ETA-1 (banner) |
 | ETA-1 | 2026-07-18 | **[SEE ERR-2 — CONCLUSION CORRECTED]** ~~THE PUMP DOES NOT IGNITE — the cross-synapse partition exists only under an IMPOSED η, never a driven one.** Measured across 4 conditions (`sweep/loop_audit_2026_07_18/eta_probe.py`): `eta = 0` under rest, under the spatial-discovery −40 mV drive, and under the −10 mV theta burst **with the clamp removed**. `r = p_met_agg/P_c` floors at **0.0390** and peaks at **0.1409** after 30 s of sustained drive; extrapolating `E_invasion` to its ceiling gives `r ≈ 0.32`, still **3× below** the `r ≥ 1` condensation threshold. Cause: `ca_open` is the binding constraint and measures **0.063** duty-averaged over the real theta protocol, not the `≈1` assumed at `soc_pump_threshold_stage1.py:88` — a ~10× overstatement, and why that falsifier never fired. **Consequence:** `k_cross ∝ sqrt(eta_i·eta_j)`, so at eta=0 **zero cross-synapse bonds form** — the clamp in every topology probe is what creates the partition, not merely what holds it steady. **T1′ is untouched** (it clamps by declaration, scores order only, and the Werner algebra is independent) but its LICENSE is narrowed: "the topology IS the eligibility trace **in a running network**" is unsupported — in every end-to-end run the topology is empty. **NOT FIXED BY TUNING:** `P_c`(ω₀,Q) and `p_active_max_W` were left alone deliberately; moving them is the §6.1 emergent-physics failure mode. Open fork: wrong drive protocol vs condensation being intrinsically a population phenomenon (~10–20 synapses at ≤1 µm; unreachable at ≥2 µm at any N). **Blocks the §8 input-selectivity phase**, whose "vary only the drive" constraint is currently unsatisfiable. | [GROUNDED, 4 conditions] | L·ETA-1 |
@@ -81,6 +82,64 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·ETA-3 — eta does NOT clear in a live trial: the pump is capable, the PROTOCOL is not · 2026-07-18  `[GROUNDED, measured]`
+
+**This is the precondition L·ETA-2 flagged, and it comes back negative.** The pump
+ignites on a characterization rig (L·ETA-2) and does **not** ignite in an actual
+spatial-discovery trial. Instrument: `sweep/eta_in_live_trial.py`; trace persisted to
+`results/eta_live_trial/`.
+
+Live trial, 12 features/synapses, 40 s budget, agent_dt=0.5, physics_dt=5e-3, seed 7,
+input engine fully wired (glutamate + plateau):
+
+| quantity | live trial | L·ETA-2 rig | short by |
+|---|---|---|---|
+| `E_invasion` (max) | **0.0868** | 0.35 | 4x |
+| `ca_open` (max) | **0.140** | ~0.38 | 2.7x |
+| **`r` (max)** | **0.0768** | 1.6234 | **13x** |
+| eta (max) | **0.0000** | 0.2376 | — |
+| synapses condensed | **0** | — | — |
+| cross-synapse edges | **0** all trial | — | — |
+
+**Both factors of `r = E_invasion x ca_open x rowsum` fall short, roughly
+multiplicatively** (4 x 2.7 ~ 11, against the observed 13x). Neither alone explains it,
+so this is not a single broken term.
+
+**The mechanism, read off the trace rather than inferred.** `E_invasion` sits at exactly
+0.0000 for the first ~34 s of the trial, then climbs 0.0111 -> 0.0517 -> 0.0747 as the
+agent reaches a high-activation region — **and is still rising when the trial ends**.
+`E_invasion` is the actin invasion driver and needs SUSTAINED activity to accumulate
+(`model6-actin-invasion-driver`: reaches ~0.74 over ~45-60 s of sustained drive). A
+navigating agent gives each feature a brief transient, so the integrator never fills.
+Meanwhile only **1-4 of 12** features are active at once and `max_act` is mostly < 0.35,
+so `ca_open` stays near its floor: activation maps to `-70mV + act*30mV`, and at act=0.3
+that is -61 mV, where the Jahr-Stevens Mg-unblock `B(V)` is negligible.
+
+**So the constraint is DWELL and CO-ACTIVATION, not the pump.** The physics is capable;
+the experiment does not drive it into the regime where it works. That is a protocol
+question and it is Sarah's call. The obvious levers, none of them taken here:
+slower agent / longer dwell per feature; denser or clustered features so neighbours
+co-drive (recall `p_met_agg` AGGREGATES over neighbours); longer trials so `E_invasion`
+can fill; or the plateau carrying depolarization the subthreshold synaptic knob
+deliberately does not.
+
+**DO NOT resolve this by raising the synaptic voltage.** The -40 mV cap is a deliberate,
+documented choice (`run_spatial_discovery.py:360-365`: "Was -10 mV, which illegally
+merged the plateau into the synaptic knob"). Raising it would manufacture condensation by
+collapsing exactly the plateau/synaptic separation the BTSP grounding rests on.
+
+**Consequence for §8.** The selectivity phase stays **blocked in practice**, for a
+different and better-understood reason than L·ETA-1 gave. L·ETA-1 said the pump cannot
+ignite (wrong — that was an unfinished input path). L·ETA-3 says the pump ignites but
+this experiment never asks it to. "Vary only the DRIVE" remains unsatisfiable until the
+drive regime reaches threshold, because at eta=0 there is no partition to be selective —
+confirmed here by **zero cross-synapse edges across the entire trial**.
+
+**Limits.** One seed, one geometry, 12 features, 40 s. `E_invasion` was still rising at
+the end, so a longer trial would land higher — this measures the SHIPPED regime, not a
+ceiling. Whether any protocol in the reachable space clears threshold is UNMEASURED.
+
 
 ### L·ETA-2 — The pump IGNITES once the input engine is finished; L·ETA-1 SUPERSEDED · 2026-07-18  `[GROUNDED, measured]`
 
