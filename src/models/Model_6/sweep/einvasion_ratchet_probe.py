@@ -104,6 +104,20 @@ GAIN_CONFIRM_MIN   = 2.0    # peak_r[N]/peak_r[1]
 GAIN_FALSIFY_MAX   = 1.2
 RHO_FALSIFY_MAX    = 0.5
 
+# --- PREREG AMENDMENT 4 (MO rotation 001, ruling 007 option 1) -----------------------
+# The L·ETA-5 null was VOID because zeroing activation does NOT silence a synapse:
+# PresynapticRelease.step uses rate = baseline_rate + a*peak_rate with
+# BASELINE_RATE_HZ = 0.5 (presynaptic_release.py:65,124), so act=0.0 still releases
+# (~0.2 Hz, full amplitude). The null reached E_invasion = 0.4507 and OUT-GAINED the
+# drive arm (7.46x vs 5.65x).
+#
+# SUPPRESS_SPONTANEOUS suppresses release at the TARGET in the null arm entirely, so the
+# control cannot receive glutamate by any path. It changes the NULL arm only; the drive
+# arm is bit-identical to the scored L·ETA-5 run.
+#
+# Registered, NOT RUN. The re-run is gated on Sarah (MO_MODEL6.md §3 hard stop).
+SUPPRESS_SPONTANEOUS = True   # null arm: target releases NOTHING
+
 
 def pick_target_and_heading(env):
     """Choose the feature with the clearest straight-line traversal, deterministically.
@@ -170,6 +184,11 @@ def step_physics(network, env, position, n_agent_steps, drive_target, target,
         for _ in range(phys_per):
             for i in range(len(network.synapses)):
                 g = network.presynaptic_release[i].step(acts[i], PHYSICS_DT)
+                # AMENDMENT 4: in the null arm the target must be TRULY silent. Stepping
+                # the release object still advances its RRP/facilitation state (so the
+                # arms stay comparable), but the cleft event is discarded.
+                if (not drive_target) and i == target and SUPPRESS_SPONTANEOUS:
+                    g = 0.0
                 stimuli[i]['glutamate'] = g
                 if i == target and g:
                     max_glu = max(max_glu, float(g))

@@ -481,3 +481,73 @@ calcium tail). **A longer gap would NOT help** — the spikes are Poisson in tim
 gap collects proportionally more of them. **Suppressing spontaneous release during gaps is the
 one change that fixes both arms.** Still a protocol change to a pre-registered design, and
 still not made unilaterally.
+
+---
+
+# AMENDMENT 4 — the CORRECTED NULL, registered before any re-run (MO rotation 001)
+
+**REGISTERED, NOT RUN.** The re-run is gated on Sarah (`MO_MODEL6.md` §3 hard stop). This
+exists so that if she approves, the re-run is one command rather than a design cycle.
+
+## The defect being fixed
+
+L·ETA-5's null arm was VOID. It suppressed *activation* (`acts[target] = 0.0`) but not
+*release*: `PresynapticRelease.step` uses `rate = baseline_rate + a*peak_rate`
+(`presynaptic_release.py:124`) with `BASELINE_RATE_HZ = 0.5` (`:65`), so a synapse at
+`act = 0.0` still releases at ~0.2 Hz at full amplitude. The null reached
+**`E_invasion` = 0.4507** and **out-gained the drive arm (7.46× vs 5.65×)**.
+
+AMENDMENT 3 showed the same floor is what inflates `rho` above the predicted 0.8948 in the
+**drive** arm — discrete calcium spikes to 3.13 µM saturating `f_CaM` — so **one fix addresses
+both arms.**
+
+## The change (null arm ONLY)
+
+`SUPPRESS_SPONTANEOUS = True`. In the null arm the target's cleft event is discarded, so the
+control cannot receive glutamate by any path:
+
+```
+if (not drive_target) and i == target and SUPPRESS_SPONTANEOUS:
+    g = 0.0
+```
+
+The release object is **still stepped**, so its RRP and facilitation state advance identically
+and the two arms stay comparable; only the cleft output is suppressed. **The drive arm is
+bit-identical to the scored L·ETA-5 run** — same seeds, same call order, same RNG consumption.
+
+## What is NOT changed, and why
+
+- **The gap stays at 20 s.** AMENDMENT 3 established the spikes are Poisson in time, so a
+  longer gap collects proportionally more of them. Lengthening the gap does not help and would
+  cost CPU. This supersedes the two-change recommendation in the first L·ETA-5 write-up.
+- **No verdict threshold moves.** GATE 0/1/2, `RATIO_BAND = (0.89, 1.07)`, `GAIN_CONFIRM_MIN`,
+  the FALSIFIED bounds and the per-gap `rho_predicted(conf)` are all exactly as registered.
+- **No constant is touched.**
+
+## Added to the re-run, from MO ruling 004
+
+The clock assertion from `sweep/gap_clock_assert.py` becomes a per-gap **logged quantity**, not
+a separate probe: log `spine_plasticity.time` at gap start and end and assert the delta equals
+`GAP_S`. **An observed clock delta is proof; GATE 1's retention threshold is only a symptom** —
+and on the L·ETA-5 data GATE 1 would have returned a FALSE `GAP NOT STEPPING` (`rho_mean` =
+0.9915 ≥ 0.99) while the clock in fact advanced in full.
+
+## Pre-registered null expectation, restated for the corrected arm
+
+With release suppressed, the target receives **no glutamate at all**. NMDAR opening is
+glutamate-gated only (`analytical_calcium_system.py:129`), so NMDAR open fraction → 0; at
+−70 mV the VGCC Boltzmann term is ~2.4e-4. Expected: `actin_enlargement` stays at its resting
+value, **`E_invasion` stays 0.0000**, `peak_r` flat at the `P_BASAL/P_c` floor (~0.039).
+
+**If the corrected null still ratchets, the effect is not activity-driven at all and the
+finding becomes a substantive negative result about the driver — which is Sarah's branch, not
+mine to call.**
+
+## Stated limit carried forward
+
+This suppresses a **modeled physiological process** in the control arm. Spontaneous release is
+real biology, not an artifact. The corrected null therefore answers *"does traversal-driven
+activity ratchet `E_invasion` above what tonic release alone produces"* — it does **not** claim
+tonic release should be absent from the model. **The L·ETA-5 finding that tonic release alone
+carries `E_invasion` past `invasion_threshold` stands on its own and is not undone by fixing
+the control.**
