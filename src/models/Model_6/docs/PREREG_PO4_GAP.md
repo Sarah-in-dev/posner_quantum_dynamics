@@ -104,6 +104,51 @@ No AMENDMENT 2 exists in this document — this is AMENDMENT A, the first. The c
 is §1's, authored here. Recorded because a citation to an artifact that does not exist is the
 same defect class this PO was dispatched to fix, and it should be caught in both directions.
 
+## 1c. AMENDMENT B — 2026-07-18 18:55Z · **the registered prediction was WRONG, and the verdict caught it**
+
+**The post-fix run returned FALSIFIED against §1's formula. That verdict stands as recorded.**
+The failure is in **my registered prediction**, not in the physics or the fix — and the
+distinction has to be earned, not asserted, because "the physics is fine, my formula was wrong"
+is exactly what someone says when tuning to rescue a result.
+
+**The error.** §1 registered `R = exp(-rate·g)` — the decay factor of `actin_enlargement`. But
+`E_invasion` is **affine** in enlargement, not proportional (`spine_plasticity_module.py:412`):
+
+```python
+self.E_invasion = np.clip((self.actin_enlargement - a.invasion_threshold) /
+                          max(1e-6, a.E_ref - a.invasion_threshold), 0.0, 1.0)
+```
+
+With a threshold offset, `R_E = (E0·f − thr)/(E0 − thr)`, **not** `f`. I registered the decay of
+the wrong variable.
+
+| arm | registered §1 | corrected | measured |
+|---|---|---|---|
+| uncommitted | 0.8948 | **0.8832** | **0.882920** (Δ 0.00028) |
+| committed | 0.6751 | **0.6390** | **0.636079** (Δ 0.0029) |
+
+**Why this is a derivation fix and not a curve fit:** the corrected expression is read off line
+412 — an algebraic consequence of code I can point at, with no free parameter and nothing fitted
+to the observed values. But that argument is available to anyone rationalising a miss, so it is
+**not accepted on its own.**
+
+### REGISTERED NOW, BEFORE RUNNING: the out-of-sample test
+
+The corrected formula has seen `g = 20 s`. It is therefore scored on durations it has **never
+been evaluated at**, registered here before execution:
+
+- `g = 30 s`: uncommitted **0.8290**, committed **0.4779**
+- `g = 45 s`: uncommitted **0.7542**, committed **0.3009**
+
+Same tolerance, unchanged: **|R_measured − R_predicted| ≤ 0.02**, both arms, both durations.
+
+**If any of those four misses, the corrected formula is wrong too** and the result is FALSIFIED
+again — no third formula will be registered. Four out-of-sample points against a zero-parameter
+expression is a real test; passing at 20 s alone would not have been.
+
+**Recorded plainly:** the 20 s result is now IN-SAMPLE for the corrected formula and is reported
+as such. The acceptance rests on the out-of-sample points.
+
 ## 2. The null that cannot show the effect
 
 Three, and all three must behave as registered or the run is INCONCLUSIVE:
