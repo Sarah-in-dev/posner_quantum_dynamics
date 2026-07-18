@@ -7,10 +7,37 @@ grep-provably gone from the live path; **a measurement shows the per-synapse and
 pumps agree on the same mode**; T1′ static probe still 7/7; a superseding entry retires
 `DISC-1` in the `RESEARCH_LOG_CALCIUM_DIMER.md` DECISION RECORD.
 
-**Status:** **ACCEPTANCE MET 5/5 — awaiting MO verification.** Two items escalated (below).
-**Current unit:** — (B2 landed; nothing in flight)
-**Last heartbeat:** 2026-07-18, post-landing.
-**Blocked on:** nothing. Two MO decisions requested, neither blocking further B2 work.
+**Status:** **ACCEPTANCE VERIFIED by the MO (`9ebda0e`) + ruling 005 §2 CLOSED (`1f75582`).**
+B2 is complete against both the acceptance bar and the pin's second obligation.
+**Current unit:** — nothing in flight. Available for the next unit.
+**Last heartbeat:** 2026-07-18, after closing ruling 005 §2.
+**Blocked on:** nothing. Two decisions sit with Sarah/MO (drive veto; flat-η re-read); neither
+blocks me, and I have no further unblocked work on my own surface.
+
+### Ruling 005 §2 — CLOSED (`1f75582`)
+`D_modes`, `phi_dissipation`, `chi_redistribution` do **NO physics at either pump site**
+post-B2 — verified on executable code with comments/docstrings stripped. Per-synapse: each is
+a declaration plus prints (φ also feeds the χ derivation). Backbone: all three are
+declarations with **zero reads** in `multi_synapse_network.py`. Live chain consumes ω₀, Q, T
+only. Retained but explicitly marked inert; changing them moves nothing.
+**Stated limit, not resolved:** `η = (r−1)/(r+1)` is the large-D limit; pin wants D ≳ 200,
+sites run 20 and 50. D doesn't enter the formula, so this doesn't change the number — it
+bears on whether the large-D *form* applies. Finite-D corrections not derived ⇒ **UNVERIFIED,
+now qualifying every η these sites report.** D was NOT raised to fit (MO_MODEL6 §7).
+**Two false statements corrected, both mine from `c280e85`** — χ "needed for the nonlinear
+term" (the quadratic is deleted) and D/χ "survive as slope parameters" (nothing consumes
+them). The program's characteristic defect, caught twice in my own diff.
+**Hazard routed to PO-6:** `sweep_runner.py` writes `dendritic_backbone.D_modes` from the
+`q1_d_modes` dimension; **nothing reads it.** A sweep over it varies a parameter with no
+consumer and returns a flat response readable as a physical null.
+
+### Rulings 002 / 004 — resolved, no action outstanding
+Both concerned a broken tree I was holding uncommitted. Resolved at `c280e85`: I did **not**
+patch `chi_redistribution` defensively (ruling 002's trap — the ZeroDivisionError dissolved
+with the ordered `_critical_threshold` deletion, as ruled), and `model6_core.py` was committed
+and released. MO has since confirmed `model CONSTRUCTS OK`. I checked ruling 002's second
+point directly: `__post_init__` **does** fire and the derivation **does** land on the instance
+the pump uses — φ = 0.8 MHz, χ = 4 kHz on the live object.
 
 **Owns:** `vibrational_cascade_module.py`, backbone params `model6_parameters.py:759-805`.
 **Must not touch:** PO-2's `atp_system.py` / phosphate path · PO-3's `spine_plasticity_module.py`

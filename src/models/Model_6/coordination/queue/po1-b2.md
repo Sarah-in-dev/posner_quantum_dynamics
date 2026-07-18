@@ -85,3 +85,41 @@ quick check will be misled.
 `kT_ref` — has never been reachable by `sweep_runner`.** No sweep ever run in this program
 could have varied it. Still true after B2. Wiring `params.cascade` is unowned; it looks like
 PO-6 territory. Raising, not claiming.
+
+---
+
+## Q5 — A swept sweep-dimension has no consumer. PO-6 hazard, raised not claimed.
+
+**The ask:** route to PO-6 (owner of `sweep_runner.py` / `quantum_dimensions.py`).
+
+**The finding:** `sweep_runner.py` **writes** `params.dendritic_backbone.D_modes` from the
+`q1_d_modes` dimension (`quantum_dimensions.py`, `dim_id="q1_d_modes"`, `variable="D_modes"`),
+but **nothing reads `D_modes`** — verified on executable code, zero reads in
+`multi_synapse_network.py`, and it does not enter `P_c` (only ω₀ and Q do).
+
+**Why it matters:** a sweep over `q1_d_modes` varies a parameter with no consumer and returns
+a **flat response**, which is readable as a physical null result ("D doesn't matter") when it
+is actually a wiring gap. PO-6's acceptance is "the sweep runs over Q × drive and reports
+η/`r`" — this is the same failure class one dimension over.
+
+**Recommendation:** PO-6 either wires `D_modes` to a consumer or removes the dimension. Do
+**not** let a flat `q1_d_modes` response be reported as a finding.
+
+---
+
+## Q6 — η's large-D validity is an open PHYSICS unit, not a code task. Owner needed.
+
+**The ask:** decide who owns closing (or permanently accepting) the large-D limit question.
+
+**State:** `η = (r−1)/(r+1)` is the large-D limit (Wang/Wang 2022). The pin calls for D ≳ 200;
+per-synapse runs D = 20, backbone D = 50. Because D does not enter the formula, this does not
+change any number computed — it bears on whether the large-D *form* is the right one to apply
+at these D. I recorded it as a **stated UNVERIFIED limit** on every η both sites report, per
+MO ruling 005 §2's explicit option to do so.
+
+**What closing it needs:** the finite-D correction to the order parameter from the source
+paper. That is literature work, not a code change, and it is outside B2's scope.
+
+**Recommendation:** leave the stated limit standing and schedule the finite-D check as its own
+unit before any η value is used in a paper claim. **Do not close it by raising D** — that is
+tuning a constant to reach an outcome (`MO_MODEL6` §7, first item).
