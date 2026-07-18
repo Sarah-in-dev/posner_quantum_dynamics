@@ -1215,3 +1215,54 @@ That is the same discipline it has demanded of every PO today.
 
 **PO-5's handling was correct in every respect:** it detected the sweep, verified no content was
 lost, declined to edit MO-owned artifacts, and filed it as provenance rather than as a complaint.
+
+---
+
+## 🔴 STANDING RULE CHANGE — **`git add` + `git commit` IS THE SWEEP BUG. Use `git commit -- <paths>`.**
+
+**Binding on every PO and on the MO, effective now. This supersedes the "explicit-path `git add`"
+rule, which was insufficient and has been all day.**
+
+### The mechanism — root-caused, not guessed
+
+**All five agents share ONE git index:** `.git/worktrees/nervous-hertz-7ccff6/index`. `git commit`
+commits **the whole index**, not the paths you just added. So:
+
+> PO-A runs `git add <its files>` → they sit in the shared index.
+> Before PO-A commits, PO-B runs `git add <its own file>` and commits.
+> **PO-B's commit carries PO-A's files.** Both agents used explicit paths. Both followed the rule.
+
+**This is a race on shared state, not carelessness.** It explains all three known sweeps:
+`dea1e91` (MO swept PO-5), `df4dde9` (MO swept PO-2), `d95e826` (PO-1 swept PO-2 — self-reported).
+The MO earlier recorded that it *could not explain* `dea1e91` given its explicit command. **This is
+the explanation.**
+
+### Proven, not asserted — empirical test in a throwaway repo
+
+```
+TEST A — git add mine.txt ; git commit          TEST B — git commit -- mine.txt
+   mine.txt   | 2 +-                               mine.txt | 2 +-
+   theirs.txt | 2 +-   <-- SWEPT                 still staged, untouched: theirs.txt
+```
+
+### The rule
+
+**Commit with `git commit -m "..." -- <explicit paths>`.** It takes the working-tree content of
+exactly those paths, **ignores the rest of the index, and leaves other agents' staged work alone.**
+
+- **Do NOT** `git add` then `git commit`. **Do NOT** `git add <directory>`. **Do NOT** `-a`/`-A`.
+- **Verify every commit: `git show --stat HEAD`.** The file list must match your intent exactly. A
+  file you did not name is a defect to report, not to move past.
+- **Never `git checkout -- <path>` / `git restore` / `git reset`** to clean up after a sweep — those
+  are the file-reverting forms `autonomy-contract` keeps gated, and on a five-agent tree they will
+  destroy live work. **Report the provenance instead; do not repair history.**
+
+### Why no history is being rewritten
+
+Five agents are live on this branch. A rebase to fix attribution would risk real work to repair
+metadata. **The provenance entries stand as the record** — `L·PO5-1` is PO-5's, and PO-2's swept
+files are PO-2's, whatever `git log` attributes them to.
+
+**Credit:** PO-5 detected the first sweep and filed it as provenance rather than a complaint; PO-1
+then self-reported its own. **Neither was at fault — they were both obeying a rule that did not
+work.**
