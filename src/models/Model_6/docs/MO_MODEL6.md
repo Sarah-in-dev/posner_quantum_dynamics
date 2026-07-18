@@ -127,9 +127,17 @@ as one.
 **Why now:** the spec already exists (2026-07-18 literature pass) and is unusually complete;
 the gap currently advances the plasticity clock **1 ms per 30 s**, which freezes CaMKII,
 DDSC and spine dynamics across every silence in every multi-trial run.
-**Known-contradicted today:** the gap dissolves dimers at `K_CLASSICAL = 0.05` while the
-chemistry skill retired that to `0.005` and `dimer_particles.py:127` uses `0.001` — a 50×
-spread on the number deciding how much dimer survives silence. **Also:** Jain 2024's DDSC
+**Known-contradicted today — ~~RESOLVED 2026-07-18~~, struck by PO-4's rotation 002.** ~~the gap
+dissolves dimers at `K_CLASSICAL = 0.05` while the chemistry skill retired that to `0.005` and
+`dimer_particles.py:127` uses `0.001` — a 50× spread on the number deciding how much dimer
+survives silence.~~ **The gap now runs the GROUNDED `0.005`** — `sweep/run_theta_burst_45s.py:147`,
+**read in the file by MO gen-2, not relayed**, and matching `quantum-system-canonical:99`
+*"k_classical = 0.005 s⁻¹ … [GROUNDED — Turhan 2024]"*. One live site, because PO-4's
+consolidation had already removed the second copy. **The delta was measured, not assumed:** at the
+same driven state (2034 dimers pre-gap), dimers lost fell **141 → 15 at a 20 s gap (9.40×)** and
+**539 → 66 at 45 s (8.17×)**, inside a bracket pre-registered *before* the change. **Quote the loss
+column, not survival** — survival moved only 6.7% at 20 s, which would make a 10× physics change
+read as noise. *(PO-4-reported measurements; MO re-run still owed — see the verification ledger.)* **Also:** Jain 2024's DDSC
 window is 30-40 s post-induction, i.e. exactly the gap that is skipped, so delayed
 commitment cannot resolve in any gap-based experiment as written.
 **Honest exclusions to KEEP:** EM field / new dimer formation (no drive), dopamine (clears
@@ -149,6 +157,19 @@ an honest gap — the full model has never been allowed to show it.
 > committed vs 3.0432 ± 0.0572 uncommitted** — disagreeing in magnitude **and in ordering**.
 > The quoted pair is struck; **PO-4 pre-registers against its own reproduction.** Superseded by
 > PO-4's measurement when it lands.
+>
+> **LANDED 2026-07-18 (MO gen-2).** PO-4 reports its measured separation pair as **1.1639 /
+> 1.9403** — *"same ordering, different magnitudes, and I did not tune toward them."* **That last
+> clause is the acceptance**, not the numbers: the bar was never a target to hit, and a PO reporting
+> a miss against a struck number rather than closing the gap to it is the behaviour this program
+> optimises for.
+>
+> **TAGGED AS RELAY, NOT EVIDENCE.** These are PO-4's self-reported figures. **MO gen-2 has not
+> re-run them**, and gen-1's defect #8 was propagating exactly such a number into a durable artifact
+> and to Sarah, where it proved to be 19× not 100× with the mechanism inverted. **They are recorded
+> here as PO-4's claim pending the MO's own run — do not cite them as MO-verified.** Note also they
+> are not obviously the same quantity as the 3.7031 / 3.0432 volume pair above; **the MO has not
+> established that they are commensurable and is not asserting it.**
 >
 > **Note the ordering, because it is the substantive part:** volume is HIGHER in the committed
 > arm while `E_invasion` is **26× LOWER** (0.0313 vs 0.8222) — commitment redirects enlargement

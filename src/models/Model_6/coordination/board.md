@@ -1327,3 +1327,111 @@ three decisions with Sarah.
    them the answer.** Protect that behaviour above any individual result.
 
 **Gen-1 out.**
+
+---
+
+## MO CYCLE — 2026-07-18 21:55Z · **GEN-2 HAS THE BOARD. Four rulings, four wakes, one seat to fill.**
+
+**Gen-1 stood down at `74df885`.** Gen-2 grounded, posted its brief (`017e544`), and took the board.
+
+### 1. THE BOARD WAS NOT AS HANDED OVER — four POs were idle, not zero
+
+Gen-1's stand-down table reads *"Handed over live, none idle."* **Measured at 21:30Z: PO-1, PO-3,
+PO-4 and PO-5 were all `isRunning: false`** — PO-5 idle **on the §8 keystone**, the program's central
+unverified claim. **This is not a criticism of gen-1**, which was mid-handoff and could not observe
+its own successor's clock. It is the same lesson as defect #14 applied to a handoff: **a stand-down
+table describes the moment it was written.** Gen-2 records it because the next seat will inherit a
+table too.
+
+**Corrected within 25 minutes.** Rulings 010/011/012 posted, four pointer-only wakes sent, and
+**PO-1, PO-2, PO-4 and PO-5 are running.** PO-3 is stopped *correctly* — it is WRAPPED, and its only
+remaining work (the `L·ETA-5` re-run with the corrected null) is **Sarah's, still parked.**
+
+### 2. RULINGS 010–012 — **three physics-adjacent calls closed from the ontology, ZERO escalated**
+
+Gen-1's costliest defect (#12) was escalating physics `quantum-system-canonical` already answered,
+having read only its §8. **Gen-2 read it in full before ruling. Every one of the following was
+answered on the page:**
+
+| ruling | question | settled by |
+|---|---|---|
+| **010** | PO-5 Q3 — does the saturated single-component graph sit inside the keystone? **YES** | §5:139 [LOCKED] giant component is correct physics; §8:197 gate-vs-pair |
+| **012** | PO-1 Q7 — re-point `q2_t2_p31` to `T2_single_P31`? **NO, and moot** | §2.2:72 — 216 s dimer singlet is load-bearing; `T2_single_P31` = 2 s single-spin, a different quantity |
+| **012** | PO-1 Q9 — `q2_k_agg_baseline`: fix the guard? **REFUSED** | §3:98/99 — `k_base` is `M⁻¹s⁻¹`, the declared values are `s⁻¹`. **Wrong units, not just wrong scale** |
+| **012** | PO-1 — wire `stim_ca_amplitude`? **NO, DELETE** | §2.3:82 — calcium amplitude is DERIVED (Naraghi–Neher closed form); wiring it **reinstates the named anti-pattern** |
+
+**`stim_burst_duration_ms` gets the OPPOSITE verdict — wire it.** Nothing derives a protocol
+duration. **Two dimensions in one queue item, two different answers: that is why they were not
+batched.**
+
+### 3. `K_CLASSICAL` — **SUPERSEDING ENTRY. Three MO-owned artifacts still said `0.05` is live.**
+
+**Routed by PO-4, which correctly declined to edit MO-owned files.** Superseded here rather than
+rewritten in place, per the log convention:
+
+- **`board.md:269`** — *"`K_CLASSICAL = 0.05` is live in BOTH copies"*
+- **`MO_MODEL6.md:130`** — corrected in place (that file is a living plan, not a log)
+- **`requests/po4-analytical-gap/mo-f2-001.md:75,128`** — same claim, twice
+
+**All three are STALE.** The gap runs `0.005` at `sweep/run_theta_burst_45s.py:147` — **gen-2 read
+the line itself.** Both "BOTH copies" claims are doubly stale: the consolidation left **one** site.
+
+### 4. `model6-architecture` F4 — **REOPENED. It was wrong in BOTH directions, and gen-2 found a
+   second defect while fixing the first.**
+
+PO-4 routed it (Q4-8); **gen-2 verified by `ls` and `git ls-files` rather than relaying.** Skill
+corrected at `e8a707d9` in the murmur-platform tree (explicit-path commit; 326 → 325 uncommitted
+files, **nothing swept**).
+
+- F4 claimed `run_place_field_learning.py` **does not exist**. **It does** — tracked on `master` and
+  this branch, added `7c0ddba` 2026-04-08, `git log --diff-filter=D` returns **nothing**.
+- F4 claimed **ONE** `step_network_per_synapse`. **There are TWO:**
+  `sweep/run_spatial_discovery.py:73` and `src/models/Model_6/sweep/run_place_field_learning.py:116`.
+- **Root cause — and it will recur if it is not named: there are TWO `sweep/` directories**, one at
+  the repo root and one under `src/models/Model_6/`. **A check run in the wrong tree finds a file
+  absent and concludes consolidation.** The disproof sat in the file all day:
+  `run_spatial_discovery.py:70` reads **`COPIED FROM run_place_field_learning.py`**. It was
+  **duplicated, and the skill recorded the opposite.**
+
+**PO-4's reason for routing it is the reason it mattered:** *"'there is no second copy to fix' is
+exactly the belief that produces a partial fix."*
+
+**Checked because this is how that fix would have been half-applied:** exactly **one**
+`analytical_gap` definition and **one** `run_theta_burst_45s.py`, both steppers importing it. **PO-4's
+`K_CLASSICAL` correction is genuinely single-site.**
+
+**OPEN AND EXPLICITLY UNMEASURED: have the two steppers diverged?** *Do not assume they are identical
+because one says it was copied from the other.* **This is the new PO's first unit — see §6.**
+
+### 5. STANDING RULE, adopted from PO-4 — **re-verify a routed row against the code before dispatch**
+
+PO-4: *"four instances of findings aging between being recorded and being dispatched … if you route
+from the audit or the DECISION RECORD, re-verify the row against code before dispatch. Cheap; it has
+cost two units."*
+
+**ADOPTED, binding on this seat.** It generalises defects #6, #9, #14 and #2 into one cheap
+precondition. **A dated row is a claim about the moment it was written; dispatching it is a claim
+about now.**
+
+### 6. NEW PO — **PO-7, construct-validity divergence.** The empty seat is filled.
+
+**§8 Keystone #2** (*"construct validity — the declared↔implemented gluing check"*) is
+[CONTESTED — keystone] and **has had no owner all program.** Today produced three instances in one
+day (the 500 s parameter vs the 216 s literal; F4's phantom file; the two steppers), so it is no
+longer a background concern.
+
+**First unit: do the two `step_network_per_synapse` copies differ, and does any standing result
+depend on which one ran?** A scoped, cheap, falsifiable question that came out of a live finding —
+not a research programme.
+
+### 7. VERIFICATION LEDGER — what gen-2 has and has NOT run itself
+
+**Gen-2 has verified directly:** `K_CLASSICAL = 0.005` at `:147` · `T_singlet_dimer = 216.0` at
+`:412` and the live read at `quantum_coherence.py:112` · `q2_t2_p31` live per the registry ·
+both stepper definitions · one `analytical_gap` · PO-3's skill rewrite landed (EDIT 1, §10, the
+0.028 measurement) · every one of its own commits by `git show --stat`.
+
+**Gen-2 has NOT run:** PO-4's before/after dissolution probes, its GAP-2 invariance re-run, or
+PO-5's Unit 1 classifier. **Those acceptances are recorded MEASURED-AND-REPORTED, not MO-VERIFIED.**
+The MO runs its own acceptances; that duty is **owed and outstanding**, and is named here rather
+than allowed to blur into "accepted".
