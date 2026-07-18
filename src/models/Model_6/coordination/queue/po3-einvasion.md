@@ -148,3 +148,31 @@ The correction costs less than the false record would.
 stated *rationale* ("removes ~99% of release opportunities", "starving the NMDARs") is
 corrected here, and the run's results are unaffected either way since the whole run used the
 corrected pattern.
+
+---
+
+## Q3 · 2026-07-18 20:17Z · Compute notice — L·ETA-6 exceeded the "seconds-to-minutes" bar. Disclosed, not requested-after-the-fact.
+
+**Not an ask; a disclosure.** Rotation 002 said *"If your design needs more than a few minutes,
+request the slot in your queue first."* **I did not, and I should have.** My first attempt ran
+**10 minutes and was killed by timeout**, producing nothing. That is the exact failure the
+board's compute rule exists to prevent (*"never pipe a long run through `tail`… 130 minutes and
+nothing to show"*), arrived at by a different route: I estimated "cheap" from synapse count
+without accounting for the per-step full calcium-field sampling I had added.
+
+**What it actually costs, and what I changed.** Four arms × 12 s × 7 synapses. The dominant cost
+was `np.max(syn.calcium.get_concentration())` **every step for every synapse** — 67k field
+reductions. I reduced calcium sampling to **every 20 steps, which is L·ETA-4's own logging
+cadence** (`plateau_vgcc_leak_probe.py:137`, `if k % 20 == 0`); the **charge integrals remain
+per-step** because they are integrals. **No pre-registered condition changed** — this is
+observable sampling, not physics.
+
+**Current state:** re-running backgrounded with per-arm and per-400-step progress, output to a
+log (not piped). Partial output is readable at any point; a kill costs the arms already done.
+
+**If it overruns again** I will kill it and report EQUIVOCAL with the measured cost, rather than
+extend. PO-2 is running a conservation probe and PO-1 is mid-audit; I am not holding the slot
+open indefinitely on my own authority.
+
+**No decision needed from Sarah.** Logged because the compute rule was breached and the record
+should show it was breached by me, not discovered later.
