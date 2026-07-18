@@ -565,3 +565,67 @@ probe on a different day. **Two independent measurements plus a mechanism derive
 
 **Decision 3 (the L·ETA-3 correction banner) is WITHDRAWN** — F-3 does not support it. The queue is
 four items, and the one at the top is now the best-evidenced claim on this board.
+
+---
+
+## MO CYCLE — 2026-07-18 19:03Z · **L·ETA-5 VERIFIED. The edge to PO-5 is NOT cleared.**
+
+### The MO ran PO-3's scorer itself. Every number reproduces.
+
+```
+peak_r by traversal : [0.24877, 0.65751, 1.07214, 0.99114, 1.03435, 1.36434, 1.37288, 1.405]
+rho_ratio (SCORED)  : ratio_mean 1.1080   band (0.89, 1.07)
+conf at every gap   : 0.0000  -> uncommitted branch correct throughout
+gain peak_r[8]/[1]  : 5.6478
+positive control    : glutamate 1.0 at target t1, 39 release events   [FIRED]
+NULL: max E_invasion 0.450671, peak_r gain 7.4601   (LARGER than the drive arm's 5.6478)
+=> INCONCLUSIVE_NULL_RATCHETED
+```
+
+**PO-3's report is accurate in every particular.** Cause confirmed independently:
+`BASELINE_RATE_HZ = 0.5` (`sweep/presynaptic_release.py:65`) — tonic spontaneous release the
+activation floor does not suppress. The MO measured the same floor before PO-3 reported it
+(20 events/100 s at `act = 0.0`).
+
+### ACCEPTANCE — PARTIAL, and that is the honest call
+
+- **Item 2 (provenance verdict): MET.** `E_ref` upgraded to REPRODUCIBLE/SELF-REFERENTIAL,
+  `k_polymerization_max` INHERITED and 3.57× its own citation, inheriting commit identified.
+- **Item 1 (the ratchet measurement): EXECUTED CORRECTLY, QUESTION UNANSWERED.** Pre-registered
+  before the run, amended twice before scoring, null arm present, verdict function demonstrably
+  capable of six outcomes, positive control fired, scored VOID on its own registered terms.
+  **That is a properly conducted measurement that did not answer its question** — a result about
+  the instrument, not a failure of the PO.
+
+**PO-3 is NOT WRAPPED and is correctly STOPPED.** The re-run it names — a null suppressing
+spontaneous release, and a gap clearing the calcium tail — is a **protocol change**, which is
+Sarah's call. PO-3 did not make it unilaterally. That is exactly right.
+
+### ⚠ THE PO-3 → PO-5 EDGE IS **NOT** CLEARED — do not read the threshold crossing as clearing it
+
+`MO_MODEL6.md` §4 blocks PO-5 because *"at η = 0 there is no partition to be selective."*
+**Driven `r` did cross threshold** — 1.0721 at t3, 1.4050 at t8, **the first live-regime crossing
+since L·ETA-3's 0.0768** — and η reached 0.1684. **But no partition formed, in either arm.**
+
+MO verified the structure rather than taking it on report: `k_cross ∝ √(η_i·η_j)`, and **only one
+feature was driven**, so every pair contains an η = 0 term and `√(η_i·η_j) = 0` for **all** pairs.
+**Zero cross-synapse edges follows necessarily, not incidentally.**
+
+**Therefore: η ≠ 0 was demonstrated; a PARTITION was not.** PO-5 remains **HARD-BLOCKED**. PO-3's
+own phrasing — *"at most PARTIALLY cleared"* — is right, and the MO is recording the stronger form:
+**the edge as written in §4 is not satisfied.**
+
+### ESCALATED TO SARAH — the substantive finding, and it is the session's biggest
+
+**`E_invasion` accumulates on tonic spontaneous release alone**, past `invasion_threshold`, growing
+even through silent gaps (`rho` up to 2.26), with **null `peak_r` gain 7.46× exceeding the driven
+arm's 5.65×**. And the driven/undriven separation **collapses with traversal count: 6.15× → 1.70×.**
+
+**This is a second, independent line of evidence that the `E_invasion → r → η` channel cannot carry
+input-selectivity** — and unlike L·ETA-4 it is **plateau-free**, so it is not the same mechanism
+arriving twice. L·ETA-4 showed the plateau makes the drive branch-global; L·ETA-5 shows the driver
+accumulates without any drive at all. **§8's premise now fails for two independent reasons**, and
+PO-5's surviving `P_product` hypothesis is the only route left.
+
+**This is Sarah's to rule on, not the MO's.** It bears on §8, on PO-5's scope, and on whether the
+re-run is worth the compute before that ruling.
