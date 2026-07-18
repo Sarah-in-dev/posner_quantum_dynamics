@@ -12,9 +12,90 @@ Four groups:
 
 Parameters that are emergent (condensation threshold, commit rate, loop gain)
 are NOT included — those are outputs, not inputs.
+
+⚠ READ INERT_DIMENSIONS BELOW BEFORE INTERPRETING ANY SWEEP RESULT ⚠
+====================================================================
+Measured 2026-07-18 (`sweep/dimension_consumer_audit.py`, PO-6a Unit 1): **9 of 19
+read-traceable dimensions are INERT** — swept by sweep_runner.py and read by nothing.
+
+A sweep over an inert dimension returns a FLAT RESPONSE. A flat response over a swept
+parameter reads as "this parameter does not matter" — a physical null. It is not. It is a
+wiring gap wearing the costume of a result. Two of the inert dimensions are declared
+importance="critical", including the dimer coherence lifetime.
+
+Each inert dimension is annotated at its definition below and registered in
+INERT_DIMENSIONS with its measured reason. Do not report a flat response over any of them
+as physics until it is resolved.
 """
 
+from typing import Dict
+
 from sweep.talon_core.permutation_engine import RefinedDimension
+
+
+# ── INERT REGISTRY (measured, not assumed) ───────────────────────────────────
+#
+# dim_id -> why it is inert. Machine-readable on purpose: a comment can be skimmed past,
+# a registry can be asserted against. sweep_runner.py warns loudly when a vector includes
+# any of these.
+#
+# Method: read-tracing via __getattribute__ on the parameter dataclasses and the scenario,
+# driving the real model. reads == 0 is definitive — nothing looked at the value. The audit
+# carries three controls, including calibration against known-live/known-dead attributes,
+# so the verdict demonstrably distinguishes its outcomes.
+#
+# THREE MECHANISMS, needing three different fixes — do not treat these as one bug:
+#   (1) NO CONSUMER          nothing reads the attribute at all
+#   (2) CONSUMER HARDCODED   the physics DOES use the quantity, but as a literal the
+#                            parameter system cannot reach — and the literal disagrees
+#                            with the declared parameter value
+#   (3) OVERRIDDEN/DISCLAIMED the code explicitly implements a different mechanism
+INERT_DIMENSIONS: Dict[str, str] = {
+    "q1_d_modes":
+        "(1) NO CONSUMER. dendritic_backbone.D_modes is a declaration with zero reads in "
+        "multi_synapse_network.py. It does not enter P_c — only omega_0 and Q do (B2).",
+    "q1_phi_dissipation":
+        "(1) NO CONSUMER. dendritic_backbone.phi_dissipation: declaration only, zero reads.",
+    "q1_chi_redistribution":
+        "(1) NO CONSUMER. dendritic_backbone.chi_redistribution: declaration only, zero reads.",
+    "q1_kT_per_modulation":
+        "(1) NO CONSUMER. dendritic_backbone.kT_per_modulation_unit: declaration only.",
+    "q2_t2_p31":
+        "(2) CONSUMER HARDCODED — and the values disagree. The live dimer singlet lifetime "
+        "is a hardcoded literal T_singlet_P31 = 216.0 s, duplicated at "
+        "dimer_particles.py:288 and quantum_coherence.py:107. The parameter this dimension "
+        "writes, quantum.T_singlet_dimer = 500.0, is read ONLY by singlet_dynamics.py:122 — "
+        "an orphan module never imported. So the declared value (500 s) is not the value the "
+        "physics runs (216 s), and the sweep varies the dead one. NOT re-pointed here: "
+        "wiring it means turning a literal in PO-5's live file into a params read, and the "
+        "dimension's own label 'current default 500s' is wrong. ROUTED, not fixed.",
+    "q2_j_coupling_hz":
+        "(1) NO CONSUMER, and the parameter is scale-mismatched to the thing it names. "
+        "quantum.J_intrinsic_dimer = 15.0 Hz has ONE write (sweep_runner.py:73) and ZERO "
+        "reads anywhere in the tree. J-coupling itself IS live, but via a different route: "
+        "an ATP-derived field (atp_system.py:296-339, params atp.J_PO_free / J_PP_atp) plus "
+        "per-dimer j_couplings_intra drawn from a hardcoded N(0.15, 0.15) at "
+        "dimer_particles.py:49 — mean 0.15, i.e. 100x below this parameter's 15.0 Hz. "
+        "Re-targeting this dimension means choosing WHICH J is meant. Physics call. ROUTED.",
+    "q2_k_agg_baseline":
+        "(1) NO CONSUMER via a SILENT GUARD, and the declared values are off by ~1e6. "
+        "sweep_runner.py:92 guards on hasattr(dimerization,'k_agg'), which is False — the "
+        "attribute is k_base — so the write never executes. But re-pointing at k_base is NOT "
+        "mechanical: k_base = 18918.67 M^-1 s^-1, while this dimension's values are "
+        "[0.001, 0.005, 0.01, 0.05] — which match k_classical (0.005) exactly. The values "
+        "were written for a DISSOLUTION rate, duplicating q2_k_classical. ROUTED.",
+    "stim_ca_amplitude":
+        "(3) MECHANISM DISCLAIMED BY THE CODE. This dimension's own text says 'peak calcium "
+        "per burst (direct injection)', but _run_epoch's docstring "
+        "(theta_burst_scenario.py:107) states: 'Calcium enters via voltage-gated channel "
+        "physics, not direct injection.' The scenario never reads ca_amplitude. Either wire "
+        "an injection path or DELETE the dimension — leaving it asserts a mechanism the code "
+        "explicitly disclaims.",
+    "stim_burst_duration_ms":
+        "(3) HARDCODED OVERRIDE. theta_burst_scenario.py:_run_epoch fixes burst length at "
+        "spikes_per_burst * spike_period = 4 * 10 ms = 40 ms. The swept values "
+        "[20, 50, 100, 200] ms are never consulted.",
+}
 
 
 # ── Q1: Tryptophan superradiance & backbone ──────────────────────────────────
@@ -316,6 +397,32 @@ ALL_DIMENSIONS = (
 
 CRITICAL_DIMENSIONS = [d for d in ALL_DIMENSIONS if d.importance == "critical"]
 HIGH_DIMENSIONS     = [d for d in ALL_DIMENSIONS if d.importance in ("critical", "high")]
+
+# Dimensions measured to reach a consumer. NOTE the standard: "reached" means the value is
+# READ on the live path, which is necessary but NOT sufficient for physical effect — a read
+# could be a log line. Membership here is not a claim that the dimension moves a result.
+LIVE_DIMENSIONS = [d for d in ALL_DIMENSIONS if d.dim_id not in INERT_DIMENSIONS]
+
+
+def inert_dims_in(dimensions) -> list:
+    """Return the dimensions in `dimensions` that are known-inert."""
+    return [d for d in dimensions if d.dim_id in INERT_DIMENSIONS]
+
+
+def assert_no_inert(dimensions) -> None:
+    """Raise if any known-inert dimension is present.
+
+    For callers that want a hard stop rather than sweep_runner's warning — e.g. a script
+    about to publish a response curve. Deliberately NOT called by default: silently
+    dropping inert dimensions would hide the defect instead of surfacing it.
+    """
+    bad = inert_dims_in(dimensions)
+    if bad:
+        raise ValueError(
+            "Refusing to sweep known-INERT dimensions — a flat response over these reads "
+            "as a physical null but is a wiring gap:\n" +
+            "\n".join(f"  {d.dim_id}: {INERT_DIMENSIONS[d.dim_id]}" for d in bad)
+        )
 
 
 if __name__ == "__main__":

@@ -35,7 +35,8 @@ from sweep.talon_core.permutation_engine import (
     CoveringArrayGenerator, TestVectorBuilder, TestSuite
 )
 from sweep.quantum_dimensions import (
-    ALL_DIMENSIONS, CRITICAL_DIMENSIONS, HIGH_DIMENSIONS
+    ALL_DIMENSIONS, CRITICAL_DIMENSIONS, HIGH_DIMENSIONS,
+    INERT_DIMENSIONS, inert_dims_in
 )
 from sweep.theta_burst_scenario import scenario_from_vector
 
@@ -187,10 +188,30 @@ def run_sweep(
     )
     os.makedirs(output_dir, exist_ok=True)
 
+    # Surface known-inert dimensions BEFORE the run, not in a footnote afterwards. A flat
+    # response over one of these reads as "this parameter does not matter" — a physical
+    # null — when it is actually a wiring gap. Measured by
+    # sweep/dimension_consumer_audit.py; reasons in quantum_dimensions.INERT_DIMENSIONS.
+    #
+    # This WARNS rather than dropping them: silently removing inert dimensions would hide
+    # the defect. Call quantum_dimensions.assert_no_inert() for a hard stop.
+    _inert = inert_dims_in(dimensions)
+    if _inert:
+        print(f"\n{'!'*65}")
+        print(f"  WARNING — {len(_inert)} of {len(dimensions)} dimensions in this sweep are"
+              f" KNOWN-INERT.")
+        print(f"  Their response WILL be flat. That flatness is a WIRING GAP, not a")
+        print(f"  physical null. Do not report it as a result.")
+        print(f"{'!'*65}")
+        for d in _inert:
+            print(f"  · {d.dim_id} [{d.importance}]")
+            print(f"      {INERT_DIMENSIONS[d.dim_id]}")
+        print(f"{'!'*65}")
+
     print(f"\n{'='*65}")
     print(f"  QUANTUM BIOLOGY PARAMETER SWEEP")
     print(f"{'='*65}")
-    print(f"  Dimensions:   {len(dimensions)}")
+    print(f"  Dimensions:   {len(dimensions)}  ({len(_inert)} known-INERT)")
     print(f"  Coverage:     {coverage}-wise")
     print(f"  Max vectors:  {max_tests}")
     print(f"  Timestep:     {dt*1000:.1f}ms")
@@ -248,11 +269,17 @@ def run_sweep(
                 "n_errors":         errors,
                 "dt":               dt,
             },
+            # `inert` and `inert_reason` travel WITH the results. A results file outlives
+            # the console warning above, and without this a future reader sees a flat
+            # response curve with nothing to tell them it is a wiring gap.
             "dimensions": [
                 {"dim_id": d.dim_id, "variable": d.variable,
-                 "values": d.values, "importance": d.importance}
+                 "values": d.values, "importance": d.importance,
+                 "inert": d.dim_id in INERT_DIMENSIONS,
+                 "inert_reason": INERT_DIMENSIONS.get(d.dim_id)}
                 for d in dimensions
             ],
+            "n_inert_dimensions": len(_inert),
             "results": results,
         }, f, indent=2, default=str)
 
