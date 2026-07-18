@@ -68,3 +68,27 @@ interpret. If you re-run, re-run the **null arm only** and say so; re-running th
 An INCONCLUSIVE from a null that was not null is not a negative result about the network story —
 it is a control failure, and it is reported as one. **Do not convert it into a claim in either
 direction.**
+
+---
+
+## ADDENDUM 18:57Z — the null arm is nearly IGNITING, which changes the weight of option 2
+
+Null-arm traversal 6: **`peak_r = 0.97773`**, against a condensation threshold of 1.0, with
+`E_inv_end` accumulating `0.000 → 0.102 → 0.206 → 0.343 → 0.380 → 0.419` across traversals — all
+of it driven by spontaneous release at `max_act = 0.0000`.
+
+**Factual comparison, not an interpretation:** the drive arm reached `peak_r > 1` at traversal 3;
+the null arm is at 0.978 by traversal 6. **The null is on the same trajectory, slower.**
+
+**This weighs heavily against option 2** (keep spontaneous release, re-register as a
+spontaneous-only baseline). A baseline that itself approaches threshold is a *weak contrast*: the
+comparison would become "ignites fast" vs "ignites slower", which cannot support a claim that
+condensation is driven-input-specific. **Option 1 — a genuinely silent null — is the only one of
+the two that yields a control capable of failing.** The choice remains yours; the MO is stating the
+consequence, not making it.
+
+**And flagging, without interpreting it, something larger than your acceptance:** if spontaneous
+miniature release alone accumulates `E_invasion` toward threshold across repeated traversals, then
+the *specificity* of the condensation drive is a live question — this rhymes with L·ETA-4's finding
+that the plateau makes the drive branch-global. **That is outside your bar. Do not chase it.** The
+MO is recording it for Sarah and for PO-5's eventual scope.
