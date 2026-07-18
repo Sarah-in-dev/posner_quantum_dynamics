@@ -662,3 +662,53 @@ PO-1 sat in exactly that state and the MO did not notice until Sarah said so.
 ### Applied this cycle
 - **PO-1** — B2 closed, idle, self-reported available. **Rotated to PO-6a** (`bdb2d64`) and woken.
 - **PO-2, PO-3, PO-4** — verified RUNNING; no wake needed, no message sent.
+
+---
+
+## MO CYCLE — 2026-07-18 19:52Z · PO-4's gap fix VERIFIED (partway), and an MO misattribution
+
+### The MO ran PO-4's probe post-fix. It passes, and the discriminator flipped correctly.
+
+```
+VERDICT: RETENTION MATCHES PREDICTION
+  uncommitted        R 0.8829 vs predicted 0.8832    committed        R 0.6361 vs 0.6390
+  oos_10_uncommitted R 0.9398 vs 0.9400              oos_10_committed R 0.8000 vs 0.8018
+  oos_30_uncommitted R 0.8291 vs 0.8294              oos_30_committed R 0.5016 vs 0.5052
+  oos_45_uncommitted R 0.7538 vs 0.7542              oos_45_committed R 0.3439 vs 0.3479
+  oos_60_uncommitted R 0.6845 vs 0.6850              oos_60_committed R 0.2268 vs 0.2307
+  duration ratio 0.8829  (pre-fix registered ==1.0; post-fix registered <1.0) -> clock responds
+```
+
+**Ten arms, five of them out-of-sample durations never used to build the model, both confinement
+branches.** The same probe printed `STOPPED CLOCK` and `INCONCLUSIVE` before the fix. **A check
+that has been observed to fail, twice, and now passes — that is the standard.**
+
+**Structural fixes verified by the MO directly:**
+- **ONE definition** — `grep "def analytical_gap"` returns a single hit (`run_theta_burst_45s.py:44`).
+- **`run_spatial_discovery.py:67` imports it**; its 252-line copy is gone.
+- **The double-advance block is REMOVED** (`run_place_field_learning.py:345`) with the reasoning
+  documented in place — closing the regression MO ruling 001 would have shipped.
+
+### NOT full acceptance — do not over-credit this
+
+PO-4's headline bar (`MO_MODEL6.md` §3) is **committed vs uncommitted spine volume SEPARATING
+across an honest gap, in the full model.** What is verified here is the *gap mechanism*, on a
+**controlled initial condition**, with PO-4's own limits block stating plainly that *"the live
+drive path is NOT exercised and does not reach this regime."* **The separation measurement is
+still owed.** PO-4 is partway, not done.
+
+### PO-4's AMENDMENT C — the integrity artifact of this session
+
+PO-4 disclosed that two numbers in its own AMENDMENT B table were arithmetically wrong, **in the
+direction that makes its committed arm FAIL** its own out-of-sample test (`|0.5016 − 0.4779| =
+0.024 > 0.02`). It refused to silently take the formula-scored reading that passes: *"those are
+different verdicts and I am not entitled to silently take the second."* **The MO's post-fix run
+confirms the formula-scored version passes** — so the disclosure cost PO-4 nothing in the end, but
+it was made before that was known. That is the behaviour, not the outcome, that matters.
+
+### MO defect #11 — misattribution from commit ordering
+
+The MO reported AMENDMENT C as **PO-2's** work in chat. **It is PO-4's** — `git show --stat` shows
+it touched `PREREG_PO4_GAP.md`. The MO inferred authorship from commit adjacency rather than
+checking. Same habit as #2/#6/#9/#10: **reading a proxy instead of the thing.** Corrected to Sarah
+in the same turn it was noticed.
