@@ -124,22 +124,36 @@ PARAMS_LEVEL = [
     ("q2_phosphate_initial",  "phosphate.phosphate_total",                "sweep_runner.py:77"),
 ]
 
-# Dimensions that do NOT go through Model6Parameters. Reported, not read-traced.
-OTHER_LEVEL = [
-    ("q2_k_classical",        "model.ca_phosphate.dimerization.k_classical", "sweep_runner.py:89",
-     "model-level; MO-held constant (50x spread across 3 sites) — audit only, do not touch"),
-    ("q2_k_agg_baseline",     "model.ca_phosphate.dimerization.k_agg",       "sweep_runner.py:92-93",
-     "GUARDED by hasattr(...,'k_agg') — silently a NO-OP if the attribute is absent"),
-    ("net_n_synapses",        "MultiSynapseNetwork(n_synapses=...)",         "sweep_runner.py:125-131",
-     "constructor arg — structural, applied directly"),
-    ("net_spacing_um",        "MultiSynapseNetwork(spacing_um=...)",         "sweep_runner.py:126-131",
-     "constructor arg — structural, applied directly"),
-    ("net_mt_invaded_fraction","syn.set_microtubule_invasion(bool)",         "sweep_runner.py:135-138",
-     "applied via setter loop"),
+# Model-level dimensions: applied to the model instance, not to Model6Parameters.
+# Verdict is by direct attribute probe of the apply target.
+MODEL_LEVEL = [
+    ("q2_k_classical",    "ca_phosphate.dimerization.k_classical", "sweep_runner.py:89",
+     "unguarded write; MO-held constant (50x spread across 3 sites) — audit only, never touch"),
+    ("q2_k_agg_baseline", "ca_phosphate.dimerization.k_agg",       "sweep_runner.py:92-93",
+     "GUARDED by hasattr(...,'k_agg'); silently a NO-OP if the attribute is absent"),
 ]
-STIMULUS_DIMS = ["stim_ca_amplitude", "stim_theta_cycles", "stim_n_traversals",
-                 "stim_inter_traversal_s", "stim_burst_duration_ms",
-                 "stim_theta_period_ms", "stim_dopamine_delay", "stim_silence_duration"]
+
+# Network dimensions are structural constructor/setter arguments, applied directly and
+# unconditionally at sweep_runner.py:125-138. They are not attribute writes onto a params
+# object, so read-tracing does not apply; they are recorded as APPLIED-STRUCTURALLY.
+NETWORK_LEVEL = [
+    ("net_n_synapses",         "MultiSynapseNetwork(n_synapses=...)", "sweep_runner.py:125-131"),
+    ("net_spacing_um",         "MultiSynapseNetwork(spacing_um=...)", "sweep_runner.py:126-131"),
+    ("net_mt_invaded_fraction","syn.set_microtubule_invasion(bool)",  "sweep_runner.py:135-138"),
+]
+
+# Stimulus dimensions -> ThetaBurstScenario constructor args (sweep_runner.py:145).
+# dim_id -> scenario attribute.
+STIMULUS_LEVEL = {
+    "stim_ca_amplitude":      "ca_amplitude",
+    "stim_theta_cycles":      "theta_cycles_per_traversal",
+    "stim_n_traversals":      "n_traversals",
+    "stim_inter_traversal_s": "inter_traversal_interval_s",
+    "stim_burst_duration_ms": "burst_duration_ms",
+    "stim_theta_period_ms":   "theta_period_ms",
+    "stim_dopamine_delay":    "dopamine_delay_s",
+    "stim_silence_duration":  "silence_duration_s",
+}
 
 
 def drive_the_model(n_syn=3, n_steps=8):
@@ -155,6 +169,42 @@ def drive_the_model(n_syn=3, n_steps=8):
         net.step(1e-3, {'voltage': -10e-3, 'reward': False})
     net._update_backbone_field()
     return n_syn, n_steps
+
+
+def trace_stimulus_dimensions():
+    """Read-trace ThetaBurstScenario attributes through a real (small) scenario run.
+
+    The scenario is deliberately shrunk — 2 traversals so an inter-traversal gap exists,
+    short bursts, short silence — but every branch of run()/_run_epoch is exercised:
+    bursts, gap, dopamine, final silence, snapshots.
+    """
+    from sweep.theta_burst_scenario import ThetaBurstScenario
+    reads = collections.Counter()
+    orig = ThetaBurstScenario.__getattribute__
+
+    def traced(self, name):
+        if not name.startswith('_'):
+            reads[name] += 1
+        return orig(self, name)
+
+    ThetaBurstScenario.__getattribute__ = traced
+    try:
+        p = Model6Parameters()
+        p.em_coupling_enabled = True
+        p.multi_synapse_enabled = True
+        net = MultiSynapseNetwork(n_synapses=2, pattern="clustered", spacing_um=1.0)
+        net.initialize(Model6QuantumSynapse, p)
+        for s in net.synapses:
+            s.set_microtubule_invasion(True)
+        sc = ThetaBurstScenario(
+            ca_amplitude=1e-5, theta_cycles_per_traversal=2, n_traversals=2,
+            inter_traversal_interval_s=1.0, burst_duration_ms=20.0,
+            theta_period_ms=100.0, dopamine_delay_s=0.3, silence_duration_s=1.0,
+        )
+        sc.run(net, dt=1e-3)
+    finally:
+        ThetaBurstScenario.__getattribute__ = orig
+    return reads
 
 
 def main():
@@ -206,12 +256,47 @@ def main():
         print(f"  {dim:<24}{path:<44}{n:>7}  {verdict}")
     print()
 
-    # ---------------- NON-PARAMS DIMENSIONS ----------------
-    print("--- NON-PARAMS DIMENSIONS (different apply path; NOT read-traced here) ---")
-    for dim, path, site, note in OTHER_LEVEL:
-        print(f"  {dim:<26}{site:<22}{note}")
-    print(f"  {len(STIMULUS_DIMS)} stimulus dimensions route through "
-          f"scenario_from_vector() (sweep_runner.py:145) — audited separately.")
+    # ---------------- MODEL-LEVEL ----------------
+    print("--- MODEL-LEVEL DIMENSIONS (apply target probed directly) ---")
+    from model6_parameters import Model6Parameters as _MP
+    from model6_core import Model6QuantumSynapse as _Syn
+    probe_syn = _Syn(_MP())
+    for dim, path, site, note in MODEL_LEVEL:
+        obj = probe_syn
+        ok = True
+        for part in path.split('.'):
+            if not hasattr(obj, part):
+                ok = False
+                break
+            obj = getattr(obj, part)
+        verdict = "REACHED" if ok else "*** INERT (silent no-op) ***"
+        if not ok:
+            inert.append((dim, path, site))
+        else:
+            reached.append((dim, path, site))
+        print(f"  {dim:<24}{path:<42}{verdict}")
+        print(f"  {'':<24}{site} — {note}")
+    print()
+
+    # ---------------- NETWORK-LEVEL ----------------
+    print("--- NETWORK DIMENSIONS (structural constructor/setter args) ---")
+    for dim, path, site in NETWORK_LEVEL:
+        print(f"  {dim:<26}{path:<40}APPLIED-STRUCTURALLY  {site}")
+    print("  Applied directly and unconditionally; not attribute writes, so read-tracing")
+    print("  does not apply. Effect on results not asserted here.")
+    print()
+
+    # ---------------- STIMULUS-LEVEL ----------------
+    print("--- STIMULUS DIMENSIONS (read-traced through a real scenario run) ---")
+    stim_reads = trace_stimulus_dimensions()
+    print(f"  {'dim_id':<26}{'scenario attribute':<30}{'reads':>7}  verdict")
+    print("  " + "-" * 76)
+    for dim, attr in STIMULUS_LEVEL.items():
+        n = stim_reads.get(attr, 0)
+        verdict = "REACHED" if n else "*** INERT ***"
+        site = "sweep_runner.py:145"
+        (reached if n else inert).append((dim, f"ThetaBurstScenario.{attr}", site))
+        print(f"  {dim:<26}{attr:<30}{n:>7}  {verdict}")
     print()
 
     # ---------------- VERDICT ----------------
@@ -221,7 +306,10 @@ def main():
         print("         so no dimension verdict below it can be trusted.")
         return 2
 
-    print(f"VERDICT: {len(inert)} of {len(PARAMS_LEVEL)} params-level dimensions are INERT.")
+    n_audited = len(PARAMS_LEVEL) + len(MODEL_LEVEL) + len(STIMULUS_LEVEL)
+    print(f"VERDICT: {len(inert)} of {n_audited} read-traceable dimensions are INERT.")
+    print(f"         ({len(NETWORK_LEVEL)} network dimensions are applied structurally and")
+    print(f"          are excluded from this denominator — see their section above.)")
     print()
     print("  Each of these is SWEPT by sweep_runner.py and READ BY NOTHING. A sweep over")
     print("  any of them returns a flat response that reads as a physical null:")
