@@ -172,23 +172,35 @@ def get_parameter_specs(params: Model6Parameters) -> List[ParameterSpec]:
             citation='Fisher 2015'
         ))
     
-    # 3. Calcium peak (need to find actual attribute name)
+    # 3. Calcium peak
+    #
+    # RAISES rather than skipping (MO ruling 012 §4). This block used to grope through three
+    # candidate attribute names and, if none matched, silently emit no spec — so a
+    # sensitivity analysis would quietly report on one fewer parameter than it claims, with
+    # nothing in the output saying so. That is the same defect class as sweep_runner.py's
+    # hasattr-guarded dimension write: a guard around APPLYING AN EXTERNAL INPUT, where the
+    # False branch discards the input instead of failing.
+    #
+    # The candidate list is kept (the attribute has genuinely moved names before), but
+    # exhausting it is now an error, not a silent no-op. `ca_spine_peak` resolves today.
+    _CA_CANDIDATES = ['ca_spine_peak', 'peak_ca_uM', 'ca_peak']
     if hasattr(params, 'calcium'):
-        ca_attr = None
-        for attr in ['ca_spine_peak', 'peak_ca_uM', 'ca_peak']:
-            if hasattr(params.calcium, attr):
-                ca_attr = attr
-                break
-        
-        if ca_attr:
-            specs.append(ParameterSpec(
-                name=f'calcium.{ca_attr}',
-                display_name='Peak [Ca²⁺]',
-                baseline=getattr(params.calcium, ca_attr),
-                unit='μM',
-                variation_pct=40,
-                citation='Sabatini 2000'
-            ))
+        ca_attr = next((a for a in _CA_CANDIDATES if hasattr(params.calcium, a)), None)
+        if ca_attr is None:
+            raise AttributeError(
+                f"Sensitivity spec 'Peak [Ca2+]' has no apply target: none of "
+                f"{_CA_CANDIDATES} exists on params.calcium. Silently dropping the spec "
+                f"would under-report the analysis by one parameter with no signal in the "
+                f"output. Add the correct attribute name to _CA_CANDIDATES."
+            )
+        specs.append(ParameterSpec(
+            name=f'calcium.{ca_attr}',
+            display_name='Peak [Ca²⁺]',
+            baseline=getattr(params.calcium, ca_attr),
+            unit='μM',
+            variation_pct=40,
+            citation='Sabatini 2000'
+        ))
     
     # 4. Aggregation rate
     if hasattr(params, 'coupling') and hasattr(params.coupling, 'k_agg_baseline'):

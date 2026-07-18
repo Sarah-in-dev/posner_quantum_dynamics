@@ -78,23 +78,38 @@ INERT_DIMENSIONS: Dict[str, str] = {
         "dimer_particles.py:49 — mean 0.15, i.e. 100x below this parameter's 15.0 Hz. "
         "Re-targeting this dimension means choosing WHICH J is meant. Physics call. ROUTED.",
     "q2_k_agg_baseline":
-        "(1) NO CONSUMER via a SILENT GUARD, and the declared values are off by ~1e6. "
-        "sweep_runner.py:92 guards on hasattr(dimerization,'k_agg'), which is False — the "
-        "attribute is k_base — so the write never executes. But re-pointing at k_base is NOT "
-        "mechanical: k_base = 18918.67 M^-1 s^-1, while this dimension's values are "
-        "[0.001, 0.005, 0.01, 0.05] — which match k_classical (0.005) exactly. The values "
-        "were written for a DISSOLUTION rate, duplicating q2_k_classical. ROUTED.",
+        "*** DELETE-VERDICT (MO ruling 012 §2), HELD behind the isotope gate — goes out in "
+        "one batch with the orphan deletions, not as a loose one-off. *** WRONG UNITS, not "
+        "merely wrong scale: this dimension's values [0.001, 0.005, 0.01, 0.05] are "
+        "FIRST-ORDER dissolution rates (s^-1) — two of them are exactly the grounded and the "
+        "retired K_CLASSICAL — while the aggregation constant k_base is SECOND-ORDER "
+        "(~1.9e4 M^-1 s^-1, = productive_fraction x Smoluchowski [GROUNDED]). The dimension "
+        "duplicates q2_k_classical. sweep_runner.py:92 now RAISES rather than silently "
+        "skipping (ruling 012 §4); 'fixing the guard' by assigning to k_base is refused for "
+        "the record — it injects a dissolution rate into an aggregation constant and yields "
+        "a smooth, plausible, WRONG response curve. If an aggregation sensitivity sweep is "
+        "wanted later it is a NEW declaration bracketing k_base, not a repair — and whoever "
+        "declares it must state up front whether it is sensitivity analysis or a value "
+        "choice, because productive_fraction is [LOCKED] 'never tuned to a target dimer "
+        "count'.",
     "stim_ca_amplitude":
-        "(3) MECHANISM DISCLAIMED BY THE CODE. This dimension's own text says 'peak calcium "
-        "per burst (direct injection)', but _run_epoch's docstring "
-        "(theta_burst_scenario.py:107) states: 'Calcium enters via voltage-gated channel "
-        "physics, not direct injection.' The scenario never reads ca_amplitude. Either wire "
-        "an injection path or DELETE the dimension — leaving it asserts a mechanism the code "
-        "explicitly disclaims.",
-    "stim_burst_duration_ms":
-        "(3) HARDCODED OVERRIDE. theta_burst_scenario.py:_run_epoch fixes burst length at "
-        "spikes_per_burst * spike_period = 4 * 10 ms = 40 ms. The swept values "
-        "[20, 50, 100, 200] ms are never consulted.",
+        "*** DELETE-VERDICT (MO ruling 012 §3), HELD with the batch. DO NOT WIRE IT. *** "
+        "Wiring this would reinstate a named anti-pattern. Calcium amplitude is now a "
+        "DERIVED quantity — the near-mouth nanodomain peak from a closed-form point-source "
+        "steady state (Naraghi & Neher 1997), which explicitly 'replaces the prior "
+        "calibrated 0.5 uM/channel snapshot' (quantum-system-canonical:82). A dimension that "
+        "SETS calcium amplitude directly re-introduces exactly what the calcium grounding "
+        "retired. _run_epoch's docstring ('Calcium enters via voltage-gated channel physics, "
+        "not direct injection') is the CORRECT side of this contradiction; the dimension is "
+        "the stale side.",
+    # stim_burst_duration_ms — RESOLVED 2026-07-18 (MO ruling 012 §3), no longer inert.
+    # It was a HARDCODED OVERRIDE: _run_epoch fixed spikes_per_burst = 4 at 100 Hz = 40 ms
+    # and never consulted the scenario value. Burst duration now sets the number of 100 Hz
+    # pulses (the physical meaning of a longer burst); the 100 Hz train and 2 ms
+    # depolarization are the invariants. The dataclass default moved 50.0 -> 40.0 one-way,
+    # to the value that actually ran AND the grounded one (4 pulses at 100 Hz is the
+    # canonical theta-burst unit; 50 ms was a round number) — same direction as ruling 006.
+    # Verified bit-identical at the default before and after.
 }
 
 

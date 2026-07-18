@@ -48,7 +48,13 @@ class ThetaBurstScenario:
     theta_cycles_per_traversal: int = 12    # Theta cycles per place field traversal
     n_traversals: int = 6                   # Number of place field traversals
     inter_traversal_interval_s: float = 45.0  # Gap between traversals (s)
-    burst_duration_ms: float = 50.0         # Duration of each calcium burst (ms)
+    # CORRECTED 50.0 -> 40.0 on 2026-07-18 (MO ruling 012 §3), one-way: the declaration moved
+    # to the value the code actually ran, never the reverse. This field declared 50 ms while
+    # _run_epoch hardcoded spikes_per_burst = 4 at 100 Hz = 40 ms, so 50 was never simulated.
+    # 40 ms is also the grounded value rather than merely the running one: 4 pulses at 100 Hz
+    # is the canonical theta-burst unit, whereas 50 ms is a round number with no structure
+    # behind it. Same direction of fix as T_singlet_dimer 500 -> 216 (ruling 006).
+    burst_duration_ms: float = 40.0         # Duration of each burst (ms) = 4 pulses @ 100 Hz
     theta_period_ms: float = 125.0          # Theta cycle period (ms) — 8 Hz canonical
     dopamine_delay_s: float = 1.0           # Dopamine arrival post-traversal (s)
     dopamine_after_traversal: int = -1      # Which traversal triggers dopamine (1-indexed, -1=last)
@@ -122,12 +128,18 @@ class ThetaBurstScenario:
         """
         n_steps = int(duration_s / dt)
 
-        # Spike timing within a burst: 4 spikes at 100 Hz
+        # Spike timing within a burst: 100 Hz spike train.
         # Each spike = 2ms depolarization + 8ms rest = 10ms
+        #
+        # WIRED 2026-07-18 (MO ruling 012 §3). spikes_per_burst was hardcoded to 4, fixing
+        # burst length at 40 ms and SILENTLY OVERRIDING self.burst_duration_ms — so the
+        # stim_burst_duration_ms sweep dimension varied a value nothing consulted. The burst
+        # duration now sets the number of 100 Hz pulses, which is the physical meaning of a
+        # longer burst; the 100 Hz train and the 2 ms depolarization are the invariants.
         spike_period = 0.010       # 10ms per spike (100 Hz)
         depol_duration = 0.002     # 2ms depolarization
-        spikes_per_burst = 4
-        burst_active_duration = spikes_per_burst * spike_period  # 40ms
+        spikes_per_burst = max(1, int(round(self.burst_duration_s / spike_period)))
+        burst_active_duration = spikes_per_burst * spike_period
 
         for step in range(n_steps):
             t_local = step * dt
@@ -336,7 +348,7 @@ def scenario_from_vector(values: Dict[str, Any]) -> ThetaBurstScenario:
         theta_cycles_per_traversal=int(values.get("stim_theta_cycles", 12)),
         n_traversals=int(values.get("stim_n_traversals", 6)),
         inter_traversal_interval_s=float(values.get("stim_inter_traversal_s", 45.0)),
-        burst_duration_ms=float(values.get("stim_burst_duration_ms", 50.0)),
+        burst_duration_ms=float(values.get("stim_burst_duration_ms", 40.0)),
         theta_period_ms=float(values.get("stim_theta_period_ms", 125.0)),
         dopamine_delay_s=float(values.get("stim_dopamine_delay", 1.0)),
         dopamine_after_traversal=int(values.get("stim_dopamine_after_traversal", -1)),

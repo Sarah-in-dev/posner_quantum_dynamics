@@ -89,9 +89,34 @@ def apply_vector_to_model(model, values: Dict[str, Any]) -> None:
     if "q2_k_classical" in values:
         model.ca_phosphate.dimerization.k_classical = values["q2_k_classical"]
     if "q2_k_agg_baseline" in values:
-        # k_agg may be on dimerization or a separate attribute — adjust if needed
-        if hasattr(model.ca_phosphate.dimerization, 'k_agg'):
-            model.ca_phosphate.dimerization.k_agg = values["q2_k_agg_baseline"]
+        # RAISES rather than skips (MO ruling 012 §4). This was:
+        #     if hasattr(model.ca_phosphate.dimerization, 'k_agg'):
+        #         model.ca_phosphate.dimerization.k_agg = values[...]
+        # with the comment "k_agg may be on dimerization or a separate attribute — adjust if
+        # needed". The attribute is `k_base`, so the guard was always False and the write
+        # never executed: the dimension was silently a no-op, and its flat response read as
+        # a physical null.
+        #
+        # A guard that silently skips APPLYING AN EXTERNAL INPUT is a machine for producing
+        # dimensions that look swept and are not — it is how several of the inert ones got
+        # here. Applying an input must succeed or fail loudly; there is no correct third
+        # behaviour. (This is distinct from guarding an OPTIONAL READ, e.g.
+        # hasattr(s,'dimer_particles'), which is legitimate and is left alone.)
+        #
+        # Left raising rather than re-pointed at k_base ON PURPOSE: this dimension's values
+        # [0.001, 0.005, 0.01, 0.05] are first-order s^-1 dissolution rates (two of them are
+        # exactly the grounded and retired K_CLASSICAL), while k_base is a second-order
+        # ~1.9e4 M^-1 s^-1 aggregation constant. Wrong units, not just wrong scale. Pointing
+        # it at k_base would produce a smooth, plausible, wrong response curve. The dimension
+        # carries a DELETE verdict (ruling 012 §2), held behind the isotope gate.
+        raise AttributeError(
+            "q2_k_agg_baseline has no valid apply target. The dimension's values are "
+            "first-order dissolution rates (s^-1) and duplicate q2_k_classical; the "
+            "aggregation constant is `k_base` (second-order, M^-1 s^-1). This dimension is "
+            "marked INERT with a DELETE verdict — see quantum_dimensions.INERT_DIMENSIONS. "
+            "Do not 'fix' this by assigning to k_base: that injects a dissolution rate into "
+            "an aggregation constant and yields defensible-looking wrong numbers."
+        )
 
 
 # ── Single vector execution ──────────────────────────────────────────────────
