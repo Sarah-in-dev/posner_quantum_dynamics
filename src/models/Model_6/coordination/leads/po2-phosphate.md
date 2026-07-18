@@ -7,7 +7,7 @@ consumption.
 
 **Status:** LIVE — grounding brief returned 2026-07-18 19:46Z.
 **Current unit:** pre-registration (§2.4), then the conservation probe committed FAILING first.
-**Last heartbeat:** 2026-07-18 20:52Z
+**Last heartbeat:** 2026-07-18 21:10Z
 **Blocked on:** — (two open questions in `queue/po2-phosphate.md`, neither blocking; working on)
 
 ## HEARTBEAT LOG
@@ -176,3 +176,57 @@ sample as confirmation of a mechanism I had not measured"*), and D18 established
 near-critical and bistable with large between-seed variance, which is exactly where n=1 misleads.
 **Running 3 seeds, backgrounded, persisted incrementally. If it does not resolve, I report the
 difference as UNRESOLVED rather than as an effect.**
+
+### Q2 SENSITIVITY COMPLETE (3 seeds) — conservation invariant; the downstream difference is NOT established
+
+**The MO's actual question — do the two choices give different CONSERVATION outcomes? NO.**
+
+    max |dP|/P across all 6 runs, both modes : 1.157e-14   (eps = 1e-12)
+
+Conservation is invariant, and structurally so rather than empirically: the ledger sums both
+pools, and the total debited is identical in either mode — only the split moves. **A ruling
+either way on Q2 does not disturb acceptance item 1.**
+
+**The downstream observation, and why I am NOT calling it a finding:**
+
+    met-first    dimer 3.824401e-03 +/- 9.356487e-05
+    proportional dimer 3.911854e-03 +/- 7.105433e-05
+    paired mean difference  +8.745360e-05  (~2.3%),  sign POSITIVE in 3/3 seeds
+
+Proportional debiting drains the structural pool harder (speciation reads structural only), and
+standing dimer came out **higher** in every seed. Consistent sign is suggestive. **It is not
+established:** a sign test at n=3 with all-same-sign gives **p = 0.25** — the smallest p that
+design can produce — and the between-seed spread (9.4e-05) is of the same order as the effect
+(8.7e-05). **So this is an observation requiring replication, not a result**, and I am recording
+it as such rather than letting a 3/3 sign read as a mechanism. The direction is also
+counter-intuitive (less structural phosphate → more dimer), which is one more reason not to
+narrate a mechanism for it: D18 established this regime is near-critical and bistable, where a
+0.12% input difference can amplify and where n=3 misleads.
+
+**Recommendation to the MO unchanged:** keep metabolic-first (pre-registered, defensible,
+conservative for my own claim). If Sarah rules proportional, only `consume_for_atp_synthesis`
+changes and item 1 is unaffected. **If anyone wants the dimer difference resolved it needs
+~20 seeds and should be sequenced as its own compute slot — I am not spending that inside PO-2's
+acceptance, because it is not on it.**
+
+### STATUS: acceptance MET on both items as they now stand. Not self-declaring WRAPPED.
+
+- **Item 1 (mass conservation): MET.** Shown failing first (`305e096`), fixed stoichiometrically
+  (`11aec6f`), all three controls fired, tolerance stated/justified/validated, cheat-check passed.
+- **Item 2 (as REPLACED by ruling 001 — the consumer trace): MET.** `atp_system.py:402` defines it,
+  `:591` is the only read, into a dead parameter; no live consumer repo-wide. J-coupling does not
+  read phosphate.
+
+**Per `consumer-acceptance-gate`, the MO verifies — a PO does not mark its own acceptance.**
+Everything is committed and independently re-runnable:
+`/Users/sarahdavidson/posner_quantum_dynamics/venv/bin/python -u sweep/phosphate_ledger_probe.py`
+(~2 min, exits non-zero unless CONSERVED).
+
+**Open and genuinely gated (all Sarah's, none mine to close):** should J-coupling depend on
+phosphate at all (ruling 001's escalation) · Q2 metabolic-first vs proportional · `K_CLASSICAL`'s
+three-way spread, reported and untouched.
+
+**On the PO-2 → PO-6 edge: the MO's call, not mine.** Conservation is fixed, so the sweep would no
+longer measure a loop that creates mass. **But the Pi limit never bound in the tested regime, so
+depletion feedback is unexercised** — the sweep would test a loop that CAN self-limit without
+evidence that it DOES. I recommend PO-6 proceed with that stated as a known-open input.
