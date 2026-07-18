@@ -105,6 +105,7 @@ def set_arm(net, committed):
 
 def read(net):
     return [dict(E=s.spine_plasticity.E_invasion,
+                 sp_time=s.spine_plasticity.time,
                  enl=s.spine_plasticity.actin_enlargement,
                  conf=s.spine_plasticity.confinement,
                  vol=s.spine_plasticity.spine_volume,
@@ -117,8 +118,16 @@ def run_arm(committed, gap_s, seed=42):
     net = make_network()
     set_arm(net, committed)
     pre = read(net)
+    t_net_pre = net.time
     analytical_gap(net, gap_s, dt_sub=1.0)
     post = read(net)
+    # D20's discriminator, adopted on the MO's ruling to PO-3: an OBSERVED CLOCK DELTA is
+    # proof; a retention threshold is a symptom. The gap is honest only if the plasticity
+    # clock advanced by the same wall time the network clock did.
+    for p, q in zip(pre, post):
+        q['sp_advance'] = q['sp_time'] - p['sp_time']
+    for q in post:
+        q['net_advance'] = net.time - t_net_pre
     return pre, post
 
 
@@ -174,6 +183,17 @@ def main():
         if not stopped and d > TOL:
             failures.append(f"{label}: |R-Rpred| = {d:.4f} > {TOL}")
 
+    # ---- D20 CLOCK-DELTA DISCRIMINATOR (adopted on MO ruling; proof, not symptom)
+    pre_c, post_c = run_arm(False, GAP_S)
+    sp_adv, net_adv = post_c[0]['sp_advance'], post_c[0]['net_advance']
+    print(f"\nD20 CLOCK DELTA over a {GAP_S:.0f} s gap:")
+    print(f"  network.time advanced           = {net_adv:.4f} s")
+    print(f"  spine_plasticity.time advanced  = {sp_adv:.4f} s")
+    print(f"  ratio (honest gap => 1.0)       = {sp_adv / net_adv if net_adv else float('nan'):.6f}")
+    clock_honest = abs(sp_adv - net_adv) < 1e-6
+    print(f"  {'PASS — clocks agree' if clock_honest else 'FAIL — the plasticity clock lags the network clock'}")
+    clock = dict(net_advance=net_adv, sp_advance=sp_adv, honest=bool(clock_honest))
+
     # ---- POST-HOC DIAGNOSTIC — declared post-hoc, NOT pre-registered, and it does
     # NOT enter the verdict. Reported because it is the sharpest single discriminator
     # the run produced: if the clock is stopped, retention is independent of gap length.
@@ -214,7 +234,7 @@ def main():
                        'gap_retention_probe_results.json')
     with open(out, 'w') as f:
         json.dump(dict(verdict=v, why=why, gap_s=GAP_S, results=results,
-                       null_zero_gap_R=r_null), f, indent=2)
+                       clock_delta=clock, null_zero_gap_R=r_null), f, indent=2)
     print(f"\npersisted -> {out}")
     return 0
 

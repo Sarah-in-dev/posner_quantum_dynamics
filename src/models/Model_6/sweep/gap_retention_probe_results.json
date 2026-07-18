@@ -13,7 +13,7 @@
       "E_pre": 0.5084745762711864,
       "E_post": 0.508471439553763,
       "vol_pre": 1.0,
-      "vol_post": 1.0000476038690531,
+      "vol_post": 0.9997469059587153,
       "stopped_clock": true
     },
     "committed": {
@@ -24,9 +24,14 @@
       "E_pre": 0.5084745762711864,
       "E_post": 0.5084634778922255,
       "vol_pre": 1.0,
-      "vol_post": 0.9997538791498076,
+      "vol_post": 1.0003600856139567,
       "stopped_clock": true
     }
+  },
+  "clock_delta": {
+    "net_advance": 20.001,
+    "sp_advance": 0.001,
+    "honest": false
   },
   "null_zero_gap_R": 0.9999938311224005
 }
