@@ -11,11 +11,22 @@ list. This file is the live registry; that file is the durable plan. Read both.
 ## Active POs
 | PO | Objective | Status | Owner files | Last update |
 |---|---|---|---|---|
-| `model6-mo` | the MO itself (meta/coordinator) | BOOTING | `board.md`, `MO_MODEL6.md` | 2026-07-18 |
-| `po1-b2` | B2 — retire the per-synapse pump site | NOT SPAWNED | `vibrational_cascade_module.py`, backbone params | — |
-| `po3-einvasion` | E_invasion provenance + the ratchet test | NOT SPAWNED | `spine_plasticity_module.py` | — |
+| `model6-mo` | the MO itself (meta/coordinator) | GROUNDED — brief committed `093c675` | `board.md`, `MO_MODEL6.md` | 2026-07-18 17:30Z |
+| `po1-b2` | B2 — retire the per-synapse pump site | **DISPATCHED — chip pending Sarah's click** (`task_274226b1`) | `vibrational_cascade_module.py`, backbone params (`model6_parameters.py:759-805`) | 2026-07-18 17:35Z |
+| `po3-einvasion` | E_invasion provenance + the ratchet test | **DISPATCHED — chip pending Sarah's click** (`task_ead7d588`) | `spine_plasticity_module.py` actin/E_invasion block, its `sweep/` probe | 2026-07-18 17:35Z |
 
 _(The MO adds a row here + the PO's `leads/`/`queue/` files when it spawns one.)_
+
+**Status vocabulary — read it literally.** `DISPATCHED — chip pending` means the kickoff is
+written and the chip is showing, **not** that a PO is running. A PO becomes `LIVE` only when
+its session starts and its `leads/<name>.md` carries a heartbeat. The MO does not mark a PO
+live off its own spawn call — that would be the producer-green failure applied to dispatch.
+
+**Both kickoffs pin the worktree explicitly** (`cwd` = `.claude/worktrees/nervous-hertz-7ccff6`,
+branch `claude/nervous-hertz-7ccff6`) because master is ~20 commits behind. If the chip opens a
+PO in a *fresh* worktree instead, that PO must re-base onto `claude/nervous-hertz-7ccff6`
+before doing anything — its first grounding step will catch this, since the branch HEAD it
+finds will not match the `e6c7bc5`/`093c675` lineage its kickoff names.
 
 ## Surface-ownership map (collision spine — never edit another owner's files; drop a `requests/` file)
 | Surface | Owner |
