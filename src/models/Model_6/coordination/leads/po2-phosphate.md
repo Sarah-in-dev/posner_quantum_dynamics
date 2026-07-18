@@ -5,10 +5,48 @@ hydrolysis → consumption → dissolution → recovery cycle to a **stated** to
 check **shown failing on current code first**; and J-coupling demonstrably tracking dimer
 consumption.
 
-**Status:** DISPATCHED by the MO 2026-07-18 19:05Z — chip `task_e54e9c25` pending.
-**Current unit:** — (first act is the `### GROUNDING BRIEF`)
-**Last heartbeat:** —
-**Blocked on:** —
+**Status:** LIVE — grounding brief returned 2026-07-18 19:46Z.
+**Current unit:** pre-registration (§2.4), then the conservation probe committed FAILING first.
+**Last heartbeat:** 2026-07-18 19:46Z
+**Blocked on:** — (two open questions in `queue/po2-phosphate.md`, neither blocking; working on)
+
+## HEARTBEAT LOG
+
+### 2026-07-18 19:46Z — GROUNDED. Three corrections to the dispatch, all code-verified.
+
+Both defects confirmed at the code level as the kickoff described them. Three things the
+kickoff did not have:
+
+1. **TWO consumption sites, not one.** `model6_core.py:450-452` (EM path) **and
+   `model6_core.py:756-757`** (`=== NON-EM PATH ===`) carry byte-identical decrement blocks;
+   neither updates `phosphate_total`. Same two-definitions shape the MO recorded for
+   `analytical_gap`. A fix to one leaves the other live. Fix must be structural, not
+   dual-patched.
+
+2. **Dissolution ALREADY returns Pi — do not "fix" it.** `ca_triphosphate_complex.py:430-438`:
+   `d_dimer_dt = dimer_formation - dimer_dissociation`, then
+   `_po4_consumed = 4.0*d_dimer_dt + 6.0*d_trimer_dt`, commented *"Net formation: negative
+   values return Ca to pool on dissolution"*. The quantity is **signed**. Step E's "return Pi
+   from particle dissolution" is satisfied at this site. The live defect there is instead the
+   `np.maximum(..., 0.0)` clamp at `:451`/`:757`, which creates phosphate at pool exhaustion —
+   and the pin says "not a cap".
+
+3. **DECISION RECORD D14 contradicts this dispatch, and both are right about different
+   halves.** D14: *"SOC loop already closed in live code (no B3 edit needed) … phosphate
+   feedback **mimicking model6_core**"*; D8: *"exact conservation (2e-17 M)"*. Verified against
+   code, not prose: `grep -n "ATP|hydrolys|recovery" sweep/phosphate_conservation_probe.py`
+   returns **ZERO hits**. The A3 probe has **no ATP arm**. D8/D14 measured the
+   formation↔dissolution half — which does conserve — and that has been read as the whole
+   loop. **The loop D14 declared closed was never wired to the leak.**
+
+**`K_CLASSICAL` report (MO-held, untouched):** `ca_triphosphate_complex.py:160` = `0.005` ✅ ·
+`sweep/phosphate_conservation_probe.py:70` = `0.005` + Turhan citation ✅ · `analytical_gap`
+both copies = `0.05` (retired; PO-4's surface) · `dimer_particles.py:127` = `0.001`. Three-way
+spread stands. Reported, not touched.
+
+**Tree state on arrival:** NOT clean — PO-4 holds uncommitted edits to `PREREG_PO4_GAP.md` and
+`src/models/Model_6/sweep/gap_retention_probe.py`. Those are PO-4's own files; `atp_system.py`
+and `model6_core.py` are untouched, so my slice is free. No collision.
 
 **Why now:** PO-1's B2 landed and is MO-verified; the tree is clean, so the `model6_core.py`
 shared-file boundary the board gated PO-2 on is met.
