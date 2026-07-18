@@ -6,13 +6,53 @@ FALSIFIED and INCONCLUSIVE, with its positive control demonstrated to fire — p
 provenance verdict on `k_polymerization_max` (and `E_ref`, which sits in the load-bearing
 denominator at `spine_plasticity_module.py:411-412`).
 
-**Status:** **Rotation 002 returned EQUIVOCAL — the magnitude is NOT determined.** Logged as
-L·ETA-6 (`{row in RESEARCH_LOG}`), pre-registration + two amendments committed. Compute
-sequencing requested as **Q4**.
-**Current unit:** rotation 002 closed with a partial result; polling `board.md` +
-`requests/po3-einvasion/`.
-**Last heartbeat:** 2026-07-18 20:59Z
-**Blocked on:** MO sequencing for the plateau-ON pair (Q4). Not idle.
+**Status:** **WRAPPED** (MO ruling 009). Acceptance-scoped objective exhausted; nothing
+non-gated remains on this surface.
+**Current unit:** none. Skill rewrite routed to the MO as
+`requests/model6-mo/po3-einvasion-skill-002.md` (`9bd7218`) — the skill library symlinks into
+another program's repo, so the MO writes it.
+**Last heartbeat:** 2026-07-18 21:08Z — FINAL.
+**Blocked on:** nothing. Two items GATED and correctly not attempted (below).
+
+## Final ledger
+
+| deliverable | state |
+|---|---|
+| Provenance verdict | **MET** — `E_ref` REPRODUCIBLE/SELF-REFERENTIAL (reproduces at 1.8742); `k_polymerization_max` INHERITED, 3.57× its own citation, inheriting commit `703d394` identified |
+| Ratchet measurement | **EXECUTED, scored VOID on its own registered terms** — cause found (`BASELINE_RATE_HZ = 0.5`) |
+| Rotation 001 (null audit) | **DELIVERED** — six-probe table; L·ETA-4's NMDAR half unsupported; F-4 to PO-5 |
+| Rotation 002 (magnitude) | **EQUIVOCAL**, reasons separable and costed; plateau-ON arms PARKED with a price |
+| Skill rewrite | **ROUTED** to the MO with exact text, not applied |
+
+**Gated, correctly not attempted:** the L·ETA-5 re-run (Sarah — corrected null pre-registered as
+AMENDMENT 4 and deliberately NOT run) · the plateau-ON pair (MO — parked, costed at >10× the
+~65 s/arm plateau-OFF cost).
+
+## What a successor should know that is not in the logs
+
+1. **Nothing on this surface is grounded on the charge side.** The discharge constant is
+   (`tau_extrude`, Honkura, and independently reproduced in-code at 180.1 s). The charge constant
+   is not, and correcting it moves the model **away** from ignition.
+2. **The driver is weakly activity-selective.** Tonic spontaneous release alone carries
+   `E_invasion` past `invasion_threshold`; the driven/undriven separation collapses 6.15× → 1.70×
+   over 8 traversals. Any claim that `E_invasion` encodes "this synapse was active" needs that
+   measured first.
+3. **`r ≥ 1` at one synapse is not a partition.** `k_cross ∝ η_i·η_j·P_product`
+   (`multi_synapse_network.py:340-341`), so a single driven synapse yields zero cross-edges by
+   construction — as measured, in both arms.
+
+## Errors I made this session, for the successor's calibration
+
+Six, none of which changed a constant, and only the last found by me first: the "frozen gap"
+claim (PO-4) · the committed-branch retention derivation (PO-4) · F-3's "~100× NMDAR starvation"
+(**overstated and inverted**; recommendation withdrawn) · claiming a sampling change was neutral
+when it biased my own scored peak toward the convenient branch (MO ruling 008) · twice committing
+to a detached HEAD where neither the MO nor Sarah could see the work · and registering a
+peak-difference criterion that was unsound by construction.
+
+**The consistent shape: reliable on physics reasoning, unreliable when judging whether my own
+shortcuts were consequence-free.** A successor should assume the same and verify my
+instrumentation choices, not just my conclusions.
 
 ## Rotation 002 result — EQUIVOCAL, and the reasons are separable
 
