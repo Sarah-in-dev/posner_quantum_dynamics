@@ -131,36 +131,65 @@ class TubulinCascadeParameters:
     D_modes: int = 20                 # Effective number of sub-THz modes participating
                                       # in the cascade to nuclear spin environment.
                                       # Tubulin has ~300 sub-THz modes total, but only
-                                      # ~20 couple efficiently to the dimer formation 
+                                      # ~20 couple efficiently to the dimer formation
                                       # sites via conformational pathways.
-                                      # This is the effective D for the Fröhlich dynamics
-                                      # in the relevant coupling channel.
+                                      #
+                                      # ⚠ POST-B2: D_modes enters NO physics here — it is
+                                      # printed and nothing more (verified on executable
+                                      # code, MO ruling 005 §2). It does not enter P_c;
+                                      # only ω₀ and Q do.
+                                      #
+                                      # STATED LIMIT ON η — read this before quoting η.
+                                      # η = (r−1)/(r+1) is the LARGE-D limit of the
+                                      # quantum-pump treatment (Wang/Wang 2022). The pin
+                                      # calls for D ≳ 200; this site runs D = 20 and the
+                                      # backbone runs 50. Because D no longer enters the
+                                      # formula, a small D does not change the number
+                                      # computed — it bears on whether the large-D FORM is
+                                      # the right one to use at all. Finite-D corrections
+                                      # to the order parameter have NOT been derived or
+                                      # checked here, so the adequacy of the limit at
+                                      # D = 20 is UNVERIFIED and is recorded as a limit on
+                                      # every per-synapse η this module reports.
+                                      # D is NOT tuned to make this comfortable — raising
+                                      # it to sit inside the limit would be moving a
+                                      # constant to reach an outcome (MO_MODEL6 §7).
+                                      # Closing it needs the finite-D expansion from the
+                                      # source paper, which is a physics unit, not a
+                                      # code change.
     
     # === FRÖHLICH DISSIPATION AND REDISTRIBUTION RATES ===
+    #
+    # ⚠ POST-B2 STATUS, VERIFIED 2026-07-18 (MO ruling 005 §2): φ, χ and D_modes are
+    # **DIAGNOSTIC ONLY at this site — they enter NO physics.** Checked on executable code
+    # with comments and docstrings stripped: every remaining use is a declaration, the
+    # __post_init__ derivation, or a print/log. The live chain is
+    #     P_c = n̄_s·ℏ·(2π·ω₀)²/Q  →  r = P_met/P_c  →  η = (r−1)/(r+1)
+    # which consumes ω₀, Q and T only. An earlier draft of this comment claimed χ was
+    # "kept because the steady-state solution needs a nonlinear term" — that was FALSE and
+    # is corrected here: B2 deleted the Zhang steady-state quadratic, so there is no
+    # nonlinear term left to feed. They are retained, not deleted, because the Zhang rate
+    # equations remain the right description of above-threshold dynamics should a future
+    # consumer need them — but nothing consumes them today. Do not describe them as
+    # load-bearing, and do not infer a result from changing them: nothing will move.
+    #
     # NO Zhang 2019 CITATION HERE — deliberately. Zhang's BSA values (φ=6 GHz, χ=0.07 GHz)
     # belong to the GHz protein-mode family retired above. Adopting them would re-import
-    # the exact mode conflation B2 removes, wearing a citation. The rate equations from
-    # that paper are still used (see FrohlichCondensation); its PARAMETER VALUES are not.
+    # the exact mode conflation B2 removes, wearing a citation.
     #
     # φ is fixed by the oscillator constraint φ = ω₀/Q, pinned 2026-05-30:
     #   "φ ≤ ω₀ (oscillator constraint; φ = ω₀/Q ≲ 0.8 MHz at Q≳10). Forces the old
     #    10 GHz φ out."  — model6-network-layer-feasibility-may30
-    # It is DERIVED in __post_init__ rather than declared, so it cannot drift out of step
-    # with ω₀ or Q if either is swept. The old 10 GHz value was 12500× the constraint.
+    # DERIVED in __post_init__ so it cannot drift out of step with ω₀/Q if either is
+    # swept. The old 10 GHz value was 12500× the constraint.
     phi_dissipation: float = 0.0      # Hz — DERIVED as ω₀/Q in __post_init__. Do not set.
 
-    # χ sets the SLOPE ABOVE THRESHOLD ONLY and is NOT load-bearing: under the
-    # reference-free quantum-pump treatment (Wang/Wang 2022) the threshold is n_ex = n̄_s,
-    # which in large-D is parameter-free — φ, χ and Λ enter only above it. χ is kept
-    # because the steady-state solution needs a nonlinear term, not because its value
-    # carries a result.
-    #
-    # Its VALUE had to move: χ must satisfy χ < φ (two-phonon slower than one-phonon), and
-    # the old χ = 0.05 GHz is 62.5× LARGER than the new φ = 0.8 MHz — it would have
-    # inverted its own stated constraint. The χ/φ ratio is preserved from the pre-B2 values
-    # (0.05/10 = 0.005) rather than re-derived, so the above-threshold slope behaviour is
-    # carried over unchanged. This is a rescale to stay self-consistent, NOT a new claim
-    # about the value.
+    # χ. Its VALUE had to move: χ must satisfy χ < φ (two-phonon slower than one-phonon),
+    # and the old χ = 0.05 GHz is 62.5× LARGER than the new φ = 0.8 MHz — it would have
+    # inverted its own stated constraint. The χ/φ ratio is preserved from the pre-B2
+    # values (0.05/10 = 0.005) rather than re-derived. A rescale to stay self-consistent,
+    # NOT a new claim about the value — and, per the status note above, it currently
+    # changes no computed quantity.
     chi_ratio: float = 0.005          # χ/φ, preserved from the pre-B2 values
     chi_redistribution: float = 0.0   # Hz — DERIVED as chi_ratio·φ in __post_init__.
     

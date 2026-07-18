@@ -780,8 +780,29 @@ class DendriticBackboneParameters:
       · No r_c is computed here at all. Step B (2026-06-02) replaced the classical
         critical pump with P_c above; the live code in _update_backbone_field has
         computed P_c, not r_c, since then. The sentence outlived the mechanism.
-      · D_modes does not enter P_c. Only omega_0 and Q do. D_modes and
-        chi_redistribution survive as above-threshold slope parameters.
+      · D_modes does not enter P_c. Only omega_0 and Q do.
+
+    POST-B2 STATUS of D_modes / phi_dissipation / chi_redistribution (verified
+    2026-07-18 on executable code, comments and docstrings stripped; MO ruling 005 §2):
+    **all three are DECLARATIONS ONLY at the backbone — zero reads in
+    multi_synapse_network.py, so they enter no physics.** An earlier draft of this
+    docstring said they "survive as above-threshold slope parameters"; that was FALSE
+    and is corrected here — nothing consumes them. They are retained rather than
+    deleted because the Zhang rate equations remain the right description of
+    above-threshold dynamics if a consumer is ever wired, but today changing any of
+    them moves no computed quantity.
+
+    ⚠ HAZARD, routed to the MO for PO-6: sweep_runner.py WRITES
+    `params.dendritic_backbone.D_modes` from the `q1_d_modes` sweep dimension
+    (sweep_runner.py, quantum_dimensions.py `dim_id="q1_d_modes"`), but nothing reads
+    it. A sweep over that dimension varies a parameter with no consumer and will report
+    a flat response that could be misread as a physical null result.
+
+    STATED LIMIT ON eta: eta = (r-1)/(r+1) is the LARGE-D limit (Wang/Wang 2022). The
+    pin calls for D >~ 200; the backbone runs 50. Since D does not enter the formula
+    this does not change the number, but the adequacy of the large-D FORM at D = 50 is
+    UNVERIFIED — finite-D corrections have not been derived here. Do not close this by
+    raising D; that would be tuning a constant to reach an outcome (MO_MODEL6 §7).
       · "not hand-tuned" is not a property r_c would have had anyway: the classical
         r_c = (phi/(D+1))(1+phi/chi) →0 in large-D, making it an artificial reference
         scale rather than a threshold. That artificial scale is exactly what the
