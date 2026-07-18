@@ -219,8 +219,10 @@ def main():
         print("LIMITS (PREREG §6): single synapse, one drive condition, one seed. "
               "g is GEOMETRY, not input — this does not advance §8's keystone.")
 
-    out = os.path.join(PROJECT_ROOT, "results", "po5", "unit1_g_inertness.json")
-    os.makedirs(os.path.dirname(out), exist_ok=True)
+    # Persist beside the probe, matching the convention of the other *_results.json
+    # in this directory. `results/` at the repo root is gitignored, so an artifact
+    # written there would not survive as provenance.
+    out = os.path.join(SWEEP_DIR, "po5_unit1_g_inertness_results.json")
     with open(out, "w") as f:
         json.dump({"coupling_length_nm": L,
                    "thresholds": {"SAT": SAT_THRESHOLD, "VANISH": VANISH_THRESHOLD,

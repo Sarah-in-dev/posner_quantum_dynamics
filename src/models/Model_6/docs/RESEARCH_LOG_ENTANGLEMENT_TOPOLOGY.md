@@ -93,7 +93,9 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 existed. **Probe:** `src/models/Model_6/sweep/po5_unit1_g_inertness.py` (`1dbef17`).
 **Corroborating trace:** `sweep/observe_pathway2_selectivity.py` (pre-existing; PO-5 reused it rather
 than rebuilding, and it is the source of the component counts below).
-**Raw:** `results/po5/unit1_g_inertness.json`, `results/po5/unit1_existing_probe.log`.
+**Raw (committed):** `src/models/Model_6/sweep/po5_unit1_g_inertness_results.json` and
+`..._run.log`. Persisted beside the probe, not under `results/`, which is gitignored — an artifact
+written there would not survive as provenance.
 
 #### Why this unit ran first
 
