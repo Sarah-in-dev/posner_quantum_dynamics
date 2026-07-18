@@ -7,7 +7,7 @@ consumption.
 
 **Status:** LIVE — grounding brief returned 2026-07-18 19:46Z.
 **Current unit:** pre-registration (§2.4), then the conservation probe committed FAILING first.
-**Last heartbeat:** 2026-07-18 22:32Z
+**Last heartbeat:** 2026-07-18 22:35Z
 **Blocked on:** — (two open questions in `queue/po2-phosphate.md`, neither blocking; working on)
 
 ## HEARTBEAT LOG
@@ -283,3 +283,19 @@ evidence that it DOES. I recommend PO-6 proceed with that stated as a known-open
 **MO transition noted.** The prior MO was operating as a deliberate antagonist with high context. Its rulings remain on record and I have not rewritten them, but I am no longer treating them as settled authority — Q3 is closed on Cohn & Hughes/Fisher rather than on its withdrawal, and Q2 is closed on PiC/SLC25A3 rather than on its non-binding read (which favoured metabolic-first and was wrong).
 
 **Conservation re-verified after the default change: exit 0, CONSERVED, dP +3.339551e-13 (9.542e-15 rel).**
+
+### 2026-07-18 22:35Z — ruling 015 CONFLICTS with a change I had already made under Sarah's authority. Disclosed, not reverted, not continued past.
+
+**`requests/model6-mo/po2-disclosure-001.md` written — read it before the rest of my return.**
+
+**The conflict:** ruling 015 §3 says *"DO NOT change the 90/10 split"*. I changed it ~12 min earlier (`9ddf002`, 0.02→1.0) under Sarah's explicit chat authorisation (*"yes document and let literature decide"*), which gen-2 did not have. **I am neither reverting unilaterally nor proceeding silently.** Revert is one line if ruled; acceptance item 1 is unaffected either way (conservation held at both values, −2.0e-16 at 1.0 vs +3.2e-14 at 0.02).
+
+**Three facts the ruling was issued without:** (1) Sarah authorised it directly. (2) It was grounding, not tuning — the old justification was TESTED AND FALSIFIED (resting Ca gives S=0.0060 with the entire pool free, 170× below threshold, so calcium prevents precipitation and the split never did), and A2.5 pre-registered that a runaway would be REPORTED and never damped by re-tuning back. (3) **The "90/10 split" did not exist in the code** — live value was 0.02; the 0.10 in every docstring is a getattr default that is never reached.
+
+**The crux I want checked, because ruling 015's own grounding points the other way from its boundary:** §3 rules from canonical §2.4 that *"the ontology's budget is free + dimer-bound"* and *"a third compartment that accumulates monotonically and returns nothing is not in the declared model"*. **Setting the fraction to 1.0 is exactly what removes that third compartment** — `phosphate_metabolic` now stays at exactly 0. The alternative (installing a return path) would add a mechanism §2.4 does not declare, which the same ruling forbids. So the grounding argues for the change while the boundary forbids it. **I may be wrong; that is why it is escalated rather than acted on further.**
+
+**RULING 015'S ASSIGNED READING UNITS — BOTH DELIVERED (no compute used):**
+- **Is the acid-base return path absent? NO — it is PRESENT**, as instantaneous equilibrium speciation. `update_speciation` re-derives all three species as α-fractions of `phosphate_structural` every step; consuming 1e-4 leaves α3 identical at 5.218223e-06, i.e. PO4(3-) re-partitioned immediately from the HPO4(2-) reservoir exactly as §2.4 describes. **The compartment with no return path is `metabolic`, which §2.4 does not declare** — independently corroborating the ruling's construct-validity finding and locating the gap in the compartment, not the speciation. **Not installed, not modified.**
+- **Rosen 2026 discrepancy STATED, not resolved:** activity raises free cytosolic Pi by millimolar amounts within seconds; a model sinking 98% of released Pi into a protein-bound pool has activity doing the opposite. Measured at the pre-change value the free pool DRAINED during activity (9.9736→9.9008 over 20 s) — wrong sign against Rosen.
+
+**COMPUTE: HOLDING at #2 per ruling 019 / board 22:12Z.** Bounding run NOT started; PO-5 has the exclusive slot. **Flagging that the §7 ruling should precede my slot** — against 0.02 the run bounds a real depletion; against 1.0 the pool balances and there may be nothing to bound, so the slot could be spent on the wrong configuration.
