@@ -1,7 +1,9 @@
 # Coherence-ordered fragmentation of the entanglement partition (T1′)
 
 *Results write-up. Model 6, cross-synapse entanglement topology. 2026-07-17.*
-*Provenance: `RESEARCH_LOG_ENTANGLEMENT_TOPOLOGY.md` entries T1'-1…T1'-5, dt-1, ERR-1.*
+*Provenance: `RESEARCH_LOG_ENTANGLEMENT_TOPOLOGY.md` entries T1'-1…T1'-6, dt-1, ERR-1.*
+*Revised 2026-07-18 following adversarial review: §6 rewritten on a measured basis (T1′-6),
+§4 power figure revised 10/10 → 37/40, §5 conditioning and §6 dark-control scope stated.*
 
 ---
 
@@ -124,12 +126,23 @@ finer than that scatter are decided by chance. Measured order-recovery across 10
 |---|---|---|
 | 0.10 µm | 3.35 / 3.25 / 3.15 / 3.05 | 6 / 10 |
 | 0.25 µm | 3.35 / 3.10 / 2.85 / 2.60 | 5 / 10 |
-| **0.45 µm** | **3.35 / 2.90 / 2.45 / 2.00** | **10 / 10** |
+| **0.45 µm** | **3.35 / 2.90 / 2.45 / 2.00** | **37 / 40 (92%)** |
 
 The widest ladder was adopted. Note the direction: wider rungs push the cascade *later* and
 cost more compute, but are the only configuration in which the ordering is resolvable above
 the intrinsic scatter. This also establishes that the ordering is **not** an algebraic
 identity — it fails 40% of the time when the spacing is too fine to resolve (see §7).
+
+The adopted geometry's power figure was **revised downward** on re-measurement (research log
+T1′-6): 37 of 40 independent noise draws, not the 10/10 originally recorded. The two figures
+are different estimators of the same quantity — the original used unguarded first-crossing
+detection, whereas 37/40 applies the **guarded** break criterion the experiment itself uses
+(`CONSECUTIVE_ABSENT = 3`, below), which is stricter and converts marginal orderings into
+violations. The guarded figure is the operative one. Order recovery is therefore high but
+**not deterministic**: one of the four seed populations recovers the order in only 7 of 10
+draws, its last two rungs breaking within ≈ 1.5 s of each other. This does not bear on the
+significance in §5, which is computed against a permutation null that instrument power does
+not move; it bears on how strongly the geometry choice can be justified.
 
 **Pre-registration.** Only the **order** was pre-registered: 3.35 → 2.90 → 2.45 → 2.00.
 Break *times* were explicitly not predicted and are not scored. They are an extreme-value
@@ -180,6 +193,11 @@ P(correct) = 1/4! = 1/24 per seed. Four independent seeds all correct gives
 p = (1/24)⁴ = 1/331 776 ≈ 3.0 × 10⁻⁶
 ```
 
+The null is unaffected by the choice of geometry, but note that this `p` is conditional on a
+ladder selected for order-recovery power (§4). The four scored seeds are fresh, so this is
+not data reuse; and at the revised 92% per-seed power, observing 4/4 has probability
+0.92⁴ ≈ 0.72 — an unremarkable outcome for a working instrument, not a fortunate one.
+
 **Order is invariant; times are not.** The 2.90 µm gap broke at 32.5, 37.0, 42.0 and 32.5 s
 across the four seeds — a spread of nearly 30% — while the ordering never varied. This is
 the direct empirical vindication of scoring the order and refusing to score the times.
@@ -194,19 +212,60 @@ therefore accelerates as coherence decays. The last two breaks in each seed occu
 depleted regime, so their break *times* are confounded: an edge may be lost because its
 synapses ran out of dimers rather than because `d*` contracted past the gap.
 
-**Why this does not compromise the ordering.** Dissolution is spatially uniform — it lowers
-every pair's effective radius equally, independent of separation. Its tendency is therefore
-to make edges fail at *similar* times, not in separation order. It cannot generate a
-consistent spacing-ordered cascade, and certainly not the same one across four independent
-stochastic realizations. Replication is what converts this from an argument into a control:
-uniform attrition has no mechanism by which to reproduce a specific ordering repeatably,
-whereas the contracting-radius mechanism predicts exactly that ordering every time. The
-first two breaks in each seed additionally occur while the population is still healthy
-(≈ 1800 and ≈ 1000 dimers in seed 0), and are unconfounded on their own.
+**The objection this raises, stated at full strength.** Because edge survival is governed by
+`max_pair(P_S²)` — an *extreme-value* statistic (§4) — population loss is not obviously
+order-neutral. The maximum of few draws is typically smaller than the maximum of many, and
+bonded pairs scale as ~N². If losing dimers contracts `d*_eff` on its own, then by §2 it
+would cross the gaps widest-first *as well*, producing the same signature by a different
+mechanism — and reproducibly, so replication across seeds would not distinguish the two.
+An earlier version of this section dismissed this by appeal to dissolution's *spatial
+uniformity*. That was the wrong property, and the objection deserves a measurement.
+
+**Why this does not compromise the ordering — measured, not argued.** The run was replayed
+with the two channels separated (research log T1′-6; `sweep/population_channel_arms.py`,
+traces under `results/T1prime6_arms/`). Four arms, pre-registered before execution together
+with the reading of every outcome, including the outcomes that would have refuted this
+section:
+
+| arm | coherence | population | result, all four seeds |
+|---|---|---|---|
+| A | decays | decays | reproduces the cascade |
+| B | decays | **held fixed** | **bit-identical to A** (`max|A−B| = 0.000e+00`) |
+| C | **frozen** | decays | **zero breaks** |
+| D | frozen | held fixed | zero breaks (null) |
+
+Holding coherence fixed while the population collapses 2223 → ≈ 50 produces **no edge breaks
+at all**, and retains **100.0000%** of `max_pair(P_S²)`. Enabling attrition alongside
+coherence decay changes nothing: arms A and B agree to machine zero across every sample of
+every pair's `d*_eff`. The population channel is not small here — it is *inert*.
+
+The reason is structural rather than statistical, and it is visible in the removal rule.
+Dimers are deleted **lowest-coherence-first** (`dimer_particles.py:230-241`, sorting on a
+strictly increasing map of `P_S`), re-sorted every step. Attrition is therefore
+**rank-selective**: the population maximum is the *last* element removed, so the statistic
+that governs edge survival is precisely the one attrition cannot reach. The extreme-value
+argument above assumes random removal, which this model does not perform.
+
+That assumption was tested on its own terms rather than dismissed. Forcing **uniform random**
+removal — the rule under which population loss genuinely would erode an extreme-value
+statistic — still yields **zero breaks**, with `Δd*_eff = −0.002 µm` against the 1.35 µm span
+the cascade must traverse. The reason is measured: `P_S(0)` is packed against its ceiling
+(median 0.9987, max 1.0000), leaving no headroom below the maximum, so the max over ≈ 50
+survivors is indistinguishable from the max over ≈ 2200. The objection fails twice over —
+once on the model's actual removal rule, and once on the shape of the coherence distribution.
+
+**Where population loss does bite, reported for completeness.** Under random removal
+*combined with* coherence decay, the cascade still orders correctly in every seed but breaks
+systematically earlier: once `P_S` spreads out under decay, the tail is carried by a few
+long-lived dimers that random deletion can destroy. A model that removed dimers at random
+would thus carry a live population channel affecting break *times* — though not their order.
+This model does not remove randomly, and the claim here is scoped to this model.
 
 **Dark controls.** Three 4.5 µm gaps with `P_crit = 1.1090 > 1` are structurally incapable of
-bonding. They remained dark throughout every run, confirming that edges are not being
-produced spuriously.
+bonding, and remained dark throughout every run. This is an **implementation** check — it
+confirms that no edge is fabricated where the algebra forbids one — and not a physics
+control: since `P_crit > 1` cannot be met at any coherence, their darkness is a foregone
+conclusion rather than an observation about the mechanism.
 
 **Flicker rejection.** Transient edge absences occurred (e.g. seed 0 on the 3.35 µm gap at
 t = 14.0 s, resolving before the true break at 14.5 s) and were correctly excluded.
@@ -232,16 +291,20 @@ that the partition carries *spatial* structure; it says nothing about whether it
 *quantum* structure. Establishing the latter requires a separate microscopic construction
 with phase and an explicit non-classicality test.
 
-**On circularity.** The edge criterion contains distance, so it is reasonable to ask whether
-observing distance-ordered fragmentation merely recovers the model's own definition. The
-algebra fixes the *rule*; it does not establish that the resulting *ordering survives* the
-system's stochasticity — per-dimer frozen lifetimes, multiplicative noise compounding over
-~10⁵ steps, extreme-value statistics over hundreds of pairs, and a collapsing population.
-That survival is an empirical question, and it demonstrably has a negative answer in part of
-the parameter space: at 0.10 µm rung spacing the correct order is recovered only 6 times in
-10 (§4). The ordering is a robustness property of the noisy system, not a restatement of the
-definition. It is, however, correctly described as a demonstration that the model behaves as
-its own physics implies under realistic noise — not as a discovery about nature.
+**On circularity.** The right description of this result is that the model **behaves as its
+own physics implies under realistic noise** — not that anything was discovered about nature.
+The edge criterion contains distance, so distance-ordered fragmentation partly recovers the
+model's own definition, and that framing should govern how the result is read. What the
+algebra fixes is the *rule*; what it does not fix is whether the resulting *ordering
+survives* the system's stochasticity — per-dimer frozen lifetimes, multiplicative noise
+compounding over ~10⁵ steps, extreme-value statistics over hundreds of pairs, and a
+collapsing population. That survival is an empirical question with a genuinely contingent
+answer: the order fails to be recovered in part of the parameter space (6/10 at 0.10 µm rung
+spacing), and even at the adopted spacing it is recovered 92% of the time rather than
+always (§4). Both failures are, admittedly, what the algebra itself predicts once the
+between-synapse scatter in `d*_eff` (≈ 0.29 µm) exceeds the rung spacing — so this
+demonstrates robustness of the model's behaviour under noise, and should not be oversold as
+an independent discovery.
 
 **Scope.** One geometry (1D, eight synapses, four rungs), one drive protocol, four seeds,
 and a fixed spatial arrangement. The partition here encodes *distance*, which is anatomy and
@@ -261,11 +324,20 @@ All scripts run from `src/models/Model_6/sweep/`:
 | `coherence_radius_probe.py` | the static half (7/7 gap confirmation) |
 | `measure_dstar0.py` | measures `d*(0)` and the `P_S` distribution |
 | `dstar_eff_replay.py` | tail-statistic replay; window sizing (upper bound on break times) |
-| `order_power_probe.py` | order-recovery power across candidate geometries |
+| `order_power_probe.py` | order-recovery power across candidate geometries (unguarded detection; see §4) |
+| `population_channel_arms.py` | §6 channel separation — coherence vs population, four arms + two counterfactual |
 | `dt_convergence_drive.py`, `dt_convergence_operating_point.py`, `dt_independence_tail.py` | step-size controls |
 
 Runtime ≈ 2.7 h per seed (single-threaded, ~500 MB); seeds parallelise across cores with no
 measurable interference. Runs self-terminate once all live edges are confirmed broken.
+
+**Data availability.** The four scored T1′ runs (§5) wrote to session-scoped scratchpad and
+those raw logs **are lost**; their break tables survive only as transcription into the
+research log, so §5 is not independently re-derivable without a re-run. This was corrected
+going forward: from 2026-07-18 all scored traces are persisted to a tracked path
+(`src/models/Model_6/results/`), and the §6 channel-separation arms are the first result
+whose per-sample traces — `n_dimers`, `max_pair(P_S²)` and per-pair `d*_eff` at 0.5 s
+resolution — ship alongside the claim.
 
 **References.** Werner, R. F. (1989), *Phys. Rev. A* **40**, 4277 — separability bound,
 entangled iff F > ½. Agarwal et al. (2023), arXiv:2210.14812 — dimer coherence lifetimes.
