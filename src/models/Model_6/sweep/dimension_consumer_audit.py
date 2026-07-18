@@ -171,6 +171,73 @@ def drive_the_model(n_syn=3, n_steps=8):
     return n_syn, n_steps
 
 
+# --- STAGE 2: EFFECT TEST -------------------------------------------------------------
+#
+# Read-tracing answers "was it consumed". It does NOT answer "did it change anything" — a
+# read can be a log line. This stage drives each REACHED dimension at two values under a
+# fixed seed and checks whether a downstream quantity moves.
+#
+# THE OBSERVABLE IS DECLARED PER DIMENSION, AND THAT IS NOT A CONVENIENCE.
+# The first version of this test used ONE global fingerprint (dimer count, mean P_S,
+# k_enhancement, peak calcium) for every dimension, and returned "NO EFFECT" for
+# q1_n_tryptophan and q1_f_coherent_base. That was WRONG. Both are live: they move
+# collective_field_kT (18.6 -> 23.0 and 14.0 -> 22.1 respectively) — a channel the global
+# fingerprint simply did not span. A null from an instrument that cannot see the channel is
+# not a null; it is a blind spot, and it would have condemned two working dimensions.
+#
+# So each dimension names the observable its effect should appear in, and BLINDNESS IS
+# TREATED AS A TEST FAILURE, not as evidence of inertness: if the declared observable does
+# not move, the result is reported as UNDEMONSTRATED (the honest verdict) rather than as
+# INERT (a claim this stage is not entitled to make).
+EFFECT_CASES = [
+    # (dim_id, dotted params path, low value, high value, observable)
+    ("q1_n_tryptophan",     "tryptophan.n_trp_baseline", 50,     500,   "collective_field_kT"),
+    ("q1_f_coherent_base",  "tryptophan.f_coherent",     0.04,   0.10,  "collective_field_kT"),
+    ("q2_phosphate_initial","phosphate.phosphate_total", 0.0001, 0.010, "n_dimers"),
+]
+
+
+def _observables(syn):
+    import numpy as _np
+    return {
+        "n_dimers": len(syn.dimer_particles.dimers),
+        "collective_field_kT": round(float(getattr(syn, '_collective_field_kT', 0.0)), 6),
+        "em_field_trp": round(float(getattr(syn, '_em_field_trp', 0.0)), 3),
+        "k_enhancement": round(float(getattr(syn, '_k_enhancement', 0.0)), 9),
+    }
+
+
+def _run_with(path, value, seed=1234, steps=40):
+    import numpy as _np
+    _np.random.seed(seed)
+    p = Model6Parameters()
+    p.em_coupling_enabled = True
+    if path is not None:
+        obj = p
+        parts = path.split('.')
+        for q in parts[:-1]:
+            obj = getattr(obj, q)
+        setattr(obj, parts[-1], value)
+    syn = Model6QuantumSynapse(p)
+    syn.set_microtubule_invasion(True)
+    for _ in range(steps):
+        syn.step(1e-3, {'voltage': -10e-3, 'reward': False})
+    return _observables(syn)
+
+
+def run_effect_tests():
+    """Returns (determinism_ok, [(dim, observable, lo, hi, moved)])."""
+    a = _run_with(None, None)
+    b = _run_with(None, None)
+    determinism_ok = (a == b)   # without this, any difference below is meaningless noise
+    rows = []
+    for dim, path, lo, hi, obs in EFFECT_CASES:
+        r_lo = _run_with(path, lo)
+        r_hi = _run_with(path, hi)
+        rows.append((dim, obs, r_lo[obs], r_hi[obs], r_lo[obs] != r_hi[obs]))
+    return determinism_ok, rows
+
+
 def trace_stimulus_dimensions():
     """Read-trace ThetaBurstScenario attributes through a real (small) scenario run.
 
@@ -297,6 +364,25 @@ def main():
         site = "sweep_runner.py:145"
         (reached if n else inert).append((dim, f"ThetaBurstScenario.{attr}", site))
         print(f"  {dim:<26}{attr:<30}{n:>7}  {verdict}")
+    print()
+
+    # ---------------- STAGE 2: EFFECT TESTS ----------------
+    print("--- EFFECT TESTS (does a driven value MOVE a downstream quantity?) ---")
+    det_ok, rows = run_effect_tests()
+    print(f"  determinism control (same params twice -> same observables): "
+          f"{'PASS' if det_ok else 'FAIL — differences below are noise, not effect'}")
+    print(f"  {'dimension':<24}{'observable':<24}{'low':>16}{'high':>16}  moved?")
+    print("  " + "-" * 88)
+    undemonstrated = []
+    for dim, obs, lo, hi, moved in rows:
+        if not moved:
+            undemonstrated.append(dim)
+        print(f"  {dim:<24}{obs:<24}{str(lo):>16}{str(hi):>16}  "
+              f"{'YES' if moved else 'UNDEMONSTRATED'}")
+    if undemonstrated:
+        print(f"  NOTE: UNDEMONSTRATED means this stage could not show an effect in the")
+        print(f"        declared observable. It does NOT mean inert — it may mean the")
+        print(f"        observable is blind to the channel. See EFFECT_CASES.")
     print()
 
     # ---------------- VERDICT ----------------
