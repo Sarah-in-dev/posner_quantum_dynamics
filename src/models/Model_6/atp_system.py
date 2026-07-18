@@ -467,21 +467,27 @@ class PhosphateSpeciation:
         
     def add_phosphate_from_atp(self, source: np.ndarray):
         """
-        Add phosphate released from ATP hydrolysis
-    
-        Most goes to metabolic pool (protein binding, rapid cycling).
-        Small fraction enters structural pool (available for Posners).
-    
-        Literature basis:
-        - Cells actively prevent Ca-PO4 precipitation (toxic to metabolism)
-        - Most ATP-Pi is protein-bound or rapidly cycled
-        - Only "free" inorganic pool forms Posners
-    
+        Add phosphate released from ATP hydrolysis.
+
+        Routed by `metabolic_to_structural_fraction`, which is **1.0 as of 2026-07-18**
+        (PO-2, PREREG AMENDMENT A2.5) — i.e. hydrolysis-released Pi enters the FREE
+        (structural) pool, because that is what ATP hydrolysis produces. See the grounding
+        block at `model6_parameters.py` `metabolic_to_structural_fraction`.
+
+        THE PRIOR DOCSTRING WAS WRONG TWICE AND IS REPLACED:
+        - It claimed "Most goes to metabolic pool ... 90% / 10%". **The live value was 0.02
+          (98/2), never 90/10** — the 0.10 below was a `getattr` default that was never
+          reached, so the prose described a split the model did not use.
+        - It cited "Cells actively prevent Ca-PO4 precipitation" as the basis. **Tested and
+          false as a justification:** at resting Ca (100 nM) the model's own supersaturation
+          gate gives S = 0.006 with the ENTIRE pool free, 170x below threshold. Calcium
+          prevents precipitation, not this split.
+
         Args:
             source: Phosphate released from ATP (M)
         """
-        # Get fraction parameter (default 10% if not set)
-        fraction = getattr(self.params, 'metabolic_to_structural_fraction', 0.10)
+        # Default now matches the grounded parameter rather than contradicting it.
+        fraction = getattr(self.params, 'metabolic_to_structural_fraction', 1.0)
     
         # MOST goes to metabolic pool (90%)
         self.phosphate_metabolic += source * (1 - fraction)

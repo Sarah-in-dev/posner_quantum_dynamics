@@ -231,6 +231,81 @@ because the structural pool is ~500× the metabolic and therefore absorbs almost
 proportional debit. **Metabolic-first — the choice I registered — is the outlier and the least
 physical of the three.**
 
+## 6d. AMENDMENT A2.5 — the 90/10 split, registered BEFORE the run
+
+*(2026-07-18. Sarah's authority, explicit: "document and let literature decide." Registered before
+changing `metabolic_to_structural_fraction`, because this one moves standing results.)*
+
+**The literature.** ATP hydrolysis (ATP + H₂O → ADP + Pi) releases **free inorganic** phosphate.
+Protein-bound phosphate is made by **kinase phosphotransfer** — a different reaction, which the
+model's `update_hydrolysis` does not compute; it computes hydrolysis and credits
+`phosphate_released += delta_atp`. Free cytosolic Pi is **0.29 mM at rest rising to 2.3 mM** near
+maximal metabolic demand in myocyte (≈8×), and neuronal cytosolic Pi rises by **millimolar amounts
+within seconds** of stimulation (Rosen et al., PNAS 2026). **Activity LIBERATES free Pi.** So the
+grounded routing of hydrolysis-released Pi is ≈**100% free**, not 10%.
+
+**The split's stated justification does not survive.** `add_phosphate_from_atp` cites *"Cells
+actively prevent Ca-PO₄ precipitation (toxic to metabolism)"*. Tested against the model's own gate:
+
+| Ca | Pi = 1.0 mM (all free) | Pi = 0.1 mM (the 10% split) |
+|---|---|---|
+| rest 100 nM | **S = 0.0060** dead | S = 0.0024 dead |
+| 10 µM | S = 0.0955 dead | S = 0.0380 dead |
+| **616 µM (D12 nanodomain)** | **S = 1.1317 FORMS** | **S = 0.4506 dead** |
+
+**At rest, calcium alone holds S ~170× below threshold with the entire pool free.** The split is not
+what prevents precipitation. **What it actually does is hold the nanodomain sub-threshold** — the
+one regime where the grounded calcium says nucleation should occur. That is `quantum-system-canonical`
+§6's named hazard: *"a calibration that silently does a missing mechanism's job is a hidden drift."*
+
+### CORRECTION TO THIS AMENDMENT, made BEFORE running it — two errors of my own
+
+**(a) The live split is 98/2, not 90/10.** `model6_parameters.py:199` sets
+`metabolic_to_structural_fraction = 0.02`; the `getattr(..., 0.10)` default at
+`atp_system.py:419` is **never reached** and its `add_phosphate_from_atp` docstring ("MOST goes to
+metabolic pool (90%)", "SMALL FRACTION enters structural pool (10%)") **describes a value the model
+does not use.** Third instance of prose contradicting code on this surface. **And the may30 pin's
+Step E names this exact number** — *"ground the **2% ATP replenish**"* — so this parameter is the
+unaddressed half of my own charter, not a side issue.
+
+**(b) The table above is MISLEADING and I am not deleting it, I am correcting it.** I compared
+S at 1.0 mM vs 0.1 mM as though the fraction set the pool size. **It does not.**
+`phosphate_structural` is initialised to `params.phosphate_total` = **1 mM regardless of the
+fraction** (`atp_system.py:352`); the fraction routes only **newly hydrolysed** Pi, which over a 5 s
+run totals ~1.1e-2 against a pool of 10.0 — about **0.1%**. So the S row that matters is the
+1.0 mM one, which is **already the model's current behaviour**, and the fraction does **not** move
+instantaneous S appreciably.
+
+**What the fraction actually controls is the LONG-RUN balance of the free pool** — at 2%, 98% of
+hydrolysed Pi is permanently sunk into a pool that (per A2.4's grounded debit) is not drawn back
+from, so the free pool drains monotonically. That is precisely the one-way valve recorded in PO2-6,
+and it is a long-run effect, not an instantaneous one.
+
+**REGISTERED PREDICTIONS, corrected, before running `metabolic_to_structural_fraction` 0.02 → 1.0:**
+
+1. **Conservation UNAFFECTED.** This is a routing change between two pools the ledger already sums.
+   `|dP|/P` stays ≤ ε. *If conservation breaks, the change is wrong, not the ledger.*
+2. **Free (structural) Pi RISES during activity** instead of staying flat, qualitatively matching
+   the 0.29→2.3 mM myocyte swing and Rosen's millimolar neuronal rise.
+3. **The metabolic one-way sink disappears** (PO2-6) — `phosphate_metabolic` stays ≈0.
+4. **REVISED (my original prediction here was wrong and is struck):** dimer formation changes only
+   **slightly** over a 5 s run — ATP-derived Pi is ~0.1% of the standing pool at this timescale, so
+   the effect is comparable to the 0.116% debit-rule difference already measured, **not** a
+   threshold crossing. *Struck: "Dimer formation INCREASES, because S crosses threshold at grounded
+   nanodomain calcium (1.13 vs 0.45)" — that was built on error (b) above and is not what the
+   fraction does.* **The difference should GROW with run length**, which is the real test and is
+   beyond this probe's 5 s.
+5. **RISK, registered so it cannot be quietly absorbed: over LONG runs this may push the system
+   supercritical and reintroduce the phosphate runaway** (the may30 pin's "known 427-dimer growth";
+   `experiment-design-patterns:122` red flag *"Dimer count growing without bound"*). Correspondingly
+   **low risk at 5 s** — this is a long-run hazard, and a short probe cannot clear it.
+
+**If prediction 5 fires, that is a FINDING, not a reason to restore the split.** It would mean the
+90/10 split was load-bearing as an **unphysical brake** — suppressing formation to keep the model
+bounded — and that the real bound must come from somewhere physical (conservation, which now
+exists, or the dissolution rate). **I will report a runaway; I will not re-tune the fraction to
+prevent one.** §7 LOCKED: emergent physics only, no constant tuned to a downstream target.
+
 ## 7. Limits of this measurement, stated in advance
 
 - It measures **mass conservation of phosphate**, nothing else. Conservation is **necessary, not

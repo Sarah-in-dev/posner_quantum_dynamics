@@ -194,9 +194,34 @@ class PhosphateParameters:
 
     # === PHOSPHATE POOL PARTITIONING ===
     # Fraction of ATP-released phosphate entering structural pool
-    # Literature: Most ATP-Pi is protein-bound or metabolically consumed
-    # Only "free" inorganic pool forms Posners
-    metabolic_to_structural_fraction: float = 0.02  
+    # Fraction of ATP-hydrolysis-released Pi entering the FREE (structural) pool.
+    #
+    # 0.02 -> 1.0, 2026-07-18 (PO-2, PREREG AMENDMENT A2.5, Sarah's authority to let
+    # literature decide). This is the may30 pin's Step E "ground the 2% ATP replenish".
+    #
+    # GROUNDING: ATP hydrolysis (ATP + H2O -> ADP + Pi) releases FREE inorganic phosphate.
+    # Protein-bound phosphate is produced by KINASE PHOSPHOTRANSFER, a different reaction
+    # that update_hydrolysis does not compute. Free cytosolic Pi is ~0.29 mM at rest rising
+    # to ~2.3 mM near maximal metabolic demand (myocyte), and neuronal cytosolic Pi rises by
+    # millimolar amounts within SECONDS of stimulation (Rosen et al., PNAS 2026) — activity
+    # LIBERATES free Pi rather than sequestering it. So the grounded routing is ~100% free.
+    #
+    # The prior 0.02 was uncited and its stated justification ("cells prevent Ca-PO4
+    # precipitation") does not survive testing: at resting Ca (100 nM) the model's own gate
+    # gives S = 0.006 with the ENTIRE pool free — 170x below threshold. Calcium prevents
+    # precipitation; the split was not doing that job.
+    #
+    # MEASURED consequence (20 s, matched seed): at 0.02 the free pool drains MONOTONICALLY
+    # 9.9736 -> 9.9008 (~34 min to full depletion) because 98% of hydrolysed Pi is sunk into
+    # a pool that grounded ATP synthesis does not draw back from (a one-way valve, research
+    # log PO2-6). At 1.0 the pool BALANCES, oscillating 10.0003-10.0058 about baseline.
+    # Dimer +2.3%; conservation holds in both (-2.0e-16 vs +3.2e-14).
+    #
+    # NOTE: real cells DO buffer phosphate (acidocalcisomes, protein binding), but that is a
+    # separate DYNAMIC process, not a routing split applied at the moment of release. If
+    # buffering is wanted it belongs as its own rate, not folded into this fraction.
+    # Consequence: phosphate_metabolic is now vestigial (stays 0) unless such a rate is added.
+    metabolic_to_structural_fraction: float = 1.0
     
     # === DIFFUSION COEFFICIENTS ===
     # Li & Gregory 1974 Geochim Cosmochim Acta 38:703-714
