@@ -7,7 +7,7 @@ consumption.
 
 **Status:** LIVE — grounding brief returned 2026-07-18 19:46Z.
 **Current unit:** pre-registration (§2.4), then the conservation probe committed FAILING first.
-**Last heartbeat:** 2026-07-18 22:35Z
+**Last heartbeat:** 2026-07-18 23:33Z
 **Blocked on:** — (two open questions in `queue/po2-phosphate.md`, neither blocking; working on)
 
 ## HEARTBEAT LOG
@@ -299,3 +299,19 @@ evidence that it DOES. I recommend PO-6 proceed with that stated as a known-open
 - **Rosen 2026 discrepancy STATED, not resolved:** activity raises free cytosolic Pi by millimolar amounts within seconds; a model sinking 98% of released Pi into a protein-bound pool has activity doing the opposite. Measured at the pre-change value the free pool DRAINED during activity (9.9736→9.9008 over 20 s) — wrong sign against Rosen.
 
 **COMPUTE: HOLDING at #2 per ruling 019 / board 22:12Z.** Bounding run NOT started; PO-5 has the exclusive slot. **Flagging that the §7 ruling should precede my slot** — against 0.02 the run bounds a real depletion; against 1.0 the pool balances and there may be nothing to bound, so the slot could be spent on the wrong configuration.
+
+### 2026-07-18 23:33Z — ruling 021 accepted. But its dimer attribution does not survive checking.
+
+**Ruling 021: 015 §3 withdrawn, no revert, my handling correct, my test adopted verbatim, MO defect #18 recorded.** Nothing disputed. Both assigned items addressed below.
+
+**`requests/model6-mo/po2-002-dimer-attribution.md` written.**
+
+**THE 5.9% DIMER SHIFT IS NOT MY COMMIT — I checked rather than accepted the gift.** `9ddf002` committed **22:32:39Z**; the observation window is **23:00→23:17Z**. My commit predates the window opening by **27 min 21 s**, so it was already live at BOTH endpoints — **a change present at both ends of an interval cannot produce a difference across it.** And there is a measured alternative that landed INSIDE the window: PO-7's `be1759f`, *"the model is NOT reproducible at a fixed seed under drive"*, measuring `cross_bonds` **1179 vs 1848 = 1.57× spread** in separate processes at fixed seed. **5.9% sits an order of magnitude inside that envelope.** I have not reproduced PO-7's numbers either and say so — my claim is only the narrow one: **timing excludes my commit, and a measured mechanism covers the observation.**
+
+**Why I pushed back on a gift:** gen-2 offered it as something my downstream delta could measure against. My A2.5 delta is **+2.3%** — itself inside PO-7's envelope. **Calibrating a 2.3% effect against a 5.9% observation when the noise floor may be 57% would manufacture agreement out of noise.** That is the F-3 shape, and declining to build on an unverified number is the other half of that lesson.
+
+**CONSEQUENCE FOR RULING 021's SECOND ITEM — it splits in two:** the **depletion** half is deterministic accounting (monotonic −0.99%/20 s, drain-vs-balance far outside seed noise) and **remains worth the slot**; the **downstream-delta** half now **needs replicates or it is uninterpretable**, and I will not report a single-run delta. **Board dependency that may not be drawn yet: PO-7's nondeterminism escalation gates ANY small-effect measurement on the driven path — not just mine.**
+
+**Ruling 021 item 1 (keep the falsification findable) — VERIFIED in 4 places**, first being DECISION RECORD row PO2-8 (*"S = 0.0060 with the ENTIRE pool free — 170× below threshold"*), plus the parameter's own grounding block, the `add_phosphate_from_atp` docstring, and prereg A2.5. **One gap I cannot close myself:** `model6-dimer-formation-chemistry` carries `k_base`/`k_classical` groundings but nothing on `metabolic_to_structural_fraction` — a sceptic reading the chemistry skill would not learn the 0.02 was ungrounded. **Skill write REQUESTED with exact text, not made** (standing rule: only the MO writes the symlinked library).
+
+**COMPUTE: still holding at #2, nothing started.** All of the above is reading and `git log`.
