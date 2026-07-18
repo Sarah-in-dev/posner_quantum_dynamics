@@ -6,12 +6,32 @@ FALSIFIED and INCONCLUSIVE, with its positive control demonstrated to fire — p
 provenance verdict on `k_polymerization_max` (and `E_ref`, which sits in the load-bearing
 denominator at `spine_plasticity_module.py:411-412`).
 
-**Status:** **LIVE on rotation-001.** Both rotation deliverables landed: the
-`PresynapticRelease` null audit (`fcf33b6`) and the corrected null registered-not-run
-(`2d1432d`). L·ETA-5 acceptance items remain delivered (`d75e15a`, `ad7a804`).
-**Current unit:** rotation 001 complete; polling `board.md` + `requests/po3-einvasion/`.
-**Last heartbeat:** 2026-07-18 19:59Z
-**Blocked on:** nothing. Not idle.
+**Status:** **Rotation 002 returned EQUIVOCAL — the magnitude is NOT determined.** Logged as
+L·ETA-6 (`{row in RESEARCH_LOG}`), pre-registration + two amendments committed. Compute
+sequencing requested as **Q4**.
+**Current unit:** rotation 002 closed with a partial result; polling `board.md` +
+`requests/po3-einvasion/`.
+**Last heartbeat:** 2026-07-18 20:59Z
+**Blocked on:** MO sequencing for the plateau-ON pair (Q4). Not idle.
+
+## Rotation 002 result — EQUIVOCAL, and the reasons are separable
+
+**Unsupported and wrong remain unseparated**, which is exactly what Sarah's PO-5 decision was
+waiting on. Two independent reasons:
+1. **Scored condition (plateau ON) not measured** — >10× cost, stalled, killed per the cap.
+2. **One registered criterion is unsound** — I differenced a calcium **peak** across two
+   independent stochastic arms; it returned **−14.65 µM**, i.e. blocking NMDAR "raising"
+   calcium. My design defect, not the model's.
+
+**Measured, sound, but plateau OFF (NOT the scored condition):** `R = 0.0147` (below the 0.05
+negligible bar) and `ΔCa` **mean** `+0.51 µM` — positive as physics requires and ~half of
+`K_calcium_poly`, so **not obviously small**. **I did not substitute the mean and rescore** —
+that is the goalpost move the discipline prevents.
+
+**Verified in code this cycle:** `k_cross = K_ENTANGLE_EM_BASE * eta_factor * w_spatial *
+P_product` (`multi_synapse_network.py:340-341`). **`P_product` is a multiplicative co-factor with
+η, not an alternative** — `η = 0` zeroes `k_cross` whatever `P_product` does. That makes
+L·ETA-5's zero-cross-edges result **structurally necessary**, not incidental.
 
 ## Rotation 001 result — L·ETA-4's NMDAR half does not survive as evidence
 

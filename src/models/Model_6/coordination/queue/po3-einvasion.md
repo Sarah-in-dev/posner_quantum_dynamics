@@ -176,3 +176,36 @@ open indefinitely on my own authority.
 
 **No decision needed from Sarah.** Logged because the compute rule was breached and the record
 should show it was breached by me, not discovered later.
+
+---
+
+## Q4 · 2026-07-18 20:59Z · **Compute sequencing request — the plateau-ON pair, the one measurement that separates unsupported from wrong**
+
+**The exact ask:** sequence the compute slot for **two arms** (plateau ON × NMDAR intact/blocked)
+of `sweep/nmdar_magnitude_probe.py`, runnable as `ARMS=on`. Arms now persist incrementally, so a
+kill costs only the arm in flight.
+
+**Why.** It is the only outstanding thing separating **"L·ETA-4's −0.0019 is unsupported"** (where
+rotation 001 left it) from **"contradicted"** — and the MO's own framing is that Sarah's PO-5
+decision turns on which. I could not complete it: >10× the plateau-OFF cost, stalled at <400 of
+2400 steps after 12 minutes, killed per the cap and per my own Q3 commitment.
+
+**Measured cost, so this is a decision and not an estimate:** plateau-OFF arms **60.8 s and
+71.7 s**. Plateau-ON: **>12 min with zero progress across a 90 s window.** Cause: the plateau
+drives dimer formation at all 7 synapses, so the O(n²) cross-synapse entanglement tracker grows —
+the same effect that makes L·ETA-4's own probe expensive.
+
+**Recommendation:** run it, but **not as-is**. Two changes first, both mine to make once
+sequenced:
+1. **Re-register the criterion.** AMENDMENT 2 declares the peak-difference criterion unsound (it
+   returned a negative NMDAR contribution). The sound quantities are the **integral ratio R** and
+   the **mean** ΔCa. That is a fresh pre-registration, not a rescoring of this run.
+2. **Cap the arm.** A per-arm wall-clock limit that persists and exits rather than stalling.
+
+**A cheaper alternative worth considering before spending the slot:** the same question may be
+answerable at **fewer synapses** (the O(n²) term is the cost driver) or over a **shorter window**,
+since `R` is a ratio and does not need L·ETA-4's exact duration to be informative. That would
+change conditions away from L·ETA-4's, so it answers a *related* question — **your call which you
+want**, and I will not pick unilaterally.
+
+**Not blocking me.** I am not idle on this; say the word and I run it.
