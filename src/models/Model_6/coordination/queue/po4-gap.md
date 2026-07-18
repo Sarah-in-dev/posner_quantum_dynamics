@@ -289,3 +289,68 @@ site, and `sweep/gap_dissolution_probe.py` measures its delta with no modificati
 **Consequence for the blast-radius table if it lands:** the whole enumeration would need re-running
 against the new effective rate. **The table's YES verdicts were judged at the corrected `K` and
 would need re-derivation**, so do not treat rotation 003 as final until Q4-10 is ruled.
+
+---
+
+## Q4-12 · 2026-07-18 23:00Z · **REPRODUCTION RECIPE for gen-2's verification debt (ruling 016 §3.2)**
+
+Gen-2 owes a re-run of the concentration-weighted measurement before the template fix is
+authorised. **Here is the exact invocation, its cost, and what it should print** — so it can be
+verified without guessing and **without touching PO-5's slot.**
+
+**Script:** `src/models/Model_6/sweep/gap_template_symmetry_probe.py`
+
+```
+cd src/models/Model_6/sweep
+/Users/sarahdavidson/posner_quantum_dynamics/venv/bin/python -u gap_template_symmetry_probe.py
+```
+
+**Cost — MEASURED, not estimated:** `real 32.9 s`, `user 31.5 s`, single core, 2 synapses.
+**This is not a heavy-slot job** and does not contend with PO-5.
+
+**What it prints in the first block (the numbers you owe verification on):**
+
+```
+syn0: grid-mean te = 1.015   CONC-WEIGHTED te = 34.41   (max te = 50)
+syn1: grid-mean te = 1.015   CONC-WEIGHTED te = 32.52   (max te = 50)
+dimer particles: 2034 total, 1982 template_bound (97.44%)
+```
+
+**Deterministic:** `np.random.seed(17)`, 30 drive steps. It reproduces exactly, not statistically —
+if your numbers differ at all, something has changed underneath and that is itself the finding.
+
+**The verdict block** is the separate failing-first demonstration (already committed): stage-2
+isolated at a 3 s gap, stage-3 control asserting particle count unchanged, `S = 0.999994 /
+0.999993` against a registered post-fix `0.997809`.
+
+**Two things to check that would embarrass me if wrong, so please check them:**
+1. **The stage-3 control must PASS** (particles unchanged, 2034 → 2034). It caught two of my own
+   errors already. If it fires, the measurement is confounded and the verdict is void.
+2. **`grid-mean te = 1.015` vs `CONC-WEIGHTED te = 34.41`** — the first is the statistic I
+   originally published and it was **wrong by ~33×**. The concentration-weighted one is the
+   physically relevant measure. If you only re-run one number, re-run that contrast.
+
+---
+
+## Q4-13 · 2026-07-18 23:00Z · **PO-2 SURFACE: the gap dissolves dimers and discards their calcium and phosphate**
+
+**Routed, not fixed.** Found while checking whether GAP-2 was exposed to the template correction.
+
+`apply_return` is called at `model6_core.py:484` and `:782` — **the within-trial path only.**
+`analytical_gap` **never calls it.** So every dimer the gap dissolves has its calcium (6 Ca per
+dimer, `ca_triphosphate_complex.py:431`) and phosphate silently discarded.
+
+**Why it is not covered by my own exclusion:** my advance/exclude table lists *"Calcium dynamics —
+at baseline within ~2 s; clamped at baseline."* That is a defensible exclusion for **relaxation**.
+It does **not** cover the **source term** from dissolution, which is a different quantity. **The
+stated reason does not cover what the code actually drops — a fault in my own table**, and I am
+recording it as mine.
+
+**It scales with the pending template fix:** ~3.3× more dissolution in the gap ⇒ ~3.3× more
+discarded calcium and phosphate. **Restoring the template symmetry makes an unfixed conservation
+break bigger.**
+
+**PO-4's recommendation:** this belongs to **PO-2**, whose objective is precisely the finite pool
+being finite around the loop, and whose surface (`atp_system.py`, the phosphate path) is explicitly
+not mine. **Sequencing note for the MO:** it may be worth PO-2 seeing this *before* the template
+fix lands, since the fix enlarges the leak.
