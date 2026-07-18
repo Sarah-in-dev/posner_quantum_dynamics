@@ -1,0 +1,202 @@
+# PRE-REGISTRATION — L·ETA-5: does `E_invasion` RATCHET across traversals?
+
+**Registered 2026-07-18 by PO-3, BEFORE the run.** Committed as its own commit; the probe
+and its results land in later commits. Per `MO_MODEL6.md` §2.4: the discriminating quantity
+is fixed here, the thresholds are numeric and fixed here, there is a null arm that cannot
+show the effect, and the verdict function can return CONFIRMED, FALSIFIED **or**
+INCONCLUSIVE.
+
+---
+
+## 1. The question
+
+L·ETA-2 (characterization rig, sustained `act=1.0`) measured `r = 1.6234` against a
+threshold of 1.0. L·ETA-3 (live spatial-discovery trial, one traversal) measured
+`r = 0.0768` — 13× short — and read off the trace that `E_invasion` "is exactly 0 for the
+first ~34 s then climbs 0.011->0.052->0.075 and is STILL RISING at trial end."
+
+`E_invasion` is an actin integrator. A navigating agent gives each feature a brief
+transient. **The question is whether the integrator retains enough between traversals that
+repeated passes accumulate** — i.e. whether L·ETA-3's shortfall is an artifact of measuring
+one traversal.
+
+The prediction comes from the **grounded** constant, not the inherited one:
+`tau_extrude = 180.0` (`spine_plasticity_module.py:109`, Honkura 2008, in-band) against a
+fixed 20 s inter-traversal gap.
+
+## 2. The mechanism, read off the code (not asserted)
+
+`spine_plasticity_module.py:386-390`:
+
+```
+formation = a.k_polymerization_max * f_CaM * (self.actin_monomer / a.S0) * room
+k_extrude = 1.0 / a.tau_extrude
+extrusion = k_extrude * (1.0 - conf) * self.actin_enlargement
+retention = a.k_stabilization_max * conf * self.actin_enlargement
+```
+
+During a silent gap `f_CaM → 0` (no calcium), so `formation → 0` and, **while `conf ≈ 0`**,
+`actin_enlargement` decays as a pure exponential at `1/tau_extrude`.
+
+**Two consequences that shape the pre-registration:**
+
+**(A) The retention fraction must be scored on `actin_enlargement`, NOT on `E_invasion`.**
+`spine_plasticity_module.py:411-412` maps enlargement to `E_invasion` through an **affine**
+transform with a subtracted offset:
+
+```
+denom = max(1e-6, a.E_ref - a.invasion_threshold)
+self.E_invasion = clip((self.actin_enlargement - a.invasion_threshold) / denom, 0.0, 1.0)
+```
+
+Because `invasion_threshold = 0.1` is subtracted before normalizing, an exponential decay in
+`actin_enlargement` is **not** an exponential decay in `E_invasion`. Scoring the retention
+fraction on `E_invasion` would compare the measurement against a prediction the code does
+not make. The exponential lives in the state variable; the pre-registered retention
+threshold below is therefore on `actin_enlargement`.
+
+**(B) `conf > 0` legitimately shuts extrusion off.** If commitment (`structural_drive`)
+latches the confinement latch during the run, `extrusion` is gated to zero and retention
+goes to ~100% **as real physics**, not as an artifact. This is physically distinct from the
+frozen-clock artifact but numerically identical, so `confinement` is logged per traversal
+and the verdict function branches on it explicitly (§6). Not doing this would let a genuine
+confinement latch and a stopped clock print the same verdict.
+
+## 3. The frozen-clock hazard this probe deliberately avoids
+
+`sweep/run_spatial_discovery.py:55-78` `analytical_gap()` advances P_S decoherence,
+dissolution, bond cleanup and stochastic disentanglement through a silent gap. **It does not
+advance spine plasticity.** Actin appears neither in its computed list nor in its
+"NOT computed (negligible during silence)" list — it is silently frozen.
+
+Calling it would produce **100% inter-traversal retention** and a clean-looking ratchet that
+was an artifact of a stopped clock, which would then read as confirmation of `tau_extrude`.
+
+**Therefore this probe steps real physics through the gap and never calls `analytical_gap`.**
+(MO ruling, 2026-07-18: approved as a protocol choice inside PO-3's scope. `analytical_gap`
+is PO-4's surface and is not edited. Routed to PO-4 as `requests/po4-analytical-gap/mo-f2-001.md`.)
+
+**This is a stated limit of the measurement, declared in advance:** the silence model here
+differs from the shipped experiment's. This probe's gap is *more* physically complete for
+actin and *more expensive*; results are not directly comparable to a shipped
+`run_spatial_discovery` multi-trial run until F-2 is resolved.
+
+## 4. Protocol
+
+**Geometry and drive — inherited unchanged from the L·ETA-3 harness.** `N_FEATURES = 12`,
+`PHYSICS_DT = 0.005`, `AGENT_DT = 0.5`, `SEED = 7`, same `make_network`, same
+`activations_to_stimuli` **including the −40 mV synaptic cap at
+`run_spatial_discovery.py:368`** (LOCKED, `MO_MODEL6.md` §7 — not touched, not raised).
+Coupling row-sums are reported, since feature count sets them.
+
+**A "traversal" is a scripted straight-line pass through one feature's centre.** The random
+walk is replaced by a deterministic path so that "traversal N" is a defined object and the
+retention fraction is well-posed (MO ruling: fixed gap primary; emergent revisit interval
+descriptive only, reported in §7 but not scored).
+
+The agent crosses the target feature's centre at the shipped speed (`0.2` units/s) along a
+straight line. With `feature_sigma = 0.5` (`spatial_environment.py:19`) and the 0.05
+activation floor, activation exceeds the floor for `|d| < 1.224` units, i.e. **2.45 units of
+path = 12.2 s of dwell per traversal** — a brief transient, matching what L·ETA-3 described
+a navigating agent as delivering.
+
+- `N_TRAVERSALS = 8`
+- `GAP_S = 20.0` (fixed, between traversals; real physics stepped throughout)
+- Target feature index: the one whose traversal path is clear of other feature centres,
+  chosen from geometry **before** the run and recorded in the trace.
+
+**Runtime assertion (the ERR-2 / `model6-input-engine` drift guard):** the probe asserts
+`glutamate > 0` reaches the target synapse during traversal 1 and **records the measured
+value in the trace**. `model6-input-engine` still documents the glutamate gap as OPEN (it is
+dated June 14 and has drifted); L·ETA-2 records it as closed. Neither is trusted — it is
+asserted at runtime. If the assertion fails the run aborts and the verdict is INCONCLUSIVE
+(NMDARs silent ⇒ the ERR-2 retraction class).
+
+## 5. The discriminating quantities (fixed before the run)
+
+Per traversal `n ∈ [1..8]`, at the target synapse:
+
+| symbol | definition |
+|---|---|
+| `peak_r[n]` | max `r` during traversal `n` (recomputed by `r_eta_per_synapse`, unmodified) |
+| `enl_end[n]` | `actin_enlargement` at the last physics step of traversal `n` |
+| `enl_start[n]` | `actin_enlargement` at the first physics step of traversal `n` |
+| `rho[n]` | **retention fraction** = `enl_start[n+1] / enl_end[n]`, for `n ∈ [1..7]` |
+| `conf[n]` | `confinement` at the end of traversal `n` |
+| `E_inv_start[n]` | `E_invasion` at traversal start (reported; not the scored quantity — see §2A) |
+
+**The prediction, from the grounded constant alone:**
+
+`rho_pred = exp(-GAP_S / tau_extrude) = exp(-20/180) = 0.8948`
+
+## 6. The verdict function — thresholds fixed here, in advance
+
+Evaluated in this order. `rho_mean` = mean of `rho[1..7]`.
+
+**GATE 0 — positive control (must fire, else INCONCLUSIVE).**
+The measurement channel must be demonstrated live before any verdict is read:
+`max(peak_r[1..8]) > peak_r` at rest **and** `max(E_inv_start[2..8]) > 0` **and** the
+glutamate assertion passed. If the positive control does not fire, the probe reports
+**INCONCLUSIVE — POSITIVE CONTROL DID NOT FIRE** and stops. *(This is the L·ETA-4 scar
+guarded directly: a test whose positive control never fires tests nothing.)*
+
+**GATE 1 — frozen-clock / confinement discrimination.**
+- If `rho_mean >= 0.99` **and** `max(conf) < 0.05` → **INCONCLUSIVE — GAP NOT STEPPING.**
+  Retention indistinguishable from 100% with the extrusion gate open is a red flag that the
+  probe's own gap is not advancing actin, not a strong positive. *(MO ruling, adopted.)*
+- If `rho_mean >= 0.99` **and** `max(conf) >= 0.05` → **CONFINED-RATCHET**, reported
+  separately: extrusion is legitimately gated off by the confinement latch. This is real
+  physics but it is **not** the `tau_extrude` retention hypothesis, and it is reported as a
+  distinct outcome, not folded into CONFIRMED.
+
+**GATE 2 — the ratchet verdict** (only reached when `rho_mean < 0.99`):
+- **CONFIRMED** iff **both**: (i) `peak_r` is monotonically non-decreasing across all 8
+  traversals with `peak_r[8] / peak_r[1] >= 2.0`; **and** (ii) `rho_mean ∈ [0.80, 0.95]` —
+  i.e. consistent with the 0.8948 prediction, and excluding both the ~1.0 artifact band and
+  a weak-retention regime that would not accumulate.
+- **FALSIFIED** iff `peak_r[8] / peak_r[1] < 1.2` **or** `rho_mean < 0.5`. The integrator
+  does not retain across a behavioural-timescale gap; repeated traversals do not accumulate.
+- **PARTIAL / INCONCLUSIVE** otherwise (e.g. accumulation present but `rho_mean` outside the
+  predicted band, or non-monotone `peak_r`) — reported with the numbers, no verdict claimed.
+
+**Reported regardless of verdict, never as a verdict:** whether `peak_r` reaches 1.0 within
+8 traversals, and the linear/geometric extrapolation of how many traversals it would take.
+Extrapolation is descriptive. It is not evidence and does not enter the verdict.
+
+## 7. The null arm — cannot show the effect, by construction
+
+Identical in every respect (same seed, same network construction, same traversal count, same
+gaps, same total wall-clock physics) **except** the target feature's activation is held
+below the 0.05 floor for the whole run, so `voltage` stays at −70 mV rest and `f_CaM ≈ 0`.
+
+**Pre-registered null expectation:** `actin_enlargement` stays at its resting value,
+`E_invasion` stays 0.0000, `peak_r` is flat across traversals, and `rho` is undefined or
+~1.0 at the resting floor. **If the null arm shows a ratchet, the probe is measuring
+something other than activity-driven actin and the whole measurement is void** — reported as
+INCONCLUSIVE — NULL ARM RATCHETED.
+
+Also recorded (descriptive only, not scored): the emergent revisit interval a free-running
+agent would produce at this geometry, for comparison against the fixed 20 s.
+
+## 8. Compute
+
+ONE backgrounded run (board cap). `python -u`, never piped through `tail`. Per-traversal
+progress to stdout. `r`-vs-traversal and the per-traversal state row **persisted
+incrementally after each traversal**, so a mid-flight kill leaves analysable partial data.
+Both arms write to `results/einvasion_ratchet/`.
+
+Estimated simulated time: `8 × (12.2 + 20.0) ≈ 258 s` per arm at `dt = 0.005` over 12
+synapses — roughly 6.4× L·ETA-3's 40 s trial. If the run exceeds the cap it is killed and
+the partial per-traversal data is analysed as-is; the cap is raised at most once, with a
+stated reason in `queue/po3-einvasion.md`.
+
+## 9. What this measurement does NOT do
+
+- It does not touch any constant. `k_polymerization_max`, `E_ref`, `tau_extrude`,
+  `invasion_threshold` and the −40 mV cap are all read, never written. (`MO_MODEL6.md` §7:
+  *"Emergent physics only. No constant tuned to a downstream target."*)
+- It does not extend the protocol to reach threshold. If 8 traversals do not ratchet, that
+  is the result.
+- **The negative branch is Sarah's call.** PO-3 measures, writes it up, and STOPS — no
+  remedy proposed, no constant moved, no protocol extended to rescue it (`board.md`,
+  "Decided, do not re-open").
