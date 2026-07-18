@@ -12,8 +12,9 @@ list. This file is the live registry; that file is the durable plan. Read both.
 | PO | Objective | Status | Owner files | Last update |
 |---|---|---|---|---|
 | `model6-mo` | the MO itself (meta/coordinator) | GROUNDED — brief committed `093c675` | `board.md`, `MO_MODEL6.md` | 2026-07-18 17:30Z |
-| `po1-b2` | B2 — retire the per-synapse pump site | **GROUNDED — brief returned, ACCEPTED; resumed to build** (session `local_e4593171`) | `vibrational_cascade_module.py`, backbone params (`model6_parameters.py:759-805`) | 2026-07-18 17:35Z |
-| `po3-einvasion` | E_invasion provenance + the ratchet test | **GROUNDED — brief returned, ACCEPTED; resumed to pre-register** (session `local_b7aeedcf`) | `spine_plasticity_module.py` actin/E_invasion block, its `sweep/` probe | 2026-07-18 17:35Z |
+| `po1-b2` | B2 — retire the per-synapse pump site | **BUILDING** — acceptance probe committed FAILING first `fa12009` (mode ratio 5000, FAIL) | `vibrational_cascade_module.py`, backbone params (`model6_parameters.py:759-805`) | 2026-07-18 17:35Z |
+| `po3-einvasion` | E_invasion provenance + the ratchet test | **BUILDING** — pre-registration committed `2084960` (retention fraction, predicted 0.8948) | `spine_plasticity_module.py` actin/E_invasion block, its `sweep/` probe | 2026-07-18 17:50Z |
+| `po4-gap` | the analytical gap, biologically grounded | **DISPATCHED — chip pending** (`task_daa62deb`) | `analytical_gap` in BOTH drivers, `run_theta_burst_45s.py` | 2026-07-18 17:52Z |
 
 _(The MO adds a row here + the PO's `leads/`/`queue/` files when it spawns one.)_
 
