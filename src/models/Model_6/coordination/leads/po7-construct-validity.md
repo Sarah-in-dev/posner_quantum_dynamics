@@ -131,4 +131,156 @@ de-duplication your audit motivates.
 **Do not idle silently:** if you are blocked, write the block into your queue and say what would
 unblock it.
 
-**Status:** SEATED, not yet grounded. **Last heartbeat:** — (none yet)
+**Status:** GROUNDED. Unit 1 parts 1 and 3 have SHOWN answers; part 2 is pre-registered, not yet
+measured. **Last heartbeat:** 2026-07-18 — grounding brief posted.
+
+---
+
+# GROUNDING BRIEF — PO-7, 2026-07-18
+
+## (a) Verified current state
+
+**`[skill quantum-system-canonical]` — read in full (215 lines), not only §8.** §6 is this seat's
+charter, `:163`:
+> *"**Construct validity [LOCKED].** The *declared* model (docstrings, skills, this document) and
+> the *implemented* model (code) must be reconciled; until they are, a behavior cannot be attributed
+> to the claimed physics — it could be an artifact of the gap."*
+
+`:198` — *"**Keystone #2 — construct validity.** The declared↔implemented gluing check (§6).
+[CONTESTED — keystone]"*
+
+Two sections bear directly on whether a stepper difference is physics. `:140` (§5):
+> *"Cross-bond fidelity carries coupling: F = P_S_i·P_S_j·w_spatial. An edge counts toward
+> connectivity/collapse **only if F > 0.5**"*
+
+and `:118` (§4.3), the identity that survived the 2026-07-18 falsification:
+> *"the *identity* `eta = 0 ⇒ k_cross = 0` is arithmetic and stands."*
+
+**That second quote is why the divergence below is not cosmetic** — it converts "the backbone
+update is missing" from a code-shape observation into a physics prediction I can score.
+
+`[skill quantum-computation-and-attribution]` `:74` (§6.5), the seat's own mandate:
+> *"the **declared** model (docstrings, skills) and the **implemented** model (code) have diverged
+> … **Build the declared↔implemented gluing check before any behavioral result is load-bearing.**"*
+
+`[skill self-comprehension-discipline]` `:90` — the epistemic spine I am scoring against:
+> *"prove what can be proven; observe what can't be proven; infer only what can't be observed"*
+
+and its named characteristic defect, `:95-97`: *"checking something at a **weaker** level than is
+available."* **Bearing on this unit:** which copy a caller runs is *provable* from the import
+statement — it must NOT be inferred, and must not be answered by running something.
+
+`[skill model6-architecture]` — F4 as corrected today, `:333`:
+> *"**Open:** whether the two steppers have diverged in behaviour. **Not measured. Do not assume
+> they are identical because one says it was copied from the other.**"*
+
+`[skill session-discipline]` and `[skill agent-grounding-protocol]` — read in full. The
+load-bearing line for this unit is `agent-grounding-protocol:45`:
+> *"**Code + DB = what IS.** … If a skill says X and the code does Y, the code is right"*
+
+`[skill model6-codebase-operations]` — read; nothing in it bears on the stepper-divergence
+question beyond the runtime/backgrounding discipline already carried in the kickoff. That is a
+passing answer, recorded as one.
+
+`[recent conversation — board.md]` MO gen-2 cycle 21:55Z §4, the finding that opened this unit:
+> *"**OPEN AND EXPLICITLY UNMEASURED: have the two steppers diverged?** *Do not assume they are
+> identical because one says it was copied from the other.***"*
+
+`[recent conversation — MO_MODEL6.md §2.3]`, the acceptance bar this unit is graded on:
+> *"**A verdict that cannot distinguish its outcomes is not a result.**"*
+
+## (b) Decisions + locked items found
+
+- **§7 LOCKED, `MO_MODEL6.md:271`** — *"No constant tuned to a downstream target."* Nothing in this
+  unit proposes a constant change.
+- **`MO_MODEL6.md:279`** — *"**T1′ is CLOSED** — 4/4, p≈3×10⁻⁶. Do not re-run."* Relevant: one
+  caller of the RSD copy is `sweep/test_learning_pathway.py`, adjacent to that probe family. **I
+  will read it, not re-run it.**
+- **Prior failure in this exact area:** F4 asserted the place-field file did not exist and that
+  there was one stepper. Both false. Root cause named at `board.md` §4 — **two `sweep/`
+  directories**, and *"a check run in the wrong tree finds a file absent and concludes
+  consolidation."* **My unit is run in the wrong tree by construction if I am careless**, so every
+  path below is repo-root-relative and both trees are enumerated explicitly.
+- **The commit rule** (`board.md`, standing rule change): `git commit -m "..." -- <paths>`; never
+  `git add` then bare `git commit`; verify with `git show --stat HEAD`.
+
+## (c) Prior art to compose from
+
+- `src/models/Model_6/sweep/dimension_consumer_audit.py` (PO-1) — the model for a verdict with a
+  calibration against known-LIVE and known-INERT ground truth.
+- `src/models/Model_6/sweep/gap_phase_coverage_check.py` (PO-4) — the mechanical docstring-vs-code
+  check that FAILS rather than reports.
+- `src/models/Model_6/sweep/coupling_weights_reach_probe.py:127-144` — **the closest prior art, and
+  it is directly on my target.** It already instruments SITE 1 = `step_network_per_synapse` for
+  `coupling_weights` arrival, with an `all_arrived` boolean. Its harness shape is what I extend;
+  I do not rebuild it.
+
+## (d) Verdict so far — parts 1 and 3 are ANSWERED FROM CODE; part 2 is NOT
+
+**Part 1 — do they differ? YES, and it is not cosmetic.** Two structural differences, SHOWN:
+
+1. **The backbone update is absent from the place-field copy.**
+   `sweep/run_spatial_discovery.py:88-89` runs `network._update_backbone_field()` between the
+   per-synapse step and the entanglement tracker. `src/models/Model_6/sweep/run_place_field_learning.py:116-156`
+   **has no such call at any line.**
+2. **The coordinated gate is called at a different rate.**
+   RSD `:101-106` calls `network._evaluate_coordinated_gate(...)` **every step**, with the reason in
+   the comment: *"it must also see the falling edge of reward to re-arm its one-shot measurement
+   latch, otherwise the measurement fires once per experiment rather than once per reward episode
+   (D19)."* RPFL `:148-150` calls it **only when `any_reward` is true** — i.e. **the D19 defect is
+   still live in the place-field copy.**
+
+**Part 3 — does any standing result depend on which copy ran? ANSWERED, and the answer is the
+boring one.** Every external consumer resolves to the **RSD** copy, provably from the import
+statement, not inferred:
+
+| caller | import | resolves to |
+|---|---|---|
+| `sweep/test_learning_pathway.py:33` | `from run_spatial_discovery import …` | RSD |
+| `src/models/Model_6/sweep/gap_clock_assert.py:20` | same | RSD |
+| `src/models/Model_6/sweep/resting_leak_probe.py:8` | same | RSD |
+| `src/models/Model_6/sweep/eta_in_live_trial.py:58` | same | RSD |
+| `src/models/Model_6/sweep/einvasion_ratchet_probe.py:66` | same | RSD |
+| `src/models/Model_6/sweep/gap_dissolution_probe.py:53` | `import run_spatial_discovery as RSD` | RSD |
+| `src/models/Model_6/sweep/coupling_weights_reach_probe.py:51` | same | RSD |
+
+**Zero files import `run_place_field_learning`.** Its copy has exactly **one** consumer — its own
+`:268`, in-file. And exactly one `run_spatial_discovery.py` exists in the repo, so the bare-name
+import is unambiguous.
+
+**Consequence, and it is the load-bearing part:** the two copies are **not** a hazard to any
+standing result, because **no standing result flows through the place-field copy.** The divergence
+is real but quarantined. **The RSD copy is the one every probe on this board has been running.**
+
+**Still to establish before I will call the unit done:** the sys.path claim above is read from
+source; I owe a **resolution check that would FAIL if a caller resolved to the other copy** — I will
+demonstrate the check failing (by pointing it at a deliberately shadowed path) before reporting that
+it passes. `MO_MODEL6.md:53` — *"A verdict that cannot distinguish its outcomes is not a result."*
+
+**Part 2 — does the difference change physics? NEEDS MEASUREMENT, and I am not asserting it.**
+The two differences predict, from `quantum-system-canonical:118` (`eta = 0 ⇒ k_cross = 0`), that a
+place-field run condenses no backbone and therefore forms **zero cross-synapse bonds** — the same
+end-state the file's own `:134-141` audit note already records for the `coupling_weights` omission,
+**arriving by a second, independent route.** *That is a prediction from a verified premise, not a
+result.* Per the kickoff's own bar — *"a correctly-verified premise does not license an unmeasured
+conclusion"* — it is logged as **NEEDS MEASUREMENT**.
+
+**Minimum surgical change proposed:** none to model code. One new read-only probe under
+`src/models/Model_6/sweep/`, extending `coupling_weights_reach_probe.py`'s harness. **I am not
+proposing to de-duplicate the steppers** — the kickoff reserves that to the MO.
+
+## (e) Open questions (routed to my queue, not decided here)
+
+1. The place-field copy carries a **known-defective** gate call (D19) and no backbone update, and
+   has **no consumer but itself**. Whether that is delete / fix / freeze-with-a-banner is a routing
+   call, not mine.
+2. Does `run_place_field_learning.py` have standing results in the research logs at all? If it does,
+   those results were produced by a driver with no backbone condensation **and** the documented
+   zero-cross-bond defect — which would make them re-examine-not-re-run, per its own `:140`.
+
+## (f) Self-understanding delta — one sentence
+
+The program believed the open question was *whether* the two steppers diverged; the code shows they
+diverge in two physics-bearing ways **and** that it does not matter to any standing result, because
+every consumer on the board provably runs the same one — so the live hazard was never divergence,
+it was a defective orphan driver nobody imports.
