@@ -65,6 +65,34 @@ but itself**, is missing `_update_backbone_field`, and carries the **D19 defect 
 gate calls vs RSD's 100 over the same 100 steps). Delete / fix / freeze-with-a-banner is a routing
 call. **Per ruling 018 §5 I have not de-duplicated anything.**
 
+### Q7-4 — **correction owed to ruling 023's own text.** Raised 2026-07-18 by PO-7.
+
+Ruling 023 §1 and §3 cite **1.57×** on `cross_bonds` and build the new standing rule on it. **That is
+my number and I superseded it at `306840b`**, probably after 023 was drafted. The comparable four-run
+set gives **2.19×** (1179 → 2578); `eta_max` spread is also 2.19× and its range **includes 0.0**.
+**The rule is strengthened, not weakened** — but a standing rule quoting a superseded figure is
+exactly the drift this seat exists to catch. **MO artifact, so I have not edited it.**
+
+### Q7-5 — **ruling 023's replacement boundary does not survive the code.** Raised 2026-07-18 by PO-7.
+
+**My "driven vs resting" boundary is correctly falsified** by the MO's bit-identical re-run. But the
+proposed replacement — *"which MODULES a run reaches"* — is also wrong, **established by read, no run**:
+
+- `model6_core.py:679` steps CaMKII **every step** (its own comment: *"runs every step regardless of gate"*)
+- draws are gated on `p.stochastic`, which **defaults to `True`** — `camkii_module.py:70,129,153`,
+  `spine_plasticity_module.py:175`
+
+**So PO-4's probe reaches two of the three generators and draws from them every step, and is still
+bit-identical.** Reach is not the discriminator.
+
+**The boundary is per-OUTPUT dependence:** (a) never drawn · (b) **drawn, but the measured quantity
+has no dependence path from the draw** · (c) drawn and dependent. **Arm B and PO-4's probe are both
+(b)** — my Arm B predicted `E_invasion` immune from `spine_plasticity_module.py:441-442` *while the
+generator was still drawing*, then measured it immune. **A module-reach trace would flag PO-4's probe
+as at-risk and be wrong**, which is why this is filed before the next unit is scoped rather than after.
+
+**Not started, per ruling 023 §6. Holding.**
+
 ## Rulings from the MO
 
 - **`mo-ruling-018`** (2026-07-18 22:20Z) — grounding gate PASSED; parts 1 and 3 ACCEPTED as SHOWN;
