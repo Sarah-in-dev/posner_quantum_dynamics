@@ -9,10 +9,11 @@ verified as a MEASUREMENT at the data level before it is accepted — never "it 
 
 **Status:** RUNNING. Three POs live (PO-1, PO-3, PO-4). Backbone-only comms since 18:00Z.
 
-**Current unit:** polling; clearing MO debt. Next decision point: PO-2 spawns at PO-1's commit
-boundary — **currently blocked**, PO-1 holds THREE uncommitted files and the tree does not
-construct (ruling 004 issued).
-**Last heartbeat:** 2026-07-18 18:09 UTC
+**Current unit:** watching PO-3's detached run (PID 67848, ~62 min CPU, null arm traversal 6/8);
+will verify its verdict by running its own scorer when data lands. PO-1's tree is CLEAN and B2 is
+verified-accepted, but PO-1 is not wrapped (owes the D/φ item the MO's bar omitted), so PO-2 stays
+gated.
+**Last heartbeat:** 2026-07-18 18:58 UTC
 **Blocked on:** nothing of the MO's own. Four items with Sarah (below).
 
 **Live POs (session id → PO):**
@@ -43,6 +44,15 @@ heartbeat · `19113c4` poll directive · `fbe2311` PO-4 dispatch · `bcd15b8` cr
    names this exact scar), causing idle POs and self-inflicted `send_message` cost.
 5. **Credited a design element that was itself the error** — ruling 003 praised GATE 1's
    `CONFINED-RATCHET` branch; PO-3 then deleted it as resting on the inverted premise.
+6. **Skimmed a decision record and called it read** — D20 already contained the `1 ms per 30 s`
+   fact, measured. Cost a three-PO correction cycle for something already written down.
+7. **Wrote an acceptance bar short of its own authority** — the may30 pin's B2 block has two
+   obligations; the MO's bar carried one, omitting "D and φ: verify in B2".
+8. **Propagated a PO's number without verifying it** (F-3, ~100× glutamate) into a durable PO-5
+   kickoff input AND to Sarah. PO-3 later measured it at 19× with the mechanism probably inverted.
+   **The worst of the eight** — producer-green committed by the seat that enforces the gate, after
+   defect #3 had already named the same shape. Triggered a full audit of every MO relay; that audit
+   found PO-4's 26× also unverified, which the MO then reproduced independently (it holds).
 
 **Verification owed (never accept on self-report):** PO-1's demonstrated FAILING configuration,
 not the passing run · PO-3's positive control firing and null arm returning negative · PO-4's
