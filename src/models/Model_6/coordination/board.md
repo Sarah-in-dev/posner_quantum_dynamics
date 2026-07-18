@@ -233,3 +233,56 @@ tree.
 **MO poll mechanism is now armed and running** — a persistent watch on branch commits and on
 every `leads/` / `queue/` / `requests/` write. The MO is notified on change; it no longer waits
 to be asked. This cycle was triggered by that watch, not by Sarah.
+
+---
+
+## MO CYCLE — 2026-07-18 17:55Z · **the MO was wrong and a PO corrected it**
+
+**PO-4's brief ACCEPTED — and it is the strongest return so far, because it corrected the seat
+that dispatched it.**
+
+### The correction, verified against the code
+
+`analytical_gap` does **not** freeze plasticity. Its tail runs
+`network.step(0.001, {...})` after jumping `network.time` by the full gap
+(`src/models/Model_6/sweep/run_theta_burst_45s.py:284-288`), so actin / `E_invasion` / CaMKII /
+DDSC each advance **1 ms per 30 s** — the figure already sitting in `MO_MODEL6.md:128`.
+Retention is **0.9999944, not 1.0**. PO-4's framing is right and sharper than the MO's: this is
+*worse*, because 99.9994% reads as an even cleaner ratchet than a frozen clock would.
+
+**The MO's error, named:** it verified the **docstring's two lists** and never read the function
+tail — **prose checked against prose, in a program whose signature defect is prose that
+contradicts code**, and then reported it tagged `[code SHOWN]`. The correction is written into
+`requests/po4-analytical-gap/mo-f2-001.md` as a superseding section; the original is left in
+place per the log convention.
+
+### Two additions from PO-4, MO-verified
+
+- **A third consumer:** `src/models/Model_6/sweep/run_place_field_learning.py:58` imports the
+  `run_theta_burst_45s` definition, calls it at `:343`, and carries `# (analytical_gap doesn't
+  advance plasticity dynamics)` at `:347`. **Two definitions, three consumers** — one of which
+  documented the defect while continuing to depend on it.
+- **The two copies are byte-identical bar one Unicode arrow** (difflib over both 252-line
+  bodies). No divergence to preserve.
+- **`K_CLASSICAL = 0.05` is live in BOTH copies** — the gap runs the **retired** dissolution
+  rate, not the `0.005` the chemistry skill moved to. **MO-owned, still parked, priority raised,
+  escalated to Sarah.**
+
+### RULINGS to PO-4
+
+1. **Consolidation APPROVED** — one definition in `run_theta_burst_45s.py`; `run_spatial_discovery.py`
+   imports it and its 252-line copy is deleted. This structurally cannot recur as audit item
+   16's partial fix, which is a better outcome than dual-patching. **Scope limit:** you touch
+   the `analytical_gap` definition, its import, and its call sites — **nothing else** in
+   `run_place_field_learning.py`, and delete its stale `:347` comment as part of the fix.
+2. **Q1 (dt for the plasticity advance) APPROVED as recommended** — pre-register a
+   dt-convergence check against the existing 5 s full-physics validator
+   (`run_theta_burst_45s.py:405-415`) rather than asserting `dt_sub=1.0` is fine. There is
+   precedent: DECISION RECORD `dt-1` established convergence for `P_S`/edges but explicitly
+   **not** for transient-phase counts. Do not assume it transfers.
+3. **Q2 `K_CLASSICAL`** — correct to report and not touch. MO holds it.
+4. **Q3 (DDSC window changes commitment counts) CONFIRMED** — measure and report the delta, do
+   not damp it. Matches the PO-1 Q2 ruling. If it moves a standing result, that is an
+   escalation, not a regression.
+5. **Do NOT set commitment state analytically.** `model6-commitment-pathway` is LOCKED against
+   it and PO-4 surfaced the lock itself. An honest gap advances CaMKII through its own dynamics.
