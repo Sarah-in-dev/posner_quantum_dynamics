@@ -762,3 +762,54 @@ This is the hazard PO-1 routed out of B2 and was rotated onto. **It is larger th
 - **PO-3** → rotated to the spontaneous-release null audit across the probe family; re-run stays
   gated on Sarah.
 - **PO-4** → headline met; owes the subsystem table.
+
+---
+
+## MO CYCLE — 2026-07-18 20:00Z · **6 of 9 sweep dimensions INERT — MO-verified. Two of them are the quantum parameters.**
+
+The MO ran `dimension_consumer_audit.py` itself. **PO-1's claim reproduces exactly.**
+
+```
+VERDICT: 6 of 9 params-level dimensions are INERT
+  q1_d_modes            -> dendritic_backbone.D_modes                 0 reads
+  q1_phi_dissipation    -> dendritic_backbone.phi_dissipation         0 reads
+  q1_chi_redistribution -> dendritic_backbone.chi_redistribution      0 reads
+  q1_kT_per_modulation  -> dendritic_backbone.kT_per_modulation_unit  0 reads
+  q2_t2_p31             -> quantum.T_singlet_dimer                    0 reads
+  q2_j_coupling_hz      -> quantum.J_intrinsic_dimer                  0 reads
+  q2_phosphate_initial  -> phosphate.phosphate_total                  3 reads  REACHED
+```
+
+### ESCALATED TO SARAH — the two most load-bearing quantum parameters are among the inert six
+
+**`q2_t2_p31` (`T_singlet_dimer`) and `q2_j_coupling_hz` (`J_intrinsic_dimer`) are swept and read by
+nothing.** In a Posner/quantum-biology model, **T2 and J-coupling are the two parameters the entire
+quantum hypothesis rests on.** A sweep over either returns a flat response — which reads as
+**"coherence time does not affect the outcome"** or **"J-coupling does not affect the outcome."**
+
+**For a model whose central claim is quantum coherence, those are the two most damaging false nulls
+available**, and they are the two most likely to be swept by anyone probing the quantum hypothesis.
+**No sweep over T2 or J in this program's history could have meant anything.**
+
+This is the same shape as F-1 (the per-synapse pump parameter set unreachable because
+`Model6Parameters` has no `cascade` attribute) — and the audit found a third instance of the exact
+mechanism: **`q2_k_agg_baseline` is `hasattr`-guarded at `sweep_runner.py:92-93` and is silently a
+NO-OP when the attribute is absent.** Three independent cases of a sweep dimension quietly not
+landing.
+
+### PO-1's epistemic discipline, noted and adopted
+
+Its limits are the right ones and the MO is adopting them rather than softening them:
+> *"INERT is definitive for these driving conditions. A consumer on a rare branch this short run
+> never reached would look identical — so these are reported as INERT-under-stated-conditions …
+> **REACHED is necessary but not sufficient: a read may be a log line, not physics.**"*
+
+**So `q2_phosphate_initial` is NOT yet confirmed live** — 3 reads, unclassified. That matters
+because PO-2 is working the phosphate loop right now; the MO is not treating REACHED as consumed.
+
+### Consequence for the board
+
+**PO-6's Q × drive sweep was already HARD-blocked on PO-2.** It is now blocked on this too: a sweep
+harness where two-thirds of its dimensions do not land cannot produce an interpretable result
+regardless of whether the phosphate loop conserves. **Fixing the wiring is now upstream of running
+any sweep**, and it belongs to PO-1's current rotation.
