@@ -66,6 +66,7 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
 | AUDIT-1 | 2026-07-18 | **SUBSTRATE AUDIT — full adversarial code audit, `docs/SUBSTRATE_AUDIT_JUL18.md`.** Four parallel read-only agents, `file:line` required for every claim, UNVERIFIED where code could not confirm. **Five headline findings:** (1) **factor-of-2pi error** on the per-synapse pump — `vibrational_cascade_module.py:315` uses `hbar*f` on a LINEAR frequency, n_bar inflated **6.28x**; the backbone pump is CORRECT (`h*f`, `model6_parameters.py:46`). (2) **The calibration fiction survives and is unsweepable** — `kT_ref = 22.1` is a function-body literal (`:246`), invisible to the params dataclass and to sweep_runner; with `r_at_E_ref = 100e9` it makes **r/r_c ~ 1.045 at MT+ an arithmetic identity, not a result**. (3) **Three docstrings assert mechanisms absent from the code** — a Hill function (`multi_synapse_network.py:1332-1334` vs `:1381-1392`), a 30% collapse (`:1423-1425`, `collapse_factor` never read), and "No fitted parameters!" (`:1238-1242`) beside two fitted parameters. (4) **Cited sources contradict their values** — phi/chi cite Zhang 2019 which gives 6 GHz / 0.07 GHz; code uses 10 GHz / 0.05 GHz. (5) **The two pump sites run different threshold physics** — backbone `n_ex = n_bar_s`, per-synapse still Zhang Eq. 4. **WHAT SURVIVES:** the entanglement/partition layer — Werner 0.5 is a THEOREM not a cutoff, eta is exactly `(r-1)/(r+1)` with no fitted curve, commitment is a real CaMKII integrator with a genuine DDSC delay. **Debt REGRESSED:** ~151 dead parameter fields (was ~120), six orphan modules, none removed. Also found: `phosphate_total` goes stale so J-coupling reads a field ignoring dimer consumption; ATP<->Pi is not mass-conserving; `step_with_coordination` and `run_place_field_learning` still form ZERO cross-synapse bonds (a gap in the same-day fix). | [GROUNDED, code SHOWN] | `docs/SUBSTRATE_AUDIT_JUL18.md` |
+| ETA-5 | 2026-07-18 | **THE RATCHET TEST IS VOID — ITS NULL ARM IS THE RESULT: `E_invasion` accumulates WITHOUT ACTIVATION.** Pre-registered (`docs/PREREG_L_ETA_5_RATCHET.md`), 8 traversals x 14 s, 20 s gaps, real physics through every gap (`analytical_gap` deliberately NOT called). **Scored verdict `INCONCLUSIVE — NULL ARM RATCHETED`: the dispatch question is NOT ANSWERED.** The null held the target below the 0.05 activation floor but did NOT suppress presynaptic release (`BASELINE_RATE_HZ = 0.5`, `presynaptic_release.py:124`) — so the 'silent' synapse still received glutamate. **null max `E_invasion` = 0.4507** (registered: must stay 0.0000) and **null `peak_r` gain = 7.46x** — *larger than the driven arm's 5.65x*. **The finding that survives is about the driver itself:** `E_invasion` climbs past `invasion_threshold` on tonic spontaneous release alone, growing even during silent gaps (`rho` up to 2.26), and the driven/undriven separation COLLAPSES with traversal count (6.15x -> 1.70x). This is a stronger, plateau-free version of L·ETA-4: selectivity in the `E_invasion -> r -> eta` channel is weak on this driver's own dynamics. **Driven `r` DID cross threshold** (1.0721 at t3, 1.4050 at t8 — first live-regime crossing after L·ETA-3) but **cross-synapse edges = 0 in BOTH arms**, since `k_cross` ~ sqrt(eta_i*eta_j) and only one feature was driven: **eta != 0 shown, a PARTITION was NOT.** PO-3 -> PO-5 at most PARTIALLY cleared. Not the negative branch (FALSIFIED needed gain < 1.2; measured 5.65x). Even absent the null failure the drive arm would not have CONFIRMED: `peak_r` non-monotone (t3 1.0721 -> t4 0.9911) and `ratio_mean` 1.1080 outside the registered [0.89, 1.07], the calcium-tail overshoot flagged in AMENDMENT A1.2 BEFORE the run. **Three PO-3 errors corrected in-cycle:** the 'frozen gap' claim (wrong — 1 ms/gap, caught by PO-4), the committed-branch retention derivation (wrong — committed spines drain 3.54x FASTER, caught by PO-4, fixed before scoring), and F-3's '~100x NMDAR starvation' (**overstated and inverted** — measured 19x on events, but the old pattern HOLDS each release 100 steps so it delivers MORE exposure; **the L·ETA-3 correction-banner recommendation is WITHDRAWN**). Re-run needs a null suppressing spontaneous release and a gap clearing the calcium tail — protocol changes, not made unilaterally. | [GROUNDED, measured] | L·ETA-5 |
 | ETA-4 | 2026-07-18 | **THE PLATEAU MAKES THE CONDENSATION DRIVE BRANCH-GLOBAL — §8's premise FAILS as written.** Probe `sweep/plateau_vgcc_leak_probe.py`, 7 synapses @1um, ONLY synapse 3 driven, rest silent, with/without plateau. **Selectivity survives in NMDAR exactly as Jain 2024 requires** (silent-synapse NMDAR gain from plateau **-0.0019**, i.e. zero — no glutamate, no current, however depolarized). **But it is destroyed in the VGCC->E_invasion->r channel:** silent-synapse VGCC open fraction **0.0017 -> 0.4783 (+0.492)**, and that propagates — **E_invasion silent 0.0000 -> 0.2115, IDENTICAL to the driven synapse's 0.2115 to four decimals**. `r` silent **0.754-0.822** vs driven **0.812**: the driven synapse is **NOT SEPARABLE** from the silent ones. When r crosses 1 they cross TOGETHER. **VERDICT-LOGIC CORRECTION (important):** the probe's first auto-verdict printed "eta stays SELECTIVE" because eta==0 at silent synapses — but eta==0 at the DRIVEN synapse too (r=0.812<1), so the test was VACUOUS, the 683b82f failure class exactly. Logic corrected to return INCONCLUSIVE-on-eta and to read the DRIVE channel instead. **Consequence:** eta cannot carry input-selectivity once a plateau is present; selectivity must live in `P_product` (the dimer population, which forms only where NMDAR calcium arrived). That is a coherent story but NOT the one §8 is written against — §8 assumes drive patterns the partition THROUGH eta. | [GROUNDED, measured] | L·ETA-4 |
 | ETA-3 | 2026-07-18 | **eta does NOT clear in a LIVE trial — the pump is capable, the PROTOCOL is not.** L·ETA-2's flagged precondition, measured and negative (`sweep/eta_in_live_trial.py`). Real spatial-discovery trial, input engine fully wired: **max r = 0.0768 vs threshold 1.0 (13x short), eta = 0.0000, zero synapses condensed, ZERO cross-synapse edges all trial.** Attribution — both factors of `r ∝ E_invasion x ca_open` fall short roughly multiplicatively: **E_invasion 0.0868 (rig 0.35, 4x short)** and **ca_open 0.140 (rig 0.38, 2.7x short)**. Mechanism read off the trace: E_invasion is exactly 0 for the first ~34 s then climbs 0.011->0.052->0.075 and is STILL RISING at trial end — it is the actin integrator and needs sustained activity (~45-60 s per model6-actin-invasion-driver), but a navigating agent gives each feature only a brief transient; and only 1-4 of 12 features are active at once with max_act mostly <0.35, so the -70+act*30 mV map leaves B(V) negligible. **The constraint is DWELL and CO-ACTIVATION, not physics.** Levers (Sarah's call): slower agent, denser/clustered features so neighbours co-drive the aggregation, longer trials, or the plateau carrying the depolarization. **DO NOT raise the synaptic voltage** — the -40 mV cap deliberately keeps the plateau out of the synaptic knob. §8 stays blocked IN PRACTICE, for a better-understood reason than ETA-1 gave. | [GROUNDED, measured] | L·ETA-3 |
 | ETA-2 | 2026-07-18 | **THE PUMP IGNITES — L·ETA-1 SUPERSEDED.** Input engine finished (glutamate into every learning driver; plateau_potential wired), eta re-measured on the same rig: NMDAR open fraction **0.0000 -> 0.3806**, **r 0.3509 -> 1.6234** (4.63x, threshold is 1.0), **eta 0.0000 -> 0.2376**. Condensation fires. The gain is entirely `ca_open`, not `E_invasion` (which moved 1.02x): the NMDAR half of the 25/25 population is no longer structurally shut, and 0.3806 is almost exactly the 0.33 equilibrium `model6-input-engine` predicts from alpha/beta at saturating glutamate. **Nothing tuned.** Bonus check: the naturally-driven eta lands within 9% of the **0.26 the topology probes CLAMP to** — the imposed stand-in matches a driven value, a retroactive check on T1's operating point. **WIRE 3: DDSC fires for the first time ever** — triggered False without plateau, True with it; the >=20 kT field gate is not binding. **LIMITS:** characterization rig at act=1.0 sustained, 7 synapses @1um — NOT a live-trial measurement, and whether eta clears threshold under spatial-discovery's Gaussian activations is UNMEASURED. Plateau duration is MODELED/PROVISIONAL (0.3 s, ungrounded). T1' probes deliberately NOT wired (would invalidate a closed result — open decision). | [GROUNDED, measured] | L·ETA-2 |
@@ -84,6 +85,139 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·ETA-5 — the ratchet test is VOID; its NULL arm is the result: `E_invasion` accumulates without activation · 2026-07-18  `[GROUNDED, measured]`
+
+**Pre-registered:** `docs/PREREG_L_ETA_5_RATCHET.md` (`2084960`, before the run; AMENDMENT 1
+before the run, AMENDMENT 2 + CORRECTION 1 before scoring). **Probe:**
+`sweep/einvasion_ratchet_probe.py`. **Scored offline:** `sweep/score_leta5.py` — the in-run
+verdict used superseded gate logic and is void. **Run pinned to `1b43b89`** in a clean
+checkout, because PO-1's in-flight `vibrational_cascade_module.py` edit blocked model
+construction in the shared worktree.
+
+**SCORED VERDICT: `INCONCLUSIVE — NULL ARM RATCHETED`. The measurement is VOID on its own
+registered terms.** The dispatch question — does `E_invasion` ratchet across traversals — is
+**NOT ANSWERED** by this run.
+
+#### What was measured (8 traversals, 14 s each, 20 s gaps, real physics through every gap)
+
+| t | drive `enl` | null `enl` | ratio | drive `E_inv` | null `E_inv` | drive `r` | null `r` |
+|---|---|---|---|---|---|---|---|
+| 1 | 0.4440 | 0.0722 | 6.15 | 0.1944 | 0.0000 | 0.2488 | 0.1157 |
+| 2 | 0.7757 | 0.2803 | 2.77 | 0.3817 | 0.1019 | 0.6575 | 0.2809 |
+| 3 | 1.0590 | 0.4651 | 2.28 | 0.5418 | 0.2063 | **1.0721** | 0.5498 |
+| 4 | 1.2754 | 0.7066 | 1.80 | 0.6640 | 0.3427 | 0.9911 | 0.4914 |
+| 5 | 1.3755 | 0.7733 | 1.78 | 0.7206 | 0.3804 | 1.0344 | 0.5889 |
+| 6 | 1.4516 | 0.8419 | 1.72 | 0.7636 | 0.4191 | 1.3643 | 0.9777 |
+| 7 | 1.4677 | 0.8977 | 1.63 | 0.7727 | 0.4507 | 1.3729 | 0.6786 |
+| 8 | 1.4915 | 0.8796 | 1.70 | 0.7862 | 0.4405 | **1.4050** | 0.8631 |
+
+`conf = 0.0000` at every gap in both arms, so the uncommitted retention branch
+(`rho_pred = 0.8948`) is the correct one throughout — the AMENDMENT 2 correction did not bite
+on this run, but it was required before scoring and would have inverted the verdict had the
+traversals committed.
+
+#### Why it is VOID
+
+PREREG §7 registered a null arm that **cannot show the effect**: the target held below the
+0.05 activation floor, expected to hold `E_invasion = 0.0000` and a flat `peak_r`. Both
+criteria failed:
+
+- **null max `E_invasion` = 0.4507** (registered: must stay 0.0000)
+- **null `peak_r` gain = 7.46×** (registered: void at ≥ 1.2×) — *larger than the drive arm's
+  5.65×*
+
+**The null arm ratcheted harder than the driven arm.** `E_invasion` in a synapse that was
+never activated climbed past `invasion_threshold` by traversal 2 and reached 0.45; its `r`
+reached 0.978, within 2% of the condensation threshold.
+
+**The design error is mine.** The null suppressed *activation* (`acts[target] = 0`) but not
+*presynaptic release*: `PresynapticRelease` fires at `BASELINE_RATE_HZ = 0.5` independently of
+activation (`presynaptic_release.py:124`, `rate = baseline_rate + a*peak_rate`). A synapse
+receiving glutamate is not a null.
+
+#### The finding that survives, and it is about the driver itself
+
+**In this model, `E_invasion` accumulates past `invasion_threshold` on tonic spontaneous
+release alone, with no activation at any point.** This is not a probe artifact — spontaneous
+release is a modeled physiological process, and the accumulation is the actin integrator doing
+what it is written to do. Read off the trace:
+
+- The undriven synapse's `actin_enlargement` grew **during silent gaps** (`rho` up to 2.26 at
+  gap 1) — formation exceeded extrusion with the agent parked where max activation measured
+  0.0000.
+- Working back through `formation = k_poly·f_CaM·(S/S0)·room` (`:386`), sustaining the
+  observed +0.091 over a 20 s gap needs `f_CaM ≈ 0.045`, i.e. calcium held near **0.47 µM**
+  through a gap designed to be silent, against a ~0.1 µM baseline. *(Inferred from the rate
+  equation, NOT independently measured — labelled as such.)*
+- **The driven/undriven separation collapses with traversal count:** 6.15× → 2.77× → 2.28× →
+  1.80× → 1.78× → 1.72× → 1.63× → 1.70×. The driven arm saturates into the room-limited
+  regime while the undriven arm keeps accumulating.
+
+**Consequence for input-selectivity (PO-5).** L·ETA-4 found `E_invasion` at a silent synapse
+*identical to the driven one* under a plateau (0.2115 vs 0.2115) and concluded selectivity
+cannot ride the η channel. This is a **stronger and more general** version of that result: **no
+plateau is required.** Tonic release alone carries `E_invasion` to within a factor ~1.7 of the
+driven value. Selectivity in the `E_invasion → r → η` channel is not merely destroyed by the
+plateau; it is weak on this driver's own dynamics at these timescales.
+
+#### What did NOT happen, and must not be read into this
+
+- **`r` crossing 1.0 does NOT unblock PO-5.** The driven arm crossed threshold (1.0721 at t3,
+  1.4050 at t8) — the first live-regime crossing after L·ETA-3's 13× shortfall — but
+  **cross-synapse edges = 0 in BOTH arms, all run.** `k_cross ∝ √(η_i·η_j)` and this design
+  drives exactly one feature, so every cross term vanishes by construction. **η ≠ 0 was
+  demonstrated; a PARTITION was not.** PO-3 → PO-5 is at most partially cleared.
+- **This is not the pre-registered negative branch.** FALSIFIED required gain < 1.2 or
+  ratio_mean < 0.5; measured gain was 5.65×. There is no "condensate cannot track behavioural
+  timescales" negative result here to route to Sarah — the run is void, not negative.
+- **Absolute values are not comparable to L·ETA-3's** (different release call pattern, AMENDMENT
+  A1.1) and **absolute `r` is not comparable across B2** (`P_c` depends on backbone `omega_0`/`Q`,
+  which PO-1 is changing). The pre-registered quantities were ratios for this reason.
+
+#### Two of the registered gates would ALSO have failed, recorded so the design is judged whole
+
+Had the null passed, the drive arm still would not have returned CONFIRMED:
+
+- `peak_r` **non-monotone** (t3 1.0721 → t4 0.9911), failing clause (i). `r ∝ E_inv × ca_open`
+  and `ca_open` is stochastic; the scatter is visible in both arms (null t6 0.978 → t7 0.679).
+- `ratio_mean = 1.1080`, **outside** the registered band `[0.89, 1.07]`, failing clause (ii).
+  Raw `rho_mean = 0.9915` would additionally have tripped GATE 1's `≥ 0.99` artifact gate.
+
+The retention overshoot is the calcium tail flagged in AMENDMENT A1.2 **before the run**: a
+20 s gap after a 14 s traversal is not a clean decay window because formation has not stopped
+when the gap begins. `rho` converges downward toward the predicted 0.8948 across the run
+(1.068 → 1.052 → 1.037 → 0.952 → 0.958 → 0.941 → 0.933) exactly as that mechanism implies.
+**A cleaner test needs a gap long enough for calcium to clear before retention is scored.**
+
+#### Errors made and corrected in this cycle (all recorded, none found by PO-3 first except the last)
+
+1. **"`analytical_gap` freezes actin" — WRONG.** Its tail runs `network.step(0.001, ...)`;
+   actin advances 1 ms per gap (retention 0.9999944, not 1.0). Concluded from absence in the
+   docstring's two lists without reading the function tail, and reported tagged `[code SHOWN]`.
+   Caught by PO-4. (CORRECTION 1.)
+2. **The committed-branch retention prediction — MIS-DERIVED.** `conf` gates extrusion off at
+   `:389` *and* retention on at `:390`; both drain `actin_enlargement`, which is what
+   `E_invasion` reads (`:412`). A committed spine drains **3.54× faster**, not slower. Caught
+   by PO-4, ruled by the MO, fixed before scoring. (AMENDMENT 2.)
+3. **F-3 "the L·ETA-3 harness starves the NMDARs ~100×" — OVERSTATED, and it inverts.**
+   Measured: 19.0 vs 1.0 release events per traversal (**19×**, not ~100×), and the L·ETA-3
+   pattern *holds* each release for 100 physics steps, so on exposure duration it delivers
+   **more** glutamate, not less. The ~350/~3.3 figures came from `rate × time`, ignoring the
+   10 ms refractory and vesicle depletion. **The recommendation that L·ETA-3 carry a correction
+   banner is WITHDRAWN; its `ca_open` attribution stands unchallenged.**
+
+All three were mechanism claims asserted from arithmetic rather than measurement — the defect
+class this sub-program is named for.
+
+#### Status
+
+`E_invasion` ratchet: **UNRESOLVED.** A re-run needs (a) a null that suppresses spontaneous
+release, not just activation, and (b) a gap long enough to clear the calcium tail. **Both are
+protocol changes to a pre-registered design and are not made unilaterally — PO-3 measured,
+recorded, and stopped.**
+
+---
 
 ### L·ETA-3 — eta does NOT clear in a live trial: the pump is capable, the PROTOCOL is not · 2026-07-18  `[GROUNDED, measured]`
 
