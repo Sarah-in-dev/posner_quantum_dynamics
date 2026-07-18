@@ -762,14 +762,39 @@ class DendriticBackboneParameters:
     synapses on the same segment. This shared infrastructure contributes
     a collective tryptophan field that all synapses benefit from.
 
-    The backbone's coherent fraction is activity-modulated: aggregate
-    reverse coupling from all synapses on the segment pumps the backbone
-    toward Fröhlich condensation (Zhang, Agarwal & Scully, PRL 122,
-    158101, 2019). The critical pump rate r_c is computed from the
-    backbone lattice parameters (D, phi, chi) — not hand-tuned.
+    The backbone's coherent fraction is activity-modulated: METABOLIC POWER,
+    aggregated over the synapses on the segment, pumps the backbone toward
+    Fröhlich condensation.
+
+    The threshold is REFERENCE-FREE (Wang & Wang 2022): condensation begins where
+    the source occupation reaches the bath's thermal occupation at the mode,
+    n_ex = n̄_s, i.e. P_met_agg ≥ P_c with
+
+        P_c = n̄_s · ℏ · (2π·omega_0)² / Q      (n̄_s from bose_einstein_occupation)
+        eta = (r − 1)/(r + 1) for r ≥ 1, else 0,   r = P_met_agg / P_c
+
+    CORRECTED 2026-07-18 (B2). This docstring previously read: "The critical pump
+    rate r_c is computed from the backbone lattice parameters (D, phi, chi) — not
+    hand-tuned." That was FALSE in three ways at once, which is why it is called out
+    rather than quietly swapped:
+      · No r_c is computed here at all. Step B (2026-06-02) replaced the classical
+        critical pump with P_c above; the live code in _update_backbone_field has
+        computed P_c, not r_c, since then. The sentence outlived the mechanism.
+      · D_modes does not enter P_c. Only omega_0 and Q do. D_modes and
+        chi_redistribution survive as above-threshold slope parameters.
+      · "not hand-tuned" is not a property r_c would have had anyway: the classical
+        r_c = (phi/(D+1))(1+phi/chi) →0 in large-D, making it an artificial reference
+        scale rather than a threshold. That artificial scale is exactly what the
+        per-synapse pump's retired calibration fiction was measured against.
+
+    The values omega_0, Q and p_active_max_W below are pinned/bounded choices, not
+    derivations — see their own comments. Do not read this docstring as claiming they
+    are derived.
 
     References:
+        - Wang & Wang 2022 (arXiv:2209.05086) — quantum-pump threshold n_ex = n̄_s
         - Zhang, Agarwal & Scully 2019 (PRL 122:158101) — Fröhlich rate equations
+          (above-threshold dynamics; NOT the source of the threshold used here)
         - Babcock et al. 2024 (J Phys Chem B 128:4035) — superradiance scaling
         - Harris et al. 2022 (PMC9038701) — spine density scales with MT number
     """

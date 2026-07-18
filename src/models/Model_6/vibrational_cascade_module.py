@@ -13,55 +13,81 @@ dimer coherence (Q2) operates through a multi-stage frequency cascade:
   UV excitation (~10^15 Hz, femtoseconds)
       ↓ Excitonic coupling (Babcock/Kurian 2024)
   Collective superradiant emission (√N enhancement)
-      ↓ Optomechanical transduction (Azizi/Kurian 2023)
-  Protein collective vibrational modes (40-160 GHz, picoseconds)
-      ↓ Fröhlich condensation if pump > threshold (Zhang/Scully 2019)
-  Condensed lowest-frequency mode
-      ↓ Conformational dynamics (Pandey/Cifra 2024)
-  Tubulin conformational fluctuations (~MHz, microseconds)
+      ↓ Metabolic power delivered to the lattice segment
+  Collective microtubule mode at ω₀ = 8 MHz
+      ↓ Fröhlich condensation if P_met ≥ P_c (Wang/Wang 2022)
+  Condensed collective mode
       ↓ Electric field modulation at dimer sites (Chafai/Cifra 2019)
   Modified electric field gradient at P-31 sites
       ↓ NMR-like relaxation modulation
   Nuclear spin coherence dynamics (~Hz, seconds)
 
 The critical innovation: the 20 kT threshold is NOT an energy barrier.
-It's a pump rate threshold for Fröhlich condensation. Below threshold,
-energy thermalizes normally. Above threshold, it condenses into specific
-collective modes with dramatically extended lifetimes.
+It's a threshold for Fröhlich condensation. Below it, energy thermalizes
+normally. Above it, energy condenses into the collective mode.
 
-KEY EQUATIONS (Zhang, Agarwal & Scully, PRL 122, 158101, 2019):
----------------------------------------------------------------
-Rate equation for phonon number at lowest mode ω₀:
-    ⟨ṅ₀⟩ = (χN_r − φ − χ)⟨n₀⟩ − χ⟨n₀²⟩ + [r + φn̄ + χ(n̄+1)N]
+THE THRESHOLD (Wang & Wang 2022, arXiv:2209.05086)
+--------------------------------------------------
+Reference-free — condensation begins where the source occupation reaches the
+thermal occupation of the bath at the mode frequency, n_ex = n̄_s:
 
-Critical pump threshold:
-    r_c = (φ/(D+1)) × (1 + φ/χ)
+    P_c = n̄_s · ℏ · (2π·ω₀)² / Q
+    r   = P_met / P_c
+    η   = (r − 1)/(r + 1)  for r ≥ 1, else 0      (second order, β = 1)
 
-Coherence lifetime above threshold:
-    γ₀ ≈ [r + φ(n̄ + ½)] / (4⟨n₀⟩)
+This is the SAME physics the backbone pump runs
+(multi_synapse_network._update_backbone_field). The two are two segments of ONE
+microtubule lattice at ONE collective mode — not two systems. The only intended
+difference is aggregation: the backbone sums over coupled spines, this site does not.
+sweep/pump_mode_agreement_probe.py measures that they still agree.
+
+RETIRED 2026-07-18 (B2) — do not restore:
+  · ω₀ = 40 GHz / ω_max = 160 GHz, the tubulin PROTEIN modes (Pandey & Cifra 2024).
+    A different mode family; carrying them made the two pumps disagree by 5000×.
+  · φ = 10 GHz, χ = 0.05 GHz and the Zhang 2019 BSA parameter values. φ is now the
+    oscillator constraint ω₀/Q; χ is rescaled to preserve χ < φ and sets slope only.
+  · r_at_E_ref = 100 GHz, pump_exponent = 2.0, E_ref_pump, and the kT_ref = 22.1
+    function-body literal — the calibration fiction that made the headline
+    "pump exceeds threshold at MT+" (r/r_c ≈ 1.045) an arithmetic identity.
+  · r_c = (φ/(D+1))(1+φ/χ), the classical critical pump: →0 in large-D, an
+    artificial reference scale rather than a threshold.
+  · The hand-rolled hbar = 1.0546e-34 applied to a LINEAR frequency (ℏ·f), which
+    inflated n̄ by 6.3×. There is one Planck factor in Model 6:
+    bose_einstein_occupation (model6_parameters.py), and it uses h·f.
+
+The Zhang rate equations still describe the ABOVE-threshold dynamics, and φ/χ set the
+slope there. What they do not supply is the threshold.
 
 INTERFACE:
 ---------
-Drop-in replacement for EMCouplingModule. Same update() signature,
-same output dict structure. Only the internal physics changes.
+update() takes metabolic power (p_met_W). It previously took em_field_trp /
+collective_field_kT; converting a kT field energy to a pump rate is what required the
+retired calibration constants.
 
 LITERATURE:
 ----------
-Zhang, Agarwal & Scully (2019) PRL 122:158101 — Fröhlich rate equations
-Pandey & Cifra (2024) JPCL 15:8334 — Tubulin vibration modes 40-160 GHz
+Wang & Wang (2022) arXiv:2209.05086 — quantum-pump threshold n_ex = n̄_s, β = 1
+Zhang, Agarwal & Scully (2019) PRL 122:158101 — Fröhlich rate equations (dynamics
+    above threshold; BSA parameter VALUES deliberately not adopted here)
+Sahu et al.; Pokorný — measured MT resonances; 8.085 MHz, slip-layer damping
 Azizi, Gori, Morzan, Hassanali & Kurian (2023) PNAS Nexus 2:pgad257
 Reimers et al. (2009) PNAS 106:4219 — Weak/strong/coherent Fröhlich regimes
-Lundholm et al. (2015) Struct Dyn 2:054702 — Experimental Fröhlich condensation
 Chafai/Cifra et al. (2019) Sci Rep 9:10477 — Tubulin electric field response
 
 Author: Sarah Davidson
-Date: March 2026
+Date: March 2026 (pump retired and rebuilt, B2, July 2026)
 """
 
 import numpy as np
 from typing import Dict, Optional, Tuple
 from dataclasses import dataclass, field
 import logging
+
+# The ONE Planck factor in Model 6 (h·f, not the ℏ·f shortcut), and the CODATA hbar
+# (scipy.constants.hbar). This site used to hand-roll its own hbar = 1.0546e-34 with a
+# dropped 2π; B2 retired that. Do not reintroduce a local hbar here. Imported exactly as
+# multi_synapse_network.py imports them, so the two pump sites share one source.
+from model6_parameters import bose_einstein_occupation, hbar
 
 logger = logging.getLogger(__name__)
 
@@ -80,10 +106,28 @@ class TubulinCascadeParameters:
     tubulin-specific measurements become available.
     """
     
-    # === TUBULIN VIBRATIONAL MODES ===
-    # Pandey & Cifra 2024: dominant modes between ~40 and ~160 GHz
-    omega_0: float = 40.0e9           # Hz — lowest dominant mode
-    omega_max: float = 160.0e9        # Hz — highest dominant mode  
+    # === THE COLLECTIVE CONDENSING MODE ===
+    # ω₀ is a LINEAR frequency f, in Hz. It is consumed as h·f (never ℏ·f — see
+    # bose_einstein_occupation, model6_parameters.py:41). The symbol is named ω₀ for
+    # continuity with the Zhang/Agarwal/Scully notation, but the VALUE is f, not 2πf.
+    # That naming/units mismatch is what produced the factor-of-2π error retired in B2.
+    #
+    # 8 MHz is the collective microtubule condensing mode (Sahu et al. measured MT
+    # resonances; Pokorný 8.085 MHz), pinned 2026-05-30. It is the SAME mode the backbone
+    # pump uses (DendriticBackboneParameters.omega_0, model6_parameters.py) — the two pumps
+    # are two segments of one lattice, not two systems.
+    #
+    # RETIRED here (B2, 2026-07-18): ω₀ = 40 GHz and ω_max = 160 GHz (Pandey & Cifra 2024).
+    # Those are the tubulin PROTEIN modes, a different mode family from the condensing mode.
+    # Carrying them here made the two pump sites disagree by 5000× — the mode-conflation
+    # bug. ω_max was declared and never read by anything; it is gone rather than rescaled.
+    omega_0: float = 8.0e6            # Hz — collective MT condensing mode (linear f)
+    Q: float = 10.0                   # Quality factor. Matches the backbone's Q
+                                      # (model6_parameters.py) — same lattice, same damping
+                                      # bet: Pokorný slip-layer/ordered-water (Q≳10) vs
+                                      # Foster/Baish overdamped (Q~1). Committed as a
+                                      # hypothesis on 2026-05-30, not to be cranked later
+                                      # to save a result.
     D_modes: int = 20                 # Effective number of sub-THz modes participating
                                       # in the cascade to nuclear spin environment.
                                       # Tubulin has ~300 sub-THz modes total, but only
@@ -93,30 +137,48 @@ class TubulinCascadeParameters:
                                       # in the relevant coupling channel.
     
     # === FRÖHLICH DISSIPATION AND REDISTRIBUTION RATES ===
-    # Zhang 2019 BSA values: φ=6 GHz, χ=0.07 GHz for 66 kDa protein
-    # Lysozyme (14 kDa): φ~1 GHz (Martin & Matyushov 2017)
-    # Tubulin (110 kDa): scaled, with additional water coupling at spine
-    phi_dissipation: float = 10.0e9   # Hz — energy loss to water bath
-                                      # Higher than BSA (6 GHz) because tubulin in
-                                      # aqueous spine environment has more water coupling.
-                                      # Pandey 2024 shows water increases mode frequencies
-                                      # and affects damping.
-    chi_redistribution: float = 0.05e9  # Hz — nonlinear mode coupling
-                                        # χ < φ always (two-phonon slower than one-phonon)
+    # NO Zhang 2019 CITATION HERE — deliberately. Zhang's BSA values (φ=6 GHz, χ=0.07 GHz)
+    # belong to the GHz protein-mode family retired above. Adopting them would re-import
+    # the exact mode conflation B2 removes, wearing a citation. The rate equations from
+    # that paper are still used (see FrohlichCondensation); its PARAMETER VALUES are not.
+    #
+    # φ is fixed by the oscillator constraint φ = ω₀/Q, pinned 2026-05-30:
+    #   "φ ≤ ω₀ (oscillator constraint; φ = ω₀/Q ≲ 0.8 MHz at Q≳10). Forces the old
+    #    10 GHz φ out."  — model6-network-layer-feasibility-may30
+    # It is DERIVED in __post_init__ rather than declared, so it cannot drift out of step
+    # with ω₀ or Q if either is swept. The old 10 GHz value was 12500× the constraint.
+    phi_dissipation: float = 0.0      # Hz — DERIVED as ω₀/Q in __post_init__. Do not set.
+
+    # χ sets the SLOPE ABOVE THRESHOLD ONLY and is NOT load-bearing: under the
+    # reference-free quantum-pump treatment (Wang/Wang 2022) the threshold is n_ex = n̄_s,
+    # which in large-D is parameter-free — φ, χ and Λ enter only above it. χ is kept
+    # because the steady-state solution needs a nonlinear term, not because its value
+    # carries a result.
+    #
+    # Its VALUE had to move: χ must satisfy χ < φ (two-phonon slower than one-phonon), and
+    # the old χ = 0.05 GHz is 62.5× LARGER than the new φ = 0.8 MHz — it would have
+    # inverted its own stated constraint. The χ/φ ratio is preserved from the pre-B2 values
+    # (0.05/10 = 0.005) rather than re-derived, so the above-threshold slope behaviour is
+    # carried over unchanged. This is a rescale to stay self-consistent, NOT a new claim
+    # about the value.
+    chi_ratio: float = 0.005          # χ/φ, preserved from the pre-B2 values
+    chi_redistribution: float = 0.0   # Hz — DERIVED as chi_ratio·φ in __post_init__.
     
     # === TEMPERATURE ===
     T_body: float = 310.0             # K — body temperature
-    
-    # === OPTOMECHANICAL TRANSDUCTION ===
-    # How tryptophan UV energy converts to tubulin vibrational pumping
-    # Azizi/Kurian 2023: photoexcitation produces >2σ THz spectral changes
-    E_ref_pump: float = 1.4e9         # V/m — reference field from tryptophan module
-                                      # (from current em_tryptophan_module typical output)
-    r_at_E_ref: float = 100.0e9       # Hz — pump rate at reference field
-                                      # Calibrated so that full MT invasion (22 kT field)
-                                      # produces r > r_c (above condensation threshold)
-    pump_exponent: float = 2.0        # E² scaling (energy ∝ field²)
-    
+
+    # === RETIRED IN B2 (2026-07-18): THE CALIBRATION FICTION ===
+    # E_ref_pump = 1.4e9, r_at_E_ref = 100.0e9 and pump_exponent = 2.0 are GONE, together
+    # with the kT_ref = 22.1 function-body literal that used them. They were not a
+    # measurement: r_at_E_ref's own comment read "Calibrated so that full MT invasion
+    # (22 kT field) produces r > r_c", and with r_c = (φ/(D+1))(1+φ/χ) that made the
+    # headline r/r_c ≈ 1.045 at MT+ an ARITHMETIC IDENTITY between two numbers chosen to
+    # produce it. There is no derivation to recover: r_c is the classical critical pump,
+    # which →0 in large-D — an artificial reference scale (May-30 session). The threshold
+    # is now the reference-free n_ex = n̄_s (Wang/Wang 2022); see PumpRateCalculator.
+    # E_ref_pump was additionally self-referential ("from current em_tryptophan_module
+    # typical output") while citing Azizi/Kurian 2023 for the phenomenon.
+
     # === CONDENSATION → PHYSICAL MODULATION ===
     # How the condensed mode affects the local environment
     modulation_coupling: float = 0.8  # Fraction of condensation energy → barrier modulation
@@ -135,6 +197,18 @@ class TubulinCascadeParameters:
 
     substrate_depletion_feedback: bool = True
 
+    def __post_init__(self):
+        """Derive φ and χ from ω₀ and Q so they cannot drift out of step.
+
+        φ = ω₀/Q is the oscillator constraint (pinned 2026-05-30). χ = chi_ratio·φ keeps
+        χ < φ. Deriving rather than declaring is deliberate: the defect B2 retires was two
+        parameter sets silently disagreeing about which mode they described, and a declared
+        φ swept independently of ω₀ would reopen exactly that. A caller that needs a
+        different damping sets Q or chi_ratio, not φ or χ directly.
+        """
+        self.phi_dissipation = self.omega_0 / self.Q
+        self.chi_redistribution = self.chi_ratio * self.phi_dissipation
+
 
 # =============================================================================
 # STAGE 1: PUMP RATE CALCULATOR
@@ -142,120 +216,110 @@ class TubulinCascadeParameters:
 
 class PumpRateCalculator:
     """
-    Calculate the energy injection rate from tryptophan superradiance
-    into tubulin vibrational modes.
-    
-    PHYSICS:
-    -------
-    Tryptophan photoexcitation → collective superradiant emission →
-    optomechanical transduction into protein collective modes.
-    
-    The pump rate scales with field INTENSITY (∝ E²), not amplitude,
-    because the energy deposited into vibrational modes scales with
-    the square of the driving field.
-    
-    LITERATURE:
+    Compute how hard the collective mode is being driven, relative to the threshold
+    at which it condenses.
+
+    THE THRESHOLD IS REFERENCE-FREE (Wang & Wang 2022, arXiv:2209.05086)
+    ------------------------------------------------------------------
+    Condensation begins when the source occupation reaches the thermal occupation of
+    the bath at the mode frequency:
+
+        n_ex = n̄_s          (equivalently, P_met = P_c)
+
+    with the critical power
+
+        P_c = n̄_s · ℏ · (2π·ω₀)² / Q
+
+    and the order parameter, a genuine second-order transition with β = 1,
+
+        η = (r − 1)/(r + 1)   for r ≥ 1,   η = 0 otherwise,   r = P_met / P_c
+
+    This is the SAME computation the backbone pump performs in
+    multi_synapse_network._update_backbone_field — deliberately, and it is the point of
+    B2. The two pumps are two segments of one microtubule lattice at one collective
+    mode, so they must not run different threshold physics. The only difference is
+    aggregation: the backbone sums over coupled neighbours (coupling_weights @ p_active),
+    the per-synapse site does NOT aggregate — it sees its own spine's metabolic power.
+
+    WHAT WAS RETIRED HERE, AND WHY IT WAS NOT "FIXED" (B2, 2026-07-18)
+    -----------------------------------------------------------------
+    This class previously computed
+
+        r = r_at_E_ref · (collective_field_kT / kT_ref) ^ pump_exponent
+        r_c = (φ/(D+1)) · (1 + φ/χ)                       [Zhang Eq. 4]
+
+    with r_at_E_ref = 100 GHz and kT_ref = 22.1 bound as a literal INSIDE the function
+    body — invisible to TubulinCascadeParameters and therefore to sweep_runner. The
+    headline result "the per-synapse pump exceeds its Fröhlich threshold under MT
+    invasion" (r/r_c ≈ 1.045) was an ARITHMETIC IDENTITY between two numbers chosen to
+    produce it, not a measurement.
+
+    There was no derivation to recover, so nothing was recalibrated: r_c is the CLASSICAL
+    critical pump, which →0 in large-D and is only an artificial reference scale
+    (May-30 session). Justifying kT_ref would have meant justifying scaffolding with
+    nothing underneath it. The whole reference construction is gone, replaced by a
+    threshold that needs no reference.
+
+    _critical_threshold() (Zhang Eq. 4) is deleted for the same reason: a live
+    computation of a retired artificial scale is the scaffolding, not a diagnostic.
+
+    LITERATURE
     ----------
-    Azizi et al. 2023 PNAS Nexus — optomechanical energy downconversion
-    Babcock et al. 2024 JPCB — tryptophan superradiance in microtubules
+    Wang & Wang 2022 (arXiv:2209.05086) — quantum-pump threshold n_ex = n̄_s, β = 1
+    Zhang, Agarwal & Scully 2019 (PRL 122:158101) — rate equations. Used for the
+        above-threshold dynamics ONLY; its BSA parameter values are not adopted here
+        (they belong to the retired GHz protein-mode family).
     """
-    
+
     def __init__(self, params: TubulinCascadeParameters):
         self.params = params
         self._r_history = []
-        
-    def calculate_pump_rate(self, em_field_trp: float) -> Dict:
-        """
-        Convert tryptophan EM field to vibrational pump rate.
-        
-        Parameters:
-        ----------
-        em_field_trp : float
-            Time-averaged EM field from tryptophan module (V/m)
-            
-        Returns:
-        -------
-        dict with:
-            'pump_rate': r in Hz
-            'pump_ratio': r / r_c (how far above/below threshold)
-            'field_ratio': em_field / E_ref
+
+    def critical_power(self) -> float:
+        """P_c = n̄_s · ℏ · (2π·ω₀)² / Q — the power at which n_ex reaches n̄_s.
+
+        Mirrors the backbone's P_c exactly (multi_synapse_network.py). ω₀ is a LINEAR
+        frequency, so the angular frequency is formed explicitly here and the thermal
+        occupation is taken from bose_einstein_occupation (h·f). Both conventions are
+        checked against an independent CODATA recomputation by
+        sweep/pump_mode_agreement_probe.py.
         """
         p = self.params
-        
-        if em_field_trp <= 0:
+        omega_ang = 2.0 * np.pi * p.omega_0
+        n_bar_s = bose_einstein_occupation(p.omega_0, p.T_body)
+        return n_bar_s * hbar * omega_ang ** 2 / p.Q
+
+    def calculate_pump_rate(self, p_met_W: float) -> Dict:
+        """Drive ratio r = P_met / P_c for THIS spine (no aggregation).
+
+        Parameters
+        ----------
+        p_met_W : float
+            Metabolic power delivered to this spine's lattice segment, in Watts, from
+            compute_metabolic_power(E_invasion, ca_open_fraction, p_active_max_W).
+
+        Returns
+        -------
+        dict with pump_power_W, critical_power_W, pump_ratio (r), above_threshold.
+        """
+        P_c = self.critical_power()
+
+        if p_met_W is None or p_met_W <= 0.0 or P_c <= 0.0:
             return {
-                'pump_rate': 0.0,
+                'pump_power_W': 0.0,
+                'critical_power_W': P_c,
                 'pump_ratio': 0.0,
-                'field_ratio': 0.0,
+                'above_threshold': False,
             }
-        
-        # Field ratio relative to reference
-        field_ratio = em_field_trp / p.E_ref_pump
-        
-        # Pump rate scales as E^pump_exponent (default: E²)
-        # This is the optomechanical transduction step
-        r = p.r_at_E_ref * (field_ratio ** p.pump_exponent)
-        
-        # Calculate critical threshold for reference
-        r_c = self._critical_threshold()
-        pump_ratio = r / r_c if r_c > 0 else 0.0
-        
+
+        r = p_met_W / P_c
         self._r_history.append(r)
-        
+
         return {
-            'pump_rate': r,
-            'pump_ratio': pump_ratio,
-            'field_ratio': field_ratio,
-        }
-    
-    def _critical_threshold(self) -> float:
-        """Zhang 2019 Eq. 4: r_c = (φ/(D+1)) × (1 + φ/χ)"""
-        p = self.params
-        return (p.phi_dissipation / (p.D_modes + 1)) * (1.0 + p.phi_dissipation / p.chi_redistribution)
-    
-    def calculate_pump_rate_from_kT(self, collective_field_kT: float) -> Dict:
-        """
-        Calculate pump rate directly from collective field energy in kT.
-        
-        This is the preferred input path. The collective_field_kT is computed
-        by TryptophanSuperradianceModule from first principles (μ_collective,
-        1/r³ field, U=eEd). It directly represents the energy scale of the
-        tryptophan superradiance at the dimer formation site.
-        
-        The mapping from kT to pump rate:
-        - Calibrated so that 22 kT (MT+ invaded) → well above r_c
-        - 12.8 kT (MT- naive) → below r_c
-        - The transition sharpness comes from the E² scaling (energy ∝ field²)
-        
-        Parameters:
-        ----------
-        collective_field_kT : float
-            Collective EM field energy from tryptophan module (in units of kT)
-            
-        Returns:
-        -------
-        dict with pump_rate, pump_ratio, field_kT
-        """
-        p = self.params
-        
-        if collective_field_kT <= 0:
-            return {'pump_rate': 0.0, 'pump_ratio': 0.0, 'field_kT': 0.0}
-        
-        # Reference: 22.1 kT (MT+ full invasion) should give r well above threshold
-        # The pump rate scales as (field_kT / kT_ref)^pump_exponent
-        kT_ref = 22.1  # Reference field energy for MT+ condition
-        
-        r = p.r_at_E_ref * (collective_field_kT / kT_ref) ** p.pump_exponent
-        
-        r_c = self._critical_threshold()
-        pump_ratio = r / r_c if r_c > 0 else 0.0
-        
-        self._r_history.append(r)
-        
-        return {
-            'pump_rate': r,
-            'pump_ratio': pump_ratio,
-            'field_kT': collective_field_kT,
+            'pump_power_W': p_met_W,
+            'critical_power_W': P_c,
+            'pump_ratio': r,
+            'above_threshold': r >= 1.0,
         }
 
 
@@ -265,137 +329,90 @@ class PumpRateCalculator:
 
 class FrohlichCondensation:
     """
-    Implements the Fröhlich condensation rate equations from
-    Zhang, Agarwal & Scully (PRL 122, 158101, 2019).
-    
-    Tracks the steady-state phonon population at the lowest
-    vibrational mode and determines the condensation regime.
-    
-    REGIMES (Reimers et al. 2009):
-    - Below threshold (r < r_c): thermal redistribution, no condensation
-    - Weak condensate (r ~ r_c): modest kinetic effects, biologically feasible
-    - Strong condensate (r >> r_c): dramatic energy channeling into lowest mode
-    
-    For our system, we need WEAK condensation — which is exactly what
-    Reimers showed is biologically achievable and produces the kinetic
-    effects (barrier modulation, enhanced formation rates) we require.
+    Turn the drive ratio r = P_met/P_c into the condensation order parameter η.
+
+    η = (r − 1)/(r + 1) for r ≥ 1, else 0.
+
+    This is the Wang/Wang 2022 quantum-pump order parameter — a genuine second-order
+    transition with critical exponent β = 1 — and it is EXACTLY the expression the
+    backbone pump uses (multi_synapse_network._update_backbone_field). One lattice, one
+    mode, one order parameter. The substrate audit (2026-07-18) confirmed this form
+    carries no fitted curve: "eta is exactly (r-1)/(r+1) with no fitted curve".
+
+    WHAT WAS RETIRED HERE (B2, 2026-07-18)
+    --------------------------------------
+    This class previously solved the Zhang Eq. 14 steady-state quadratic for ⟨n₀⟩ and
+    formed η = ⟨n₀⟩/N, against the classical threshold r_c = (φ/(D+1))(1+φ/χ). Two
+    problems, and the second is why the code went rather than being patched:
+
+      1. Its Planck factor used a hand-rolled hbar on a LINEAR frequency (ℏ·f, not h·f),
+         inflating n̄ by 6.3×.
+      2. r_c is the classical critical pump, which →0 in large-D. It is an artificial
+         reference scale, not a threshold — so the quantity η was measured against did
+         not mean what the surrounding prose said it meant.
+
+    The Zhang rate equations remain the correct description of the ABOVE-threshold
+    dynamics, and φ/χ still set the slope there. What they do not provide is the
+    threshold, which is now reference-free.
+
+    NOT MODELLED, deliberately: the ⟨n₀⟩ phonon count and the γ₀ coherence-lifetime
+    enhancement that the old steady-state returned. Nothing outside this module read
+    them (verified by grep across the tree, 2026-07-18) and reconstructing them under
+    the new threshold would be inventing numbers no consumer asked for. If a future
+    consumer needs ⟨n₀⟩, derive it then, from the quantum-pump treatment.
+
+    REGIMES (Reimers et al. 2009) — classified on η, the order parameter:
+    - r < 1     : 'thermal', no condensation
+    - η < 0.3   : 'weak_condensate'  ← the biologically feasible regime we claim
+    - η < 0.7   : 'strong_condensate'
+    - else      : 'full_condensate'
     """
-    
+
     def __init__(self, params: TubulinCascadeParameters):
         self.params = params
-        self._n0 = 0.0          # Current phonon number at lowest mode
-        self._N_total = 0.0     # Total phonon number
-        self._eta = 0.0         # Condensation ratio
+        self._eta = 0.0
         self._regime = 'thermal'
-        
-    def calculate_steady_state(self, pump_rate: float) -> Dict:
+
+    def calculate_steady_state(self, pump_ratio: float) -> Dict:
         """
-        Calculate the steady-state condensation from Zhang Eq. 3-4.
-        
-        Parameters:
+        Condensation state from the drive ratio.
+
+        Parameters
         ----------
-        pump_rate : float
-            Energy injection rate r (Hz) from Stage 1
-            
-        Returns:
+        pump_ratio : float
+            r = P_met / P_c from PumpRateCalculator. DIMENSIONLESS — this is a power
+            ratio, not the Hz pump rate the pre-B2 signature took.
+
+        Returns
         -------
-        dict with condensation state
+        dict with condensation_ratio (η), above_threshold, regime, and the drive
+        diagnostics.
         """
         p = self.params
-        r = pump_rate
-        phi = p.phi_dissipation
-        chi = p.chi_redistribution
-        D = p.D_modes
-        
-        # Planck factor at body temperature for lowest mode
-        # n̄ = [exp(ℏω₀/k_BT) - 1]^{-1}
-        hbar = 1.0546e-34  # J·s
-        k_B = 1.381e-23    # J/K
-        
-        x = hbar * p.omega_0 / (k_B * p.T_body)
-        if x > 500:  # Prevent overflow
-            n_bar = 0.0
-        elif x < 1e-6:  # High-temperature limit
-            n_bar = k_B * p.T_body / (hbar * p.omega_0)
-        else:
-            n_bar = 1.0 / (np.exp(x) - 1.0)
-        
-        # Total phonon number from Zhang Eq. 8 (steady state):
-        # N = (D+1)(r/φ + n̄)
-        N_total = (D + 1) * (r / phi + n_bar)
-        
-        # Critical threshold from Zhang Eq. 4:
-        # r_c = (φ/(D+1)) × (1 + φ/χ)
-        r_c = (phi / (D + 1)) * (1.0 + phi / chi)
-        
-        # Coefficients from Zhang Eq. 14 (SM):
-        # ⟨ṅ₀⟩ = a(r - r_c)⟨n₀⟩ - χ⟨n₀²⟩ + b(r + φn̄)
-        a = (D + 1) * chi / phi
-        b = 1.0 + (D + 1) * (n_bar + 1) * chi / phi
-        
-        # Steady state: set ⟨ṅ₀⟩ = 0 and solve quadratic
-        # χ⟨n₀⟩² - a(r - r_c)⟨n₀⟩ - b(r + φn̄) = 0
-        gain = a * (r - r_c)
-        source = b * (r + phi * n_bar)
-        
-        if chi > 0:
-            # Quadratic formula: n₀ = [gain + sqrt(gain² + 4χ·source)] / (2χ)
-            discriminant = gain**2 + 4.0 * chi * source
-            if discriminant < 0:
-                discriminant = 0.0
-            n0 = (gain + np.sqrt(discriminant)) / (2.0 * chi)
-        else:
-            # No nonlinear term — linear response
-            if gain > 0:
-                n0 = source / gain
-            else:
-                n0 = source / (phi + 1e-30)
-        
-        n0 = max(n0, 0.0)
-        
-        # Condensation ratio: η = ⟨n₀⟩/N
-        eta = n0 / N_total if N_total > 0 else 0.0
-        eta = np.clip(eta, 0.0, 1.0)
-        
-        # Coherence lifetime from Zhang Eq. 7:
-        # γ₀ ≈ [r + φ(n̄ + ½)] / (4⟨n₀⟩)  when r >> r_c
-        if n0 > 1.0:
-            gamma_0 = (r + phi * (n_bar + 0.5)) / (4.0 * n0)
-        else:
-            gamma_0 = phi  # Uncondensed: just the bare dissipation rate
-        
-        lifetime_enhancement = phi / gamma_0 if gamma_0 > 0 else 1.0
-        
-        # Classify regime
-        if r < r_c * 0.5:
+        r = float(pump_ratio) if pump_ratio is not None else 0.0
+
+        above_threshold = r >= 1.0
+        eta = (r - 1.0) / (r + 1.0) if above_threshold else 0.0
+        eta = float(np.clip(eta, 0.0, 1.0))
+
+        if not above_threshold:
             regime = 'thermal'
-        elif r < r_c:
-            regime = 'sub_threshold'
         elif eta < 0.3:
             regime = 'weak_condensate'
         elif eta < 0.7:
             regime = 'strong_condensate'
         else:
             regime = 'full_condensate'
-        
-        # Store state
-        self._n0 = n0
-        self._N_total = N_total
+
         self._eta = eta
         self._regime = regime
-        
+
         return {
-            'n0': n0,
-            'N_total': N_total,
             'condensation_ratio': eta,
-            'r_c': r_c,
-            'pump_rate': r,
-            'above_threshold': r > r_c,
+            'pump_ratio': r,
+            'above_threshold': above_threshold,
             'regime': regime,
-            'n_bar': n_bar,
-            'gamma_0': gamma_0,
-            'lifetime_enhancement': lifetime_enhancement,
-            'gain': gain,
+            'n_bar': bose_einstein_occupation(p.omega_0, p.T_body),
         }
 
 
@@ -615,31 +632,31 @@ class VibrationalCascadeModule:
         logger.info("=" * 70)
         logger.info("VIBRATIONAL CASCADE MODULE (Fröhlich condensation)")
         logger.info("=" * 70)
-        logger.info(f"  Tubulin modes: {self.cascade_params.D_modes} modes, "
-                     f"ω₀={self.cascade_params.omega_0/1e9:.0f} GHz")
-        logger.info(f"  Dissipation φ={self.cascade_params.phi_dissipation/1e9:.1f} GHz, "
-                     f"Redistribution χ={self.cascade_params.chi_redistribution/1e9:.2f} GHz")
-        r_c = self.pump_calculator._critical_threshold()
-        logger.info(f"  Critical threshold r_c={r_c/1e9:.1f} GHz")
-        logger.info(f"  Replaces linear EM coupling with Fröhlich condensation dynamics")
-        
+        cp = self.cascade_params
+        logger.info(f"  Collective mode ω₀={cp.omega_0/1e6:.3f} MHz (linear f), Q={cp.Q:.1f}, "
+                     f"D={cp.D_modes} modes")
+        logger.info(f"  Dissipation φ={cp.phi_dissipation/1e6:.3f} MHz (=ω₀/Q), "
+                     f"Redistribution χ={cp.chi_redistribution/1e3:.3f} kHz (slope only)")
+        logger.info(f"  Critical power P_c={self.pump_calculator.critical_power()*1e15:.2f} fW "
+                     f"(threshold n_ex = n̄_s; reference-free)")
+        logger.info(f"  Drive: per-spine metabolic power, NOT aggregated (backbone aggregates)")
+
     def update(self,
-               em_field_trp: float,
+               p_met_W: float,
                n_coherent_dimers: int,
                k_agg_baseline: float,
                phosphate_fraction: float = 1.0,
-               protein_type: str = 'generic',
-               collective_field_kT: float = None) -> Dict:
+               protein_type: str = 'generic') -> Dict:
         """
         Update complete cascade coupling state.
-        
-        BACKWARD COMPATIBLE with EMCouplingModule.update().
-        Adds optional collective_field_kT for physics-based pump rate.
-        
+
         Parameters:
         ----------
-        em_field_trp : float
-            Time-averaged EM field from tryptophan (V/m)
+        p_met_W : float
+            Metabolic power delivered to THIS spine's lattice segment, in Watts, from
+            compute_metabolic_power(E_invasion, ca_open_fraction, p_active_max_W).
+            This is the drive. It is NOT aggregated over neighbours — that is the one
+            deliberate difference from the backbone pump, which sums coupled spines.
         n_coherent_dimers : int
             Number of quantum coherent dimers from Model 6
         k_agg_baseline : float
@@ -648,16 +665,12 @@ class VibrationalCascadeModule:
             Fraction of phosphate available (0-1)
         protein_type : str
             Backward compatibility (unused in cascade model)
-        collective_field_kT : float, optional
-            If provided, use this directly for pump rate calculation.
-            This is the physically meaningful quantity from the tryptophan
-            module's first-principles calculation. Preferred over em_field_trp.
-            
+
         Returns:
         -------
-        dict with IDENTICAL STRUCTURE to EMCouplingModule output:
+        dict with:
             'forward': Forward coupling results
-            'reverse': Reverse coupling results  
+            'reverse': Reverse coupling results
             'feedback': Loop dynamics
             'state': Internal state
             'output': {
@@ -666,18 +679,21 @@ class VibrationalCascadeModule:
                 'above_threshold': bool,
                 'feedback_active': bool,
             }
-            'cascade': Fröhlich-specific diagnostics (new)
+            'cascade': Fröhlich-specific diagnostics
+
+        RETIRED PARAMETERS (B2, 2026-07-18): `em_field_trp` and `collective_field_kT`.
+        The drive is metabolic power, not the tryptophan field — the same call already
+        made for the backbone in Step B ("Drive is metabolic P_met, NOT
+        collective_field_kT"). Converting a kT field energy into a pump rate required the
+        r_at_E_ref/kT_ref calibration constants, which is precisely the fiction B2
+        retires; there is no honest kT→power conversion to keep.
         """
-        # === STAGE 1: PUMP RATE ===
-        # Prefer collective_field_kT (direct physics) over em_field_trp (V/m)
-        if collective_field_kT is not None and collective_field_kT > 0:
-            pump_result = self.pump_calculator.calculate_pump_rate_from_kT(collective_field_kT)
-        else:
-            pump_result = self.pump_calculator.calculate_pump_rate(em_field_trp)
-        
+        # === STAGE 1: DRIVE RATIO r = P_met / P_c ===
+        pump_result = self.pump_calculator.calculate_pump_rate(p_met_W)
+
         # === STAGE 2: FRÖHLICH CONDENSATION ===
-        cond_result = self.condensation.calculate_steady_state(pump_result['pump_rate'])
-        
+        cond_result = self.condensation.calculate_steady_state(pump_result['pump_ratio'])
+
         # === STAGE 3: ENVIRONMENT MODULATION ===
         mod_result = self.modulator.calculate_modulation(
             condensation_state=cond_result,
@@ -694,15 +710,18 @@ class VibrationalCascadeModule:
             'stable': mod_result['feedback']['stable'],
         }
         
+        # 'n0_phonons', 'lifetime_enhancement' and 'r_c' are NOT reported any more.
+        # r_c was the retired artificial reference scale; n0/lifetime came from the Zhang
+        # steady-state quadratic that the quantum-pump treatment replaces. No consumer
+        # outside this module ever read them (grep-verified across the tree, 2026-07-18),
+        # so they are dropped rather than reconstructed as plausible-looking numbers.
         self.cascade_state = {
-            'pump_rate': pump_result['pump_rate'],
+            'pump_power_W': pump_result['pump_power_W'],
+            'critical_power_W': pump_result['critical_power_W'],
             'pump_ratio': pump_result['pump_ratio'],
             'condensation_ratio': cond_result['condensation_ratio'],
             'regime': cond_result['regime'],
             'above_condensation_threshold': cond_result['above_threshold'],
-            'n0_phonons': cond_result['n0'],
-            'lifetime_enhancement': cond_result['lifetime_enhancement'],
-            'r_c': cond_result['r_c'],
         }
         
         # === ASSEMBLE OUTPUT (backward compatible) ===
@@ -726,11 +745,13 @@ class VibrationalCascadeModule:
 # =============================================================================
 
 if __name__ == "__main__":
+    from model6_parameters import compute_metabolic_power, P_BASAL_W, DendriticBackboneParameters
+
     print("=" * 80)
     print("VIBRATIONAL CASCADE MODULE — SELF-TEST")
-    print("Zhang, Agarwal & Scully (PRL 122, 158101, 2019)")
+    print("Threshold: Wang & Wang 2022 (n_ex = n̄_s). Dynamics above it: Zhang 2019.")
     print("=" * 80)
-    
+
     params = TubulinCascadeParameters()
     module = VibrationalCascadeModule.__new__(VibrationalCascadeModule)
     module.cascade_params = params
@@ -739,114 +760,75 @@ if __name__ == "__main__":
     module.modulator = CondensationModulator(params)
     module.state = {}
     module.cascade_state = {}
-    
-    # Calculate critical threshold
-    r_c = module.pump_calculator._critical_threshold()
-    print(f"\n--- Fröhlich Parameters (Tubulin) ---")
-    print(f"  ω₀ = {params.omega_0/1e9:.0f} GHz")
+
+    P_c = module.pump_calculator.critical_power()
+
+    print(f"\n--- Fröhlich Parameters (collective MT condensing mode) ---")
+    print(f"  ω₀ = {params.omega_0/1e6:.3f} MHz  (linear f; consumed as h·f)")
+    print(f"  Q = {params.Q:.1f}")
     print(f"  D = {params.D_modes} modes")
-    print(f"  φ = {params.phi_dissipation/1e9:.1f} GHz")
-    print(f"  χ = {params.chi_redistribution/1e9:.2f} GHz")
-    print(f"  r_c = {r_c/1e9:.2f} GHz (condensation threshold)")
-    
-    # Planck factor
-    hbar = 1.0546e-34
-    k_B = 1.381e-23
-    x = hbar * params.omega_0 / (k_B * params.T_body)
-    n_bar = 1.0 / (np.exp(x) - 1.0) if x < 500 else 0.0
-    print(f"  n̄(T=310K) = {n_bar:.1f} (Planck factor)")
-    print(f"  N_thermal = {(params.D_modes+1)*n_bar:.0f} (thermal phonons)")
-    
-    # === TEST 1: Sweep pump rate through threshold ===
-    print(f"\n--- TEST 1: Pump Rate Sweep Through Threshold ---")
-    print(f"{'r (GHz)':<12} {'r/r_c':<8} {'η':<8} {'⟨n₀⟩':<12} {'Regime':<20} {'Lifetime ×':<12}")
-    print("-" * 80)
-    
-    for r_ghz in [0.1, 0.5, 1.0, 5.0, 10.0, 20.0, 50.0, 100.0, 200.0, 500.0]:
-        r = r_ghz * 1e9
+    print(f"  φ = {params.phi_dissipation/1e6:.3f} MHz  (= ω₀/Q)")
+    print(f"  χ = {params.chi_redistribution/1e3:.3f} kHz  (= {params.chi_ratio}·φ; slope only)")
+    n_bar = bose_einstein_occupation(params.omega_0, params.T_body)
+    print(f"  n̄_s(T=310K) = {n_bar:.4g}")
+    print(f"  P_c = {P_c*1e15:.3f} fW   (reference-free threshold, n_ex = n̄_s)")
+
+    # === TEST 1: the order parameter through threshold ===
+    print(f"\n--- TEST 1: η through threshold (η = (r−1)/(r+1)) ---")
+    print(f"{'r = P/P_c':<12} {'η':<10} {'Regime':<20}")
+    print("-" * 44)
+    for r in [0.0, 0.25, 0.5, 0.9, 1.0, 1.5, 2.0, 3.0, 5.0, 10.0, 30.0]:
         cond = module.condensation.calculate_steady_state(r)
-        print(f"{r_ghz:<12.1f} {r/r_c:<8.2f} {cond['condensation_ratio']:<8.3f} "
-              f"{cond['n0']:<12.0f} {cond['regime']:<20} {cond['lifetime_enhancement']:<12.1f}")
-    
-    # === TEST 2: Map collective_field_kT to condensation ===
-    print(f"\n--- TEST 2: Field kT → Condensation Mapping ---")
-    print(f"  (Validates that MT+ → above threshold, MT- → below threshold)")
-    print(f"{'Field (kT)':<14} {'r (GHz)':<12} {'r/r_c':<8} {'η':<8} {'Regime':<20} {'Commit?':<8}")
-    print("-" * 80)
-    
-    for field_kT in [0, 5, 10, 12.8, 15, 16.6, 18, 20, 22.1, 25, 28.6]:
-        pump = module.pump_calculator.calculate_pump_rate_from_kT(field_kT)
-        cond = module.condensation.calculate_steady_state(pump['pump_rate'])
-        commit = "YES" if cond['above_threshold'] else "no"
-        print(f"{field_kT:<14.1f} {pump['pump_rate']/1e9:<12.1f} "
-              f"{pump['pump_rate']/r_c:<8.2f} {cond['condensation_ratio']:<8.3f} "
-              f"{cond['regime']:<20} {commit:<8}")
-    
-    # === TEST 3: Full integration test (mimics model6_core.py call) ===
-    print(f"\n--- TEST 3: Full Module Integration ---")
-    
-    # Simulate MT+ condition (22.1 kT, 50 dimers)
-    state_mt_plus = module.update(
-        em_field_trp=1.4e9,  # Typical time-averaged field for MT+
-        n_coherent_dimers=50,
-        k_agg_baseline=8e5,
-        phosphate_fraction=0.8,
-        collective_field_kT=22.1,  # Direct kT input
-    )
-    
-    print(f"\n  MT+ (22.1 kT, 50 dimers):")
-    print(f"    Pump rate: {state_mt_plus['cascade']['pump_rate']/1e9:.1f} GHz")
-    print(f"    Condensation ratio: {state_mt_plus['cascade']['condensation_ratio']:.3f}")
-    print(f"    Regime: {state_mt_plus['cascade']['regime']}")
-    print(f"    k_enhanced: {state_mt_plus['forward']['k_enhanced']:.2e}")
-    print(f"    Enhancement: {state_mt_plus['forward']['enhancement']:.2f}×")
-    print(f"    Protein modulation: {state_mt_plus['output']['protein_modulation_kT']:.1f} kT")
-    print(f"    Above threshold: {state_mt_plus['output']['above_threshold']}")
-    
-    # Simulate MT- condition (12.8 kT, 50 dimers)
-    state_mt_minus = module.update(
-        em_field_trp=0.8e9,
-        n_coherent_dimers=50,
-        k_agg_baseline=8e5,
-        phosphate_fraction=0.8,
-        collective_field_kT=12.8,
-    )
-    
-    print(f"\n  MT- (12.8 kT, 50 dimers):")
-    print(f"    Pump rate: {state_mt_minus['cascade']['pump_rate']/1e9:.1f} GHz")
-    print(f"    Condensation ratio: {state_mt_minus['cascade']['condensation_ratio']:.3f}")
-    print(f"    Regime: {state_mt_minus['cascade']['regime']}")
-    print(f"    k_enhanced: {state_mt_minus['forward']['k_enhanced']:.2e}")
-    print(f"    Above threshold: {state_mt_minus['output']['above_threshold']}")
-    
-    # Simulate isoflurane 25% (16.6 kT)
-    state_iso25 = module.update(
-        em_field_trp=1.0e9,
-        n_coherent_dimers=50,
-        k_agg_baseline=8e5,
-        phosphate_fraction=0.8,
-        collective_field_kT=16.6,
-    )
-    
-    print(f"\n  Isoflurane 25% (16.6 kT, 50 dimers):")
-    print(f"    Regime: {state_iso25['cascade']['regime']}")
-    print(f"    Above threshold: {state_iso25['output']['above_threshold']}")
-    
-    # === SUMMARY ===
+        print(f"{r:<12.2f} {cond['condensation_ratio']:<10.4f} {cond['regime']:<20}")
+
+    # === TEST 2: does the per-synapse site agree with the backbone on P_c? ===
+    # Same mode, same Q => same critical power. This is the invariant B2 exists to
+    # establish, asserted here so the module's own self-test would catch a re-fork.
+    print(f"\n--- TEST 2: per-synapse vs backbone critical power ---")
+    bp = DendriticBackboneParameters()
+    omega_ang_bb = 2.0 * np.pi * bp.omega_0
+    P_c_backbone = bose_einstein_occupation(bp.omega_0) * hbar * omega_ang_bb**2 / bp.Q
+    print(f"  per-synapse P_c = {P_c*1e15:.4f} fW   (ω₀={params.omega_0/1e6:.3f} MHz, Q={params.Q})")
+    print(f"  backbone    P_c = {P_c_backbone*1e15:.4f} fW   (ω₀={bp.omega_0/1e6:.3f} MHz, Q={bp.Q})")
+    same_mode = abs(params.omega_0 - bp.omega_0) / bp.omega_0 < 1e-9
+    same_P_c = abs(P_c - P_c_backbone) / P_c_backbone < 1e-9
+    print(f"  same mode: {'✓' if same_mode else '✗'}    same P_c: {'✓' if same_P_c else '✗'}")
+
+    # === TEST 3: full integration, driven by metabolic power ===
+    # Drive levels are the physical range from the Step-B calc: rest is basal only;
+    # active is basal + E_invasion·ca_open·p_active_max. NOTHING here is calibrated to
+    # put a particular condition above threshold — the drive is computed and the
+    # verdict falls where it falls.
+    print(f"\n--- TEST 3: Full Module Integration (metabolic drive) ---")
+    print(f"{'condition':<34} {'P_met (fW)':<12} {'r':<8} {'η':<8} {'regime':<18} {'above?':<7}")
+    print("-" * 92)
+
+    conditions = [
+        ("rest (E_inv=0, ca_open=0)",        0.0, 0.0),
+        ("partial (E_inv=0.5, ca_open=0.5)", 0.5, 0.5),
+        ("active (E_inv=1.0, ca_open=0.84)", 1.0, 0.84),
+    ]
+    for label, e_inv, ca_open in conditions:
+        p_met = compute_metabolic_power(e_inv, ca_open, bp.p_active_max_W)
+        st = module.update(
+            p_met_W=p_met,
+            n_coherent_dimers=50,
+            k_agg_baseline=8e5,
+            phosphate_fraction=0.8,
+        )
+        c = st['cascade']
+        print(f"{label:<34} {p_met*1e15:<12.3f} {c['pump_ratio']:<8.3f} "
+              f"{c['condensation_ratio']:<8.4f} {c['regime']:<18} "
+              f"{str(c['above_condensation_threshold']):<7}")
+
     print(f"\n{'='*80}")
-    print(f"VALIDATION SUMMARY")
+    print("NOTE ON WHAT THIS SELF-TEST NO LONGER CLAIMS")
     print(f"{'='*80}")
-    
-    mt_plus_ok = state_mt_plus['cascade']['above_condensation_threshold']
-    mt_minus_ok = not state_mt_minus['cascade']['above_condensation_threshold']
-    
-    print(f"  MT+ above condensation threshold: {'✓' if mt_plus_ok else '✗'}")
-    print(f"  MT- below condensation threshold: {'✓' if mt_minus_ok else '✗'}")
-    print(f"  Sharp transition (phase transition, not linear): "
-          f"{'✓' if mt_plus_ok and mt_minus_ok else '✗'}")
-    print(f"  20 kT threshold emerges from Fröhlich dynamics: "
-          f"{'✓' if mt_plus_ok else '✗'}")
-    print(f"")
-    print(f"  Replaces linear k_enhanced = k_base × (E/E_ref)")
-    print(f"  with nonlinear Fröhlich condensation dynamics")
+    print("  The pre-B2 self-test asserted 'MT+ (22.1 kT) above threshold, MT- (12.8 kT)")
+    print("  below' and printed a '20 kT threshold emerges' tick. That was not a")
+    print("  measurement: 22.1 was kT_ref itself, so the test restated its own input.")
+    print("  It is gone. A single synapse is expected to be SUBCRITICAL on its own")
+    print("  metabolic power (the backbone crosses P_c by aggregating neighbours, which")
+    print("  this site deliberately does not do) — so 'above? False' at rest is the")
+    print("  designed behaviour, not a failure.")
     print(f"{'='*80}")

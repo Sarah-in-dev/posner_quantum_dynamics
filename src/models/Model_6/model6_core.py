@@ -22,7 +22,7 @@ import json
 import h5py
 from datetime import datetime
 
-from model6_parameters import Model6Parameters
+from model6_parameters import Model6Parameters, compute_metabolic_power
 
 # =============================================================================
 # PLATEAU POTENTIAL — the dendrite-wide instructive depolarization (2026-07-18)
@@ -557,12 +557,26 @@ class Model6QuantumSynapse:
             # --- PHASE 7: PREPARE k_agg FOR NEXT TIMESTEP (forward coupling) ---
             k_agg_baseline = self.ca_phosphate.dimerization.k_base
             
+            # Per-synapse metabolic drive for this spine's lattice segment. Same helper
+            # and same inputs the backbone pump uses (multi_synapse_network), but NOT
+            # aggregated over neighbours — the backbone sums coupled spines, this site
+            # sees only its own. A single spine is therefore expected to be subcritical.
+            #
+            # B2 (2026-07-18): this replaced `collective_field_kT=` as the drive. The old
+            # path converted a kT field energy into a pump rate via r_at_E_ref/kT_ref,
+            # which is the calibration fiction B2 retires; there is no honest kT→power
+            # conversion to keep. Step B made the same call for the backbone in June.
+            p_met_W = compute_metabolic_power(
+                getattr(self.spine_plasticity, 'E_invasion', 0.0),
+                self.calcium.channels.get_open_fraction(),
+                self.params.dendritic_backbone.p_active_max_W,
+            )
+
             coupling_state = self.em_coupling.update(
-                em_field_trp=em_field_trp,
+                p_met_W=p_met_W,
                 n_coherent_dimers=n_entangled_network,
                 k_agg_baseline=k_agg_baseline,
                 phosphate_fraction=np.mean(phosphate) / 0.001,
-                collective_field_kT=self._collective_field_kT
             )
             
             # Store for NEXT timestep (this is the feedback delay)
