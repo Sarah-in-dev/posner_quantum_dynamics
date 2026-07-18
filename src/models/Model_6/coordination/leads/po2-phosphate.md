@@ -7,7 +7,7 @@ consumption.
 
 **Status:** LIVE — grounding brief returned 2026-07-18 19:46Z.
 **Current unit:** pre-registration (§2.4), then the conservation probe committed FAILING first.
-**Last heartbeat:** 2026-07-18 21:10Z
+**Last heartbeat:** 2026-07-18 21:21Z
 **Blocked on:** — (two open questions in `queue/po2-phosphate.md`, neither blocking; working on)
 
 ## HEARTBEAT LOG
@@ -230,3 +230,15 @@ three-way spread, reported and untouched.
 longer measure a loop that creates mass. **But the Pi limit never bound in the tested regime, so
 depletion feedback is unexercised** — the sweep would test a loop that CAN self-limit without
 evidence that it DOES. I recommend PO-6 proceed with that stated as a known-open input.
+
+### 2026-07-18 21:21Z — rulings 001 and 002 fully discharged; PO-2 at rest, not self-wrapped
+
+**Ruling 002 §2 applied:** dead `phosphate` parameter removed from `calculate_j_coupling`, docstring corrected. Regression check: J std, correlation and ATP recovered all **bit-identical**, verdict still CONSERVED — removing an unread parameter is provably behaviour-neutral.
+
+**Ruling 002 §4 answered as PO2-3:** conservation error 9.745e-15 vs depletion signal 1.429e-03 = **signal/noise 1.47e11**, so self-limiting is testable. But depletion ran only 0.1429% in 5 s (~29 min simulated to reach 50%), so the tested regime is **~350x short** of where the pool would limit. **Conservation MET; self-limiting UNEXERCISED, not falsified.**
+
+**Ruling 002 §1 DISPUTED with data — queue Q4.** Its conclusion that the debit choice "cannot affect the chemistry, only the ledger" does not follow from its own correct premise: the premise is about phosphate going IN, the debit is about which pool it comes OUT of, and the structural pool is the chemically active one. Measured 0.116% structural difference between modes. Item 1 is untouched either way.
+
+**`K_CLASSICAL`: closed by ruling 002** — settled by documentation (canonical §3, `0.005` GROUNDED/Turhan 2024), not a Sarah decision. Still MO-held for sequencing. I never touched it.
+
+**AT REST. Everything remaining is genuinely gated:** Q4 needs an MO response · the metabolic/proportional choice is a stated modelling choice pending that · the n=3 dimer difference needs ~20 seeds and its own compute slot, and is not on my acceptance. **Both acceptance items stand MET as they now read; the MO verifies, a PO does not mark its own.** Re-run: `venv/bin/python -u sweep/phosphate_ledger_probe.py` (~2 min, non-zero exit unless CONSERVED).
