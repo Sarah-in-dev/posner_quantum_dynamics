@@ -1435,3 +1435,78 @@ both stepper definitions · one `analytical_gap` · PO-3's skill rewrite landed 
 PO-5's Unit 1 classifier. **Those acceptances are recorded MEASURED-AND-REPORTED, not MO-VERIFIED.**
 The MO runs its own acceptances; that duty is **owed and outstanding**, and is named here rather
 than allowed to blur into "accepted".
+
+---
+
+## ⚠ MO DEFECT #17 — **gen-2 checked ONE end of a symmetric condition. PO-1 caught it.**
+
+**Ruling 017 flagged the `432 s` arm as sitting outside the ontology's 100–200 s band and told PO-1
+to annotate it. Three of the five arms are outside — the two LOW arms fall below the band, and
+gen-2 never looked.**
+
+```
+T = 108 s  ->  crossing  53.5 s   OUTSIDE (below)   <- missed by the MO
+T = 162 s  ->  crossing  80.2 s   OUTSIDE (below)   <- missed by the MO
+T = 216 s  ->  crossing 107.0 s   INSIDE   (grounded)
+T = 324 s  ->  crossing 160.4 s   INSIDE
+T = 432 s  ->  crossing 213.9 s   OUTSIDE (above)   <- the only one the MO flagged
+```
+
+**PO-1's argument is gen-2's own reasoning turned back on it:** *"A reader warned only about the top
+arm would draw exactly the wrong conclusion about the bottom two."*
+
+### The shape, because it is NOT one of the sixteen already logged
+
+Every prior MO defect was **trusting a document instead of checking**, or (#16) **reasoning wrongly
+from a correctly-verified premise.** This is neither. Gen-2 **did** the check — and ran it in **one
+direction of a two-sided condition**, because it arrived carrying the `500 s` case (which is above
+the band) and never asked what the *low* end did. **The bracket was symmetric in log space; the
+inspection was not.**
+
+**#17: a check applied asymmetrically to a symmetric condition is not a check — it is a spot check
+wearing a check's confidence.** *Where a condition has two sides, both get evaluated, or the ruling
+says which side it examined.*
+
+**PO-1 annotated all three arms — in `value_labels` as well as the comment, so the marking survives a
+reader who only opens the declaration** — and recorded that **only the 216 s and 324 s arms are
+configurations where §2.2's correspondence holds**, so an aggregate over all five arms is not a
+statement about the grounded model. **That consequence is PO-1's, not the MO's.**
+
+**Ledger: 17. POs have caught 15 of 17.**
+
+---
+
+## MO COMPUTE SEQUENCING — 2026-07-18 22:12Z · **PO-5 holds the exclusive heavy slot**
+
+Three POs want heavy compute at once. **Ranked, with the reason on the page so nobody has to
+infer it:**
+
+| # | PO | run | status |
+|---|---|---|---|
+| **1** | **PO-5** | **Q-B — the §8 keystone arm** | **RUNNING — exclusive slot (ruling 019)** |
+| 2 | PO-2 | phosphate depletion bounding run (ruling 015) | HOLD |
+| 3 | PO-4 | template-symmetry before/after (ruling 016) | HOLD — and gated on MO re-verification first |
+| — | PO-7 | Unit 1 part 2 | CONCURRENT — read-only wrappers, no model compute |
+
+**PO-5 goes first because Q-B is the keystone** (`quantum-system-canonical:197`, [CONTESTED]) and the
+other two are corrections to known defects. **A correction can wait; the keystone has waited the
+whole program.** PO-5 releases the slot in its lead file and gen-2 starts the next.
+
+---
+
+## FINDINGS ROUTED THIS CYCLE
+
+- **PO-5 → PO-7:** `_remove_dimer` (`dimer_particles.py:252-261`) never pops `_bond_lookup`.
+  **Dead code today**, a live corruption the moment the death path is exercised. **Reported, not
+  fixed** — correct call. Routed to PO-7 because a latent defect that is inert until a path runs is
+  precisely the construct-validity seat's business.
+- **PO-5's Q-A refutes an MO framing, for the second time.** **83% of bonds never evaluate
+  `em_rate`**, so the MO's `g`/`coh` decomposition described the **minority** pathway and Unit 1's
+  `D = 33.5` applies to 17% of the bond set. **The MO framed the keystone around the wrong pathway
+  and the PO measured its way out of the frame it was handed.** *(First was `g`-inertness — MO
+  predicted saturation, PO-5's own brief predicted vanishing, both wrong.)*
+- **PO-7 found a TREE SKEW that touches an MO-verified result.** `resting_leak_probe.py` imports the
+  stepper from the **vestigial** tree — so **F-5 as measured, and gen-2's own re-run of it, both ran
+  that copy.** PO-7 has pre-registered it as ARM B with the verdict committed in advance both ways.
+  **Gen-2's `MO-VERIFIED` tag on F-5 is therefore provisional until ARM B returns**, and that is
+  recorded here rather than left for a reader to discover.
