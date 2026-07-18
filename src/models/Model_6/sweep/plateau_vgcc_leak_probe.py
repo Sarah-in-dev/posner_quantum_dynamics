@@ -188,16 +188,42 @@ def main():
     print(f"  max eta at a SILENT synapse, plateau   : {sil_eta_on:.4f}")
     print(f"  eta at the DRIVEN synapse, plateau     : {on['eta'][DRIVEN]:.4f}")
     print()
-    if sil_eta_on > 0:
+    # VERDICT LOGIC CORRECTED 2026-07-18 — the first version was VACUOUS.
+    # It read "eta == 0 at silent synapses" as "selectivity held". But eta is 0 at the
+    # DRIVEN synapse too, because r never reached 1.0 at this operating point. A
+    # selectivity test in which the positive control also fails to fire tests nothing.
+    # This is the 683b82f failure class (a verdict that cannot distinguish the outcomes)
+    # and it must be guarded, not printed.
+    driven_eta = float(on['eta'][DRIVEN])
+    if driven_eta == 0.0:
+        print("  => INCONCLUSIVE ON eta. The DRIVEN synapse did not condense either")
+        print(f"     (r = {on['r'][DRIVEN]:.3f} < 1.0), so eta == 0 everywhere says")
+        print("     NOTHING about selectivity. Read the DRIVE channel instead:")
+        print()
+        r_sil = [on['r'][i] for i in silent]
+        print(f"     r at silent synapses, plateau : {min(r_sil):.3f} - {max(r_sil):.3f}")
+        print(f"     r at the DRIVEN synapse       : {on['r'][DRIVEN]:.3f}")
+        e_sil = [on['e_inv'][i] for i in silent]
+        print(f"     E_invasion silent             : {min(e_sil):.4f} - {max(e_sil):.4f}")
+        print(f"     E_invasion driven             : {on['e_inv'][DRIVEN]:.4f}")
+        print()
+        overlap = on['r'][DRIVEN] <= max(r_sil)
+        if overlap:
+            print("     => THE DRIVEN SYNAPSE IS NOT SEPARABLE FROM THE SILENT ONES in r.")
+            print("        The plateau raises the condensation drive BRANCH-WIDE, and the")
+            print("        input signal is swamped. When r does cross 1, silent and driven")
+            print("        synapses will cross TOGETHER. eta would be plateau-global.")
+            print("        §8's premise — that drive patterns the partition THROUGH eta —")
+            print("        FAILS as written. Selectivity survives only in the NMDAR/dimer")
+            print("        channel (P_product), not in the condensation channel.")
+        else:
+            print("     => the driven synapse separates in r; selectivity may survive.")
+    elif sil_eta_on > 0:
         print("  => eta IS PLATEAU-GLOBAL. Silent synapses condense purely because the")
-        print("     branch was depolarized. eta then encodes 'a plateau happened', NOT")
-        print("     'which synapses were driven'. §8's premise — that drive patterns the")
-        print("     partition THROUGH eta — FAILS AS WRITTEN. Selectivity would have to")
-        print("     live in P_product (dimers form only where NMDAR calcium arrived).")
+        print("     branch was depolarized. §8's premise FAILS as written.")
     else:
-        print("  => eta stays SELECTIVE under a plateau: silent synapses do not condense.")
-        print("     §8's premise holds. The VGCC leak exists at the channel level but")
-        print("     does not propagate to condensation.")
+        print("  => eta stays SELECTIVE under a plateau, WITH the driven synapse")
+        print(f"     actually condensing (eta={driven_eta:.4f}). §8's premise holds.")
 
     out = os.path.join(MODEL6_DIR, 'results', 'plateau_leak')
     os.makedirs(out, exist_ok=True)
