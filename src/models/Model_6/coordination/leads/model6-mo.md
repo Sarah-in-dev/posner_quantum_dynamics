@@ -7,31 +7,36 @@ verified as a MEASUREMENT at the data level before it is accepted — never "it 
 **Worktree:** `.claude/worktrees/nervous-hertz-7ccff6` (branch `claude/nervous-hertz-7ccff6`).
 **Mode:** supervised autonomy — dispatches without per-PO approval; escalates physics calls.
 
-**Status:** RUNNING. Three POs live (PO-1, PO-3, PO-4). Backbone-only comms since 18:00Z.
+**Status:** RUNNING. Four POs dispatched, one complete. Backbone-only comms since 18:00Z.
 
-**Current unit:** watching PO-3's detached run (PID 67848, ~62 min CPU, null arm traversal 6/8);
-will verify its verdict by running its own scorer when data lands. PO-1's tree is CLEAN and B2 is
-verified-accepted, but PO-1 is not wrapped (owes the D/φ item the MO's bar omitted), so PO-2 stays
-gated.
-**Last heartbeat:** 2026-07-18 18:58 UTC
-**Blocked on:** nothing of the MO's own. Four items with Sarah (below).
+**Current unit:** polling. No MO work blocked.
+**Last heartbeat:** 2026-07-18 19:06 UTC
+**Blocked on:** nothing of the MO's own. FIVE items with Sarah (below).
 
-**Live POs (session id → PO):**
-- `local_e4593171-...` → **PO-1** (B2). Probe committed FAILING first (`fa12009`). Now holding
-  `model6_core.py` + `model6_parameters.py` + `vibrational_cascade_module.py` uncommitted; tree
-  does not construct. Shared-file hazard ARMED. Ruling 004 issued.
-- `local_b7aeedcf-...` → **PO-3** (E_invasion). Run IN FLIGHT, pinned to `1b43b89` in a clean
-  checkout. Prereg amended twice pre-run (A1.1 glutamate, A2 retention re-derivation).
-  Provenance verdict ACCEPTED — acceptance item 2 MET.
-- `local_0b183e0f-...` → **PO-4** (gap). Pre-registered; consolidation approved with scope limits.
+**PO STATE — enough for a successor MO to take over cold:**
+- **PO-1** `local_e4593171-...` — B2 LANDED (`c280e85`) and **MO-VERIFIED**: A1 mode ratio 1
+  exactly, A2 convention 1.000000, BOTH positive controls fired (C1 5000, C2 6.283189 vs 2π),
+  model constructs, T1′ static 7/7, DISC-1 superseded by row B2-1. **NOT WRAPPED** — owes the
+  D/φ verification item the MO's own bar omitted (ruling 005 queued, unread). Idle.
+- **PO-2** `task_e54e9c25` — DISPATCHED 19:05Z, chip pending. Gates PO-6.
+- **PO-3** `local_b7aeedcf-...` — **COMPLETE and correctly STOPPED.** L·ETA-5 scored
+  `INCONCLUSIVE_NULL_RATCHETED`, **MO-verified by running its scorer**. Acceptance PARTIAL:
+  provenance MET; ratchet executed correctly but question UNANSWERED. Re-run is Sarah's.
+- **PO-4** `local_0b183e0f-...` — consolidation approved; failing-first probe committed but its
+  verdict is INCONCLUSIVE because its null cannot pass pre-fix (ruling 005 queued, unread). Idle.
+- **PO-5** — **HARD-BLOCKED, verified.** η ≠ 0 was demonstrated (peak 0.1684) but a PARTITION was
+  NOT: `k_cross ∝ √(η_i·η_j)` with one driven feature forces zero edges necessarily. The threshold
+  crossing must NOT be read as clearing the edge. Pre-positioned request already corrected.
+- **PO-6** — blocked on PO-2 (HARD).
 
-**PO-5 pre-positioned, NOT dispatched:** `requests/po5-selectivity/mo-f3-001.md` — must not
-inherit the starved-NMDAR harness. Still HARD-BLOCKED on PO-3.
+**Landed this run:** `093c675` brief · `895d55f` registration · `18acd68` rulings · `19113c4` poll
+directive · `fbe2311` PO-4 · `d0ed6d8` PO-4's correction of the MO · `9d4a526` GATE-2 band ·
+`3cc9a83` D19/D20/D21 routing · `afd0fe2` B2-incomplete-vs-pin · `6b3ddb6` K_CLASSICAL
+decision-ready · `683cdb7` F-3 correction · `87fe9ca` relay audit · `a628a4c`+`51e8ed0` null-arm
+diagnosis · `c48a54e` L·ETA-5 verification · `0b4dd64` PO-2 dispatch. Skill lib: `4bba978e3`.
 
-**Landed this run:** `093c675` brief · `895d55f` registration · `18acd68` rulings · `e3e6090`
-heartbeat · `19113c4` poll directive · `fbe2311` PO-4 dispatch · `bcd15b8` crash routing ·
-`d0ed6d8` PO-4's correction of the MO · `5661564` confinement ruling · `9d4a526` GATE-2 band ·
-`d9a68b5` hazard armed · this commit (MO_MODEL6 correction).
+**Verification owed:** PO-4's pre-fix demonstration once its null is re-registered; PO-2's
+conservation check shown failing before passing; PO-1's D/φ close-out.
 
 **MO DEFECTS THIS SESSION — all caught by POs, none by the MO. Record honestly, do not repeat:**
 1. **Verified prose against prose.** Read `analytical_gap`'s docstring lists, concluded "frozen",
