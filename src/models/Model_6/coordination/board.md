@@ -712,3 +712,53 @@ The MO reported AMENDMENT C as **PO-2's** work in chat. **It is PO-4's** — `gi
 it touched `PREREG_PO4_GAP.md`. The MO inferred authorship from commit adjacency rather than
 checking. Same habit as #2/#6/#9/#10: **reading a proxy instead of the thing.** Corrected to Sarah
 in the same turn it was noticed.
+
+---
+
+## MO CYCLE — 2026-07-18 19:56Z · PO-4's HEADLINE ACCEPTANCE MET (MO-run), PO-1 finds 6/9 dimensions inert
+
+### L·GAP-2 — MO ran it; SEPARATION CONFIRMED
+
+```
+committed     1.9312 +/- 0.0302   conf 0.976   committed=True
+uncommitted   1.2031 +/- 0.0106   conf 0.000
+SEPARATION  dV = +0.7281        (registered > 0 and > 0.26 = 4 sigma)
+NULL seeds-only  dV = +0.0001   -> 8339x smaller than the effect
+both positive controls fired; neither arm at the 3.8 ceiling
+```
+
+**This is `MO_MODEL6.md` §3's headline bar for PO-4** — *"a measurement shows committed vs
+uncommitted spine volume SEPARATING across an honest gap … the full model has never been allowed
+to show it."* **It has now.** It could not before because the clock did not run.
+
+**Why the MO accepts it:** the effect clears a pre-registered 4σ floor, the seed-only null is
+**8339× smaller**, both positive controls fired, the saturation ceiling was checked and not hit,
+and the frozen-clock control in AMENDMENT D shows the *old* code produces essentially no
+separation (1.0006 vs 1.0003). **The measurement discriminates, and its failure mode was
+demonstrated first.**
+
+**The limits are honest and are NOT to be dropped when this is cited:** controlled initial
+condition, two synapses, one network, and — importantly — **the live drive path still does not
+reach this regime** (measured: a traversal leaves `E_invasion` at 0.0000, **10× below
+`invasion_threshold`**). That is the same wall L·ETA-3 and L·ETA-5 hit, now confirmed from a third
+direction.
+
+**PO-4 acceptance status:** separation measurement **MET**. The per-subsystem advance/exclude table
+with cited timescales is still owed before PO-4 wraps.
+
+### PO-1 (PO-6a Unit 1) — 6 of 9 sweep dimensions are INERT
+
+Landed `9b4819f`. **Six of nine params-level sweep dimensions do not reach a consumer.** Each such
+dimension returns a flat response, and a flat response over a swept parameter reads as *"this
+parameter does not matter"* — **a physical null that is actually a wiring gap.** MO verification of
+the per-dimension evidence is owed and is the next MO unit.
+
+This is the hazard PO-1 routed out of B2 and was rotated onto. **It is larger than the single
+`q1_d_modes` case that prompted the rotation.**
+
+### Thread state — all four working, each with a defined unit
+- **PO-1** → PO-6a: dimension-consumer audit (Unit 1 landed), then orphan modules.
+- **PO-2** → phosphate conservation; pre-registered, two self-corrections before running.
+- **PO-3** → rotated to the spontaneous-release null audit across the probe family; re-run stays
+  gated on Sarah.
+- **PO-4** → headline met; owes the subsystem table.
