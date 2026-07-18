@@ -171,6 +171,34 @@ no distance term at all — so a Pathway-1 origin is *plausible* and is exactly 
 attribution this program's defect class punishes. **It is not claimed.** Separating Pathway 1 from
 Pathway 2 in the realised bond set is PO-5 Unit 2.
 
+#### ADDENDUM — the corroborating trace completed to 30 s, and the graph is NOT static
+
+`sweep/observe_pathway2_selectivity.py`, full run (single synapse, −10 mV, 30 s):
+
+| t | n_ent | bonds | sat | bonded_med | all_med | comps | largest_frac |
+|---|---|---|---|---|---|---|---|
+| 0.0 | 493 | 114481 | **0.9440** | 10.0 | 10.2 | 15 | 0.972 |
+| 5.0 | 1132 | 480369 | 0.7504 | 9.5 | 10.2 | 1 | 1.000 |
+| 10.0 | 1110 | 480562 | 0.7808 | 9.5 | 10.3 | 1 | 1.000 |
+| 15.0 | 1124 | 456378 | 0.7231 | 9.4 | 10.4 | 1 | 1.000 |
+| 20.0 | 1086 | 414162 | 0.7030 | 9.3 | 10.5 | 3 | 0.998 |
+| 25.0 | 1123 | 394135 | 0.6256 | 9.1 | 10.7 | 2 | 0.999 |
+| 30.0 | 1104 | 368747 | **0.6056** | 9.0 | 10.9 | 1 | 1.000 |
+
+**Two monotone trends, measured:** saturation **falls 0.944 → 0.606**, and the bonded/all-pair
+median separation gap **widens from 0.2 nm to 1.9 nm** (bonded drifts down 10.0 → 9.0 while all-pair
+drifts up 10.2 → 10.9). **The bond set becomes progressively more distance-shaped over 30 s.**
+
+`comps` stays at 1–3 with `largest_frac ≥ 0.998` throughout — consistent with
+`quantum-system-canonical:139`'s LOCKED expectation for a single synapse, and **not** read here as a
+finding either way (see CORRECTION 1).
+
+**Directional, and explicitly NOT an attribution.** A near-complete graph at t = 0 eroding toward a
+distance-shaped one is *consistent with* Pathway 1 (birth-pairing, no distance term,
+`dimer_particles.py:218-228`) laying down the initial blob and Pathway 2's 1/r³ plus dissolution
+shaping it thereafter. **That mechanism is NOT measured and is not claimed** — the same trap Unit 1
+already refused once. It is what Unit 2 tests.
+
 #### ⚠ CORRECTION 1 — PO-5's own, 2026-07-18, after MO ruling 010. **The measurements stand; one INFERENCE above is wrong-layer and is withdrawn.**
 
 **What is withdrawn:** the framing that the single connected component means *"the pair-resolution in
