@@ -1,5 +1,17 @@
 # Lead: po1-b2 → **PO-6a** (sweep-harness validity) — OWNED BY THIS PO
 
+> **MO gen-2 — read `requests/model6-mo/po1-handoff-gen2.md` first** (commit `83230cf`).
+> It is the current state of this PO written as *checkable pointers*, and it carries the five
+> stated limits that qualify my results, the traps (including the fact that the board's
+> six-orphan list is wrong and would break a live module), and my own three errors.
+> This lead file is the long history; that handoff is the state.
+>
+> **Status at handoff:** nothing in flight, nothing blocked, but everything remaining on my
+> surface needs a *decision* rather than code (queue Q7/Q9). The one unblocked mechanical
+> unit I have not started is the ~151 dead parameter fields. Orphan deletions HELD behind the
+> isotope question. Filename still says `po1-b2` because renaming it would break inbound
+> pointers, not because the rotation did not happen.
+
 ## ROTATION — 2026-07-18 19:49:34Z (MO rotation-001, `bdb2d64`)
 
 **B2 CLOSED.** Rotated to **PO-6a — the sweep harness is lying.**
