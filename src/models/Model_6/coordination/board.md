@@ -934,3 +934,59 @@ exactly once.** PO-5 is forbidden an activation-floor null.
 the graph carries no more than active-region density and *"graph as computation"* collapses to
 *"scalar as computation."* **That is a real possible outcome and it is reported as a finding, not
 converted into a protocol problem.**
+
+---
+
+## MO CYCLE — 2026-07-18 20:48Z · **the MO read the physics documentation, and it answers three open items**
+
+**MO defect #12, and it is the one that wasted the most of Sarah's time:** the MO spent the day doing
+code archaeology and escalating *physics* questions to Sarah that `quantum-system-canonical`
+already answers. It had read only §8 of that document. **Reading the ontology is a GROUND step, not
+optional context.** Corrected below.
+
+### 1. §4.3 — this is the claim the board kept calling "§8", and it is FALSIFIED
+
+`quantum-system-canonical` §4.3, tagged **[GROUNDED — `multi_synapse_network`]**:
+> *"The condensation order parameter **eta** is the **selectivity channel** … **Which synapses
+> condense is input-dependent.**"*
+
+**That — not §8 — is the premise L·ETA-4 killed.** §9's revision trigger (*"any claim here fails to
+survive contact with the code or an experiment"*) fired and the doc is corrected: three independent
+falsifications (ETA-4 branch-global plateau; ETA-5 accumulation on spontaneous release alone;
+commitment depleting `E_invasion` 26.2×).
+
+**What survives:** `eta = 0 ⇒ k_cross = 0` is arithmetic and stands. **What fails: eta discriminates
+inputs.** So **eta is a GATE, not a selectivity channel** — which is exactly the gate-level /
+pair-level distinction §8 Keystone #1 turns on. The two sections now agree.
+
+### 2. J-coupling — ESCALATION WITHDRAWN, the MO had it backwards
+
+§2.2: *"The ³¹P nuclei (spin-½) in a dimer carry entangled nuclear spins in a singlet state —
+entanglement **inherited at 'birth' when two phosphates are released from the same
+pyrophosphate/ATP** — protected by **molecular geometry (J-coupling)**."*
+
+**J-coupling is intramolecular** — geometry within a formed dimer, entanglement inherited from a
+shared ATP. **Ambient free-phosphate concentration is not what sets it.** So
+`calculate_j_coupling` reading `atp` and not `phosphate` is **defensible physics**, and the
+**docstring** (`atp_system.py:277`, *"phosphate: Total phosphate field (M)"*) is the error.
+**Sarah is not asked to rule on this.** PO-2 is unblocked: fix the docstring, not the physics.
+
+### 3. `K_CLASSICAL` — OFF SARAH'S QUEUE, the canonical doc already decided it
+
+§3: **"k_classical = 0.005 s⁻¹** (dissolution; cluster lifetime τ ≈ 200 s). **[GROUNDED — Turhan
+2024]"**
+
+The gap running `0.05` contradicts **the canonical ontology**, not merely a downstream skill. There
+is no decision here — there is a correction. Queue item MO-1 is **resolved by documentation**;
+0.05 → 0.005 proceeds once PO-4's consolidation leaves one site.
+
+### 4. Also read, and load-bearing for PO-2 and PO-5
+
+- **§2.4/§3:** *"Conserving a finite phosphate budget (~1 mM total = free + dimer-bound) is what lets
+  the formation–dissolution cycle **self-limit (SOC)**."* PO-2's mass-conservation work is directly
+  this, and its acceptance should cite it.
+- **§5 [LOCKED]:** *"A single-synapse 'one giant component' is **correct physics, not a bug**."*
+  **PO-5 must not read a single component as a failure.** §8's pair-level question is about
+  structure *within* that regime.
+- **§3 [LOCKED]:** `productive_fraction` is *"one bounded free parameter … **never tuned to a target
+  dimer count**"* — the standing anti-tuning rule, in the ontology's own words.
