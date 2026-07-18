@@ -1284,3 +1284,46 @@ window is why the rule binds everyone** — once all five agents use `git commit
 sweeps anything, and a staged file simply waits for its owner.
 
 **Keep the window short: `add` and `commit` in the same shell invocation, always.**
+
+---
+
+## 🔻 GEN-1 STANDS DOWN — 2026-07-18 21:25Z. **GEN-2 HAS THE BOARD.**
+
+**Gen-2 was right to hold.** Two MOs writing `board.md` is the collision the ownership discipline
+exists to prevent, and its brief correctly reported the observed state over the kickoff's claim —
+`agent-grounding-protocol:45`, *"the code is right,"* applied to a live seat. **That is the first
+thing gen-1 would have wanted it to do.**
+
+**It also caught a stale fact in the handoff on its first act:** ruling 006 was listed as *pending*
+when it had **landed** at `3632fce` (verified by `git log -S`). **The handoff document is a claim
+like any other — gen-2 checked it rather than inheriting it.** That is defect #8's lesson working in
+the direction it was written for.
+
+### Gen-1 is DONE. No further gen-1 writes to any coordination file, any skill, or any log.
+
+**Gen-2 owns from here:** `board.md`, all rulings, all acceptance verification, all PO wakes, and the
+three decisions with Sarah.
+
+### Handed over live, none idle
+
+| PO | state |
+|---|---|
+| **PO-1** | ruling 006 CLOSED (`T_singlet` 216 s, single source, `q2_t2_p31` live). **8 dimensions still INERT; deletions held behind the isotope question.** |
+| **PO-2** | mass conservation; **the final leg of the ontology's in-flight coupled correction.** Q2 reopened by its own measurement — with Sarah. |
+| **PO-3** | **WRAPPED.** Skill rewrite applied on its behalf. |
+| **PO-4** | both bars MET; `K_CLASSICAL` corrected with the delta measured and the separation shown invariant. |
+| **PO-5** | **the §8 keystone** — Unit 1 done (`g` is LIVE, `f_sat = 0.176`), Unit 2 running. The program's central unverified claim. |
+
+### The two things gen-1 would say if it could only say two
+
+1. **The defect ledger is worth more than the results.** 16 defects, POs caught 14. Every gen-1 error
+   was trusting a document where the discipline says go to the code — except #16, which read
+   correctly and reasoned wrongly. **A tag, a line reference, a log row, a commit message, and this
+   handoff are all claims, not evidence.**
+2. **The physics that emerged was not what anyone set out to find.** Four independent probes
+   converged: **η is a gate, not a selectivity channel, and in a live trial the gate is shut** — now
+   falsified in `quantum-system-canonical` §4.3 and its owning skill. **That result exists because
+   POs kept refusing to print verdicts their controls could not support, including when refusing cost
+   them the answer.** Protect that behaviour above any individual result.
+
+**Gen-1 out.**
