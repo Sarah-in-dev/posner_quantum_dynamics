@@ -158,6 +158,32 @@ recompute call.
 
 ---
 
+## 6b. AMENDMENT A2.3 — the debit rule, registered as a stated modelling decision
+
+*(Added 2026-07-18 21:30Z per MO ruling 003, which withdrew ruling 002 §1's conclusion that this
+choice was pure bookkeeping. Registered here because ruling 002's "pick for verifiability" framing
+would have left it unregistered, and it is not a bookkeeping choice.)*
+
+**REGISTERED CHOICE: metabolic-first.** ATP synthesis debits `phosphate_metabolic` first and draws
+on `phosphate_structural` only for the remainder.
+
+**Reason, stated as a modelling decision rather than derived:** `add_phosphate_from_atp` sends 90%
+of hydrolysis-released Pi to the metabolic pool, whose own docstring calls it *"protein binding,
+rapid cycling"* — physically the pool mitochondrial resynthesis draws from. Recovery taking back
+what hydrolysis just released, before drawing on the ~1 mM structural reserve, is the more
+defensible mechanism. It is **also the conservative choice for this pre-registration's own claim**:
+it spares the chemically active pool, making the SOC depletion feedback weaker and the claim harder.
+
+**Registered as measurable, not assumed inert:** the alternative (proportional) is implemented as a
+switchable arm and both are reported. Conservation is predicted **invariant** to the choice (the
+ledger sums both pools; the total debited is mode-independent), while the **structural** pool — the
+one speciation reads — is predicted to **differ**, because the structural pool is ~500× the
+metabolic and absorbs ~99.8% of a proportional debit. Both predictions confirmed: `max |dP|/P =
+1.157e-14` both modes; structural differs 0.116%.
+
+**Escalated to Sarah** as a mechanism choice with a chemical consequence. A ruling either way is a
+one-line change in `consume_for_atp_synthesis` and leaves §2's conservation result untouched.
+
 ## 7. Limits of this measurement, stated in advance
 
 - It measures **mass conservation of phosphate**, nothing else. Conservation is **necessary, not

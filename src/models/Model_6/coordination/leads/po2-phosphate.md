@@ -7,7 +7,7 @@ consumption.
 
 **Status:** LIVE — grounding brief returned 2026-07-18 19:46Z.
 **Current unit:** pre-registration (§2.4), then the conservation probe committed FAILING first.
-**Last heartbeat:** 2026-07-18 21:26Z
+**Last heartbeat:** 2026-07-18 21:27Z
 **Blocked on:** — (two open questions in `queue/po2-phosphate.md`, neither blocking; working on)
 
 ## HEARTBEAT LOG
@@ -257,3 +257,15 @@ evidence that it DOES. I recommend PO-6 proceed with that stated as a known-open
 **NEW, and it sharpens my own prior row.** Canonical §88 says PO4(3-) is the genuinely limiting species, so PO2-3's pool-fraction framing was the coarser proxy. Measured live: **max S = 1.8341, S>1 on 51.6% of steps, but only 0.066% of the grid** — the gate IS engaged, firing in nanodomain hotspots. **But `S ∝ P^0.4`**, so the measured 0.143% depletion moves S by 0.057%, while calcium swings orders of magnitude (`S ∝ Ca^0.6`). **Halving S by phosphate alone needs 82.3% depletion = ~48 min simulated.** So the gate is **calcium-controlled, not phosphate-limited, at this drive.** Logged as PO2-4. Does not falsify SOC — locates what a real test needs, and is the sharpest input I have for PO-6.
 
 **STANDING DISPUTE, unchanged and now restated by the MO without having seen it — queue Q4.** Ruling 002 §1 dissolves Q2 because "your debit choice cannot affect the chemistry, only the ledger". The premise is right and concerns phosphate going IN; **the debit governs which pool it comes OUT of**, and the structural pool is the chemically active one (~500x larger, so it absorbs ~99.8% of a proportional debit). Measured: **structural differs 0.116% between modes** — deterministic, not statistical. Acceptance item 1 is untouched either way (max |dP|/P = 1.157e-14 across 6 runs), so this changes nothing about the headline; it changes whether the debit rule deserves pre-registration. **I kept metabolic-first, which spares the chemically active pool and so makes my own claim harder.**
+
+### 2026-07-18 21:27Z — ruling 003 discharged. Q4 accepted; the debit rule now sits in the LOG, not just coordination.
+
+**Ruling 003 upholds queue Q4 and withdraws ruling 002 §1's conclusion** (MO defect #16 — a new shape: *"verifying a premise is not verifying a conclusion"*). Q2 is live physics and goes to Sarah; MO's non-binding read is metabolic-first, which is what I pre-registered and kept.
+
+**Discharged:**
+- **PO2-5 added to the research log** — the debit rule carried *alongside* the conservation result as the ruling directs, with the 0.116% structural delta reported and the ~2.3% downstream explicitly NOT claimed (sign test p=0.25). It belongs in the log because that is the substance home; the queue is coordination.
+- **PREREG AMENDMENT A2.3** — metabolic-first registered as a stated modelling decision with its reason, plus the two predictions it makes (conservation invariant; structural pool differs). Both confirmed. Ruling 002's "pick for verifiability" framing would have left this unregistered.
+
+**Acceptance unchanged and untouched by any of it:** item 1 (conservation) is the headline and does not depend on the debit choice; item 2 (as replaced by ruling 001) is the consumer trace, met.
+
+**AT REST. Everything remaining is genuinely gated on Sarah:** the debit rule (ruling 003's escalation) · whether J-coupling should depend on phosphate at all — *note ruling 002 §2 withdrew that escalation on canonical §2.2 grounds, so I treat it as closed unless told otherwise* · the ~20-seed run to resolve the downstream dimer difference, which is not on my acceptance and needs its own compute slot. **The MO verifies acceptance; a PO does not mark its own.**
