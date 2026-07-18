@@ -206,16 +206,55 @@ Q2_DIMENSIONS = [
         condition="classical dissolution rate at P_S=0.25 (Fisher 2015)",
         importance="critical",
     ),
+    # ── q2_t2_p31 — SENSITIVITY ANALYSIS, **NOT VALUE SELECTION** ───────────────────────
+    #
+    # READ THIS BEFORE INTERPRETING ANY SWEEP OVER THIS DIMENSION.
+    #
+    # The grounded value is **T_singlet_dimer = 216 s** (Agarwal; dipolar relaxation only).
+    # It is LOAD-BEARING for `quantum-system-canonical` §2.2 and is NOT up for revision by a
+    # sweep. This bracket exists to measure **how the model degrades away from 216 s**, not to
+    # search for a better value. See the one-way-fix note at `model6_parameters.py:409-411`:
+    # *"the parameter was moved to match the physics. Do NOT adjust the 216 s to match a
+    # declared number — that is tuning a constant to reach an outcome."*
+    # **A result from this sweep may never be cited as choosing a coherence time.**
+    #
+    # Bracket: symmetric in log space about 216 s (x1/2, x3/4, x1, x3/2, x2), approved
+    # MO ruling 017. It REPLACES [50, 100, 200, 500], whose top arm was the **retired** 500 s
+    # — a configuration the program has explicitly rejected (crossing 247.6 s), which a sweep
+    # would have sampled with nothing warning.
+    #
+    # WHERE THE PHYSICS STOPS HOLDING — annotate, do not assume.
+    # P_S(t) = 0.25 + 0.75·exp(−t/T) toward the thermal floor 0.25 (dimer_particles.py:283,
+    # :323-332); a pair clears the Werner bound F = P_S² > 0.5 while P_S > 1/√2. So the
+    # crossing is t = 0.49516·T. The ontology's coherence window is ~100–200 s.
+    #
+    #     T = 108 s  ->  crossing  53.5 s   OUTSIDE (below band)
+    #     T = 162 s  ->  crossing  80.2 s   OUTSIDE (below band)
+    #     T = 216 s  ->  crossing 107.0 s   INSIDE   <-- the grounded value
+    #     T = 324 s  ->  crossing 160.4 s   INSIDE
+    #     T = 432 s  ->  crossing 213.9 s   OUTSIDE (above band)
+    #
+    # **THREE of the five arms sit outside the band, not one.** Ruling 017 flagged the 432 s
+    # arm; the two low arms are outside as well, below rather than above. That is correct for
+    # a sensitivity sweep — sampling where the correspondence degrades is the point — but
+    # only the 216 s and 324 s arms are configurations in which §2.2's central correspondence
+    # holds. **Do not report an aggregate over all five arms as if it described the grounded
+    # model.** Formula above is derived from the code, so re-derive rather than trust these
+    # numbers if the decay law changes.
     RefinedDimension(
         dim_id="q2_t2_p31",
         variable="T_singlet_dimer",
         category="threshold",
-        values=[50.0, 100.0, 200.0, 500.0],
-        value_labels=["50s", "100s", "200s", "500s"],
+        values=[108.0, 162.0, 216.0, 324.0, 432.0],
+        value_labels=["108s (x0.5, outside)", "162s (x0.75, outside)",
+                      "216s GROUNDED", "324s (x1.5, inside)", "432s (x2, outside)"],
         source_file="model6_parameters.py",
         source_function="QuantumParameters",
-        source_line=0,
-        condition="dimer singlet coherence lifetime — controls eligibility trace window (current default 500s)",
+        source_line=409,
+        condition=("dimer singlet coherence lifetime — the eligibility-trace window. "
+                   "SENSITIVITY ANALYSIS ONLY about the grounded 216 s; NOT value selection. "
+                   "Werner crossing = 0.4952*T; band 100-200 s; only the 216 s and 324 s arms "
+                   "sit inside it. See the block comment above this declaration."),
         importance="critical",
     ),
     RefinedDimension(
