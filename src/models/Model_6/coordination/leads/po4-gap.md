@@ -11,7 +11,47 @@ docstring violating the rule it states. **Now closed and mechanically enforced.*
 awaiting MO re-verification.
 **Current unit:** **ROTATION 002 COMPLETE** — `K_CLASSICAL` 0.05 → 0.005 landed with its measured
 delta. No open unit. Awaiting MO verification.
-**Last heartbeat:** 2026-07-18 22:50Z
+**Last heartbeat:** 2026-07-18 23:00Z
+
+### 2026-07-18 23:00Z — compute-sequencing note answered. HOLDING the before/after, correctly.
+
+**Two of the three "unblocked meanwhile" items were already delivered** when the note arrived — the
+failing-first detailed-balance demonstration landed at 22:50Z (`gap_template_symmetry_probe.py`).
+Third message-crossing this session; not a complaint, just why it reads as duplicated.
+
+**Holding the before/after.** Doubly gated (PO-5's exclusive slot + gen-2's verification debt) and I
+have not run it.
+
+**Rotation 003 PART II delivered** — and gen-2's framing was right in a way I had missed: **the two
+corrections move in OPPOSITE directions**, so an artifact can survive one and not the other.
+
+| state | effective gap `k_diss` | vs artifacts' conditions |
+|---|---|---|
+| as standing artifacts were run | `0.05` | — |
+| after `K` alone | `0.005` | **10× slower** |
+| after `K` + template | `≈ 0.165` | **3.3× FASTER** |
+
+**D17 is the one that moves: NEEDS under `K` alone → YES under both.** Faster clearing cannot
+manufacture unbounded accumulation, so an upper-bound claim survives *a fortiori*. That is a
+direction-of-inequality argument, **not an estimate**, so it resolves with no run bought — which
+**strengthens** the Q4-9 recommendation not to spend a slot.
+
+**GAP-2 was the genuinely exposed one and I checked rather than assumed.** Volume ← actin ← CaMKII
+← calcium, and the commitment pathway is *"dimers dissolve → calcium return → CaMKII"*, so 33× more
+gap dissolution could have moved ΔV. **It cannot — and the reason is a defect:** `apply_return` is
+called at `model6_core.py:484`/`:782`, the **within-trial path only**. The gap never calls it.
+
+### NEW FINDING (Q4-13, routed to PO-2) — and a fault in my own table
+
+**The gap dissolves dimers and silently discards their calcium and phosphate.** My advance/exclude
+table says *"calcium clamped at baseline"* — defensible for **relaxation**, but it does **not**
+cover the **source term** from dissolution. **The stated reason does not cover what the code
+actually drops.** Mine, recorded as mine. **And it scales ~3.3× with the pending template fix — so
+restoring the symmetry enlarges an unfixed conservation break.** PO-2 may want it *before* the fix
+lands.
+
+**Q4-12: gen-2's verification debt is now cheap to discharge** — exact invocation, deterministic
+under seed 17, **measured cost `real 32.9 s / user 31.5 s`, single core, no slot contention.**
 
 ### 2026-07-18 22:50Z — ruling 016: failing-first demonstration DONE. **Fix NOT landed**, per sequencing.
 
