@@ -389,3 +389,58 @@ comparator reports a difference. If it does not fire → **ABORT**.
 
 **Neither arm touches model code.** Both are read-only wrappers. **No de-duplication is proposed** —
 that stays routed to the MO per ruling 018 §5.
+
+---
+
+## HEARTBEAT — ARM A ABORTED ON ITS OWN POSITIVE CONTROL. **Recorded before it is fixed.**
+
+First run of `po7_stepper_divergence_probe.py` (committed `f2cbadc` *before* the run):
+
+```
+NULL   (RSD vs RSD)             -> NO MATERIAL DIVERGENCE  []
+POSCTL (RSD vs RSD-no-backbone) -> NO MATERIAL DIVERGENCE  []
+ARM A = ABORT: the positive control did NOT fire.
+```
+
+**The instrument refused to report a verdict. That is the design working**, and it is the exact
+scar the kickoff names — *"a probe printed 'selectivity holds' while its own positive control never
+fired."* Mine did not fire and mine printed nothing.
+
+**Root cause — my design error, not a model defect.** The backbone diagnostic from the same run:
+
+```
+[backbone diag] P_met=0.84fW  P_agg=0.84fW  P_c=21.51fW  r=0.039  eta=0.0000  invaded=True
+```
+
+At 0.5 s of sim time `E_invasion` has barely started, so **`r = 0.039`, `eta = 0.0000` in BOTH
+arms.** Removing `_update_backbone_field` from a regime where it already outputs zero changes
+nothing. **Two of my three discriminators were degenerate at the duration I chose** — I registered a
+control that could not fire in the regime I ran it in.
+
+This is `model6-architecture:115` operating exactly as documented: *"the continuous term honestly
+reads `E_invasion`, which **builds over seconds**."* I knew that from grounding and still chose
+0.5 s. **The prereg's control was sound in form and untested in placement.**
+
+### Correction — one positive control PER discriminator, plus a regime precondition
+
+The three discriminators do not share a regime, and pairing all of them to one control was the
+error:
+
+1. **`gate_calls`** — differs *structurally*, independent of regime (RSD calls the gate every step;
+   RPFL only on reward steps). Its control must be a **gate-frequency perturbation**, not a backbone
+   skip. Valid at 0.5 s.
+2. **`eta_max` / `cross_bonds`** — only distinguishable where the backbone update produces `eta > 0`,
+   i.e. `r ≥ 1`. This needs a **regime precondition asserted before the comparison**: if the RSD arm
+   itself shows `eta_max == 0`, the discriminator is degenerate and returns **NEEDS MEASUREMENT** —
+   **not** a pass. A comparison of two zeros is not a null result, it is no result.
+
+**Arithmetic for the regime, from the model's own constants** (not tuned — read off the diag):
+`P_met = P_BASAL + E_inv·ca_open·p_active_max` with `P_c = 21.51 fW`, `p_active_max = 60 fW`,
+`P_BASAL ≈ 0.84 fW` ⇒ crossing needs `E_inv·ca_open ≳ 0.345`. At `ca_open ≈ 0.55` that is
+`E_inv ≳ 0.63`, and `model6-architecture:119` records `E_invasion` reaching **0.495 by 30 s** and
+tracking toward **~0.74 by ~45 s**. **So ~45 s is the shortest arm that can distinguish the
+outcomes** — chosen from the constants, before the run, not raised until something happened.
+
+**I am NOT relaxing the verdict to make it fire.** The threshold, the discriminators and the verdict
+vocabulary are unchanged from the prereg; only the control placement and the run duration change,
+and both are stated here before the corrected run.
