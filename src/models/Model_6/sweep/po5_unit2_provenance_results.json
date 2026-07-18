@@ -1,0 +1,110 @@
+{
+  "seed": 20260718,
+  "T": 2.0,
+  "dt": 0.005,
+  "instrumented": [
+    {
+      "t": 0.5,
+      "n_dimers": 1081,
+      "n_entangled": 1081,
+      "n_bonds": 415643,
+      "mean_PS": 0.9947054224587227,
+      "live_by_origin": {
+        "P0_birth_inherit": 396659,
+        "P1_burst": 1,
+        "P2_em": 18983,
+        "unknown": 0
+      },
+      "cumulative_created": {
+        "P0_birth_inherit": 396667,
+        "P1_burst": 1,
+        "P2_em": 18984,
+        "unknown": 0
+      },
+      "conservation": {
+        "ok": true,
+        "n_live": 415643,
+        "n_tracked": 415643,
+        "n_missing": 0,
+        "n_orphan": 0
+      }
+    },
+    {
+      "t": 1.0,
+      "n_dimers": 1104,
+      "n_entangled": 1104,
+      "n_bonds": 436683,
+      "mean_PS": 0.9914275181844588,
+      "live_by_origin": {
+        "P0_birth_inherit": 396003,
+        "P1_burst": 4,
+        "P2_em": 40676,
+        "unknown": 0
+      },
+      "cumulative_created": {
+        "P0_birth_inherit": 396898,
+        "P1_burst": 4,
+        "P2_em": 40717,
+        "unknown": 0
+      },
+      "conservation": {
+        "ok": true,
+        "n_live": 436683,
+        "n_tracked": 436683,
+        "n_missing": 0,
+        "n_orphan": 0
+      }
+    },
+    {
+      "t": 2.0,
+      "n_dimers": 1148,
+      "n_entangled": 1148,
+      "n_bonds": 474256,
+      "mean_PS": 0.9859979509937815,
+      "live_by_origin": {
+        "P0_birth_inherit": 392952,
+        "P1_burst": 22,
+        "P2_em": 81282,
+        "unknown": 0
+      },
+      "cumulative_created": {
+        "P0_birth_inherit": 397361,
+        "P1_burst": 23,
+        "P2_em": 81800,
+        "unknown": 0
+      },
+      "conservation": {
+        "ok": true,
+        "n_live": 474256,
+        "n_tracked": 474256,
+        "n_missing": 0,
+        "n_orphan": 0
+      }
+    }
+  ],
+  "baseline": [
+    {
+      "t": 0.5,
+      "n_dimers": 1081,
+      "n_entangled": 1081,
+      "n_bonds": 415643,
+      "mean_PS": 0.9947054224587227
+    },
+    {
+      "t": 1.0,
+      "n_dimers": 1104,
+      "n_entangled": 1104,
+      "n_bonds": 436683,
+      "mean_PS": 0.9914275181844588
+    },
+    {
+      "t": 2.0,
+      "n_dimers": 1148,
+      "n_entangled": 1148,
+      "n_bonds": 474256,
+      "mean_PS": 0.9859979509937815
+    }
+  ],
+  "conservation_ok": true,
+  "nonperturbation_ok": true
+}

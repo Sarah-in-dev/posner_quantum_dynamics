@@ -65,6 +65,7 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| PO5-2 | 2026-07-18 | **83% OF THE BOND SET COMES FROM A THIRD, DETERMINISTIC MECHANISM THAT NEITHER PATHWAY DECOMPOSITION NAMES.** Pre-registered `docs/PREREG_PO5_UNIT2_PAIR_SELECTIVITY.md` §2; probe `sweep/po5_unit2_provenance.py`; **provenance recovered with ZERO edits to `dimer_particles.py`** (instance-level wrapping, four POs share this tree). Classification is EXACT not statistical — `:439` `p1 = both_ent & same_burst & both_tmpl & ~has_bond`, `:450` `p2 = both_ent & ~p1`, phases separated by wrapping `step_population` vs `step_entanglement`. **The instrument gate FAILED FIRST on real data** (orphans 0→909→4851); cause traced to `_remove_all_bonds_for_dimer` (`:245`) popping `_bond_lookup` without routing through `_remove_bond`; AMENDMENT A2.1, instrument fixed, physics untouched; failing run preserved. **Post-fix both gates PASS:** conservation exact (missing=0, orphan=0 vs 474256 live bonds) and instrumented-vs-uninstrumented **bit-for-bit identical** on n_dimers/n_entangled/n_bonds/mean P_S. **MEASURED at t=2.0s:** P0 birth-inheritance (`:218-228`) **392952 = 82.86%**, P1 burst **22 = 0.00%**, P2 EM **81282 = 17.14%**. **Two structural findings:** (1) the dominant site is the birth loop at `:218-228`, which is **deterministic — no rate, no RNG draw, no distance term** — bonding every template-bound dimer born within 100 ms unconditionally, i.e. a near-complete blob by construction; **83% of bonds never evaluate `em_rate` at all**, so Unit 1's `D = 33.5` spread in `g` applies only to the 17% minority, and the kickoff's `em_rate` decomposition (`mo-rescope-001.md:49-53`, `quantum-computation-and-attribution` §7 #1) describes the minority mechanism. (2) **P1 is shadowed by construction** — `p1` requires `~has_bond` and the birth loop has already bonded every same-burst template-bound pair, so P1 is near-dead code (22 bonds). **EXPLICITLY NOT CLAIMED:** that this defeats §8. Birth timing and template binding are downstream of input, so a deterministic birth rule is **not automatically input-blind**; whether it carries **pair-level** vs §8's **gate-level** information is Q-B, and **Q-B is unrun**. No keystone verdict is stated or implied — the inference `L·PO5-1` CORRECTION 1 withdrew is not repeated. **Latent defect routed, not fixed:** `_remove_dimer` (`:252-261`) discards from `entanglement_bonds` but never pops `_bond_lookup`; currently **dead code** (no call sites), so nothing is broken today. | [GROUNDED, measured] | `L·PO5-2` below |
 | PO5-1 | 2026-07-18 | **[PARTLY SUPERSEDED — see CORRECTION 1 in `L·PO5-1`: the measurements stand, the "trivial partition" INFERENCE is withdrawn as wrong-layer, `quantum-system-canonical:139` LOCKS single-synapse one-giant-component as correct physics.]** **`g` IS LIVE — the 1/r³ is NOT inert, and BOTH standing predictions about it were wrong. But the graph it builds is a ~78%-complete SINGLE COMPONENT, so the pair-resolution in the RATE does not reach the TOPOLOGY.** Pre-registered `docs/PREREG_PO5_UNIT1_G_INERTNESS.md` (committed `cc80fcc` before the run); probe `src/models/Model_6/sweep/po5_unit1_g_inertness.py` (`1dbef17`); classifier demonstrated ABORTing on a deliberately broken threshold before it was allowed to score. Single synapse, -10 mV, 5 s, dt=0.005, 4 sample times. **Measured:** `f_sat = 0.176` (only 17.6% of pairs inside the 5 nm clamp, vs the ≥0.90 registered saturation bar), `r_p10/p50/p90 = 3.70/9.75/16.11 nm`, `r_max = 36.45`, `g_p10..p90 = 2.99e-2 .. 1.00`, **dynamic range `D = 33.5`**, stable to 3 decimals across all four samples. **Verdict `LIVE`-under-stated-conditions.** **Both priors refuted:** the board/kickoff (`board.md:919-922`, `mo-rescope-001.md:55-59`) predicted `g ≈ 1` **inert by saturation** — no, only 17.6% clamp; PO-5's own grounding brief predicted `g ≈ 3.7e-5` **inert by vanishing** off the 400 nm birth domain — no, dimers cluster at templates and sit ~10 nm apart, so the brief's a-priori was wrong by ~15× in `r` and is recorded as such. `model6-entanglement-partition-werner:60`'s *"intra edges at ~7 nm"* is the prose that was RIGHT (`r_p10 = 3.70`, `r_p50 = 9.75`). **THE CONSEQUENCE, which is the finding:** realised intra bond saturation is **0.75–0.83** and the corroborating probe (`sweep/observe_pathway2_selectivity.py`) reads **`comps = 1`, `largest_frac = 1.000`** at t=5 s and t=10 s, with bonded-pair median separation **9.5 nm vs all-pair 10.3 nm** — i.e. the bonded set is barely distinguishable from the all-pairs set. **A rate that varies 33× across pairs is producing a near-complete graph with a trivial partition.** Since the computation IS the partition (`model6-entanglement-partition-werner`, LOCKED), pair-resolution in `em_rate` that does not survive into the component structure buys the keystone nothing. **NOT YET ATTRIBUTED — UNVERIFIED:** whether the saturation is Pathway 1 (birth entanglement, `dimer_particles.py:218-228`, which bonded 94.4% of pairs at the very first sample) or Pathway 2. That separation is PO-5 Unit 2 and no claim is made on it here. **`g` is GEOMETRY, not input — this unit does NOT advance §8's keystone**, it establishes that the later pair-level test is not operating on a constant. | [GROUNDED, measured] | `L·PO5-1` below |
 | AUDIT-1 | 2026-07-18 | **SUBSTRATE AUDIT — full adversarial code audit, `docs/SUBSTRATE_AUDIT_JUL18.md`.** Four parallel read-only agents, `file:line` required for every claim, UNVERIFIED where code could not confirm. **Five headline findings:** (1) **factor-of-2pi error** on the per-synapse pump — `vibrational_cascade_module.py:315` uses `hbar*f` on a LINEAR frequency, n_bar inflated **6.28x**; the backbone pump is CORRECT (`h*f`, `model6_parameters.py:46`). (2) **The calibration fiction survives and is unsweepable** — `kT_ref = 22.1` is a function-body literal (`:246`), invisible to the params dataclass and to sweep_runner; with `r_at_E_ref = 100e9` it makes **r/r_c ~ 1.045 at MT+ an arithmetic identity, not a result**. (3) **Three docstrings assert mechanisms absent from the code** — a Hill function (`multi_synapse_network.py:1332-1334` vs `:1381-1392`), a 30% collapse (`:1423-1425`, `collapse_factor` never read), and "No fitted parameters!" (`:1238-1242`) beside two fitted parameters. (4) **Cited sources contradict their values** — phi/chi cite Zhang 2019 which gives 6 GHz / 0.07 GHz; code uses 10 GHz / 0.05 GHz. (5) **The two pump sites run different threshold physics** — backbone `n_ex = n_bar_s`, per-synapse still Zhang Eq. 4. **WHAT SURVIVES:** the entanglement/partition layer — Werner 0.5 is a THEOREM not a cutoff, eta is exactly `(r-1)/(r+1)` with no fitted curve, commitment is a real CaMKII integrator with a genuine DDSC delay. **Debt REGRESSED:** ~151 dead parameter fields (was ~120), six orphan modules, none removed. Also found: `phosphate_total` goes stale so J-coupling reads a field ignoring dimer consumption; ATP<->Pi is not mass-conserving; `step_with_coordination` and `run_place_field_learning` still form ZERO cross-synapse bonds (a gap in the same-day fix). | [GROUNDED, code SHOWN] | `docs/SUBSTRATE_AUDIT_JUL18.md` |
 | ETA-6 | 2026-07-18 | **EQUIVOCAL — the magnitude question is NOT answered, for two independent reasons.** Pre-registered (`docs/PREREG_L_ETA_6_NMDAR_MAGNITUDE.md`, thresholds anchored to Jain 2024's own no-glutamate control, 7/56.3 = 0.124, fixed BEFORE measuring). Audit of L·ETA-4's conditions; its probe was not modified and its verdict not re-derived. **(1) The scored condition (plateau ON) was NOT MEASURED** — those arms cost >10x the plateau-OFF arms (>12 min without reaching step 400/2400, zero progress in a 90 s window) and were killed per the compute cap. **(2) One registered criterion is UNSOUND:** §3 differenced a calcium PEAK across two INDEPENDENT stochastic arms — an extreme-value statistic with no sign guarantee — and it duly returned **dCa peak = -14.65 uM**, i.e. blocking NMDAR 'raised' calcium. Defect in the criterion, not the model. **MEASURED and SOUND, but plateau OFF and therefore NOT the scored condition:** NMDAR charge ratio **R = 0.0147** (silent/driven), below the negligible threshold 0.05; and dCa **mean** **+0.51 uM**, positive as physics requires and ~half of `K_calcium_poly` = 1.0 uM, so **not obviously small** — reported with status, not scored. The mean was NOT substituted for the peak and rescored: swapping a criterion after seeing the registered one give an uncomfortable answer is the goalpost move the discipline prevents. **So: L·ETA-4's -0.0019 is still UNSUPPORTED (L·ETA-5 rotation-001) and NOT YET CONTRADICTED — unsupported and wrong remain unseparated,** which is precisely what Sarah's PO-5 decision was waiting on. **Also verified in code this cycle:** `k_cross = K_ENTANGLE_EM_BASE * eta_factor * w_spatial * P_product` (`multi_synapse_network.py:340-341`) — `P_product` is a **multiplicative co-factor with eta, not an alternative**, so eta = 0 zeroes `k_cross` whatever `P_product` does. That makes L·ETA-5's zero-cross-edges result structurally necessary rather than incidental. **Cost for the MO to sequence: the plateau-ON pair, >10x the ~65 s/arm plateau-OFF cost, cause = O(n^2) entanglement growth once the plateau drives dimer formation across all 7 synapses.** | [GROUNDED, partial] | L·ETA-6 |
@@ -87,6 +88,96 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·PO5-2 — **83% of the bond set is formed by a THIRD mechanism neither pathway decomposition names, and it is deterministic** · 2026-07-18 `[GROUNDED, measured]`
+
+**Pre-registered:** `docs/PREREG_PO5_UNIT2_PAIR_SELECTIVITY.md` §2 (committed before the probe ran).
+**Probe:** `src/models/Model_6/sweep/po5_unit2_provenance.py`.
+**Raw:** `src/models/Model_6/sweep/po5_unit2_provenance_results.json`.
+**Scope:** this is **Q-A (provenance), descriptive.** It is **not** an input-selectivity result and
+is not reported as one. Q-B is unrun.
+
+#### The instrument gate FAILED first, on real data, and the failure was diagnostic
+
+The first instrumented run **failed its own registered conservation check** — orphaned provenance
+entries growing 0 → 909 → 4851 across samples. **Cause traced, not guessed:**
+`_remove_all_bonds_for_dimer` (`dimer_particles.py:245`, called from the death path at `:239`) pops
+`_bond_lookup` **directly** and never routes through `_remove_bond`, so the wrapper never saw those
+removals. Registered as **AMENDMENT A2.1**, instrument fixed, physics untouched. Failing run
+preserved at `results/po5/unit2_provenance_FAILING_v1.log`.
+
+Post-fix, **both registered gates pass**: conservation exact at all three samples (`missing = 0,
+orphan = 0` against 415643 / 436683 / 474256 live bonds), and instrumented vs uninstrumented runs at
+the same seed agree **bit-for-bit** on `n_dimers`, `n_entangled`, `n_bonds` and `mean P_S`.
+
+#### The measurement — live bonds by originating mechanism (single synapse, −10 mV, 2 s, seed 20260718)
+
+| t | n_bonds | P0 birth-inherit | P1 burst | P2 EM |
+|---|---|---|---|---|
+| 0.5 | 415643 | 396659 | 1 | 18983 |
+| 1.0 | 436683 | 396003 | 4 | 40676 |
+| 2.0 | 474256 | **392952 (82.86%)** | **22 (0.00%)** | **81282 (17.14%)** |
+
+Classification is **exact, not statistical**: `dimer_particles.py:439` sets
+`p1 = both_ent & same_burst & both_tmpl & ~has_bond` and `:450` sets `p2 = both_ent & ~p1`, so within
+`step_entanglement` a newly formed bond took Pathway 1 iff `same_burst & both_tmpl`. Phase is
+separated by wrapping `step_population` vs `step_entanglement`. No RNG replay, no guessed branch.
+
+#### Two structural findings
+
+**1. The dominant mechanism is a third site that neither pathway decomposition names.**
+`dimer_particles.py:218-228`, inside the birth loop:
+
+```python
+if template_bound:
+    birth_window = 0.1
+    for other in self.dimers[:-1]:
+        if other.template_bound and other.is_entangled:
+            if abs(other.birth_time - dimer.birth_time) < birth_window:
+                self._create_bond(dimer.id, other.id, strength=...)
+```
+
+**It is deterministic — there is no rate, no RNG draw, no distance term, and no coherence gate
+beyond `is_entangled`.** Every template-bound dimer born within 100 ms of another is bonded to it,
+unconditionally. That is a near-complete blob **by construction**, and it produces **83%** of the
+live bond set.
+
+**This matters for the keystone's framing.** The kickoff, `mo-rescope-001.md:49-53` and
+`quantum-computation-and-attribution` §7 #1 all decompose `em_rate` into `g` / `collective_field_kT`
+/ `coh` and locate the keystone in `coh`. **83% of bonds never evaluate `em_rate` at all.** Unit 1
+measured `g`'s dynamic range at `D = 33.5` — that 33× spread is being applied to the 17% minority.
+
+**2. Pathway 1 is almost entirely shadowed — 22 bonds, 0.00%.** The cause is structural and follows
+from the code: `p1` requires `~has_bond`, and the birth loop has *already* bonded every same-burst
+template-bound pair. **P0 pre-empts P1 by construction.** So the `p1` branch at `:437-444`, which the
+documentation treats as one of two pathways, is very nearly dead code under these conditions.
+
+#### What is NOT claimed
+
+**Whether this defeats §8's keystone is NOT measured here, and the temptation to say so is exactly
+the inference `L·PO5-1` CORRECTION 1 already withdrew once.** Birth timing and template binding are
+themselves downstream of input (calcium → dimer concentration → births), so a deterministic
+birth-pairing rule is **not automatically input-blind**. Whether it carries **pair-level** input
+information — as against §8's *"gate-level … which regions/timings are eligible"* — is precisely
+Q-B, and Q-B has not been run. **No verdict on the keystone is stated or implied.**
+
+Note also `mo-ruling-001` §3: birth-pairing is *"arguably a more natural home for input-dependent
+pair structure than Pathway 2's EM-mediated route."* This measurement says that home holds 83% of
+the residents; it does not say what they encode.
+
+#### A latent defect found in passing — reported, not fixed
+
+`_remove_dimer` (`dimer_particles.py:252-261`) discards bonds from `self.entanglement_bonds` but
+**never pops `self._bond_lookup`**, so the two containers would diverge if it ran. **It is currently
+dead code** — `grep -n "_remove_dimer"` returns only its definition, no call sites — so nothing is
+broken today. Routed to the MO rather than fixed: it is a death-path function, not the Pathway 2
+formation path PO-5 owns.
+
+#### Limits
+
+Single synapse, one drive condition, one seed, 2 s. The 83/17 split is a property of **these**
+driving conditions; a regime with more spread-out births would shift it. Provenance shares are
+reported for the **live** bond set at each sample, not cumulative creations (both are in the JSON).
 
 ### L·PO5-1 — `g` is LIVE, both priors were wrong, and the pair-resolution does not reach the topology · 2026-07-18 `[GROUNDED, measured]`
 
