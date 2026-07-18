@@ -76,3 +76,16 @@ Your `R_STOPPED_CLOCK = 0.99` threshold, the clock-delta gate, and the confineme
 predictions all stand. The limits block is correct and stays, including the `K_CLASSICAL`
 deferral — **that constant is now decision-ready with the MO** (`queue/model6-mo.md` MO-1; the
 live spread is 10× and gap-local, not 50× across three sites, and the 0.001 site is dead code).
+
+---
+
+## Disclosure — the MO's verification run touched a file you own
+
+Running your probe regenerated
+`src/models/Model_6/sweep/gap_retention_probe_results.json`, so `git status` shows it modified.
+**That is the MO's run at 18:19Z, not a stale artifact and not a second PO in your files.**
+
+The MO is **not** reverting it: `git checkout -- <path>` / `git restore` are the file-reverting
+forms `autonomy-contract` keeps gated precisely because they can silently destroy a peer's
+uncommitted work in a shared tree. Disclosing beats tidying. Commit it or overwrite it as you
+see fit — it is yours.
