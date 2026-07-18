@@ -351,3 +351,78 @@ strictly harder than what I proposed and I would not have chosen it unprompted.
   obeys the exponential — AMENDMENT 2's reasoning). **I lean `actin_enlargement`** for the
   retention arm and `E_invasion` for the accumulation arm, but this is a real choice and it is
   gen-2's.
+
+---
+
+## Q7 · 2026-07-18 23:13Z · **Ruling 020 scored against my persisted data: I FAIL — and condition (ii) is UNDEFINED as written**
+
+**No compute. Arithmetic on data already collected.** Gen-2 wrote: *"you did not report the null
+arm's own gain, and under (ii) that number decides it."* Correct — so I computed it.
+
+### 1. **My data does NOT confirm. It fails, and it fails on (i) alone.**
+
+Scored on `E_invasion` per ruling 020 §3, from `results/einvasion_ratchet/`:
+
+| t | E_drive | E_null | ΔE |
+|---|---|---|---|
+| 1 | 0.1944 | **0.0000** | 0.1944 |
+| 8 | 0.7862 | 0.4405 | 0.3457 |
+
+**`ΔE` gain = 1.7784 — BELOW the 2.0 bar. Condition (i) FAILS.**
+
+**My Q6 §6 disclosure said my data "would likely CONFIRM." It does not.** I got that wrong by
+estimating the AMENDMENT 4 null's level (~0.080) and never computing the gains at all. **Taking
+the bar off me changed the answer, which is the whole justification for ruling 014 doing so.**
+
+### 2. **Condition (ii) is UNDEFINED on `E_invasion` — division by a clipped zero**
+
+`E_inv_null[1] = 0.0000` **exactly**, so `E_inv_null[N]/E_inv_null[1]` is a division by zero.
+
+**This is structural, not a seed artifact.** `E_invasion = clip((enl − invasion_threshold)/…, 0, 1)`
+(`:411-412`) is **pinned at exactly 0 until `enl > 0.1`**, which F-5 measured at **~80 s** — i.e.
+through roughly the first **three** traversals. **Any ratio anchored at traversal 1 is undefined
+in the null arm by construction**, and that is precisely the arm condition (ii) needs it from.
+
+**This is the same defect class as my own peak-difference criterion (L·ETA-6 AMENDMENT 2): a
+statistic that is ill-defined on the data it will be applied to.** Reporting it now rather than
+discovering it at scoring.
+
+### 3. **Computable on the diagnostic quantity — and my data fails there too**
+
+`actin_enlargement` is never clipped (`enl_null[1] = 0.0722`), so (ii) is well-defined on it:
+
+| | value |
+|---|---|
+| null's OWN gain | **12.1810** |
+| ΔE gain | **1.6455** |
+| **(ii): 1.6455 > 12.1810?** | **NO — FAILS** |
+
+**The leak ratchets 12.2× while the activity-attributable component grows 1.65×.** Condition (ii)
+returns **FALSIFIED**, decisively, and it is the condition I recommended against myself.
+
+**Direction check (ruling 020 §3):** `E_invasion` and `actin_enlargement` **agree** — both FAIL (i);
+(ii) fails on enl and is undefined on E_inv. **No disagreement to escalate.**
+
+### 4. **What this does and does NOT mean**
+
+- **DOES:** on L·ETA-5's data as collected, ruling 020's criterion returns **FALSIFIED**, not
+  CONFIRMED.
+- **DOES NOT:** settle the ratchet question. **That run's null was the BROKEN one** (activation
+  floor), which ratchets far harder than an AMENDMENT 4 null would — the 12.18× is inflated by
+  spontaneous release the corrected null suppresses. **The re-run is what settles it.** I am not
+  claiming the ratchet is falsified.
+
+### 5. **Proposed fixes for (ii) — gen-2 decides, I do not**
+
+Ruling 020 §2 refused an invented constant, so none of these adds one:
+
+- **(a) Anchor the gain at the first traversal where the null is non-zero**, applied identically to
+  both arms. No constant; the index is read from the data.
+- **(b) Score (ii)'s gains on `actin_enlargement`** (never clipped) while keeping the level
+  condition on `E_invasion`. Cuts against §3's "score on E_invasion" — flagging the tension, not
+  resolving it.
+- **(c) Replace the ratio with a slope** — regress each arm's E over traversal index and compare
+  slopes. **No denominator, so no clipping singularity**, and no constant.
+- **My lean is (c)**, because it removes the failure mode rather than routing around it. **Stated
+  as a lean, not a choice.** Note (a) and (c) would each have to be re-checked against a null whose
+  early traversals are all-zero.
