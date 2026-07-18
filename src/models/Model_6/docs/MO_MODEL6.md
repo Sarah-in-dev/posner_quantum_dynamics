@@ -137,8 +137,24 @@ commitment cannot resolve in any gap-based experiment as written.
 so they are not tarred with the dishonest ones.
 **Acceptance:** each subsystem either advances with a cited timescale or is excluded with a
 stated reason; a measurement shows committed vs uncommitted spine volume SEPARATING across
-an honest gap (the isolated-module numbers say 1.291 vs 2.389 at +300 s — the full model
-has never been allowed to show it).
+an honest gap — the full model has never been allowed to show it.
+
+> **CORRECTION 2026-07-18 (MO's own defect, raised by PO-4 as Q4-2).** This bar previously read
+> *"the isolated-module numbers say **1.291 vs 2.389** at +300 s"*. **Those numbers have no
+> artifact behind them.** `grep -rn '1.291\|2.389'` over the repo returns hits in coordination
+> prose only — no code, no results file, no log entry produces them. **The MO put unsourced
+> numbers into a PO's definition of done**, which is this program's characteristic defect class
+> (prose asserting a quantity the code does not demonstrate) sitting in the acceptance bar
+> itself. PO-4's reproduction (5 reps, dt=0.005, 300 s, thermal noise on) gives **3.7031 ± 0.0649
+> committed vs 3.0432 ± 0.0572 uncommitted** — disagreeing in magnitude **and in ordering**.
+> The quoted pair is struck; **PO-4 pre-registers against its own reproduction.** Superseded by
+> PO-4's measurement when it lands.
+>
+> **Note the ordering, because it is the substantive part:** volume is HIGHER in the committed
+> arm while `E_invasion` is **26× LOWER** (0.0313 vs 0.8222) — commitment redirects enlargement
+> into `actin_stable`, and `E_invasion` reads the transient pool alone
+> (`spine_plasticity_module.py:412`). Since `r ∝ E_invasion × ca_open`, **a synapse that commits
+> loses pump drive.** Escalated to Sarah as a physics call; bears on §8 and on PO-5.
 
 ### PO-5 — selectivity, re-asked where it can survive
 **Coordinates:** the keystone → input-selectivity → but not through η.

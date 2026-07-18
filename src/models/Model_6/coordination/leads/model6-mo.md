@@ -7,25 +7,54 @@ verified as a MEASUREMENT at the data level before it is accepted — never "it 
 **Worktree:** `.claude/worktrees/nervous-hertz-7ccff6` (branch `claude/nervous-hertz-7ccff6`).
 **Mode:** supervised autonomy — dispatches without per-PO approval; escalates physics calls.
 
-**Status:** RUNNING. Both POs grounded, briefs accepted, resumed to build (`18acd68`).
+**Status:** RUNNING. Three POs live (PO-1, PO-3, PO-4). Backbone-only comms since 18:00Z.
 
-**Current unit:** polling the backbone for PO-1's build slices and PO-3's pre-registration
-commit. Next decision point: PO-2 spawns at PO-1's commit boundary (`model6_core.py` hazard).
-**Last heartbeat:** 2026-07-18 17:47 UTC
-**Blocked on:** nothing. One item awaiting Sarah's optional veto (PO-1 `_critical_threshold`).
+**Current unit:** polling; clearing MO debt. Next decision point: PO-2 spawns at PO-1's commit
+boundary — **currently blocked**, PO-1 holds THREE uncommitted files and the tree does not
+construct (ruling 004 issued).
+**Last heartbeat:** 2026-07-18 18:09 UTC
+**Blocked on:** nothing of the MO's own. Four items with Sarah (below).
 
-**Live POs (session id → PO) — you need these to resume a stalled worker:**
-- `local_e4593171-4394-42ba-8067-c70dc97cc48e` → **PO-1** (B2), worktree `nervous-hertz-7ccff6`
-- `local_b7aeedcf-4425-4416-8389-2a57e288f7b5` → **PO-3** (E_invasion), same worktree
-Chips: `task_274226b1` (PO-1), `task_ead7d588` (PO-3). Both resumed by message 17:47Z after
-each returned its brief and correctly stopped on an open question.
+**Live POs (session id → PO):**
+- `local_e4593171-...` → **PO-1** (B2). Probe committed FAILING first (`fa12009`). Now holding
+  `model6_core.py` + `model6_parameters.py` + `vibrational_cascade_module.py` uncommitted; tree
+  does not construct. Shared-file hazard ARMED. Ruling 004 issued.
+- `local_b7aeedcf-...` → **PO-3** (E_invasion). Run IN FLIGHT, pinned to `1b43b89` in a clean
+  checkout. Prereg amended twice pre-run (A1.1 glutamate, A2 retention re-derivation).
+  Provenance verdict ACCEPTED — acceptance item 2 MET.
+- `local_0b183e0f-...` → **PO-4** (gap). Pre-registered; consolidation approved with scope limits.
 
-**Landed this run:** `093c675` MO brief · `895d55f` PO registration · `18acd68` rulings +
-findings routed. Worktree topology error found and corrected (see `board.md`).
+**PO-5 pre-positioned, NOT dispatched:** `requests/po5-selectivity/mo-f3-001.md` — must not
+inherit the starved-NMDAR harness. Still HARD-BLOCKED on PO-3.
 
-**Verification owed (do NOT accept on self-report):** PO-1's "two pumps agree on the same mode"
-measurement — I verify the demonstrated FAILING configuration, not the passing run. PO-3's
-verdict function — I verify the positive control fires and the null arm returns negative.
+**Landed this run:** `093c675` brief · `895d55f` registration · `18acd68` rulings · `e3e6090`
+heartbeat · `19113c4` poll directive · `fbe2311` PO-4 dispatch · `bcd15b8` crash routing ·
+`d0ed6d8` PO-4's correction of the MO · `5661564` confinement ruling · `9d4a526` GATE-2 band ·
+`d9a68b5` hazard armed · this commit (MO_MODEL6 correction).
+
+**MO DEFECTS THIS SESSION — all caught by POs, none by the MO. Record honestly, do not repeat:**
+1. **Verified prose against prose.** Read `analytical_gap`'s docstring lists, concluded "frozen",
+   never read the function tail (it steps 1 ms). Reported it tagged `[code SHOWN]`. Caught by PO-4.
+2. **Unsourced numbers in a PO's acceptance bar.** `1.291/2.389` had no artifact. Caught by PO-4.
+   Corrected in `MO_MODEL6.md` §3 this cycle.
+3. **Named prior art without verifying it.** PO-3's kickoff called `eta_in_live_trial.py` prior
+   art; it under-delivers glutamate ~100×. Caught by PO-3.
+4. **Omitted the continuous-poll mandate from the first two kickoffs** (`consumer-acceptance-gate:34`
+   names this exact scar), causing idle POs and self-inflicted `send_message` cost.
+5. **Credited a design element that was itself the error** — ruling 003 praised GATE 1's
+   `CONFINED-RATCHET` branch; PO-3 then deleted it as resting on the inverted premise.
+
+**Verification owed (never accept on self-report):** PO-1's demonstrated FAILING configuration,
+not the passing run · PO-3's positive control firing and null arm returning negative · PO-4's
+pre-fix `0.9999944` measured not asserted, and every subsystem in exactly one column.
+
+**WITH SARAH (four, none blocking the MO):**
+1. **Physics:** commitment depletes `E_invasion` 26× ⇒ a committed synapse loses pump drive.
+   Bears on §8 and PO-5.
+2. **Record:** F-3 puts L·ETA-3's `ca_open` attribution in question. PO-3 recommends an
+   ERR-2-style narrowing banner, no retraction, no re-run.
+3. **`K_CLASSICAL`:** priority raised — the gap runs the RETIRED `0.05` in every driver.
+4. **`_critical_threshold` deletion:** MO ruled delete; open for veto.
 
 **Notes / decomposition (living — rewrite each cycle):**
 - Board came from the 2026-07-18 substrate audit (`docs/SUBSTRATE_AUDIT_JUL18.md`) plus
