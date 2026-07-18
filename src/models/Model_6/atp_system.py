@@ -351,16 +351,39 @@ class PhosphateSpeciation:
         # POOL 2: Structural phosphate (baseline, available for Posners)
         self.phosphate_structural = np.ones(grid_shape) * params.phosphate_total
         
-        # Total for pH buffering calculations
-        self.phosphate_total = self.phosphate_structural.copy()
-        
+        # NOTE: phosphate_total is a DERIVED PROPERTY (see below), not a stored field.
+        # It was previously assigned here and recomputed in exactly one other place
+        # (add_phosphate_from_atp), so any site that changed a pool WITHOUT going through
+        # that method left the total stale — which is what dimer consumption at
+        # model6_core.py:450-452 and :756-757 did. Deriving it makes staleness structurally
+        # impossible rather than fixing the two known sites and waiting for a third.
+
         # Speciated forms
         self.H2PO4 = np.zeros(grid_shape)  # Monobasic
         self.HPO4 = np.zeros(grid_shape)   # Dibasic (main species)
         self.PO4 = np.zeros(grid_shape)    # Tribasic
         
         logger.info("Initialized phosphate speciation")
-        
+
+    @property
+    def phosphate_total(self) -> np.ndarray:
+        """
+        Total phosphate across both pools — DERIVED, never stored.
+
+        Both pools contribute to pH buffering. Deriving this on read is what guarantees it
+        tracks every mutation of either pool, including dimer consumption/dissolution applied
+        directly to `phosphate_structural` by model6_core.
+
+        NOTE for whoever wires this next: as of 2026-07-18 this property's only consumer is
+        `ATPSystem.step` passing it to `JCouplingField.calculate_j_coupling`, which does NOT
+        read its `phosphate` argument (AST-verified; the argument is dead and its docstring
+        claims a dependency the body does not have). So correcting this value changes no
+        current behaviour — it is fixed because a wrong field is a trap for the next consumer,
+        not because a live consumer was misreading it. See coordination/queue/po2-phosphate.md Q3.
+        """
+        return self.phosphate_structural + self.phosphate_metabolic
+
+
     def update_speciation(self, pH: np.ndarray):
         """
         Calculate speciation based on local pH using Henderson-Hasselbalch
@@ -423,10 +446,10 @@ class PhosphateSpeciation:
     
         # SMALL FRACTION enters structural pool (10%)
         self.phosphate_structural += source * fraction
-    
-        # Update total for pH buffering (both pools contribute)
-        self.phosphate_total = self.phosphate_structural + self.phosphate_metabolic
-    
+
+        # (phosphate_total was recomputed here; it is now a derived property, so this was the
+        #  ONLY site keeping it current and every other mutation left it stale.)
+
     def get_posner_forming_species(self) -> np.ndarray:
         """
         Get the phosphate species that forms Posners
