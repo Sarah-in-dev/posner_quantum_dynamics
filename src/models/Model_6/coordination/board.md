@@ -990,3 +990,48 @@ is no decision here — there is a correction. Queue item MO-1 is **resolved by 
   structure *within* that regime.
 - **§3 [LOCKED]:** `productive_fraction` is *"one bounded free parameter … **never tuned to a target
   dimer count**"* — the standing anti-tuning rule, in the ontology's own words.
+
+---
+
+## MO CORRECTION — 2026-07-18 21:06Z · **the MO's T2/J-coupling escalation was half wrong**
+
+PO-1's Unit 3 registry (`427b47c`) classifies inert dimensions by *why*, and the taxonomy corrects
+what the MO told Sarah. **MO defect #13: it reported "swept and read by nothing" and let that imply
+the physics does not use these quantities. The physics uses both — by other routes.**
+
+**What the MO said:** *"`q2_t2_p31` and `q2_j_coupling_hz` are swept and read by nothing … for a
+model whose central claim is quantum coherence, those are the two most damaging false nulls
+available."*
+
+**What is actually true, MO-verified:**
+
+**`q2_t2_p31` — (2) CONSUMER HARDCODED, and the values disagree.**
+- The **live** dimer singlet lifetime is a hardcoded `T_singlet_P31 = 216.0 s`, duplicated at
+  `dimer_particles.py:288` **and** `quantum_coherence.py:107`.
+- The parameter the sweep writes, `quantum.T_singlet_dimer = 500.0` (`model6_parameters.py:391`), is
+  read **only** by `singlet_dynamics.py:122` — **an orphan, zero importers** (MO-confirmed).
+- **So the declared coherence time is 500 s and the physics runs on 216 s.**
+
+**This is a construct-validity defect against the ontology, not just a wiring gap.**
+`quantum-system-canonical` §1 and §2.2 both put the window at **~100–200 s**, *"maps to the
+behavioural eligibility-trace / BTSP window."* **216 s sits at the edge of that band; 500 s is
+2.5× outside it.** The hardcoded value is the defensible one and **the declared parameter
+contradicts the ontology.** The sweep dimension writes to the value that is both wrong and orphaned.
+
+**`q2_j_coupling_hz` — (1) NO CONSUMER, and scale-mismatched.** `quantum.J_intrinsic_dimer = 15.0
+Hz` has one write, zero reads. **But J-coupling itself IS live**, via a different route entirely:
+the ATP-derived field (`atp_system.py:296-339`, `atp.J_PO_free` / `J_PP_atp`) plus per-dimer
+`j_couplings_intra` drawn from a hardcoded `N(0.15, 0.15)`.
+
+### What stands, and what the MO withdraws
+
+**STANDS:** sweeping either dimension returns a flat response that would read as a physical null.
+That was the point and it is unchanged.
+
+**WITHDRAWN:** the implication that the quantum quantities are absent from the physics. **They are
+present. They are unreachable from the sweep, and in T2's case the reachable parameter disagrees
+with the physics by 2.3×.** That is a different and more precise defect, and Sarah should have been
+given the precise version.
+
+**PO-1's taxonomy is adopted board-wide:** NO CONSUMER vs CONSUMER HARDCODED are different defects
+with different fixes, and collapsing them — as the MO did — loses the distinction that matters.
