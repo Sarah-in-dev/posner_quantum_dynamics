@@ -23,7 +23,7 @@ is itself a stated reason, not a third way to be silent).
 | # | subsystem | timescale that makes integration necessary | source |
 |---|---|---|---|
 | 1 | P_S decoherence | per-dimer `T_eff`, `T_base = 216 s` at `fraction_P31 = 1.0` | Agarwal 2023 (dimer coherence, hundreds of s) |
-| 2 | Dissolution | `k_diss = K_CLASSICAL·(1 − singlet_excess)`, `K_CLASSICAL = 0.05 s⁻¹` | **⚠ the RETIRED rate — see §D** |
+| 2 | Dissolution | `k_diss = K_CLASSICAL·(1 − singlet_excess)`, **`K_CLASSICAL = 0.005 s⁻¹`** | cluster lifetime τ ≈ 200 s, **Turhan 2024** — see §D |
 | 3 | Particle removal | tracks (2); no independent timescale | — |
 | 4 | Bond cleanup (`P_S < 0.5`) | tracks (1); no independent timescale | — |
 | 5 | Stochastic disentanglement | `k_decohere = 0.01·(1 − P_Si·P_Sj)` s⁻¹ | in-code |
@@ -115,10 +115,22 @@ passes `0.0` (the honest value — no drive at rest) and **claims nothing.** Lis
 advanced pathway would have been the exact defect class this table eliminates, and the docstring
 one would be tempted to copy from is itself an instance of it.
 
-**`K_CLASSICAL = 0.05`** (§A row 2) is the rate `model6-dimer-formation-chemistry:64` **RETIRED**
-(to `0.005`; cluster lifetime τ ≈ 200 s, Turhan 2024). It is **MO-held and deliberately untouched
-by PO-4.** Every dissolution number this function produces inherits it. After consolidation it
-sits at **one** site rather than two, so the MO's decision is a one-line change.
+**`K_CLASSICAL` — CORRECTED 2026-07-18 (MO rotation 002).** It is now **`0.005 s⁻¹`**, the
+grounded rate: `quantum-system-canonical` §3 carries it as *[GROUNDED — Turhan 2024]*, cluster
+lifetime τ ≈ 200 s, and `model6-dimer-formation-chemistry` §1 item 4 records the retirement of the
+previous **uncited** `0.05`. The consolidation is what made this one site rather than two.
+
+**Every dissolution number this function produced BEFORE 2026-07-18 inherits `0.05`** and must be
+re-read in that light. Measured delta at the same driven state (2034 dimers pre-gap):
+
+| gap | dimers lost @ 0.05 | @ 0.005 | loss ratio |
+|---|---|---|---|
+| 20 s | 141 | 15 | **9.40×** |
+| 45 s | 539 | 66 | **8.17×** |
+
+Survival fraction moved only 0.9307 → 0.9926 at 20 s, which *understates* the change by an order
+of magnitude — **the loss column is the honest one.** The shortfall from a clean 10× is coherence
+protection: `k_diss = K·(1 − singlet_excess)` and fresh dimers enter a gap at `se ≈ 0.997`.
 
 ## E. What the tail step is, and is not
 

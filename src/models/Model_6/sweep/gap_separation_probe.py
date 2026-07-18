@@ -137,8 +137,11 @@ def main():
     print("=" * 78)
     print("LIMITS: controlled initial condition; the live drive path is NOT exercised and")
     print("        does not reach this regime (measured: a traversal leaves E_invasion at")
-    print("        0.0000, 10x below invasion_threshold). K_CLASSICAL = 0.05, the RETIRED")
-    print("        rate, is live in the gap -- MO-held. Two synapses, one network.")
+    print("        0.0000, 10x below invasion_threshold). Two synapses, one network.")
+    print("        NOTE: this measurement was taken with K_CLASSICAL = 0.05, the retired")
+    print("        rate; it was corrected to the grounded 0.005 later the same day. The")
+    print("        separation is an ACTIN/volume result and does not read the dissolution")
+    print("        rate, so the correction does not move it -- but the run predates it.")
 
     p = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                      'gap_separation_probe_results.json')

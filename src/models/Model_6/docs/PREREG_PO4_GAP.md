@@ -347,6 +347,9 @@ the defect on unmodified code. A passing run alone cannot satisfy this registrat
   (`run_theta_burst_45s.py:405-415`). DECISION RECORD `dt-1` covers `P_S`/edges, **not**
   transient-phase counts; it is not assumed to transfer.
 - `K_CLASSICAL = 0.05` (the retired rate) remains live in the gap during this measurement.
+  **[SUPERSEDED 2026-07-18 21:30Z — corrected to the grounded `0.005` under MO rotation 002.
+  This limit was TRUE for every run recorded above and the line is left standing rather than
+  rewritten; runs after that commit carry `0.005`. See AMENDMENT E and the L·GAP-3 delta.]**
   MO-held. **Every dissolution number this measurement produces inherits it** and must be read
   that way. Stated in advance, not as a caveat afterwards.
 - This measures the **gap**, not the drive. Nothing here validates the physics *during* a
