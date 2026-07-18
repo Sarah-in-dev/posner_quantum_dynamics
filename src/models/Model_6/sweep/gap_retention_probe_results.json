@@ -1,40 +1,94 @@
 {
-  "verdict": "DEFECT REPRODUCED \u2014 the clock is stopped",
+  "verdict": "RETENTION MATCHES PREDICTION",
   "why": [
-    "duration-independence: R(0)/R(20) ratio = 1.000000 (registered 1.0) -- no decay model produces this",
-    "clock delta: spine_plasticity.time advanced 0.0010 s while network.time advanced 20.0010 s (ratio 0.000050)",
-    "R = 0.999994 >= 0.99 in the uncommitted arm; registered honest value was 0.8948",
-    "R = 0.999978 >= 0.99 in the committed arm; registered honest value was 0.6751"
+    "uncommitted: R = 0.8829 vs predicted 0.8832",
+    "committed: R = 0.6361 vs predicted 0.6390",
+    "oos_30_uncommitted: R = 0.8291 vs predicted 0.8294",
+    "oos_30_committed: R = 0.5016 vs predicted 0.5052",
+    "oos_45_uncommitted: R = 0.7538 vs predicted 0.7542",
+    "oos_45_committed: R = 0.3439 vs predicted 0.3479",
+    "oos_10_uncommitted: R = 0.9398 vs predicted 0.9400",
+    "oos_10_committed: R = 0.8000 vs predicted 0.8018",
+    "oos_60_uncommitted: R = 0.6845 vs predicted 0.6850",
+    "oos_60_committed: R = 0.2268 vs predicted 0.2307"
   ],
   "gap_s": 20.0,
   "results": {
     "uncommitted": {
-      "R": 0.9999938311224005,
-      "R_pred": 0.8948393168143698,
-      "diff": 0.10515451430803069,
+      "R": 0.8829201279337665,
+      "R_pred": 0.8831547964604108,
+      "diff": 0.0002346685266443327,
       "conf": 0.0,
       "E_pre": 0.5084745762711864,
-      "E_post": 0.508471439553763,
+      "E_post": 0.4489424379324236,
       "vol_pre": 1.0,
-      "vol_post": 0.9998952604569286,
-      "stopped_clock": true
+      "vol_post": 2.098286394185488,
+      "stopped_clock": false
     },
     "committed": {
-      "R": 0.9999781731880435,
-      "R_pred": 0.6750598471879043,
-      "diff": 0.32491832600013915,
+      "R": 0.636078729766903,
+      "R_pred": 0.6389553857643382,
+      "diff": 0.0028766559974351402,
       "conf": 0.975609756097561,
       "E_pre": 0.5084745762711864,
-      "E_post": 0.5084634778922255,
+      "E_post": 0.3234298625933405,
       "vol_pre": 1.0,
-      "vol_post": 1.0009497127191471,
-      "stopped_clock": true
+      "vol_post": 2.2645557066261985,
+      "stopped_clock": false
+    },
+    "oos_30_uncommitted": {
+      "R": 0.8290997305646072,
+      "R_pred": 0.8294241387673489,
+      "diff": 0.00032440820274171056,
+      "passed": true
+    },
+    "oos_30_committed": {
+      "R": 0.5016323392564959,
+      "R_pred": 0.505158717035674,
+      "diff": 0.0035263777791781914,
+      "passed": true
+    },
+    "oos_45_uncommitted": {
+      "R": 0.7537907255987903,
+      "R_pred": 0.7542230923015609,
+      "diff": 0.0004323667027705813,
+      "passed": true
+    },
+    "oos_45_committed": {
+      "R": 0.3439415954863302,
+      "R_pred": 0.34785182297581846,
+      "diff": 0.003910227489488272,
+      "passed": true
+    },
+    "oos_10_uncommitted": {
+      "R": 0.9398258714341675,
+      "R_pred": 0.9399549654519616,
+      "diff": 0.00012909401779404028,
+      "passed": true
+    },
+    "oos_10_committed": {
+      "R": 0.8000349839115943,
+      "R_pred": 0.8018002858768437,
+      "diff": 0.0017653019652493773,
+      "passed": true
+    },
+    "oos_60_uncommitted": {
+      "R": 0.6845226645013276,
+      "R_pred": 0.6850347895264325,
+      "diff": 0.0005121250251048926,
+      "passed": true
+    },
+    "oos_60_committed": {
+      "R": 0.2268470069062425,
+      "R_pred": 0.2306985398645501,
+      "diff": 0.0038515329583076185,
+      "passed": true
     }
   },
   "clock_delta": {
     "net_advance": 20.001,
-    "sp_advance": 0.001,
-    "honest": false
+    "sp_advance": 20.001,
+    "honest": true
   },
   "null_zero_gap_R": 0.9999938311224005
 }

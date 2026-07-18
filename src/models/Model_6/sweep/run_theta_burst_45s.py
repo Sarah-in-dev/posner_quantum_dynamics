@@ -45,23 +45,63 @@ def analytical_gap(network, gap_duration_s, dt_sub=1.0, diagnostics=False):
     """
     Advance the network through a silent gap analytically.
 
-    Physics during silence (V = -70 mV, no reward):
-      1. P_S decoherence: per-dimer exponential decay toward 0.25
-      2. Dissolution: concentration decays at k_diss = k_classical*(1 - singlet_excess)
-      3. Particle removal: track concentration, remove lowest-coherence particles
-      4. Bond cleanup: remove bonds involving P_S < 0.5 dimers
-      5. Stochastic disentanglement: k_decohere = 0.01*(1 - P_Si*P_Sj)
+    THE RULE THIS DOCSTRING OBEYS (PO-4, 2026-07-18): every subsystem appears in
+    ONE of the two columns below. Nothing is in neither. The previous version of
+    this docstring listed five ADVANCED items and six EXCLUDED items and left
+    actin / E_invasion / CaMKII / DDSC in NEITHER -- so they were silently frozen
+    while the prose read as complete. That is this program's characteristic defect
+    class (prose asserting mechanisms the code does not implement), and it is the
+    defect this function was rewritten to remove. If you add a subsystem, it goes
+    in a column or this docstring is a lie.
 
-    NOT computed (negligible during silence):
-      - Calcium dynamics (already at baseline within ~2s)
-      - ATP hydrolysis / phosphate production
-      - EM field / tryptophan superradiance
-      - New dimer formation (no calcium)
-      - New bond formation (no EM field)
-      - Network entanglement tracker O(n^2) recalc
+    ADVANCED during the gap (integrated at dt_sub, with the timescale that makes
+    integration necessary):
+      1. P_S decoherence      per-dimer exponential decay toward 0.25, T_eff-scaled
+      2. Dissolution          k_diss = K_CLASSICAL*(1 - singlet_excess)
+      3. Particle removal     track concentration, remove lowest-coherence particles
+      4. Bond cleanup         remove bonds involving P_S < 0.5 dimers
+      5. Stochastic disentanglement   k_decohere = 0.01*(1 - P_Si*P_Sj)
+      6. Actin enlargement    tau_extrude = 180 s unconfined (Honkura 2008, 2-15 min
+                              band); ~51 s confined, where commitment redirects the
+                              pool into stabilization instead of shaft extrusion
+      7. Spine volume         tau_volume_follow_actin = 5 s (Matsuzaki 2004), follows actin
+      8. CaMKII               Jain 2024's DDSC window is 30-40 s post-induction --
+                              INSIDE this interval. Integrated here so delayed
+                              commitment can resolve at all; before this fix it could
+                              not, in any gap-based experiment.
+      9. DDSC                 tau_rise 15 s / tau_decay 50 s, peak ~35 s
 
-    Sub-interval dt_sub controls accuracy of the coupling between
-    P_S decay and dissolution rate. 1s is fine for 45s gaps.
+    EXCLUDED, and these are HONEST exclusions -- "settles fast, then clamp" is a
+    defensible modelling choice, NOT the silent freeze above. Each carries the
+    timescale that justifies it:
+      - Calcium dynamics          at baseline within ~2 s; clamped at baseline
+      - Dopamine                  clears in ~2 s; no reward is delivered in a gap
+      - ATP level                 tau ~ 5 s; re-equilibrates far inside any gap
+      - ATP hydrolysis / phosphate production   no drive at rest
+      - EM field / tryptophan superradiance     no drive at rest
+      - New dimer formation       requires the calcium transient; none at baseline
+      - New bond formation        requires the EM field; none at rest
+      - Network entanglement tracker O(n^2) recalc   deferred to the single tail
+                                  refresh below, for cost, not for physics
+
+    NOT A PATHWAY, recorded so it is not mistaken for one: quantum_field_kT is
+    accepted by spine_plasticity.step at three call sites and read at none --
+    measured bit-identical volume for kT in {0,1,5,20,100} (DECISION RECORD D21(1)).
+    It is passed as 0.0 here and is NOT claimed as something the gap advances.
+
+    COMMITMENT IS NOT EVALUATED HERE. CaMKII integrates across the gap; the
+    threshold test that sets commitment stays in model6_core.py:671-685, reached by
+    the tail step. `model6-commitment-pathway` is LOCKED against setting commitment
+    outside the CaMKII path, and nothing here writes it.
+
+    K_CLASSICAL = 0.05 below is the rate `model6-dimer-formation-chemistry` RETIRED
+    (to 0.005, cluster lifetime tau ~ 200 s, Turhan 2024). It is MO-held and
+    deliberately untouched by PO-4; every dissolution number this function produces
+    inherits it.
+
+    Sub-interval dt_sub controls accuracy of the coupling between P_S decay and
+    dissolution rate, and now also the Euler accuracy of the plasticity advance.
+    1 s is fine for 45 s gaps.
 
     If diagnostics=True, returns a dict with per-stage counts.
     """
@@ -239,6 +279,55 @@ def analytical_gap(network, gap_duration_s, dt_sub=1.0, diagnostics=False):
             bonds_after_step5 = sum(len(s.dimer_particles.entanglement_bonds)
                                     for s in network.synapses)
             diag["bonds_removed_step5"] += (bonds_before_step5 - bonds_after_step5)
+
+        # ------------------------------------------------------------------
+        # 6. PLASTICITY CLOCK (added 2026-07-18, PO-4 — the defect this fix repairs)
+        # ------------------------------------------------------------------
+        # Before this, the ONLY plasticity advance in a gap was the single
+        # network.step(0.001, ...) in the tail, so actin / E_invasion / CaMKII /
+        # DDSC each advanced 1 ms per gap REGARDLESS of gap length. Measured:
+        # spine_plasticity.time +0.0010 s against network.time +20.0010 s, and
+        # E_invasion retention 0.999994 where tau_extrude = 180 s predicts 0.8948.
+        # A 0 s gap and a 20 s gap retained the identical fraction (ratio 1.000000)
+        # -- the signature of a fixed tick rather than decay.
+        #
+        # These subsystems settle SLOWLY (tens to hundreds of seconds) and so are
+        # exactly the ones a gap must integrate rather than clamp:
+        #   actin enlargement  tau_extrude = 180 s unconfined (Honkura 2008), or
+        #                      1/(k_stab*conf + (1-conf)/tau_extrude) ~= 51 s confined
+        #   spine volume       tau_volume_follow_actin = 5 s, tracking actin
+        #   CaMKII             Jain 2024 DDSC window is 30-40 s post-induction --
+        #                      i.e. INSIDE the interval that used to be skipped
+        #   DDSC               tau_rise 15 s / tau_decay 50 s, peak ~35 s
+        #
+        # Commitment is NOT evaluated here. CaMKII INTEGRATES across the gap (that
+        # is what needs the time); the commitment THRESHOLD TEST is instantaneous
+        # and is left to the real path in model6_core.py:671-685, reached by the
+        # tail step. This keeps `model6-commitment-pathway` (LOCKED) satisfied --
+        # no commitment state is ever written analytically -- and avoids
+        # duplicating that condition here, where it would drift.
+        for syn in network.synapses:
+            # Resting calcium, READ from the synapse rather than hardcoded. During
+            # silence this IS the baseline (the docstring's "at baseline within ~2 s").
+            ca_uM = float(np.max(syn.calcium.get_concentration())) * 1e6
+
+            # Same drive convention as model6_core.py:687-699 -- the committed
+            # memory level when committed, zero otherwise.
+            drive = (syn._committed_memory_level
+                     if getattr(syn, '_camkii_committed', False) else 0.0)
+
+            # quantum_field_kT = 0.0: no EM drive at rest. (D21(1) records this
+            # argument as measured INERT in spine plasticity -- bit-identical volume
+            # for kT in {0,1,5,20,100}. Passed honestly as zero, and NOT claimed as
+            # a pathway the gap advances.)
+            syn.spine_plasticity.step(actual_dt, drive, ca_uM, quantum_field_kT=0.0)
+
+            # CaMKII integrates at baseline calcium with no dimer field at rest.
+            syn.camkii.step(actual_dt, ca_uM, 0.0)
+
+            # DDSC integrates only once triggered (model6_core.py:723-725).
+            if getattr(syn, 'ddsc', None) is not None and syn.ddsc.triggered:
+                syn.ddsc.integrate(syn.time, actual_dt)
 
     # Refresh network entanglement tracker after dissolutions
     if diag is not None:

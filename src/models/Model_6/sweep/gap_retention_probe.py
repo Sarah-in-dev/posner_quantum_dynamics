@@ -67,10 +67,23 @@ K_STAB = 0.02
 CONF_SS = 0.02 / (0.02 + 0.0005)
 
 
+INVASION_THRESHOLD = 0.1   # spine_plasticity_module.py:116
+
+
 def predicted_R(gap_s, conf):
-    """The registered prediction, from the module's own constants. Not fitted."""
+    """The registered prediction, from the module's own constants. Not fitted.
+
+    AMENDMENT B: E_invasion is AFFINE in actin_enlargement, not proportional --
+    spine_plasticity_module.py:412 subtracts invasion_threshold before normalising.
+    So the retention of E is NOT the decay factor f of the enlargement pool:
+        R_E = (E0*f - thr) / (E0 - thr)
+    Registering f itself (AMENDMENT A and earlier) was registering the decay of the
+    wrong variable, and the pre-registered verdict function caught it as FALSIFIED.
+    Zero free parameters; nothing fitted to an observed value.
+    """
     rate = K_STAB * conf + (1.0 - conf) / TAU_EXTRUDE
-    return float(np.exp(-rate * gap_s))
+    f = float(np.exp(-rate * gap_s))
+    return (E0 * f - INVASION_THRESHOLD) / (E0 - INVASION_THRESHOLD)
 
 
 def make_network(n=2):
@@ -183,6 +196,31 @@ def main():
         if not stopped and d > TOL:
             failures.append(f"{label}: |R-Rpred| = {d:.4f} > {TOL}")
 
+    # ---- OUT-OF-SAMPLE TEST (AMENDMENT B, registered in 70223b0 BEFORE this ran).
+    # The corrected formula has seen 20 s. These durations it has never been scored
+    # at. If any of the four misses by > TOL, the corrected formula is wrong too and
+    # no third formula gets registered.
+    print(f"\nOUT-OF-SAMPLE (AMENDMENT B — registered before running, never fitted):")
+    print(f"{'gap':>6}{'arm':>14}{'R meas':>11}{'R pred':>11}{'|diff|':>9}   result")
+    print("-" * 78)
+    oos_fail = []
+    # 30/45 s: AMENDMENT B. 10/60 s: AMENDMENT C, predictions script-computed and
+    # committed in 5a17288 before this ran, on durations never previously used.
+    for g in (30.0, 45.0, 10.0, 60.0):
+        for label, committed in (("uncommitted", False), ("committed", True)):
+            pre_o, post_o = run_arm(committed, g)
+            elig = [i for i, p in enumerate(pre_o) if p['E'] > 0.0]
+            Ro = float(np.mean([post_o[i]['E'] / pre_o[i]['E'] for i in elig]))
+            Rpo = predicted_R(g, post_o[0]['conf'])
+            do = abs(Ro - Rpo)
+            ok = do <= TOL
+            print(f"{g:>6.0f}{label:>14}{Ro:>11.4f}{Rpo:>11.4f}{do:>9.4f}   "
+                  f"{'PASS' if ok else 'MISS'}")
+            results[f'oos_{g:.0f}_{label}'] = dict(R=Ro, R_pred=Rpo, diff=do, passed=bool(ok))
+            if not ok:
+                oos_fail.append(f"out-of-sample {g:.0f}s {label}: |R-Rpred| = {do:.4f} > {TOL}")
+    failures.extend(oos_fail)
+
     # ---- D20 CLOCK-DELTA DISCRIMINATOR (adopted on MO ruling; proof, not symptom)
     pre_c, post_c = run_arm(False, GAP_S)
     sp_adv, net_adv = post_c[0]['sp_advance'], post_c[0]['net_advance']
@@ -211,7 +249,8 @@ def main():
 
     # ---- VERDICT (pre-registered Sec.5)
     print("\n" + "=" * 78)
-    both_stopped = all(results[k]['stopped_clock'] for k in results)
+    arms = ('uncommitted', 'committed')
+    both_stopped = all(results[k]['stopped_clock'] for k in arms)
     if inconclusive:
         v = "INCONCLUSIVE"
         why = inconclusive

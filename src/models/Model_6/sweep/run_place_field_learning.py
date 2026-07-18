@@ -343,15 +343,17 @@ def run_experiment(feedback_enabled=True, n_traversals=None):
             analytical_gap(network, INTER_TRAVERSAL_S, dt_sub=1.0)
             t_gap = time.time() - t0
 
-            # Also step spine plasticity forward through the gap
-            # (analytical_gap doesn't advance plasticity dynamics)
-            for syn in network.synapses:
-                drive = getattr(syn, '_committed_memory_level', 0.0)
-                ca_uM = 0.05  # baseline during gap
-                syn.spine_plasticity.step(
-                    INTER_TRAVERSAL_S, drive, ca_uM, quantum_field_kT=0.0
-                )
-
+            # The manual spine-plasticity advance that used to sit here is REMOVED
+            # (PO-4, 2026-07-18). It was a workaround for analytical_gap not advancing
+            # plasticity; the gap now advances it (stage 6 there), so keeping this
+            # would DOUBLE-advance -- 40 s of plasticity per 20 s gap.
+            #
+            # It was also numerically wrong on its own terms: it took the whole
+            # INTER_TRAVERSAL_S as a SINGLE Euler step (1 - 20/50.9 = 0.607 against the
+            # exact exp(-20/50.9) = 0.676 for a committed spine, ~10% error), and moved
+            # the confinement latch by k_conf*s*dt = 0.40 in that one step. The gap
+            # integrates at dt_sub instead. Any earlier place-field result that leaned
+            # on gap plasticity carries the old error.
             print(f"    Gap: {t_gap:.1f}s wall | "
                   f"spine_vol=[{', '.join(f'{s.spine_plasticity.spine_volume:.3f}' for s in network.synapses)}]",
                   flush=True)
