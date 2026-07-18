@@ -179,3 +179,56 @@ general — it supports mixtures, not just two discrete isotopes — and is what
 **Worth preserving before `eligibility_trace` goes:** it carries isotope T2 figures (P31 ~68 s,
 P32 ~0.3 s) that differ from the live `T_singlet_P31/P32`. Provenance, not code — I will log the
 numbers in the research log as part of the deletion commit rather than lose them.
+
+---
+
+## PO-6a Unit 3 — heartbeat 2026-07-18 20:36:43Z → complete
+
+**Delivered:** every dimension resolved — reached-and-demonstrated, or INERT-and-labelled.
+`427b47c` (labelling), `5dcd224` (log + queue), `de8e0df` (effect-test stage).
+
+**22 dimensions: 13 live, 9 INERT, 2 of the inert declared `critical`.**
+
+**The critical two — investigated first, and the answers differ. I did not invent a consumer.**
+- `q2_t2_p31` — **consumer EXISTS but is hardcoded, and the values disagree.** Live dimer
+  singlet lifetime is `T_singlet_P31 = 216.0` s at `dimer_particles.py:288`, duplicated at
+  `quantum_coherence.py:107`. The swept parameter `quantum.T_singlet_dimer = 500.0` is read
+  only by `singlet_dynamics.py:122`, an orphan. **The declared 500 s is not the 216 s the
+  model runs.** 216 is inside Agarwal's 100–200 s band; 500 is not. ROUTED to PO-5 (their
+  live file, next to the §8 keystone) + queue Q8.
+- `q2_j_coupling_hz` — **no consumer, and scale-mismatched to its own name.**
+  `J_intrinsic_dimer = 15.0 Hz`: one write, zero reads. J-coupling is live by another route
+  (ATP field + per-dimer `N(0.15,0.15)` at `dimer_particles.py:49`, ~100× below 15 Hz).
+  Re-targeting = choosing which J is meant. Physics call. ROUTED.
+- `q2_k_agg_baseline` — **NOT mechanically fixable.** `k_base = 18918.67` vs declared values
+  `[0.001…0.05]`, which match `k_classical = 0.005` exactly: the values were written for a
+  dissolution rate. "Fixing the guard" would inject values ~10⁶ off and produce a curve that
+  looks like physics. Queue Q9.
+
+**`hasattr` defect CLASS (asked for the class, not the instance):** 46 guarded assignment
+blocks, but most are legitimate — optional-subsystem reads and the lazy-init idiom. The
+defect is the subset guarding **application of an external input**, where False silently
+discards it: `sweep_runner.py:92`, `exp_sensitivity_analysis.py:176-179`. Those must fail
+loudly. Same mechanism as the missing `cascade` attribute (B2-1).
+
+**Landed on my own surface:** `INERT_DIMENSIONS` — a *machine-readable* registry (a comment
+can be skimmed past; a registry can be asserted against) + `assert_no_inert()`. `sweep_runner`
+warns **before** the run and stamps `inert`/`inert_reason` into the **results JSON**, so a
+saved file outlives the console warning. It **warns rather than dropping** — silently removing
+inert dimensions would hide the defect.
+
+**A miss I caught in my own work, recorded because it is the same class I am auditing:** the
+effect test's first version used one global fingerprint and reported "NO EFFECT" for
+`q1_n_tryptophan` and `q1_f_coherent_base`. Both are live — they move `collective_field_kT`
+(18.6→23.0, 14.0→22.1). The fingerprint was blind to the Q1 channel. **A null from an
+instrument that cannot see the channel is a blind spot, not a null** — and it would have
+condemned two working dimensions on the same page where I accused the harness of
+manufacturing false nulls. Observables are now declared per-dimension, and a non-moving
+observable reports **UNDEMONSTRATED**, never INERT.
+
+Also verified while there: B2's drive change did **not** orphan `collective_field_kT` — it
+retains live consumers including the gate at `model6_core.py:734`.
+
+**Open with Sarah/MO:** Q7 (nine inert), Q8 (216 vs 500 s — the one that matters beyond the
+harness), Q9 (`k_agg` mis-specified). **Deletions still held** pending the isotope question,
+per rotation-002.
