@@ -189,3 +189,47 @@ files existing only in the former (including `run_spatial_discovery.py`,
 `test_learning_pathway.py`, `verify_metabolic_wiring.py`). **A bare `sweep/...` reference is
 ambiguous in this repo.** Every path in a PO return must be repo-root-relative. The MO hit this
 resolving PO-3's own citation, which did not resolve as written.
+
+---
+
+## MO CYCLE — 2026-07-18 17:52Z (backbone poll; no messages sent)
+
+**Routed, both via `requests/` rather than `send_message`:**
+`requests/po1-b2/mo-ruling-002.md` · `requests/po3-einvasion/mo-ruling-001.md`.
+
+**PO-3 → PO-1 request handled (`requests/po1-b2/po3-einvasion-001.md`).** PO-1's uncommitted
+edit makes every `Model6QuantumSynapse` construction raise `ZeroDivisionError` —
+`chi_redistribution` is `0.0` when `_critical_threshold` divides by it. **The MO traced it: all
+three call sites (`:253`, `:303`, `:672`) plus the definition (`:264`) are inside the code B2
+deletes.** Ruling 001 already ordered that deletion, so the crash dissolves with it.
+**PO-1 is instructed NOT to patch `chi_redistribution` defensively** — that would be fixing a
+bug in code scheduled for deletion, the exact error the B2 framing exists to prevent, and it
+would strand a defensive clause in retired physics. *Neither PO saw that the crash was already
+inside the deletion set; PO-3 reported the symptom and correctly left the fix to its owner.*
+
+**NEW DEPENDENCY EDGE — PO-1 → PO-3, NUMERICAL, not file-based.** The board records PO-1 as
+`∥ everything` because it is file-disjoint. That is still true and it is not sufficient. B2
+moves backbone `omega_0`/`Q`, hence `P_c`, hence the **absolute** `r` scale. PO-3's verdict is
+ratio-based (`peak_r[8]/peak_r[1]`, in which `P_c` cancels within a run) and retention-based
+(pump-independent), so **the ratchet verdict is B2-robust and final**. But PO-3's dispatch
+question — *is the 13× shortfall real?* — is an absolute claim against an absolute threshold
+`r ≥ 1`. **Any threshold-crossing claim from PO-3 is PROVISIONAL PENDING B2** and must be
+labelled so in both the probe output and the log entry. Does not block; does not change the
+pre-registration.
+
+**PO-3's separate pinned checkout: APPROVED.** It runs L·ETA-5 against commit `2084960` rather
+than the shared tree, because that tree currently carries PO-1's crashing edit. A measurement
+taken against a tree with a known crash is not a measurement. Disclosed by PO-3 unprompted.
+
+**Directive violation, flagged to PO-3 (correction, not a strike — the directive postdates its
+dispatch):** `leads/po3-einvasion.md` still reads `Last heartbeat: —` while two commits have
+landed. A stale heartbeat on a working PO is a false stall signal to the MO's poll.
+
+**Shared-tree state:** PO-1 holds uncommitted edits to `vibrational_cascade_module.py` and the
+tree does not construct. No collision (its own file), but PO-4 is arriving and will need to
+construct the model. PO-1 instructed to commit at its next boundary rather than hold a broken
+tree.
+
+**MO poll mechanism is now armed and running** — a persistent watch on branch commits and on
+every `leads/` / `queue/` / `requests/` write. The MO is notified on change; it no longer waits
+to be asked. This cycle was triggered by that watch, not by Sarah.
