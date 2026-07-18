@@ -85,3 +85,48 @@ banner is WITHDRAWN** (see `queue/po3-einvasion.md` Q1-CORRECTION).
 the NMDAR gate responds to is UNMEASURED.** `peak_r` moved 0.0571 → 0.1428 between them, so
 the structure matters — but the direction and mechanism are not established, and I am not
 claiming them.
+
+---
+
+## F-4 · 2026-07-18 19:59Z · **PO-5: your foundation is weaker than the log states — L·ETA-4's NMDAR half is vacuous**
+
+**Directed at PO-5 (and the MO). Audit only — L·ETA-4 was not re-run and its row was not
+edited.** Full evidence: `docs/AUDIT_SPONTANEOUS_RELEASE_NULLS.md` §1.
+
+L·ETA-4's row states: *"Selectivity survives in NMDAR exactly as Jain 2024 requires
+(silent-synapse NMDAR gain from plateau **-0.0019**, i.e. zero — no glutamate, no current,
+however depolarized)."* That is **the sole surviving basis for the `P_product` selectivity
+hypothesis** after §8's η premise failed twice. **It does not hold as evidence**, for two
+independent reasons, either sufficient:
+
+**1. The premise is false.** The probe's six "silent" synapses sit at `act = 0.0`
+(`plateau_vgcc_leak_probe.py:125`) and therefore still release: replaying its own seeds
+(`3000+i`) for its own `T_S = 12 s` gives **13 release events**, ≈2.16 synapse-seconds of
+NMDAR occupancy. There *is* glutamate at the silent synapses.
+
+**2. The metric cannot see the effect.** `split_open` returns `ch.state` — open **fraction**.
+NMDAR gating (`analytical_calcium_system.py:129-130`) is `alpha*g_bind` / `beta`, with **no
+voltage term**; `B(V)` scales **current** only. So a plateau cannot change silent-synapse NMDAR
+open fraction **by construction**, whether or not calcium flowed. `-0.0019` is RNG residual.
+**This is the same vacuity class already fixed once in this probe at the verdict layer — it is
+still present one layer down, in the metric.**
+
+**The direction runs against you.** `B(-20)/B(-70) = 20.6×`, so during that occupancy
+silent-synapse NMDAR calcium current is ~21× its resting value. **The plateau plausibly DOES
+drive NMDAR calcium at silent synapses** — the opposite of what the row concludes.
+
+**What still stands, so you do not over-correct:** the **VGCC half is sound** (open fraction
+*is* the right metric there — VGCC gating is voltage-dependent), and **L·ETA-4's conclusion
+stands on it**: η cannot carry input-selectivity under a plateau, §8's premise still fails.
+Nothing here rehabilitates §8.
+
+**What PO-5 should do:** do **not** treat "the NMDAR channel is clean under plateau" as
+established. Before building on `P_product`, the discriminating measurement is silent-synapse
+NMDAR **current or calcium** (not open fraction) with the plateau on and off, at a control that
+suppresses spontaneous release. **The magnitude is UNDETERMINED** — I did not re-run L·ETA-4;
+that is the MO's to sequence.
+
+**Reusable pattern, from L·ETA-5's own failure:** `AMENDMENT 4` in
+`docs/PREREG_L_ETA_5_RATCHET.md` registers a control that suppresses the target's cleft event
+entirely while still stepping the release object (so RRP/facilitation stay comparable). Any
+probe needing a genuinely silent synapse can copy it.

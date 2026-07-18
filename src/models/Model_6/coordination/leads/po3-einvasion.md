@@ -6,13 +6,27 @@ FALSIFIED and INCONCLUSIVE, with its positive control demonstrated to fire — p
 provenance verdict on `k_polymerization_max` (and `E_ref`, which sits in the load-bearing
 denominator at `spine_plasticity_module.py:411-412`).
 
-**Status:** **RUN COMPLETE. SCORED VERDICT: `INCONCLUSIVE — NULL ARM RATCHETED` (VOID).**
-Both acceptance items delivered: the measurement (`d75e15a`, L·ETA-5) and the provenance
-verdict (`ad7a804`). **PO-3 has measured and STOPPED.**
-**Current unit:** none — awaiting MO/Sarah on the two decisions below.
-**Last heartbeat:** 2026-07-18, run complete (drive 2455.7 s + null 1356.4 s, one run, cap
-not raised).
-**Blocked on:** nothing. Idle by design — what remains is gated.
+**Status:** **LIVE on rotation-001.** Both rotation deliverables landed: the
+`PresynapticRelease` null audit (`fcf33b6`) and the corrected null registered-not-run
+(`2d1432d`). L·ETA-5 acceptance items remain delivered (`d75e15a`, `ad7a804`).
+**Current unit:** rotation 001 complete; polling `board.md` + `requests/po3-einvasion/`.
+**Last heartbeat:** 2026-07-18 19:59Z
+**Blocked on:** nothing. Not idle.
+
+## Rotation 001 result — L·ETA-4's NMDAR half does not survive as evidence
+
+**PO-5's sole surviving foundation is weaker than the log states.** Two independent defects,
+either sufficient: the "silent" synapses do receive glutamate (13 events in the probe's own
+12 s run, its own seeds), and the metric — NMDAR **open fraction** — is voltage-independent by
+construction (`analytical_calcium_system.py:129-130`), so a plateau cannot move it whether or
+not calcium flowed. Direction runs against the hypothesis: `B(-20)/B(-70) = 20.6×`.
+**L·ETA-4's VGCC half and its conclusion (§8's η premise fails) both STAND.** Magnitude
+UNDETERMINED — not re-run; the MO sequences that. Signalled to PO-5 as **F-4**.
+
+Best structural finding: `run_spatial_discovery` and my probe fail in **opposite** directions —
+the shipped runner gates stepping on `active_mask` (D19: inactive never decay, which
+incidentally hides the leak); mine steps everything (decay correct, clock PASS) which exposes
+it. **No probe in the family does both.** Full table: `docs/AUDIT_SPONTANEOUS_RELEASE_NULLS.md`.
 
 ## Result in one line
 
