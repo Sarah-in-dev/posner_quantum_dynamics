@@ -351,3 +351,68 @@ reads the transient pool only. Since `r ∝ E_invasion × ca_open`, this says **
 pump is driven by the UNCOMMITTED transient actin pool — a synapse that commits loses pump
 drive.** That is architectural, bears on §8 and on PO-5's `P_product` selectivity hypothesis,
 and is **Sarah's call.** PO-4 is instructed not to pursue it; it is outside its acceptance.
+
+---
+
+## MO CYCLE — 2026-07-18 18:06Z · a false-FALSIFIED band, and an MO error in a kickoff
+
+**Backbone only.** `requests/po3-einvasion/mo-ruling-003.md` ·
+`requests/po5-selectivity/mo-f3-001.md` (pre-positioned for a PO not yet spawned).
+
+### RULING 003 to PO-3 — supersedes 002, apply at scoring, run NOT killed
+
+**Credit first:** PO-3's pre-registration already anticipated confinement — GATE 1 logs `conf`
+per traversal and reports **CONFINED-RATCHET** as a distinct outcome rather than folding it into
+CONFIRMED. Ruling 002 under-credited that design.
+
+**The hole ruling 002 was aimed at survives anyway, one gate lower.** GATE 1 only fires at
+`rho_mean ≥ 0.99`; GATE 2's band is the FIXED `[0.80, 0.95]` from the uncommitted `rho_pred =
+0.8948`. Between them sits the partially-confined range. MO computed from PO-3's own constants:
+
+```
+conf    rho@20s   GATE1(>=0.99)   GATE2 [0.80,0.95]
+0.200    0.8446        -            PASS
+0.400    0.7972        -            FALSIFIED   <-- hole opens
+0.500    0.7745        -            FALSIFIED
+0.976    0.6751        -            FALSIFIED   <-- committed steady state
+```
+
+**For every `conf` from ~0.4 to 0.976, a spine retaining EXACTLY what the physics predicts prints
+FALSIFIED** — and PO-3's hard stop then routes a false negative-result-about-the-network-story to
+Sarah. The inversion arrives through GATE 2, which is why GATE 1 does not catch it.
+
+**Ruled:** centre the band on `rho_pred(conf) = exp(-GAP_S·(k_extrude·(1−conf) +
+k_stabilization_max·conf))` using the `conf` already logged, tolerance width unchanged. A
+derivation correction; no constant moves and no threshold widens. Registered as AMENDMENT A1.2.
+`0.8948` remains exactly right for the `conf → 0` arm — the special case, not the rule.
+
+### F-3 ACCEPTED — and part of it is the MO's error
+
+PO-3 found `sweep/eta_in_live_trial.py` under-delivers glutamate **~100×** (release stepped once
+per 0.5 s agent step instead of per 0.005 s physics step; ~3.3 expected release events per
+traversal vs ~350). Measured `max_glu` **0.0000 → 1.0000** corrected, `peak_r` traversal 2
+**0.0571 → 0.1428**.
+
+**The MO's error:** PO-3's kickoff named that file as *"prior art to reuse, not rebuild"*.
+**The MO named prior art without verifying it** — the same failure shape as putting the unsourced
+1.291/2.389 pair into PO-4's acceptance bar. Two MO defects of the same class in one session; both
+caught by POs, neither by the MO.
+
+**PO-3's handling was correct on every count:** corrected in its own probe only, registered as
+AMENDMENT A1.1 **before** the scored run, no verdict threshold moved, and **L·ETA-3's log row left
+untouched** — another PO's entry and the verdict under test.
+
+### Provenance verdict ACCEPTED (PO-3 acceptance item 2 MET)
+
+`E_ref` **upgraded** UNVERIFIED → **REPRODUCIBLE, SELF-REFERENTIAL**, with the consequence stated:
+not a literature measurement, so *"`E_invasion` is grounded in measurement"* would be false at that
+constant. `k_polymerization_max` **INHERITED and 3.57× its own citation**, inheriting commit
+identified by `git log -S`. A verdict with a mechanism, not a label.
+
+### PO-5 pre-positioned, NOT dispatched
+
+`requests/po5-selectivity/mo-f3-001.md` written now so the defect cannot be inherited later:
+PO-5 must not reuse `eta_in_live_trial.py` as-is, because NMDAR opening is glutamate-gated and
+**NMDAR is exactly the channel L·ETA-4 found selectivity surviving in**. A selectivity test on that
+harness would test the `P_product` hypothesis on the channel the defect suppresses — a guaranteed
+false negative. PO-5 remains HARD-BLOCKED on PO-3 regardless.
