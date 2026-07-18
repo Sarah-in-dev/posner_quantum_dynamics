@@ -52,3 +52,59 @@ is live in **both** gap copies (`sweep/run_spatial_discovery.py:80`,
 rate `model6-dimer-formation-chemistry:64` **retired** (`0.05 → 0.005`, cluster lifetime
 τ≈200 s, Turhan 2024). Untouched by this PO. After consolidation there will be **one** site
 carrying it rather than two, which makes the MO's eventual decision a one-line change.
+
+---
+
+## Q4-4 · 2026-07-18 18:40Z · **SCOPE: ruling 001's "delete its stale :347 comment" understates what is there**
+
+**The ask:** ruling 001 scope-limited me to "nothing else in `run_place_field_learning.py`, and
+delete its stale `:347` comment as part of the fix." **That comment is not stale, and it is not
+just a comment.** I need the MO to know I am exceeding the literal wording, and why.
+
+**Evidence** `[code SHOWN]` `src/models/Model_6/sweep/run_place_field_learning.py:346-353`:
+```python
+            # Also step spine plasticity forward through the gap
+            # (analytical_gap doesn't advance plasticity dynamics)
+            for syn in network.synapses:
+                drive = getattr(syn, '_committed_memory_level', 0.0)
+                ca_uM = 0.05  # baseline during gap
+                syn.spine_plasticity.step(
+                    INTER_TRAVERSAL_S, drive, ca_uM, quantum_field_kT=0.0
+                )
+```
+with `INTER_TRAVERSAL_S = 20.0` (`:86`).
+
+**This is a THIRD implementation of gap plasticity advance** — an inline workaround in a
+consumer. The comment is **accurate**, not stale: it correctly documents that `analytical_gap`
+does not advance plasticity, and then compensates.
+
+**Two consequences:**
+
+1. **My fix turns this into a DOUBLE ADVANCE.** Once `analytical_gap` advances plasticity by
+   `gap_duration_s`, this loop advances it by another `INTER_TRAVERSAL_S` — **40 s of plasticity
+   per 20 s gap.** Shipping the gap fix without removing this block introduces a regression, in a
+   file the ruling told me not to touch.
+2. **The workaround is itself numerically wrong.** It takes the whole 20 s as a **single Euler
+   step**. For a committed spine (τ_eff = 50.9 s) that is `1 − 20/50.9 = 0.607` against the exact
+   `exp(−20/50.9) = 0.676` — **~10% error**. Worse, the confinement latch moves
+   `d_conf = k_conf·s·(1−conf)·dt = 0.02·1·20 = 0.40` in one step. Any place-field result that
+   leaned on gap plasticity carries this.
+
+**PO-4's recommendation and what I am doing:** remove the workaround **in the same commit as the
+gap fix**, because the two are one change — the block exists only to compensate for the defect
+the commit repairs, and separating them ships a known double-advance. I am **not** touching
+anything else in that file. Flagged here rather than done quietly; **bounce it and I will split
+the commit.**
+
+---
+
+## Q4-5 · 2026-07-18 18:40Z · **Reported, NOT fixed, per ruling 004:** `run_trial` forms zero cross-synapse bonds
+
+Per ruling 004's instruction to report with the `file:line` and leave it:
+
+- `sweep/run_spatial_discovery.py:446-449` (pre-consolidation numbering) — `run_trial` omits
+  `coupling_weights`
+- `multi_synapse_network.py:276-279` — `_update_entanglement` early-returns without them
+
+Second independent defect in a file I am editing; not on my bar; not folded into my diff. Most
+likely PO-5's, since it is the PO that needs cross-synapse bonds to exist.
