@@ -62,7 +62,16 @@ def _stimuli(t, n_syn):
     return [{'voltage': -40e-3, 'reward': reward, 'glutamate': 1.0} for _ in range(n_syn)]
 
 
-def _run_arm_a(step_fn, n_syn=2, duration=0.5, skip_backbone=False):
+ARM_A_DURATION = 45.0   # s. Chosen from the model's own constants BEFORE the corrected run:
+# P_met = P_BASAL + E_inv*ca_open*p_active_max; P_c = 21.51 fW, p_active_max = 60 fW,
+# P_BASAL ~ 0.84 fW  =>  crossing needs E_inv*ca_open >~ 0.345, i.e. E_inv >~ 0.63 at
+# ca_open ~ 0.55. model6-architecture:119 records E_invasion ~0.495 at 30 s heading to
+# ~0.74 by ~45 s. The first run used 0.5 s, where eta is identically 0 in every arm and
+# the backbone discriminators are degenerate -- that run ABORTED on its own control.
+
+
+def _run_arm_a(step_fn, n_syn=2, duration=ARM_A_DURATION,
+               skip_backbone=False, gate_on_reward_only=False):
     """Build an identical network, step it with `step_fn`, return the discriminators."""
     np.random.seed(SEED)
     RSD = sys.modules['rsd_pinned']
@@ -72,9 +81,14 @@ def _run_arm_a(step_fn, n_syn=2, duration=0.5, skip_backbone=False):
     counter = {'gate_calls': 0}
     real_gate = net._evaluate_coordinated_gate
 
-    def counting_gate(*a, **kw):
+    def counting_gate(payload, *a, **kw):
+        # POSITIVE CONTROL for the gate_calls discriminator: swallow non-reward calls,
+        # which is precisely the RPFL copy's behaviour. Regime-independent, so unlike the
+        # backbone control it fires at any duration.
+        if gate_on_reward_only and not payload.get('reward', False):
+            return None
         counter['gate_calls'] += 1
-        return real_gate(*a, **kw)
+        return real_gate(payload, *a, **kw)
     net._evaluate_coordinated_gate = counting_gate
 
     if skip_backbone:
@@ -121,14 +135,32 @@ def arm_a():
         print("  measuring stochastic noise, not stepper divergence. No verdict reported.")
         return INCONCLUSIVE, {'null': null_d}
 
-    # ---- POSITIVE CONTROL: must FIRE before any pass may be reported. ---------
-    pc = _run_arm_a(rsd.step_network_per_synapse, skip_backbone=True)
-    pc_v, pc_d = _verdict_a(n1, pc)
-    print(f"POSCTL (RSD vs RSD-no-backbone) -> {pc_v}  {pc_d}")
-    if pc_v != DIVERGENT:
-        print(f"\n  ARM A = {ABORT}: the positive control did NOT fire. The instrument")
-        print("  cannot see the very difference it exists to detect. No verdict reported.")
-        return ABORT, {'poscontrol': 'did not fire'}
+    # ---- REGIME PRECONDITION -------------------------------------------------
+    # The backbone discriminators (eta, cross_bonds) can only distinguish outcomes
+    # where the backbone update actually produces eta > 0. If the reference arm is at
+    # eta == 0, comparing it to another zero is NOT a null result -- it is no result.
+    regime_ok = n1['eta_max'] > 0.0
+    print(f"REGIME (RSD eta_max={n1['eta_max']:.6g}) -> "
+          f"{'backbone discriminators LIVE' if regime_ok else 'backbone discriminators DEGENERATE'}")
+
+    # ---- POSITIVE CONTROLS: one per discriminator. Each must FIRE. -----------
+    pc_gate = _run_arm_a(rsd.step_network_per_synapse, gate_on_reward_only=True)
+    gate_fired = pc_gate['gate_calls'] != n1['gate_calls']
+    print(f"POSCTL-1 gate_calls   ({n1['gate_calls']} vs {pc_gate['gate_calls']}) -> "
+          f"{'FIRED' if gate_fired else 'DID NOT FIRE'}")
+    if not gate_fired:
+        print(f"\n  ARM A = {ABORT}: the gate control did not fire.")
+        return ABORT, {'poscontrol_gate': 'did not fire'}
+
+    backbone_fired = None
+    if regime_ok:
+        pc_bb = _run_arm_a(rsd.step_network_per_synapse, skip_backbone=True)
+        bb_v, bb_d = _verdict_a(n1, pc_bb)
+        backbone_fired = (bb_v == DIVERGENT)
+        print(f"POSCTL-2 backbone     -> {'FIRED' if backbone_fired else 'DID NOT FIRE'}  {bb_d}")
+        if not backbone_fired:
+            print(f"\n  ARM A = {ABORT}: the backbone control did not fire in a LIVE regime.")
+            return ABORT, {'poscontrol_backbone': 'did not fire in live regime'}
 
     # ---- THE MEASUREMENT -----------------------------------------------------
     a_rsd = n1
@@ -139,7 +171,13 @@ def arm_a():
     print(f"\n  ARM A VERDICT = {v}")
     for line in d:
         print(f"      - {line}")
-    return v, {'rsd': a_rsd, 'rpfl': a_rpfl, 'diffs': d}
+    if not regime_ok:
+        print("\n  SCOPE LIMIT, stated rather than buried: eta stayed 0 in the reference arm,")
+        print("  so the backbone discriminators are NEEDS MEASUREMENT, not verified-equal.")
+        print("  Only the gate_calls discriminator is evidential in this run.")
+    return v, {'rsd': a_rsd, 'rpfl': a_rpfl, 'diffs': d,
+               'regime_ok': regime_ok, 'backbone_control_fired': backbone_fired,
+               'backbone_discriminators': 'EVIDENTIAL' if regime_ok else 'NEEDS MEASUREMENT'}
 
 
 # =============================================================================
