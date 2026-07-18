@@ -83,12 +83,23 @@ HALF_PATH      = 1.4       # units either side of centre -> 2.8 u -> 14.0 s per 
 ACT_FLOOR      = 0.05      # the shipped activation floor
 TAU_EXTRUDE    = 180.0     # READ from spine_plasticity_module.py:109 (asserted at runtime)
 
-RHO_PRED       = math.exp(-GAP_S / TAU_EXTRUDE)   # 0.8948
+K_STAB         = 0.02      # k_stabilization_max, spine_plasticity_module.py:99
+RHO_PRED       = math.exp(-GAP_S / TAU_EXTRUDE)   # 0.8948 — UNCOMMITTED branch ONLY
+
+
+def rho_predicted(conf, gap=GAP_S):
+    """PREREG AMENDMENT 2. The gap drains actin_enlargement by BOTH paths at :389-390:
+    extrusion (1-conf)/tau_extrude AND retention k_stab*conf. E_invasion reads
+    actin_enlargement alone (:412), so a COMMITTED spine drains ~3.54x FASTER, not slower.
+    The original single number 0.8948 was the uncommitted branch mis-stated as general."""
+    drain = K_STAB * conf + (1.0 - conf) / TAU_EXTRUDE
+    return math.exp(-drain * gap)
 
 # Verdict thresholds — FIXED IN THE PRE-REGISTRATION, §6.
 RHO_ARTIFACT_MIN   = 0.99   # >= this with conf open => gap not stepping
 CONF_LATCH_MIN     = 0.05   # >= this => confinement legitimately gates extrusion off
-RHO_BAND           = (0.80, 0.95)
+RHO_BAND           = (0.80, 0.95)   # SUPERSEDED by RATIO_BAND (AMENDMENT 2)
+RATIO_BAND         = (0.89, 1.07)   # = RHO_BAND / 0.8948, carried over not re-invented
 GAIN_CONFIRM_MIN   = 2.0    # peak_r[N]/peak_r[1]
 GAIN_FALSIFY_MAX   = 1.2
 RHO_FALSIFY_MAX    = 0.5
@@ -302,13 +313,24 @@ def verdict(drive_payload, null_payload):
     confs = [t['conf_end'] for t in d]
     einv_starts = [t['E_inv_start'] for t in d[1:]]
     rho_mean = float(np.mean(rhos)) if rhos else float('nan')
+    # AMENDMENT 2: predict PER GAP from the MEASURED confinement at gap start.
+    conf_at_gap = [t['conf_end'] for t in d[:-1]]
+    preds = [rho_predicted(c) for c in conf_at_gap]
+    ratios = [r / p for r, p in zip(rhos, preds) if p > 0]
+    ratio_mean = float(np.mean(ratios)) if ratios else float('nan')
 
     print("=" * 100)
     print("VERDICT — thresholds fixed in docs/PREREG_L_ETA_5_RATCHET.md §6, before the run")
     print("=" * 100)
     print(f"  peak_r by traversal      : {[round(x, 5) for x in peak_r]}")
     print(f"  retention rho by gap     : {[round(x, 4) for x in rhos]}")
-    print(f"  rho_mean                 : {rho_mean:.4f}   (predicted {RHO_PRED:.4f})")
+    print(f"  rho_mean (raw)           : {rho_mean:.4f}")
+    print(f"  conf at each gap start   : {[round(c, 4) for c in conf_at_gap]}")
+    print(f"  rho_pred per gap         : {[round(p, 4) for p in preds]}")
+    print(f"  rho_ratio (SCORED)       : {[round(x, 4) for x in ratios]}")
+    print(f"  ratio_mean               : {ratio_mean:.4f}   (band {RATIO_BAND}, ideal 1.0)")
+    print(f"  [uncommitted branch would predict {RHO_PRED:.4f}; committed "
+          f"{rho_predicted(0.97561):.4f}]")
     print(f"  max confinement          : {max(confs):.4f}")
     print(f"  gain peak_r[N]/peak_r[1] : "
           f"{(peak_r[-1]/peak_r[0]) if peak_r[0] > 0 else float('nan'):.4f}")
@@ -344,31 +366,29 @@ def verdict(drive_payload, null_payload):
     print("  => positive control FIRES")
     print()
 
-    # ---- GATE 1: frozen-clock vs confinement discrimination. ----
+    # ---- GATE 1: frozen-clock detection (AMENDMENT 2: unconditional on conf). ----
+    # The old CONFINED-RATCHET branch treated rho~1.0 at high conf as legitimate physics.
+    # That rested on the §2(B) error: a committed spine drains FASTER (retention at :390),
+    # so rho~1.0 is an artifact signature at ANY confinement. Branch deleted.
     if rho_mean >= RHO_ARTIFACT_MIN:
-        if max(confs) < CONF_LATCH_MIN:
-            print(f"  => INCONCLUSIVE — GAP NOT STEPPING. rho_mean {rho_mean:.4f} is")
-            print("     indistinguishable from 100% with the extrusion gate OPEN")
-            print(f"     (conf {max(confs):.4f} < {CONF_LATCH_MIN}). That is a red flag that")
-            print("     this probe's own gap is not advancing actin — NOT a strong positive.")
-            return "INCONCLUSIVE_GAP_NOT_STEPPING"
-        print(f"  => CONFINED-RATCHET. Retention is ~100% because the confinement latch")
-        print(f"     (conf {max(confs):.4f}) gates extrusion off at :389. Real physics, but")
-        print("     NOT the tau_extrude retention hypothesis. Reported as its own outcome.")
-        return "CONFINED_RATCHET"
+        print(f"  => INCONCLUSIVE — GAP NOT STEPPING. rho_mean {rho_mean:.4f} >= "
+              f"{RHO_ARTIFACT_MIN} is indistinguishable from a stopped clock, and under the")
+        print("     corrected physics a committed spine drains FASTER, so no confinement")
+        print("     state makes ~100% retention legitimate. Red flag, not a positive.")
+        return "INCONCLUSIVE_GAP_NOT_STEPPING"
 
     # ---- GATE 2: the ratchet verdict. ----
     gain = (peak_r[-1] / peak_r[0]) if peak_r[0] > 0 else 0.0
     monotone = all(peak_r[i + 1] >= peak_r[i] for i in range(len(peak_r) - 1))
-    in_band = RHO_BAND[0] <= rho_mean <= RHO_BAND[1]
+    in_band = RATIO_BAND[0] <= ratio_mean <= RATIO_BAND[1]
 
     if monotone and gain >= GAIN_CONFIRM_MIN and in_band:
         print(f"  => RATCHET CONFIRMED. peak_r monotone across {len(peak_r)} traversals,")
-        print(f"     gain {gain:.2f}x >= {GAIN_CONFIRM_MIN}, and rho_mean {rho_mean:.4f} sits in")
-        print(f"     the pre-registered band {RHO_BAND} around the tau_extrude prediction")
-        print(f"     {RHO_PRED:.4f}. L·ETA-2 and L·ETA-3 reconcile with NO constant touched.")
+        print(f"     gain {gain:.2f}x >= {GAIN_CONFIRM_MIN}, and rho_ratio {ratio_mean:.4f} sits in")
+        print(f"     the pre-registered band {RATIO_BAND} against the code's OWN per-gap drain")
+        print("     formula. L·ETA-2 and L·ETA-3 reconcile with NO constant touched.")
         result = "CONFIRMED"
-    elif gain < GAIN_FALSIFY_MAX or rho_mean < RHO_FALSIFY_MAX:
+    elif gain < GAIN_FALSIFY_MAX or ratio_mean < RHO_FALSIFY_MAX:
         print(f"  => RATCHET FALSIFIED. gain {gain:.4f}, rho_mean {rho_mean:.4f}. The")
         print("     integrator does not retain across a behavioural-timescale gap;")
         print("     repeated traversals do not accumulate. This is a SUBSTANTIVE NEGATIVE")
@@ -376,7 +396,7 @@ def verdict(drive_payload, null_payload):
         result = "FALSIFIED"
     else:
         print(f"  => PARTIAL / INCONCLUSIVE. gain {gain:.4f} (monotone={monotone}),")
-        print(f"     rho_mean {rho_mean:.4f} vs band {RHO_BAND}. Numbers reported; no")
+        print(f"     ratio_mean {ratio_mean:.4f} vs band {RATIO_BAND}. Numbers reported; no")
         print("     verdict claimed.")
         result = "PARTIAL"
 

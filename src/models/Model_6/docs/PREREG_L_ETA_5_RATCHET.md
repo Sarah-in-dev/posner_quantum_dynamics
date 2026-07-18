@@ -281,3 +281,140 @@ recorded here that the calcium tail biases the scored `rho` *upward*, i.e. towar
 artifact band — so a `rho` at or above the band is expected to be at least partly this
 effect and must not be read as strong confirmation. The thresholds stand as written; this
 note exists so the bias direction is on record before the numbers are seen.
+
+---
+
+# AMENDMENT 2 — 2026-07-18, BEFORE SCORING — the retention prediction was MIS-DERIVED
+
+**Origin: PO-4's finding, ruled on by the MO (`requests/po3-einvasion/mo-ruling-002.md`),
+on PO-3's own surface. PO-3 re-derived it independently and confirms it. This corrects an
+error in §2(B) and §5 of this document.**
+
+## What was wrong
+
+§2(B) above says:
+
+> **(B) `conf > 0` legitimately shuts extrusion off.** ... `extrusion` is gated to zero and
+> retention goes to ~100% **as real physics**, not as an artifact.
+
+**That is wrong.** It read `:389` and stopped:
+
+```
+extrusion = k_extrude * (1.0 - conf) * self.actin_enlargement      # CLEARING: unconfined -> shaft
+retention = a.k_stabilization_max * conf * self.actin_enlargement  # confined -> stable
+```
+
+`conf` gates extrusion **off** at `:389` and simultaneously gates **retention on** at `:390`
+— and retention is *also* a drain on `actin_enlargement` (`d_enlarge = formation - extrusion
+- retention`, `:395`). Since `E_invasion` reads `actin_enlargement` **alone** (`:412`), a
+committed spine's `E_invasion` decays **faster**, not slower.
+
+This is the same defect class this PO was dispatched to hunt — prose asserting a mechanism
+the code does not implement — committed in PO-3's own pre-registration, in the very section
+titled "the mechanism, read off the code (not asserted)".
+
+## The correct derivation (re-derived by PO-3, matching PO-4 and the MO)
+
+Total drain on `actin_enlargement` during a silent gap (`formation → 0` as `f_CaM → 0`):
+
+```
+drain(conf) = k_stabilization_max·conf + (1 − conf)/tau_extrude
+rho_pred(conf, gap) = exp(−drain(conf)·gap)
+```
+
+With `k_stabilization_max = 0.02` (`:99`), `tau_extrude = 180.0` (`:109`),
+`k_conf = 0.02` (`:113`), `k_unconf = 0.0005` (`:114`), `conf_ss = k_conf/(k_conf+k_unconf)`:
+
+```
+conf_ss      = 0.97561
+uncommitted  drain=5.5556e-03  tau=180.0s  ret@20s=0.8948
+committed    drain=1.9648e-02  tau= 50.9s  ret@20s=0.6751
+speedup      = 3.54x
+```
+
+And because `k_unconf = 0.0005 s⁻¹` is slow, **confinement persists**: a spine that has ever
+committed does not return to the 180 s branch within these gaps.
+
+**No constant is changed.** This selects which of two formulas *already in the code* the
+prediction uses. `tau_extrude`, `k_conf`, `k_unconf` and `k_stabilization_max` are untouched
+and remain LOCKED against tuning.
+
+## What is now pre-registered, replacing §5's single number
+
+**The prediction is computed PER GAP from the MEASURED confinement**, using the code's own
+formula above — strictly better than two discrete numbers, because it is exact at any `conf`:
+
+| symbol | definition |
+|---|---|
+| `conf_gap[n]` | `confinement` at the START of gap `n` (measured, logged) |
+| `rho_pred[n]` | `exp(−(k_stab·conf_gap[n] + (1−conf_gap[n])/tau_extrude)·GAP_S)` |
+| `rho_ratio[n]` | **`rho[n] / rho_pred[n]`** — the scored quantity |
+
+**The band is carried over, not re-invented.** The original §6 band on raw `rho` was
+`[0.80, 0.95]` around a prediction of `0.8948`. Re-expressed as a ratio that is
+`[0.80/0.8948, 0.95/0.8948] = [0.894, 1.062]`, pre-registered as **`rho_ratio ∈ [0.89, 1.07]`**.
+Widening or narrowing it would be moving a goalpost; it is the same band in ratio form.
+
+**GATE 1 is corrected and becomes STRONGER.** The old GATE 1 had a `CONFINED-RATCHET` branch
+treating `rho ≈ 1.0` with high `conf` as legitimate physics. That branch rested on the error
+above and is **deleted**. Under the correct physics a committed spine drains *faster*, so
+`rho ≈ 1.0` is an artifact signature **regardless of `conf`**:
+
+- If `rho_mean_raw >= 0.99` → **INCONCLUSIVE — GAP NOT STEPPING**, unconditionally.
+
+**GATE 2 is unchanged except that clause (ii) now reads `rho_ratio` in `[0.89, 1.07]`**
+instead of raw `rho` in `[0.80, 0.95]`. Clause (i) — monotone `peak_r`, gain ≥ 2.0 — and the
+FALSIFIED thresholds are untouched. **RULING 2 adopted: the `peak_r` ratio arm was already
+sound and is not rewritten.**
+
+## Why this had to land before scoring, in this program specifically
+
+`master` HEAD carries `64346a0` (flagging a mis-derived T1′ pre-registration) immediately
+followed by `683b82f` (T1′ false positive). **A mis-derived pre-registration immediately
+preceded a false positive here before.** Concretely: had the traversals committed and been
+scored against 0.8948, a spine retaining the physically-correct 0.6751 would have read as
+**ratchet FALSIFIED** — routing a negative result about the network story to Sarah off a
+wrong number, on the branch `MO_MODEL6.md` §3 makes hers.
+
+**Note on the run in flight:** `make_network` sets `network.disable_auto_commitment = True`
+(`run_spatial_discovery.py:394`), and traversals 1–2 measured `conf = 0.0000`, so the
+uncommitted branch is expected to apply throughout and the original 0.8948 may turn out to
+be numerically right *by luck*. The correction stands regardless: `conf` is measured and
+logged per gap, and the arm actually taken is recorded rather than assumed.
+
+## Consequence for the in-flight run
+
+The running process will print a verdict computed with the **superseded** GATE 1/GATE 2
+logic. **That printed verdict is void and is not the result.** The scored verdict is
+recomputed offline from the incrementally-persisted per-traversal JSON using the corrected
+function. This is why the pre-registration required incremental persistence.
+
+---
+
+# CORRECTION 1 — §3's "frozen clock" claim was WRONG (PO-4, confirmed by PO-3)
+
+§3 above states that `analytical_gap` "does not advance spine plasticity" and that actin is
+"silently frozen". **PO-4 corrected this and PO-3 verified it directly in the code.** The
+function's tail runs, after jumping `network.time` by the full gap:
+
+```
+    # Advance network time
+    network.time += gap_duration_s
+
+    # One full step to sync all internal state (calcium baseline, etc.)
+    network.step(0.001, {"voltage": -70e-3, "reward": False})
+```
+
+So actin advances **1 ms per gap**, not zero. Inter-traversal retention under
+`analytical_gap` would be `exp(-0.001/180) = 0.9999944`, not exactly 1.0.
+
+**How the error was made, recorded rather than quietly fixed:** PO-3 read the docstring's two
+lists ("computed" / "NOT computed"), observed actin in neither, read the loop body, and
+concluded "frozen" from absence — without reading the function tail. That is prose checked
+against prose, reported under a `[code SHOWN]` tag, in a program whose signature defect is
+prose contradicting code. The original claim is left in place above per the log convention
+(supersede, never rewrite).
+
+**What survives:** the decision not to call `analytical_gap` is unchanged and, per PO-4, more
+strongly motivated — 0.9999944 reads as an even cleaner ratchet than a frozen clock would,
+while being no more real. The hazard was correctly identified; its magnitude was misstated.
