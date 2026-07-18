@@ -200,3 +200,84 @@ stated reason in `queue/po3-einvasion.md`.
 - **The negative branch is Sarah's call.** PO-3 measures, writes it up, and STOPS — no
   remedy proposed, no constant moved, no protocol extended to rescue it (`board.md`,
   "Decided, do not re-open").
+
+---
+
+# AMENDMENT 1 — 2026-07-18, BEFORE THE RUN, from the smoke test
+
+Two changes, both made **before any scored run**, both disclosed here rather than applied
+silently. **No verdict threshold in §6 is changed.** The §5 discriminating quantities, the
+§6 thresholds, the §7 null arm and the GATE order are exactly as originally registered.
+
+## A1.1 — Presynaptic release is stepped per PHYSICS step, not per agent step
+
+**This reverses the §4 promise to inherit the L·ETA-3 drive "unchanged", and that is
+deliberate: the inherited harness has a defect.**
+
+`sweep/eta_in_live_trial.py:138-144` steps presynaptic release **once per agent step**
+(`AGENT_DT = 0.5 s`) and then runs 100 physics steps against that one stale stimulus:
+
+```
+for i in range(len(network.synapses)):
+    g = network.presynaptic_release[i].step(acts[i], PHYSICS_DT)
+    if g:
+        stimuli[i]['glutamate'] = g
+for _ in range(phys_per):
+    step_network_per_synapse(network, PHYSICS_DT, stimuli)
+```
+
+The shipped reference implementation, `run_spatial_discovery.py:434-441` (`run_trial`),
+steps it **inside** the physics loop, once per `physics_dt`:
+
+```
+for _ in range(physics_steps_per_agent_step):
+    for i, syn in enumerate(network.synapses):
+        glu_event = network.presynaptic_release[i].step(activations[i], physics_dt)
+        if active_mask[i]:
+            stimuli[i]['glutamate'] = glu_event
+```
+
+`PresynapticRelease.step` (`presynaptic_release.py:110-139`) is a per-timestep Bernoulli
+draw — `p_spike = 1 - exp(-rate*dt)` — so calling it at 0.5 s intervals instead of 0.005 s
+removes ~99% of the release opportunities. At `PEAK_RATE_MEDIAN = 25 Hz` over a 14 s
+traversal at saturating activation:
+
+| | release opportunities | expected release events |
+|---|---|---|
+| shipped `run_trial` | 2800 | ~350 |
+| L·ETA-3 harness | 28 | **~3.3** |
+
+**Measured, not inferred:** the smoke run of this probe, inheriting the L·ETA-3 pattern,
+recorded `max_glu = 0.0000` at the target synapse across an entire traversal at
+`max_act = 0.9950`.
+
+**Why this is not a constant moved to rescue a result.** Nothing tuned, no parameter
+touched: this changes a *harness call site* to match the shipped reference implementation
+it was derived from. Leaving it would run the ratchet measurement with the NMDAR half of
+the channel population starved — the ERR-2 failure class exactly (*"the term setting `r`
+was measured with its glutamate contingency unsatisfied"*), which is the specific scar this
+PO was dispatched with instructions not to repeat.
+
+**Consequence for comparability, stated plainly:** this probe's absolute `E_invasion`,
+`ca_open` and `r` are therefore **NOT** directly comparable to L·ETA-3's numbers. Its
+pre-registered quantities (a retention *ratio* and an `r` *ratio*) remain well-posed.
+The implication for L·ETA-3's own `ca_open` attribution is escalated to the MO, not
+adjudicated here.
+
+## A1.2 — A descriptive late-gap retention diagnostic is added (nothing rescored)
+
+The smoke run measured `rho = 1.0135` — retention **above 1.0** across a 3 s gap. Mechanism,
+read off the code: calcium decays over ~seconds, so `f_CaM` and therefore `formation`
+(`:386`) remain non-zero into the early gap. The gap is not pure exponential decay; it is a
+brief continued-rise phase followed by decay at `1/tau_extrude`.
+
+The pre-registered `rho` (first-step-of-next-traversal / last-step-of-this-traversal) is
+**kept exactly as registered and remains the scored quantity.** In addition, and as
+**descriptive output only**, the probe records `actin_enlargement` sampled through the gap so
+the late-gap decay constant can be read separately from the calcium-tail phase.
+
+**This is why the band was pre-registered rather than a point estimate**, and it is
+recorded here that the calcium tail biases the scored `rho` *upward*, i.e. toward the
+artifact band — so a `rho` at or above the band is expected to be at least partly this
+effect and must not be read as strong confirmation. The thresholds stand as written; this
+note exists so the bias direction is on record before the numbers are seen.

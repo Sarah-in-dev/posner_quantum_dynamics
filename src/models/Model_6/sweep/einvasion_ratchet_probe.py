@@ -145,19 +145,24 @@ def step_physics(network, env, position, n_agent_steps, drive_target, target,
     peak_r = 0.0
     max_glu = 0.0
     max_act = 0.0
+    n_release = 0
     for _ in range(n_agent_steps):
         acts = env.get_activations(position)
         if not drive_target:
             acts = acts.copy()
             acts[target] = 0.0
         stimuli = activations_to_stimuli(acts)
-        for i in range(len(network.synapses)):
-            g = network.presynaptic_release[i].step(acts[i], PHYSICS_DT)
-            if g:
-                stimuli[i]['glutamate'] = g
-                if i == target:
-                    max_glu = max(max_glu, float(g))
+        # PREREG AMENDMENT A1.1: release is stepped PER PHYSICS STEP, matching the shipped
+        # run_spatial_discovery.run_trial:434-441. The L·ETA-3 harness stepped it once per
+        # AGENT step, removing ~99% of the Bernoulli release opportunities and starving the
+        # NMDARs — the ERR-2 class. Do not "simplify" this back out of the inner loop.
         for _ in range(phys_per):
+            for i in range(len(network.synapses)):
+                g = network.presynaptic_release[i].step(acts[i], PHYSICS_DT)
+                stimuli[i]['glutamate'] = g
+                if i == target and g:
+                    max_glu = max(max_glu, float(g))
+                    n_release += 1
             step_network_per_synapse(network, PHYSICS_DT, stimuli)
         rs, etas, P_c, e_inv, ca_op = r_eta_per_synapse(network)
         peak_r = max(peak_r, float(rs[target]))
@@ -167,7 +172,7 @@ def step_physics(network, env, position, n_agent_steps, drive_target, target,
                                 eta_target=float(etas[target]),
                                 E_inv=float(e_inv[target]),
                                 ca_open=float(ca_op[target])))
-    return peak_r, max_glu, max_act
+    return peak_r, max_glu, max_act, n_release
 
 
 def spine_state(network, target):
@@ -184,7 +189,7 @@ def run_arm(arm, outdir):
     network = make_network(n_synapses=N_FEATURES, seed=SEED)
 
     # Assert the constant this whole prediction rests on is what we read on disk.
-    tau_live = float(network.synapses[0].params.actin.tau_extrude)
+    tau_live = float(network.synapses[0].spine_plasticity.params.actin.tau_extrude)
     assert abs(tau_live - TAU_EXTRUDE) < 1e-9, (
         f"tau_extrude changed under the pre-registration: {tau_live} != {TAU_EXTRUDE}")
 
@@ -214,7 +219,8 @@ def run_arm(arm, outdir):
     print("-" * len(hdr))
 
     traversals, prev_enl_end = [], None
-    glu_assert_value = None
+    glu_assert_value, glu_assert_count = None, None
+    gap_samples = []
     t0 = time.time()
 
     for n in range(1, N_TRAVERSALS + 1):
@@ -222,28 +228,36 @@ def run_arm(arm, outdir):
         rho = (enl_start / prev_enl_end) if (prev_enl_end and prev_enl_end > 0) else None
 
         # --- traversal: agent walks the straight path through the feature centre ---
-        peak_r, max_glu, max_act = 0.0, 0.0, 0.0
+        peak_r, max_glu, max_act, n_rel = 0.0, 0.0, 0.0, 0
         for k in range(n_trav_steps):
             s = -HALF_PATH + (k + 0.5) * (path_len / n_trav_steps)
             position = env.feature_positions[target] + s * u
-            pr, mg, ma = step_physics(network, env, position, 1, drive, target)
-            peak_r = max(peak_r, pr); max_glu = max(max_glu, mg); max_act = max(max_act, ma)
+            pr, mg, ma, nr = step_physics(network, env, position, 1, drive, target)
+            peak_r = max(peak_r, pr); max_glu = max(max_glu, mg)
+            max_act = max(max_act, ma); n_rel += nr
 
         enl_end, einv_end, conf_end, stable_end = spine_state(network, target)
 
         # ERR-2 GUARD: glutamate must actually reach the synapse in the driven arm.
         if drive and n == 1:
             glu_assert_value = max_glu
+            glu_assert_count = n_rel
 
         # --- gap: REAL physics, at a parked position. analytical_gap is NOT called. ---
+        # A1.2 descriptive: sample enlargement through the gap so the late-gap decay
+        # constant can be read separately from the early calcium-tail phase.
+        gap_samples = []
         if n < N_TRAVERSALS:
-            step_physics(network, env, park, n_gap_steps, drive, target)
+            for _ in range(n_gap_steps):
+                step_physics(network, env, park, 1, drive, target)
+                gap_samples.append(spine_state(network, target)[0])
 
         row = dict(traversal=n, enl_start=enl_start, enl_end=enl_end,
                    rho_into_this=rho, peak_r=peak_r,
                    E_inv_start=einv_start, E_inv_end=einv_end,
                    conf_start=conf_start, conf_end=conf_end,
                    stable_end=stable_end, max_act=max_act, max_glu=max_glu,
+                   n_release_events=n_rel, gap_enl_samples=gap_samples,
                    elapsed_s=time.time() - t0)
         traversals.append(row)
 
@@ -263,6 +277,7 @@ def run_arm(arm, outdir):
                        rho_pred=RHO_PRED, physics_dt=PHYSICS_DT, agent_dt=AGENT_DT,
                        rowsum_min=float(rowsum.min()), rowsum_max=float(rowsum.max()),
                        glutamate_assert_value=glu_assert_value,
+                       glutamate_assert_count=glu_assert_count,
                        n_traversals_planned=N_TRAVERSALS,
                        n_traversals_done=n, traversals=traversals)
         with open(os.path.join(outdir, f'ratchet_{arm}_seed{SEED}.json'), 'w') as fh:
@@ -297,7 +312,8 @@ def verdict(drive_payload, null_payload):
     print(f"  max confinement          : {max(confs):.4f}")
     print(f"  gain peak_r[N]/peak_r[1] : "
           f"{(peak_r[-1]/peak_r[0]) if peak_r[0] > 0 else float('nan'):.4f}")
-    print(f"  glutamate at target, t1  : {drive_payload.get('glutamate_assert_value')}")
+    print(f"  glutamate at target, t1  : {drive_payload.get('glutamate_assert_value')}"
+          f"  ({drive_payload.get('glutamate_assert_count')} release events)")
     print()
 
     # ---- NULL ARM CHECK (PREREG §7) — a ratchet here VOIDS the measurement. ----
