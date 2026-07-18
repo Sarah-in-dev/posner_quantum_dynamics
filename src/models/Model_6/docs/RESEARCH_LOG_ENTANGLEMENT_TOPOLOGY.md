@@ -65,6 +65,7 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| ETA-1 | 2026-07-18 | **THE PUMP DOES NOT IGNITE — the cross-synapse partition exists only under an IMPOSED η, never a driven one.** Measured across 4 conditions (`sweep/loop_audit_2026_07_18/eta_probe.py`): `eta = 0` under rest, under the spatial-discovery −40 mV drive, and under the −10 mV theta burst **with the clamp removed**. `r = p_met_agg/P_c` floors at **0.0390** and peaks at **0.1409** after 30 s of sustained drive; extrapolating `E_invasion` to its ceiling gives `r ≈ 0.32`, still **3× below** the `r ≥ 1` condensation threshold. Cause: `ca_open` is the binding constraint and measures **0.063** duty-averaged over the real theta protocol, not the `≈1` assumed at `soc_pump_threshold_stage1.py:88` — a ~10× overstatement, and why that falsifier never fired. **Consequence:** `k_cross ∝ sqrt(eta_i·eta_j)`, so at eta=0 **zero cross-synapse bonds form** — the clamp in every topology probe is what creates the partition, not merely what holds it steady. **T1′ is untouched** (it clamps by declaration, scores order only, and the Werner algebra is independent) but its LICENSE is narrowed: "the topology IS the eligibility trace **in a running network**" is unsupported — in every end-to-end run the topology is empty. **NOT FIXED BY TUNING:** `P_c`(ω₀,Q) and `p_active_max_W` were left alone deliberately; moving them is the §6.1 emergent-physics failure mode. Open fork: wrong drive protocol vs condensation being intrinsically a population phenomenon (~10–20 synapses at ≤1 µm; unreachable at ≥2 µm at any N). **Blocks the §8 input-selectivity phase**, whose "vary only the drive" constraint is currently unsatisfiable. | [GROUNDED, 4 conditions] | L·ETA-1 |
 | T1'-6 | 2026-07-18 | **CHANNEL SEPARATION — the population confound is measured INERT; §6's conclusion stands, §6's argument is replaced.** Adversarial review charged that dimer loss feeds the same extreme-value statistic that sets `d*_eff`, so it produces far-pairs-first too and replication separates nothing. Pre-registered 4 arms (+2 counterfactual) BEFORE running (`abdb549`). Result: **arm A ≡ arm B bit-identically** (`max|A−B| = 0.000e+00` on every `d*_eff`/`max_pair` sample, 4/4 seeds) and **arm C produces ZERO breaks** while the population falls 2223→~50, retaining **100.0000%** of `max_pair(P_S²)`. Cause, from code: `dimer_particles.py:230-241` removes **lowest-`P_S`-first** (`coherence` is an affine increasing map of `P_S`, :57-62), so attrition is rank-selective and the argmax is the LAST thing removed. The charge additionally fails **under its own assumption**: arm C_rand (uniform random removal) also gives zero breaks — `Δd*_eff = −0.002 µm` against a 1.35 µm span — because `P_S(0)` is packed at its ceiling (median 0.9986, max 1.0), leaving no room below the max. Null arm D clean. **Where it does bite:** arm A_rand (random removal + decay) confirms 4/4 with systematically earlier breaks — a model that removed randomly *would* have a live population channel. **SECONDARY, damaging:** order-recovery power measured **37/40 ≈ 92%** across noise draws (seed 0 = 7/10), not the **10/10** §4 cites — different estimators (this run applies the probe's `CONSECUTIVE_ABSENT=3` guard; the power probe used unguarded first-crossing). Headline unaffected: `p≈3.0×10⁻⁶` is against the classical null, which power does not move, and 4/4 at 92% power has probability 0.72. | [GROUNDED, 4 seeds × 6 arms] | L·T1'-6 |
 | ERR-1 | 2026-07-17 | **CORRECTION — three P_S_crit annotations were arithmetically wrong when first committed.** The wide ladder's critical-coherence values were logged as 2.90µm→0.9327, 2.45→0.8801, 2.00→0.8305. Correct values (`P_S_crit = sqrt(0.5·exp(gap/λ))`, λ=5µm) are **0.9450 / 0.9034 / 0.8637**; 3.35µm→0.9885 was right. Verified against the Jul-16 ladder's values, which were correct (3.0→0.9545, 2.8→0.9356, 2.5→0.9079, 2.0→0.8637 all reproduce exactly). **The T1' result is UNAFFECTED**: these are descriptive annotations only — the probe never reads them, it computes d* at runtime from measured P_S and compares gaps directly, so the 4/4 cascade used the real geometry and the real Werner threshold. Caught when Sarah asked for a from-scratch explanation of the mathematics and the derivation was re-done by hand. Fixed in `sweep/coherence_fragmentation_probe.py` and in T1'-3/L·T1'-3 below. | [GROUNDED, corrected] | — |
 | T1'-5 | 2026-07-17 | **T1' REPLICATION COMPLETE — far-pairs-first CONFIRMED across 4/4 independent seeds; CONCLUSIVE.** Seeds 0,1,2,3 (wide ladder, 90 s, dt=1e-3; seeds 1–3 run in parallel). ALL FOUR broke in the exact pre-registered order **3.35 > 2.90 > 2.45 > 2.00**. Under the classical null (no spatial structure ⇒ break order is a uniformly random permutation of 4 ⇒ 1/24 per seed), 4/4 in order ⇒ **p = (1/24)⁴ ≈ 3.0×10⁻⁶**. Break TIMES scatter seed-to-seed (gap 2.90 broke at 32.5/37.0/42.0/32.5 s; gap 2.45 at 61.5/55.0/54.5/64.5 s) while the ORDER is invariant — vindicating the score-order-not-times decision (L·T1'-2). Replication also DEFEATS the population-collapse confound on the late breaks: uniform dissolution lowers every pair's radius together (edges would die ~simultaneously), so it CANNOT manufacture a consistent gap-spaced order across independent seeds — only the coherence/distance mechanism does. Altitude unchanged: **(A)** — the model's partition carries spatial structure a classical scalar eligibility trace cannot; NOT a claim about quantumness (attribution gap stands; see the epistemic frame). Completes L·T1'-4. | [GROUNDED, 4 seeds] | L·T1'-5 |
@@ -78,6 +79,79 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·ETA-1 — The pump does not ignite: the cross-synapse partition exists only under an imposed η · 2026-07-18  `[GROUNDED, 4 measured conditions + computed thresholds]`
+
+**This entry does not overturn T1′. It states the regime T1′ lives in, which was never
+written down, and which materially qualifies "the topology IS the eligibility trace."**
+
+**The measurement.** `sweep/loop_audit_2026_07_18/eta_probe.py`. Under every drive the
+learning drivers actually apply, `eta` is pinned at **0**:
+
+| condition | ca_open peak | E_invasion peak | r | eta > 0 |
+|---|---|---|---|---|
+| −70 mV rest, N=6 | 0.020 | 0.0000 | 0.0390 | NO |
+| −40 mV sustained 3 s, N=6 (spatial-discovery drive) | 0.120 | 0.0005 | 0.0391 | NO |
+| theta burst −10 mV, N=7, **clamp removed** | 0.440 | 0.0000 | 0.0390 | NO |
+| −40 mV sustained **30 s**, N=7 | 0.060 | **0.3596** | **0.1409** | NO |
+
+`eta = (r−1)/(r+1) if r ≥ 1 else 0` (`multi_synapse_network.py:1130`), with
+`r = p_met_agg / P_c`, `P_c = n̄ℏω₀²/Q = 21.51 fW` (ω₀=8e6 Hz, Q=10,
+`model6_parameters.py:801-802`) and `P_BASAL_W = 0.84 fW`. So `r` has a hard floor of
+**0.0390** at zero drive. Run F is the decisive one: `E_invasion` does climb (0 → 0.36 over
+30 s) and `r` tracks it, but linear extrapolation to the ceiling `E_invasion = 1.0` gives
+**r ≈ 0.32 — still 3× below threshold.** `[MODELED]` on the extrapolation; the run was
+stopped at 30 s on CPU budget. The verdict does not turn on it (3× is not an extrapolation
+artifact), but the number is not a measurement.
+
+**Why: `ca_open` is the binding constraint, and a prior probe overstated it ~10×.**
+In-network `ca_open` at −40 mV measures 0.04–0.06. `sweep/soc_pump_threshold_stage1.py:88`
+sets `reachable = 0.74 * 1.0` with the comment `ca_open(burst)~1`. Measured
+(`ca_probe.py`): analytic steady state is 0.726 at −10 mV and 0.179 at −40 mV, and
+**duty-averaged over the actual theta protocol** (4 spikes × 2 ms per 125 ms = 6.4% duty,
+`coherence_fragmentation_probe.py:196-198`) it is **0.063**. That is why the stage-1
+falsifier did not fire. `[GROUNDED]`
+
+**CONSEQUENCE FOR THE PARTITION — the part that matters.** `k_cross ∝ sqrt(eta_i·eta_j)`
+(`multi_synapse_network.py:309, 321`). **At eta = 0, zero cross-synapse bonds form.** So the
+clamp every topology probe applies is not a convenience and not merely a control that "holds
+the pump fixed" — *without it there is no cross-synapse entanglement at all, hence no
+partition to measure.* T1′, the static radius probe, and the two-cluster Werner validation
+all live in a regime the model does not reach from its own drive.
+
+**What this does and does not do to T1′** (state both, do not let the caveat inflate):
+- **Does NOT touch it.** T1′ clamps eta at 0.26 as a *declared* control, says so in the
+  write-up (§4 "Drive protocol"), scores order only, and the Werner/distance algebra it tests
+  is independent of how eta got there. The 4/4 result stands exactly as recorded in T1'-5.
+- **DOES qualify what it licenses.** T1′ shows the partition *of this model, under an imposed
+  pump*, carries spatial structure a classical scalar trace cannot. It does not show the
+  model reaches that partition on its own. Any claim of the form "the entanglement topology
+  IS the eligibility trace **in a running network**" is currently **unsupported** — in every
+  end-to-end run the topology is empty.
+
+**Geometry dependence** `[computed]`, `dep_probe.py`. Critical drive
+`d* = (P_c − P_BASAL)/(p_active_max · rowsum)`; `d*` **saturates** with N because coupling is
+`exp(−d/λ)`, λ=5 µm. To cross r=1 at −40 mV with `E_inv` saturated (d≈0.05) needs
+rowsum > 6.89: **~10–20 synapses at 1 µm, ~10 at 0.5 µm; unreachable at ≥2 µm spacing at any
+N** (rowsum floors at ~5.1).
+
+**THE DECISION THIS FORCES (Sarah's, explicitly NOT the thread's).** The shortfall is 3×, and
+`P_c` is set by `omega_0` and `Q` while `p_active_max_W` is a free parameter. Moving any of
+them would make eta ignite. **That is the named emergent-physics failure mode** ("what value
+makes the result come out right", `quantum-computation-and-attribution` §6.1) and this entry
+records that it was NOT done. The real fork is: (a) the drive protocol is wrong — the
+subthreshold −40 mV was a deliberate choice (`run_spatial_discovery.py:360-365`, "was −10 mV,
+which illegally merged the plateau into the synaptic knob"); or (b) the pump genuinely does
+not ignite at few-synapse scale and requires the ~10–20 co-driven synapses at ≤1 µm the table
+above implies — in which case condensation is intrinsically a *population* phenomenon and the
+experiment must be designed at that scale. **Open.**
+
+**Bearing on the designated next phase (input-selectivity).** The phase directive
+(`SESSION_HANDOFF_JUL17_T1PRIME_REDESIGN.md` §8) inherits from T1′ the constraint "fixed
+geometry across conditions; vary only the DRIVE." That constraint is currently
+**unsatisfiable**: drive does not move eta, eta is the only input-dependent channel into the
+partition, and at eta=0 there is no partition. The selectivity experiment cannot be designed
+until the fork above is resolved. This is a prerequisite, not a scheduling detail.
 
 ### L·T1'-6 — Channel separation: the population channel does not order, and cannot · 2026-07-18  `[GROUNDED, 4 seeds × 6 arms + 40-draw stability]`
 

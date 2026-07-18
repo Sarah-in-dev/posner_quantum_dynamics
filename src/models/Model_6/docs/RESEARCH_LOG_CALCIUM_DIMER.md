@@ -42,6 +42,9 @@ made, not just what it was.
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| D19 | 2026-07-18 | **D17's CROSS-TRIAL READING IS RETRACTED — the quantum measurement fires once per EXPERIMENT, not once per trial.** Observed (`sweep/loop_audit_2026_07_18/probe_latch2.py`, instrumented 3-trial run): `perform_quantum_measurement` called **1× in trial 0, 0× in trials 1–2**; `_network_measurement_performed` (`multi_synapse_network.py:1335-1337`) is a one-shot latch that `run_spatial_discovery.py:417-419` never resets. Spine volume nevertheless accumulates, by two non-quantum paths: **(A)** `_measurement_gate_opened` is written True at one site (`:1383`) and **never cleared anywhere, including `reset()`**, so later trials re-commit on stale-flag AND a classical CaMKII calcium integral — observed with `pqm_calls=0`; **(B)** commitment is not needed at all — a never-gated, never-committed synapse grew 1.065→1.430, because actin formation is calcium-only and `structural_drive` enters solely through `confinement`. **Commitment buys durability, not amplitude** (measured: drive 0→1 at fixed Ca *lowers* enlargement 1.447→1.099). Ratchet compounder: only *active* synapses are stepped, so silent ones never run their decay term. **SURVIVES:** all single-trial chemistry (emergent/bounded/rise-and-fall/localized) and D18. **RETRACTED:** "plasticity accumulates across traversals" as evidence of quantum-gated learning, and "formation→spine-growth→behavior closes". **Also invalid by construction:** the coordinated-vs-independent control — `_evaluate_independent_gate` shares the same latch (`:1476/:1478`), so whichever fires first locks out the other. | [GROUNDED, observed; reduced config] | E2·A–C |
+| D20 | 2026-07-18 | **Durable-state audit — one working channel, and it does not self-maintain.** Spine volume is the only channel closing the loop (read back as the agent's weight, `run_spatial_discovery.py:372-375`); ceiling **3.80**, actin-limited at `spine_plasticity_module.py:332-333` (not the 3.9 clip at `:381` — the two ceilings differ). **It decays to below baseline by t=3000 s (τ≈1000–2000 s), falsifying `coherence-gated-learning` primitive 4** ("self-reinforcing maintenance that resists decay"). `analytical_gap` advances the plasticity clock by **1 ms per 30 s gap** (observed `network.time`=46.5 vs `spine_plasticity.time`=16.5–31.5), so inter-trial decay is skipped rather than resisted. **AMPAR is dead twice over** — the 1800 s onset needs 159–809 trials at the measured duty cycle (0.189 best / 0.037 mean) against a shipped `n_trials=5`, AND its whole chain is gated on `spine_calcium_feedback`, defaulted False. **Template feedback (`spine_volume>1.25 → n_templates`) DOES fire early (~8 s)** and is the most reachable second channel: mean rate effect only ×1.010–1.015, but it ~**doubles the template-bound fraction**, raising `T_eff` — a coherence-window lever, not a rate lever; net standing count unsigned because dissolution carries the same factor. Coupling weights never mutate; `apply_reward_correlated`/`sample_correlated_eligibilities` orphaned and would be near-no-ops if wired (they write the lever that does not set magnitude); `eligibility_trace.py` fully orphaned and superseded. | [GROUNDED, measured] | E2·D |
+| D21 | 2026-07-18 | **CONSTRUCT-VALIDITY GAPS — declared ≠ implemented, five of them, blocking any load-bearing behavioural result** (`quantum-computation-and-attribution` §6.5). (1) **`quantum_field_kT` is INERT in spine plasticity** — measured bit-identical volume for kT ∈ {0,1,5,20,100}; accepted at three call sites, read in none; five `ActinParameters` barrier fields declared and never referenced; the module docstring describes a quantum barrier-modulation mechanism **that does not exist in the code**. (2) The same docstring names `molecular_memory` as the driver of storage; calcium is. (3) `spatial-discovery-experiment` skill claims AMPAR persists as structural state; **AMPAR never changes in any run**. (4) primitive 4 falsified (D20). (5) **No cross-synapse bonds form during trials at all** — `run_trial` omits `coupling_weights` (`run_spatial_discovery.py:446-449`) and `_update_entanglement` early-returns without them (`:276-279`); combined with `L·ETA-1` (eta=0 ⇒ k_cross=0) there are **two independent reasons the eligibility structure is absent during a learning trial**. | [GROUNDED, measured + code SHOWN] | E2·E |
 | D18 | 2026-06-28 | **Near-critical variability CHARACTERIZED — dimer nucleation is an ALL-OR-NONE bistable switch** (D17's "criticality" confirmed mechanistically). New single-synapse probe (`sweep/criticality_variability_probe.py`), N≈120/condition, reseeded global RNG isolates the stochastic gate from the agent/structural/start-position confounds in the 5-trial run. Across the subthreshold drive band the peak-dimer distribution is **bimodal with a FORBIDDEN GAP**: replicates land at silent/fizzle (≤~8 dimers) or **full (~125–150)**, NEVER between — **0 of 480** in 11–120. ON-amplitude is **quantal** (~135, drive- AND duration-independent → a real attractor = the supersaturation runaway); drive/duration/input-noise tune only **P(catch)**, a sharp sigmoid. Critical point ≈ **−43 mV / ~570 µM** (just under the 716 µM gate; matches D11/D12 616 µM→S≈0.91). Susceptibility (Fano = var/mean) peaks ~120–148 at the midpoint. Mechanism: stochastic channel-opening **COINCIDENCE** (`analytical_calcium_system.py:132`) intermittently crosses S>1; once caught it runs to the attractor. Explains the D17 trial spread (9/1/31/23/22 = many such switches integrated over a 60 s traversal). **Controls PASS:** gap survives 0.25–2.0 s durations (not a window artifact) AND presynaptic-release stochasticity (not a constant-glutamate artifact). **Altitude:** a CLASSICAL stochastic nucleation criticality on the **(A)** floor — says nothing about **(B)**. Probe + scratch data uncommitted. | [GROUNDED probe + controls] | E1·L |
 | D17 | 2026-06-28 | **FULL INTEGRATION VALIDATION — the grounded stack works end-to-end in the live network.** `run_spatial_discovery`, 5 trials, 20 synapses, B1+B2a+D16 live. Runs clean. Dimer formation **EMERGENT, BOUNDED, rise-and-fall** (end-of-trial totals 9/1/31/23/22; peak transient 318; no runaway → resolves the parked unbounded-accumulation problem). **LOCALIZED** (1/1/5/4/3 of 20 synapses). **Plasticity ACCUMULATES across traversals** (max spine vol 1.63→1.90→2.59→2.59→2.67) and the agent **FOUND the goal in trial 3** (t=62 s) — formation→spine-growth→behavior closes. Stochastic/near-critical (unseeded channel gating → trial-to-trial variability = predicted criticality). First run that is emergent + bounded + rise/fall. (Earlier expectation of ~0 dimers was WRONG — B2a's grounded amplitude lets stochastic coincident openings cross the gate at subthreshold V.) **Live edits: B1 committed; B2a+D16 uncommitted.** | [GROUNDED integration] | E1·K |
 | D16 | 2026-06-28 | **Species blocker (D13) RESOLVED — Option B outcome.** Dropped the invalid bulk-Ca/P sigmoid in `update_dimerization`; `dimer_fraction = 1` (formation → dimer). Grounding chain: Ca/P invalid (skill §3) + aggregation-rate ungroundable so a split would be tuning (D15) + **coherence selects the dimer downstream** (dimer ~100s s, trimer sub-second; Agarwal). MODELED choice, flagged in code. Validated: integration loop now forms 49 µM dimer (matches A3's 47 µM), S pins at 1.0, P_struct stabilizes 0.81 mM → grounded Ca→gate→dimers→SOC, correct species. **Live edit, uncommitted.** (Dead `calculate_dimer_fraction` recompute at ~L425 now orphaned — harmless, clean later. Canonical-skill §2.2/§3 owes the "formation species-selection ungroundable; coherence is the selector" keystone.) | [GROUNDED; MODELED choice] | E1·K |
@@ -65,6 +68,169 @@ made, not just what it was.
 ---
 
 ## THE LOG (newest first)
+
+### E2 — 2026-07-18 · Forward-learning loop audit — D17's cross-trial reading RETRACTED
+
+**Session shape.** Three parallel diagnostic agents, read-only against the code, each
+instrumenting and running the live system. No repo source modified during the audit. Probes
+persisted to `sweep/loop_audit_2026_07_18/` **because the T1′ scar applies here**: D17 and the
+April-7 place-field result survive only as prose transcribed into handoffs and are not
+independently re-derivable. These are.
+
+**Trigger.** The question was operational — "is the multi-synapse system ready to carry a
+forward-learning experiment with no backprop?" The audit was scoped to answer that. It
+instead falsified the cross-trial half of D17.
+
+#### A. The measurement gate fires ONCE PER EXPERIMENT, not once per trial  `[GROUNDED, observed]`
+
+`sweep/loop_audit_2026_07_18/probe_latch2.py`, instrumented 3-trial run (reduced config: 4
+synapses, 14 s budget, deterministic agent — every trial reached the goal and delivered
+dopamine):
+
+| trial | gate called with reward | `perform_quantum_measurement` CALLS | latch early-returns |
+|---|---|---|---|
+| 0 | 1 | **1** | 0 |
+| 1 | 1 | **0** | **1** |
+| 2 | 1 | **0** | **1** |
+
+`_network_measurement_performed` (`multi_synapse_network.py:1335-1337`) is a one-shot latch
+reset only in `__init__`, `reset()`, and two probes. `run_spatial_discovery.py:417-419` clears
+`_camkii_committed` and `network_committed` per trial and **not** the latch.
+
+**The classical control shares the same flag.** `_evaluate_independent_gate` reads and writes
+the identical latch at `:1476/:1478`. Whichever gate fires first locks out the other, so the
+coordinated-vs-independent comparison — the control for whether the correlated partition
+matters at all — **is invalid by construction**. `[GROUNDED code SHOWN; the comparison itself
+was not re-run]`
+
+#### B. Spine volume accumulates anyway, by two paths, neither of them quantum  `[GROUNDED, observed]`
+
+Observed end-of-trial spine volume in the same run:
+
+| syn | gate_opened | T0 | T1 | T2 |
+|---|---|---|---|---|
+| 0 | True | 1.243 | 1.488 | 1.838 |
+| 1 | True | 1.246 | 1.685 | 2.124 |
+| 2 | True | 1.184 | 1.554 | 1.815 |
+| **3** | **False — never gated, never committed** | **1.065** | **1.230** | **1.430** |
+
+- **Path A — stale flag.** `_measurement_gate_opened` is written `True` at exactly one site
+  (`multi_synapse_network.py:1383`) and **never cleared anywhere, including by `reset()`**.
+  With `_camkii_committed` cleared each trial, later trials re-commit on `(stale flag) AND
+  (CaMKII calcium integral > 0.5)` — observed with `pqm_calls = 0`. Two synapses committed
+  for the FIRST time in trial 2 with no measurement having occurred.
+- **Path B — commitment is not required at all.** Synapse 3 grew comparably while never
+  gated and never committed. Actin formation (`spine_plasticity_module.py:340`) is a function
+  of **calcium only**; `structural_drive` enters solely through `confinement` (`:325-326`),
+  which trades extrusion for retention. **Commitment buys durability, not amplitude.**
+  Measured directly (`probe_spine_volume.py`): driving `committed_memory_level` 0→1 at fixed
+  Ca=5 µM *lowers* enlargement 1.447→1.099. Magnitude is the Hill-4 calcium term at `:320`
+  (Ca=0.5→V=1.22; Ca=1.0→V=2.34).
+- **Compounding both:** `run_spatial_discovery.py:434-437` steps only *active* synapses, so a
+  silent synapse never runs its extrusion/decay term. Volume **ratchets** rather than
+  accumulating against decay.
+
+#### C. What of D17 survives  `[the retraction]`
+
+**SURVIVES** — everything upstream of the gate, i.e. the single-trial chemistry this log
+exists to record: dimer formation emergent, bounded, rise-and-fall (9/1/31/23/22, peak
+transient 318, no runaway), localized (1/1/5/4/3 of 20). D18's bistable-nucleation result is
+untouched (single-synapse probe, no network gate).
+
+**RETRACTED** — the cross-trial reading. *"Plasticity ACCUMULATES across traversals
+(1.63→1.90→2.59→2.59→2.67)"* is real as a number and **false as evidence of quantum-gated
+learning**: trials 2–5 contained no quantum measurement at all. *"formation→spine-growth→
+behavior closes"* does not survive either — the behavioural read is `get_synaptic_strengths()`
+= spine volume, contaminated by Paths A and B above.
+
+**Caveat, stated so it is not over-read:** the instrumented run was a reduced config with a
+deterministic agent. The latch behaviour is structural and config-independent — that part is
+certain. The *relative weight* of Path A vs Path B at the real 20-synapse/60 s config was NOT
+observed and must not be quoted as if it were. `[INFERRED]` that D17's specific run followed
+this exact chain; `[GROUNDED]` that it contained no measurement after trial 0.
+
+#### D. Durable-state channels — what could carry learning at all  `[GROUNDED, measured]`
+
+`probe_spine_volume.py`, `probe_templates_and_drive.py`, `probe_duty.py`:
+
+- **Spine volume** — the only working channel. Ceiling **3.80** (actin-limited at
+  `spine_plasticity_module.py:332-333`, *not* the `max_enlargement_ratio=3.9` clip at `:381`;
+  the two ceilings do not coincide). **It decays**: τ≈1000–2000 s, falling *below* baseline
+  1.0 by t=3000 s. This **falsifies primitive 4** of `coherence-gated-learning`
+  ("self-reinforcing maintenance regime that resists decay") — committed decays *slower* than
+  uncommitted, but does not self-maintain.
+- **`analytical_gap` does not advance the plasticity clock.** It adds `gap_duration_s` to
+  `network.time` directly (`run_spatial_discovery.py:296`) then runs one 1 ms
+  `network.step`. Observed at end of run: `network.time = 46.518` vs
+  `spine_plasticity.time` = 25.5/31.5/25.5/16.5. **A 30 s gap contributes 1 ms.** Volume
+  survives gaps because the gap is *skipped*, not because it resists decay.
+- **AMPAR is dead twice over.** Clock: `ampar_onset_delay = 1800.0` with an unconditional
+  early return (`:420-425`), and measured duty cycle (10 seeds, shipped config) is 0.189 best
+  / 0.037 mean ⇒ **159–809 trials** to reach onset against a shipped `n_trials=5`. Flag:
+  the whole AMPAR→voltage chain (`model6_core.py:309-316`) is gated on
+  `spine_calcium_feedback`, which `make_network` defaults **False**. No experiment has come
+  within 1.5–2 orders of magnitude.
+- **Template feedback DOES fire and is the most reachable second channel.** `spine_volume >
+  1.25 → n_templates 5` (`model6_core.py:632-644`) is unconditional in the EM path and V
+  reaches 1.25 by ~8 s at Ca=5 µM. Measured effect is small on rates (mean template
+  enhancement ×1.010 at n=5, ×1.015 at n=6) **but roughly doubles the template-bound
+  fraction** at n=6 — which raises `T_eff` via `template_factor=0.7`
+  (`dimer_particles.py:311`). That is a *coherence-window* lever, not a rate lever. Caveat:
+  dissolution carries the same `template_enhancement` factor
+  (`ca_triphosphate_complex.py:418`), so the net standing-count effect is unsigned by
+  inspection and needs measuring in a live run.
+- **Coupling weights are never a learning channel** — computed once from geometry
+  (`multi_synapse_network.py:807-817`, called once from `__init__`), never mutated anywhere.
+- **`apply_reward_correlated` (`:1187`) and `sample_correlated_eligibilities` (`:1147`) are
+  orphaned, and would be near-no-ops if wired** — they write to `_committed_memory_level`,
+  which §B measured does not set enlargement magnitude, and which is *assigned* (not
+  accumulated) at the next commitment (`model6_core.py:616`). This looks like why they were
+  abandoned rather than an oversight.
+- **`src/models/Model_6/eligibility_trace.py` is fully orphaned** (zero importers), superseded
+  by `model6_core.py` PHASE 9. Its P31/P32 isotope parameterisation is the only part without
+  an in-tree equivalent — check the isotope kill-switch control before deleting.
+
+#### E. Construct-validity gaps found (declared ≠ implemented)  `[GROUNDED]`
+
+Per `quantum-computation-and-attribution` §6.5 — these must be closed before any behavioural
+result is load-bearing:
+
+1. **`quantum_field_kT` is inert in spine plasticity.** Measured **bit-identical** volume to 8
+   decimals for kT ∈ {0, 1, 5, 20, 100}. It is accepted at `spine_plasticity_module.py:273,
+   311, 400` and read in no body. Five `ActinParameters` fields (`barrier_polymerization_kT`,
+   `barrier_depolymerization_kT`, `barrier_stabilization_kT`, `quantum_coupling_efficiency`,
+   `barrier_electrostatic_fraction_*`, `:95-107`) are declared and never referenced. **The
+   module docstring describes a quantum barrier-modulation mechanism that does not exist in
+   the code.**
+2. **The module docstring lists `molecular_memory` as the input that drives storage.** It does
+   not drive magnitude; calcium does (§B).
+3. **`spatial-discovery-experiment` skill** states "structural state (spine volume, AMPAR)
+   persists". Spine volume persists; **AMPAR never changes at all** in any run performed.
+4. **`coherence-gated-learning` primitive 4** is falsified as written (§D).
+5. **No cross-synapse bonds form during trials.** `run_trial` calls the tracker without
+   `coupling_weights` (`run_spatial_discovery.py:446-449`) and `_update_entanglement` returns
+   early when they are `None` (`:276-279`). The topology is built only on the single reward
+   step. Combined with `L·ETA-1` (eta=0 ⇒ `k_cross`=0), there are **two independent reasons
+   the eligibility structure does not exist during a learning trial.**
+
+#### F. Net verdict on the trigger question  `[the answer]`
+
+**The system is not ready, and the gap is not the one that was visible from the outside.**
+What ran end-to-end was calcium-driven spine growth with a quantum gate that fired once and
+wrote to a lever that does not control magnitude. All three links of the architecture are
+independently broken: input (eta=0 ⇒ no partition), readout (one-shot latch, shared with its
+own control), and write (commitment sets durability, not amplitude).
+
+**Sorted, because the two classes need different treatment:**
+- **Bugs** — fix without physics judgment: both never-reset latches (including `reset()`
+  itself), the shared coordinated/independent flag, `coupling_weights` not passed in
+  `run_trial`, silent-synapse decay never running, results never persisted
+  (`run_spatial_discovery.py:24` imports `json` and never uses it).
+- **Model-design decisions — Sarah's, NOT the thread's:** whether commitment should drive
+  enlargement amplitude rather than only durability; whether `analytical_gap` should advance
+  the plasticity clock; whether `quantum_field_kT` in spine plasticity is to be implemented or
+  its declaration deleted; and the `L·ETA-1` fork on the pump. **None of these is a tuning
+  knob and none was touched.**
 
 ### E1 — 2026-06-28 · A2 supersaturation gate probe + first external literature pass
 
