@@ -54,10 +54,14 @@ re-attempted:
 So the geometry is chosen to make the ORDER RESOLVABLE, i.e. rungs WIDER than the
 between-synapse scatter — accepting a later cascade as the price:
 
-    gap 3.35um  P_S_crit 0.9887   (widest live  -> must break FIRST)
-    gap 2.90um  P_S_crit 0.9327
-    gap 2.45um  P_S_crit 0.8801
-    gap 2.00um  P_S_crit 0.8305   (tightest live -> must break LAST)
+    gap 3.35um  P_S_crit 0.9885   (widest live  -> must break FIRST)
+    gap 2.90um  P_S_crit 0.9450
+    gap 2.45um  P_S_crit 0.9034
+    gap 2.00um  P_S_crit 0.8637   (tightest live -> must break LAST)
+    (P_S_crit = sqrt(0.5*exp(gap/5)) — the coherence at which that gap loses its bond.
+     CORRECTED 2026-07-17: the first-committed values for 2.90/2.45/2.00 were wrong
+     (0.9327/0.8801/0.8305). Annotation only — the code never reads them; it computes
+     d* at runtime from measured P_S. The 4/4 result is unaffected.)
     gap 4.50um  P_S_crit 1.1090   DARK CONTROL x3: >1, can NEVER bond at any P_S.
                                   Retrodicts the static probe (both 4.5 gaps dark).
 
