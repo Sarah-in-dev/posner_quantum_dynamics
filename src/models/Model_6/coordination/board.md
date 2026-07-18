@@ -860,3 +860,47 @@ was assumed silent and was not.** PO-3's null (spontaneous release), L·ETA-4's 
 (spontaneous release), and `run_trial`'s inactive synapses (never stepped at all — D19).
 **"Silent" has meant three different things in this codebase and none of them meant zero input.**
 `advance_silent()` is the one place that gets it right, and it is used once.
+
+---
+
+## ⚠ §8 HAS BEEN MISCHARACTERISED ON THIS BOARD — 2026-07-18 20:10Z
+
+**Recorded to stop propagation while Sarah and the MO walk the decisions. NO rulings attached; no
+PO should act on this yet.**
+
+**§8 is `quantum-system-canonical` §8, "Open keystones & in-flight work."** Located via
+`docs/handoffs/SESSION_HANDOFF_JUN28_CALCIUM_DIMER_VALIDATED.md:85` (*"canonical §8 keystone #1"*).
+**Verbatim, Keystone #1:**
+
+> *"Topology is the computation" needs **pair-level** selectivity (which dimers bond depends on
+> input), not just gate-level (which regions/timings are eligible). If formation is gate-selective
+> but pair-flat, the partition carries no more than active-region density and "graph as
+> computation" weakens to "scalar as computation." **Verify before resuming graph-as-computation
+> claims.**
+
+Owning section, `quantum-computation-and-attribution` §7 #1:
+> *"**Pathway 2 is currently all-pairs, flat-rate, no J_ij — the 1/r³ coupling the docstring claims
+> is not in the code.** … Verify before resuming graph-as-computation. **Single-synapse-scale —
+> needs no backbone.**"*
+
+### What the board has been saying, and what §8 actually says
+
+- **L·ETA-4:** *"§8 assumes drive patterns the partition THROUGH eta."* **§8 does not mention η.**
+- **L·ETA-1:** attributes a *"vary only the DRIVE"* constraint to §8. **That phrase is not in §8**
+  (grep over the repo, the skill library and Downloads returns zero hits anywhere).
+- **The MO** repeated both framings to Sarah across several cycles without reading §8.
+
+### Two consequences, stated but NOT acted on
+
+1. **The `P_product` fallback may be the case §8 rules insufficient.** `P_product` is the dimer
+   population *"which forms only where NMDAR calcium arrived"* — i.e. **which regions are
+   eligible**, which is §8's **gate-level**. §8's sentence is exactly: *"If formation is
+   gate-selective but pair-flat … collapses to 'scalar as computation.'"*
+2. **§8's keystone needs no backbone** — *"Single-synapse-scale."* The entire η/pump/plateau line
+   (L·ETA-1…5, B2) is not what this keystone requires.
+
+**UNVERIFIED and next:** the *"all-pairs, flat-rate, no J_ij"* claim has NOT been checked against
+the code by the MO. It is quoted, not confirmed. **Nobody act on it until it is.**
+
+**Standing instruction to all POs: do not re-plan off this entry.** It corrects the record; the
+decisions are Sarah's and are being walked through now.
