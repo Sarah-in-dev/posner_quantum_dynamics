@@ -223,3 +223,67 @@ ruling.** Delete / revive / quarantine is the MO's routing call.
 **Incidental, checked because it could have been serious:** **zero** live sweep probes import
 `matplotlib` (`src/models/Model_6/sweep/*.py`, `sweep/*.py`). The broken venv install does **not**
 bite any live PO work. Worth one line in the MO's ledger, not an alarm.
+
+
+---
+
+# PART II — TWO corrections per artifact (MO gen-2, compute-sequencing note)
+
+**An artifact can survive one correction and not the other, because THE TWO MOVE IN OPPOSITE
+DIRECTIONS.** This is the part Part I could not see.
+
+| state | effective gap `k_diss` coefficient | vs the conditions every standing artifact was computed under |
+|---|---|---|
+| **as all standing artifacts were run** | `0.05` (bare, no catalyst) | — |
+| after the **`K`** correction alone | `0.005` | **10× SLOWER** |
+| after **`K` + template symmetry** | `0.005 × 33 ≈ 0.165` | **3.3× FASTER** |
+
+**The template correction dominates and reverses the sign of the change.** Under `K` alone the gap
+clears *less* than any artifact assumed; under both it clears *more*. **A conclusion at risk from
+one is often protected by the other.**
+
+## The re-judged table
+
+| artifact | survives `K` alone? | survives **both**? | why the two differ |
+|---|---|---|---|
+| **D17** — *"BOUNDED, no runaway"* | **NEEDS RE-MEASUREMENT** | **YES** | Under `K` alone, 10× less inter-trial clearing raises carryover and puts a *no-runaway* claim at risk. Under both, clearing is **3.3× faster than D17's own conditions** — and **faster clearing cannot manufacture unbounded accumulation.** This is a direction-of-inequality argument about an upper-bound claim, **not an estimate of a number**: the claim survives *a fortiori*. Its specific totals (9/1/31/23/22) still change, but that is digit-level and out of scope. |
+| **D19** — latch structure | YES | **YES** | Latch counts and actin growth read neither dissolution rate. |
+| **D20** — durable state | YES | **YES** | Actin / volume / clock / duty-cycle only. |
+| **D21** — construct validity | YES | **YES** | kT sweep is gap-free; the bond result is `coupling_weights` + `η`. |
+| **GAP-1** — clock + retention | YES | **YES** | `R` is an `E_invasion` (actin) ratio. |
+| **GAP-2** — the ΔV separation | YES *(re-run verified)* | **YES — and now with a mechanism** | See below. |
+
+### Why GAP-2 is insulated — checked, because it was the one genuinely exposed
+
+Volume is actin-driven, and actin is driven by CaMKII/DDSC, which are driven by **calcium**. The
+commitment pathway is explicitly *"dimers dissolve → **calcium return to spine** → CaMKII"*
+(`model6-commitment-pathway`). So a 33× increase in gap dissolution **could** have fed CaMKII and
+moved ΔV.
+
+**It cannot, and the reason is a defect:** `apply_return` is called at `model6_core.py:484` and
+`:782` — **the within-trial path only. The gap never calls it.** Gap dissolution destroys dimers
+and **silently discards their calcium.** So ΔV is insulated from any change in gap dissolution
+rate, at both corrections.
+
+## NEW FINDING — the gap breaks mass conservation, and the template fix makes it worse
+
+**The gap dissolves dimers without returning their calcium or phosphate.** My own advance/exclude
+table lists *"Calcium dynamics — at baseline within ~2 s; clamped at baseline"*, which is a
+defensible exclusion for **relaxation** — but it also silently discards the **source term** from
+dissolution, which is a different quantity. **The stated reason does not cover what the code
+actually drops.** That is a fault in my own table, found by asking whether GAP-2 was exposed.
+
+**It scales with the correction:** at `0.05` the gap discarded the calcium of ~7 particles per 20 s;
+at `0.005 × 33` it will discard ~3.3× more. **Fixing the template symmetry makes an unfixed
+conservation break bigger.**
+
+**Routed, not fixed — this is PO-2's surface** (mass conservation is that PO's whole objective, and
+`atp_system.py` / the phosphate path are explicitly not mine). Whether the gap should return calcium
+and phosphate on dissolution is a physics call adjacent to PO-2's finite-pool work.
+
+## Consequence for the sequencing
+
+**If the template fix lands, D17's NEEDS RE-MEASUREMENT closes as YES without buying a run** — the
+direction argument above resolves it. **If it does NOT land, D17 stays NEEDS.** So the Q4-9
+recommendation (*do not buy the re-measurement*) is strengthened, not weakened: **waiting is
+strictly better than spending PO-5's slot.**
