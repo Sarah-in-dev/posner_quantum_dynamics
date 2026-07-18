@@ -1,0 +1,147 @@
+# PRE-REGISTRATION — PO-4 · the analytical gap · L·GAP-1
+
+**Registered:** 2026-07-18, BEFORE the measurement is run and BEFORE any physics change.
+**Author:** PO-4 (the analytical gap). **Method:** `MO_MODEL6.md` §2.4, `experiment-design-patterns`.
+**Precedent followed:** `fa12009` (PO-1 committed its acceptance probe *failing* on current code
+before touching physics) and `2084960` (PO-3 registered a *retention fraction*, not a direction,
+so that a suspiciously perfect result reads as a red flag).
+
+---
+
+## 0. The trap this registration exists to defeat
+
+**A stopped clock and a real memory effect both produce "the gap preserved state."** If I
+register "state survives the gap" as my prediction, both outcomes confirm it and the
+measurement cannot fail. That is the `683b82f` shape.
+
+**The discriminator is therefore not survival but the RETENTION FRACTION**, registered as a
+number in advance. A stopped clock and honest physics predict *different numbers*, and the
+stopped clock's number is the suspiciously perfect one:
+
+| | retention across a 20 s gap |
+|---|---|
+| current code (1 ms per gap) | **0.999994** |
+| honest gap, never-committed spine | **0.8948** |
+| honest gap, committed spine | **0.6751** |
+
+**A result near 1.0 is a RED FLAG, not a success.** This inverts the naive reading, which is
+the entire point of registering it in advance.
+
+---
+
+## 1. The discriminating quantity (fixed now, not after)
+
+**PRIMARY — `R`, the `E_invasion` retention fraction across one gap:**
+
+```
+R = E_invasion(immediately after gap) / E_invasion(immediately before gap)
+```
+
+measured **in the full model** (`MultiSynapseNetwork`, via `analytical_gap`), reported
+**separately per confinement arm**, with `self.confinement` logged per synapse per gap.
+
+Registered predictions, derived from the code's own constants (`spine_plasticity_module.py:388-390`,
+`:412`, `:109`, `:113-114`) and NOT tuned:
+
+- `R_uncommitted(g) = exp(-g/180)` → **0.8948** at g=20 s, **0.8465** at 30 s, **0.7788** at 45 s
+- `R_committed(g)  = exp(-(k_stab·conf + (1-conf)/180)·g)`, conf_ss = 0.9756
+  → **0.6751** at g=20 s, **0.5546** at 30 s, **0.4131** at 45 s
+
+**Why per-arm and not one number:** `E_invasion` reads `actin_enlargement` only, and commitment
+redirects that pool from extrusion (τ=180 s) into stabilization (τ≈51 s). A single registered
+number would be wrong for one of the two arms. See `requests/po3-einvasion/po4-conf-001.md`.
+
+**Tolerance:** `|R_measured − R_predicted| ≤ 0.02` absolute. Rationale: the volume update carries
+thermal noise (`_update_volume`, `thermal_fluctuation_amplitude`), but `E_invasion` is computed
+from `actin_enlargement`, which is **not** noise-injected — so the tolerance covers Euler
+integration error at `dt_sub`, not stochasticity. Measured spread across 5 isolated-module reps
+was **±0.0000** on `E_invasion`, confirming the deterministic path.
+
+**HEADLINE (the board's acceptance) — `ΔV`, committed-vs-uncommitted spine-volume separation
+across an honest gap.** Registered as the *existence and sign* of a separation that the current
+code cannot produce, **not** against a target value — see §4 on why the board's quoted numbers
+are not usable as a target.
+
+---
+
+## 2. The null that cannot show the effect
+
+Three, and all three must behave as registered or the run is INCONCLUSIVE:
+
+1. **Zero-duration gap.** `analytical_gap(network, 0.0)` ⇒ `R = 1.000` exactly, both arms.
+   A null that structurally cannot decay. If this shows decay, the harness is wrong.
+2. **Pre-gap `E_invasion = 0`.** A synapse never driven above `invasion_threshold = 0.1` has
+   nothing to retain; `R` is undefined and that synapse is **excluded from the primary**, declared
+   now rather than after seeing the data.
+3. **Volume-null.** Both arms uncommitted ⇒ `ΔV` must be ≈ 0 (within thermal noise, ±0.07 from
+   the 5-rep isolated-module spread) **even on the honest gap**. If uncommitted arms separate,
+   the separation is not commitment-driven and the headline is FALSIFIED.
+
+## 3. The positive control that MUST fire (the L·ETA-4 scar)
+
+**`_camkii_committed == True` in the committed arm, asserted and printed, before `R` is
+interpreted.** The L·ETA-4 probe printed "selectivity holds" while its own positive control
+never fired. If commitment does not fire, the committed arm does not exist and the verdict is
+**INCONCLUSIVE — POSITIVE CONTROL DEAD**, never CONFIRMED and never FALSIFIED.
+
+Second control: **`confinement > 0.5` in the committed arm.** Commitment without confinement
+would leave both arms on the same 180 s branch and the two registered numbers would collapse
+into one, silently.
+
+## 4. Why the board's own target numbers are NOT the registered target
+
+`MO_MODEL6.md:140` states the isolated-module numbers are **"1.291 vs 2.389 at +300 s."**
+`grep -rn '1.291\|2.389'` over the repo returns **two hits, both coordination prose** — no code,
+no results artifact, no log entry produces them. **They are unsourced.**
+
+My reproduction (isolated module, dt=0.005, 300 s, 5 reps) does not recover them:
+
+| arm | spine_volume @300 s | E_invasion @300 s |
+|---|---|---|
+| committed (drive=1.0, Ca=1.0 µM) | **3.7031 ± 0.0649** | 0.0313 |
+| uncommitted (drive=0.0, Ca=1.0 µM) | **3.0432 ± 0.0572** | 0.8222 |
+| uncommitted (drive=0.0, Ca=0.1 µM) | **0.9609 ± 0.0181** | 0.0000 |
+
+I did **not** search for parameters that reproduce 1.291/2.389 — doing so would be tuning to a
+target, which `MO_MODEL6.md` §7 LOCKED forbids. **Registered instead:** the headline is scored on
+whether a separation *exists with the registered sign* on an honest gap and *does not exist* on
+the current code. The unsourced pair is reported to the MO as a finding (`queue/po4-gap.md` Q4-2)
+and is not used as an acceptance number.
+
+## 5. The verdict function — it can return FALSIFIED and INCONCLUSIVE
+
+```
+INCONCLUSIVE if:
+    - positive control dead (_camkii_committed never True in the committed arm), OR
+    - confinement <= 0.5 in the committed arm, OR
+    - zero-duration null shows R != 1.000, OR
+    - fewer than 2 synapses clear the E_invasion > invasion_threshold entry bar
+
+FALSIFIED if:
+    - |R_measured - R_predicted| > 0.02 in EITHER arm on the honest gap, OR
+    - uncommitted arms separate in volume beyond thermal noise (null 3 fires), OR
+    - the honest gap yields R >= 0.99 (i.e. the fix did not actually start the clock)
+
+CONFIRMED only if ALL hold:
+    - current code reproduces R >= 0.999 (the stopped clock, demonstrated FIRST), AND
+    - honest gap reproduces R within 0.02 of prediction in BOTH arms, AND
+    - all three nulls behave as registered, AND
+    - both positive controls fire, AND
+    - committed and uncommitted spine volume separate with the registered sign
+```
+
+**Note the first CONFIRMED clause.** The verdict is not reachable without first demonstrating
+the defect on unmodified code. A passing run alone cannot satisfy this registration.
+
+## 6. Registered scope limits (stated now, so they are not "limits discovered after")
+
+- `dt_sub` for the plasticity advance is **not** asserted correct. Per MO ruling 2, a
+  dt-convergence check runs against the existing 5 s full-physics validator
+  (`run_theta_burst_45s.py:405-415`). DECISION RECORD `dt-1` covers `P_S`/edges, **not**
+  transient-phase counts; it is not assumed to transfer.
+- `K_CLASSICAL = 0.05` (the retired rate) remains live in the gap during this measurement.
+  MO-held. **Every dissolution number this measurement produces inherits it** and must be read
+  that way. Stated in advance, not as a caveat afterwards.
+- This measures the **gap**, not the drive. Nothing here validates the physics *during* a
+  traversal.
+- Two synapses, one network. No claim about scaling.
