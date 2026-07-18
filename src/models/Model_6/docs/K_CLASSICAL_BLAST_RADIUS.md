@@ -106,14 +106,57 @@ within-trial:  k_diss = k_classical · (1 − se) · template_enhancement
 the gap:       k_diss = K_CLASSICAL · (1 − se)
 ```
 
-**Measured magnitude** (2-synapse network, at init): `template_enhancement` is a 100×100 field,
-**`1.0` everywhere except 3 template voxels where it is `50.0`** — 0.03% of the grid, mean 1.015.
+**MEASURED — and my first measurement of this was MISLEADING. Corrected below.**
 
-**So the omission is real but spatially confined** to exactly the template sites where
-`template_bound` dimers are created (`dimer_particles.py:205`). Whether the gap *should* carry the
-template term is a **physics call** — the chemistry skill's detailed-balance argument says the
-template factor is a kinetic catalyst that must act on **both** directions, which is an argument
-that it belongs in the gap too. **Not PO-4's to decide. Reported, not fixed.**
+I initially reported: *"`template_enhancement` is `1.0` everywhere except 3 template voxels where
+it is `50.0` — 0.03% of the grid, mean 1.015 … the omission is real but spatially confined."*
+**That framing is wrong, and wrong in the direction that makes the defect look harmless.**
+
+`0.03% of the grid` is the wrong denominator. **Dimers are not uniformly distributed — they are
+BORN at template sites**, because formation is itself template-catalysed
+(`k_eff = k_base · template_enhancement`, `ca_triphosphate_complex.py:346`). Measured on a driven
+2-synapse network (30 steps):
+
+| measure | value |
+|---|---|
+| grid-mean `template_enhancement` | **1.015** ← the misleading number |
+| **concentration-weighted `template_enhancement`** | **32.5 – 34.4** ← the physically relevant one |
+| fraction of dimer *concentration* on templated voxels | **64 – 68%** |
+| fraction of dimer *particles* flagged `template_bound` | **97.4%** |
+
+`dimer_concentration` is a `(100,100)` field and `template_enhancement` multiplies it elementwise,
+so the relevant factor is the concentration-weighted mean: **≈ 33×, not 1.015×.**
+
+### The consequence, and it partially reframes rotation 002
+
+Effective dissolution coefficients at the same state:
+
+| path | effective `k_diss` coefficient | vs within-trial |
+|---|---|---|
+| within-trial | `0.005 × te ≈ 0.165` | — |
+| gap **before** my fix | `0.05` | **3.3× too slow** |
+| gap **after** my fix | `0.005` | **33× too slow** |
+
+**My `K` correction widened the gap-vs-within-trial mismatch from ~3.3× to ~33×.**
+
+The old uncited `0.05` was *accidentally closer* to the within-trial effective rate — for the
+wrong reason: a wrong bare constant partially compensating for a missing catalytic term. Removing
+the compensation without supplying the term leaves the two paths further apart than before.
+
+**This does not mean the `K` change was wrong.** `0.005` is the grounded **bare** rate
+(`quantum-system-canonical` §3, Turhan 2024) and the gap's comment now says so correctly. It means
+the gap's *formula* is incomplete, and fixing the constant **exposed** that rather than causing it.
+**NOT DAMPED, NOT REVERTED** — reported, per rotation 002's standing instruction that a moved
+result is an escalation.
+
+**Escalated as Q4-10 (physics call, not PO-4's).** The chemistry skill's detailed-balance argument
+— a catalyst must act on **both** directions, the reasoning that retired the one-sided template
+application as a *"thermodynamic inconsistency"* — applies here in the same shape.
+
+**The caveat I cannot resolve and am not estimating:** formation is OFF during silence, so
+including the template term would mean ~33× faster gap dissolution with no compensating formation.
+Whether that is correct physics (the catalytic surface is still present in silence) or whether the
+gap needs a different treatment is exactly the call being routed.
 
 ---
 
