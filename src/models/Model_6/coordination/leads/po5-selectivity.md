@@ -5,9 +5,31 @@ resolution? Pre-registered, null that cannot show the effect, positive control d
 fire, verdict able to return FALSIFIED.
 
 **Status:** LIVE. Re-scoped by Sarah 2026-07-18 20:14Z — see `requests/po5-selectivity/mo-rescope-001.md`.
-**Current unit:** UNIT 2 **Q-A COMPLETE** (provenance). **Q-B unrun**, gated on the compute slot
-requested in `queue/` Q4. Working the drive-matching harness meanwhile — design work, no slot needed.
-**Last heartbeat:** 2026-07-18 22:00Z
+**Current unit:** UNIT 2 **Q-B RUNNING** on the exclusive heavy slot (ruling 019).
+**SLOT STATUS: HELD AND IN USE — not released.** Released here the moment Q-B returns.
+**Last heartbeat:** 2026-07-18 23:20Z
+
+**MY DEFECT, corrected:** this file read *"Q-B unrun, gated on the compute slot"* while Q-B was
+running, so the MO correctly read PO-5 as idle for ~50 min off a stale heartbeat. **The MO offered to
+take that as its own failure; it is mine** — the backbone said blocked, so blocked is what it read.
+Heartbeat now updates at every STATE CHANGE, not every milestone.
+
+**Q-B launch history — three starts, two stopped by PO-5 before any scoring:**
+- **L1 killed @~11 min, 3/9 runs, unscored.** `cells = 4` vs `MIN_CELLS = 10` ⇒ verdict could only
+  return INCONCLUSIVE whatever the physics did. Cause: `CELL_NM = 40 nm` against Unit 1's measured
+  cloud `r_max = 36.45 nm` — **the bin was bigger than the object.** A2.4.
+- **L2 aborted by its own pre-flight in 57 s.** `cells = 9` vs 10 at 8 nm. The A2.5 gate did its job,
+  and exposed that it was gating a 1 s condition while scoring at 5 s. A2.6.
+- **L3 RUNNING:** `CELL_NM = 6 nm`, pre-flight now gates the **scored** condition.
+
+**Integrity constraint on the two cell-size moves:** selection rule fixed in advance (above
+`r_p10 = 3.71`, below `r_p50 = 9.78`, clears `MIN_CELLS`), all bounds from Unit 1's prior geometry;
+**no verdict computed at any cell size, ever** — nothing existed to select toward; no verdict
+threshold moved. **Registered hard stop: if 6 nm also fails pre-flight, PO-5 STOPS and reports**
+rather than stepping the value down a third time.
+
+**Timing for MO sequencing:** ~290–370 s/run × 9 + pre-flight ⇒ **~50–60 min**, inside the ~90 min
+estimate and well inside the 2× stop-trigger. A2.3 `_remove_dimer` tripwire armed, zero calls.
 
 **UNIT 2 Q-A RESULT — `L·PO5-2` / DECISION RECORD `PO5-2`.** Pre-registered
 `docs/PREREG_PO5_UNIT2_PAIR_SELECTIVITY.md`; probe `sweep/po5_unit2_provenance.py`; **zero edits to
