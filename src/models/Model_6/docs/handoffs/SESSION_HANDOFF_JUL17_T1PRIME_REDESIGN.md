@@ -184,6 +184,21 @@ you want them**. The durable record is research-log entry T1'-5.
 
 ## 8. THE NEXT WORK PHASE (directive) — INPUT-SELECTIVITY OF THE PARTITION
 
+> **BLOCKED as of 2026-07-18 — read `RESEARCH_LOG_ENTANGLEMENT_TOPOLOGY.md` L·ETA-1 before
+> acting on anything below.** This section's design constraint "vary only the DRIVE" is
+> currently **unsatisfiable**: `eta` is measured pinned at 0 under every drive the model
+> applies (`r` peaks at 0.14 against a threshold of 1.0, ~3× short even with `E_invasion`
+> saturated), and `k_cross ∝ sqrt(eta_i·eta_j)`, so at eta=0 **no cross-synapse bonds form
+> at all**. Drive does not move eta; eta is the only input-dependent channel into the
+> partition; at eta=0 there is no partition to be selective. The rationale below still
+> stands — the selectivity question is still the right keystone — but the experiment cannot
+> be designed until the L·ETA-1 fork (wrong drive protocol vs condensation being
+> intrinsically a population phenomenon requiring ~10–20 co-driven synapses at ≤1 µm) is
+> resolved. That is a physics call, Sarah's. **Do NOT resolve it by moving `P_c`(ω₀, Q) or
+> `p_active_max_W`** — that is the §6.1 emergent-physics failure mode, and L·ETA-1 records
+> that it was deliberately not done.
+
+
 **T1′ is CLOSED.** 4/4 confirmed, documented (research log T1'-1…T1'-5). Do not re-run it,
 re-tune it, or "improve" the geometry. The machinery takes `--seeds N M ...` if more are
 ever wanted; the result does not need them.
