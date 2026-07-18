@@ -11,7 +11,35 @@ docstring violating the rule it states. **Now closed and mechanically enforced.*
 awaiting MO re-verification.
 **Current unit:** **ROTATION 002 COMPLETE** — `K_CLASSICAL` 0.05 → 0.005 landed with its measured
 delta. No open unit. Awaiting MO verification.
-**Last heartbeat:** 2026-07-18 21:40Z
+**Last heartbeat:** 2026-07-18 21:55Z
+
+### 2026-07-18 21:55Z — ROTATION 003 COMPLETE (`docs/K_CLASSICAL_BLAST_RADIUS.md`)
+
+**The enumeration corrected the sentence that dispatched it — mine.** There were **two**
+dissolution paths and only one carried the retired rate: within-trial
+(`ca_triphosphate_complex.py:418`) already ran `0.005`; only the gap's inline `k_diss` ran `0.05`,
+and the gap never calls `update_dimerization`. **So the retired rate was confined to dissolution
+during a silent gap.** My "every multi-trial dissolution number inherits `0.05`" was too broad.
+
+**Result: 7 artifacts routed through the gap, 6 survive, 1 NEEDS RE-MEASUREMENT, 0 overturned.**
+
+**The load-bearing results are clean, checked not assumed** — T1′ (4/4 seeds, p ≈ 3×10⁻⁶) ran 90 s
+silence *stepped* at `dt = 1e-3`, and ETA-5 states `analytical_gap` was **deliberately not
+called**. PO-3's sidestep on gen-1's ruling paid off exactly here.
+
+**The one NEEDS is D17's "BOUNDED, no runaway."** Trials 2–5 start post-gap and now carry ~9× more
+residual. The within-trial bound is formation-side, which *argues* it survives — **an argument is
+not a measurement**, and gen-1's defect #16 was precisely that move, so I stopped. Cost stated,
+**slot not requested**, recommendation queued to *not buy it* (D19 already retracted D17's
+cross-trial reading independently).
+
+**Second finding, out of scope, routed as a physics call (Q4-10):** the two paths are **still**
+not equivalent — the gap omits `template_enhancement` (measured: `1.0` except 3 voxels at `50.0`).
+The chemistry skill's own detailed-balance argument says it belongs in both directions.
+
+**Q4-7 answered (Q4-11):** gen-2's "nothing imports it" test **does not settle it** — `run_tier3.py:66`
+does import it. But the path is measurably broken two ways (unqualified sibling import;
+`matplotlib` broken venv-wide). **Unreachable ≠ dead. Not deleted**, per the ruling.
 
 ### 2026-07-18 21:40Z — handed off to MODEL6-MASTER **gen-2** (seat changed under me)
 
