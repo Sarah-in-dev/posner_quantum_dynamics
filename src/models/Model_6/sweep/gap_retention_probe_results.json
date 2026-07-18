@@ -1,0 +1,32 @@
+{
+  "verdict": "INCONCLUSIVE",
+  "why": [
+    "null-1 zero-duration gap decayed"
+  ],
+  "gap_s": 20.0,
+  "results": {
+    "uncommitted": {
+      "R": 0.9999938311224005,
+      "R_pred": 0.8948393168143698,
+      "diff": 0.10515451430803069,
+      "conf": 0.0,
+      "E_pre": 0.5084745762711864,
+      "E_post": 0.508471439553763,
+      "vol_pre": 1.0,
+      "vol_post": 1.0000476038690531,
+      "stopped_clock": true
+    },
+    "committed": {
+      "R": 0.9999781731880435,
+      "R_pred": 0.6750598471879043,
+      "diff": 0.32491832600013915,
+      "conf": 0.975609756097561,
+      "E_pre": 0.5084745762711864,
+      "E_post": 0.5084634778922255,
+      "vol_pre": 1.0,
+      "vol_post": 0.9997538791498076,
+      "stopped_clock": true
+    }
+  },
+  "null_zero_gap_R": 0.9999938311224005
+}

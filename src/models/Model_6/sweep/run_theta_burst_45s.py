@@ -68,7 +68,11 @@ def analytical_gap(network, gap_duration_s, dt_sub=1.0, diagnostics=False):
     P_THERMAL = 0.25
     K_CLASSICAL = 0.05  # s^-1, bare dissolution rate
 
-    n_subs = int(np.ceil(gap_duration_s / dt_sub))
+    # A zero-duration gap is a legal call (an empty interval in a protocol loop, and the
+    # natural null for any retention measurement). np.ceil(0/dt_sub) == 0 made this raise
+    # ZeroDivisionError on the next line. Found 2026-07-18 by L·GAP-1's pre-registered
+    # zero-duration null -- i.e. by the control that exists to be unable to show an effect.
+    n_subs = max(1, int(np.ceil(gap_duration_s / dt_sub)))
     actual_dt = gap_duration_s / n_subs
 
     # Diagnostics counters
