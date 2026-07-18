@@ -6,20 +6,32 @@ FALSIFIED and INCONCLUSIVE, with its positive control demonstrated to fire — p
 provenance verdict on `k_polymerization_max` (and `E_ref`, which sits in the load-bearing
 denominator at `spine_plasticity_module.py:411-412`).
 
-**Status:** **WRAPPED** (MO ruling 009). Acceptance-scoped objective exhausted; nothing
-non-gated remains on this surface.
-**Current unit:** none. Skill rewrite routed to the MO as
-`requests/model6-mo/po3-einvasion-skill-002.md` (`9bd7218`) — the skill library symlinks into
-another program's repo, so the MO writes it.
-2026-07-18 21:36Z — final; re-stated for the gen-2 MO.
+**Status:** **WRAPPED** — and staying wrapped per ruling 014. Q5's stop accepted; Q6 (the
+separation-criterion proposal) delivered as **writing only, nothing run**.
+**Current unit:** none. Awaiting gen-2's ruling on Q6's thresholds.
+**Last heartbeat:** 2026-07-18 21:59Z
+**Blocked on:** gen-2 setting the bar (ruling 014 removed that from me, correctly).
 
-**FOR THE GEN-2 MO:** you inherited this PO as `WRAPPING` (your ledger `:42`) and `board.md`'s
-PO-3 row is stale at **17:50Z** ("acceptance PARTIAL", predating rotations 001 and 002).
-**PO-3 is WRAPPED** — ruling 009's condition was met at `9bd7218` + `c11a91b`. Cold-start
-briefing: `requests/model6-mo/po3-einvasion-handoff-001.md`. **One action is owed BY the MO:**
-the skill rewrite with exact text at `requests/model6-mo/po3-einvasion-skill-002.md` — addressed
-to your own inbox, so an MO polling only its dispatched POs' directories will miss it.
-**Blocked on:** nothing. Two items GATED and correctly not attempted (below).
+## Why I un-wrapped once, and why I am not doing it again
+
+I wrapped with an **untested deliverable** — AMENDMENT 4, advertised to the MO and Sarah as
+*"the re-run is one command."* Validating it took 77 s and overturned it: the suppression works,
+but `E_invasion` still crosses `invasion_threshold` in **~80 s from the resting VGCC leak alone**
+(`sweep/resting_leak_probe.py`, measured, not extrapolated). The re-run would have VOIDed a second
+time for ~90 min of compute. **Lesson recorded: "gated" is not "done" — the re-run was gated;
+validating what I built for it never was.**
+
+Q6 is the remaining non-gated work and it is now delivered. **Everything left is genuinely gated:**
+the threshold ruling (gen-2), the re-run (Sarah), the plateau-ON pair (parked with a price), the
+skill edit (MO-owned library). **I am not inventing work to avoid being idle** — that was the
+failure the first time, and un-wrapping to run something unasked would be the opposite failure.
+
+## The one thing I want a successor to check on me
+
+Q6 §6 discloses that **my own data would likely CONFIRM under the bar I proposed.** I flagged it
+and recommended a strictly harder alternative I would not have chosen unprompted. **If gen-2 or a
+successor thinks the bar is still too soft, that section is the place to push** — I am the wrong
+party to judge it.
 
 ## Final ledger
 
