@@ -1,228 +1,128 @@
 # Lead: model6-mo (Model 6 · Master Orchestrator) — OWNED BY THIS LEAD
 
-**Objective (the done-bar):** run the Model 6 PO board to acceptance. Every PO's claim is
-verified as a MEASUREMENT at the data level before it is accepted — never "it ran",
-"committed", "errors=0", or a printed CONFIRMED.
+**Objective (the done-bar):** run the Model 6 PO board to acceptance. Every PO claim is verified as
+a MEASUREMENT at the data level before acceptance — never "it ran", "committed", "errors=0", or a
+printed CONFIRMED.
 
-**Worktree:** `.claude/worktrees/nervous-hertz-7ccff6` (branch `claude/nervous-hertz-7ccff6`).
-**Mode:** supervised autonomy — dispatches without per-PO approval; escalates physics calls.
+**Worktree:** `.claude/worktrees/nervous-hertz-7ccff6`, branch `claude/nervous-hertz-7ccff6`.
+**NOT master** (~20 commits behind, HEAD describes a superseded state).
+Python: `/Users/sarahdavidson/posner_quantum_dynamics/venv/bin/python`.
 
-**Status:** RUNNING. Four POs dispatched, one complete. Backbone-only comms since 18:00Z.
-
-**Current unit:** polling. No MO work blocked.
-**Last heartbeat:** 2026-07-18 19:06 UTC
-**Blocked on:** nothing of the MO's own. FIVE items with Sarah (below).
-
-**PO STATE — enough for a successor MO to take over cold:**
-- **PO-1** `local_e4593171-...` — B2 LANDED (`c280e85`) and **MO-VERIFIED**: A1 mode ratio 1
-  exactly, A2 convention 1.000000, BOTH positive controls fired (C1 5000, C2 6.283189 vs 2π),
-  model constructs, T1′ static 7/7, DISC-1 superseded by row B2-1. **NOT WRAPPED** — owes the
-  D/φ verification item the MO's own bar omitted (ruling 005 queued, unread). Idle.
-- **PO-2** `task_e54e9c25` — DISPATCHED 19:05Z, chip pending. Gates PO-6.
-- **PO-3** `local_b7aeedcf-...` — **COMPLETE and correctly STOPPED.** L·ETA-5 scored
-  `INCONCLUSIVE_NULL_RATCHETED`, **MO-verified by running its scorer**. Acceptance PARTIAL:
-  provenance MET; ratchet executed correctly but question UNANSWERED. Re-run is Sarah's.
-- **PO-4** `local_0b183e0f-...` — consolidation approved; failing-first probe committed but its
-  verdict is INCONCLUSIVE because its null cannot pass pre-fix (ruling 005 queued, unread). Idle.
-- **PO-5** — **HARD-BLOCKED, verified.** η ≠ 0 was demonstrated (peak 0.1684) but a PARTITION was
-  NOT: `k_cross ∝ √(η_i·η_j)` with one driven feature forces zero edges necessarily. The threshold
-  crossing must NOT be read as clearing the edge. Pre-positioned request already corrected.
-- **PO-6** — blocked on PO-2 (HARD).
-
-**Landed this run:** `093c675` brief · `895d55f` registration · `18acd68` rulings · `19113c4` poll
-directive · `fbe2311` PO-4 · `d0ed6d8` PO-4's correction of the MO · `9d4a526` GATE-2 band ·
-`3cc9a83` D19/D20/D21 routing · `afd0fe2` B2-incomplete-vs-pin · `6b3ddb6` K_CLASSICAL
-decision-ready · `683cdb7` F-3 correction · `87fe9ca` relay audit · `a628a4c`+`51e8ed0` null-arm
-diagnosis · `c48a54e` L·ETA-5 verification · `0b4dd64` PO-2 dispatch. Skill lib: `4bba978e3`.
-
-**Verification owed:** PO-4's pre-fix demonstration once its null is re-registered; PO-2's
-conservation check shown failing before passing; PO-1's D/φ close-out.
-
-**MO DEFECTS THIS SESSION — all caught by POs, none by the MO. Record honestly, do not repeat:**
-1. **Verified prose against prose.** Read `analytical_gap`'s docstring lists, concluded "frozen",
-   never read the function tail (it steps 1 ms). Reported it tagged `[code SHOWN]`. Caught by PO-4.
-2. **Unsourced numbers in a PO's acceptance bar.** `1.291/2.389` had no artifact. Caught by PO-4.
-   Corrected in `MO_MODEL6.md` §3 this cycle.
-3. **Named prior art without verifying it.** PO-3's kickoff called `eta_in_live_trial.py` prior
-   art; it under-delivers glutamate ~100×. Caught by PO-3.
-4. **Omitted the continuous-poll mandate from the first two kickoffs** (`consumer-acceptance-gate:34`
-   names this exact scar), causing idle POs and self-inflicted `send_message` cost.
-5. **Credited a design element that was itself the error** — ruling 003 praised GATE 1's
-   `CONFINED-RATCHET` branch; PO-3 then deleted it as resting on the inverted premise.
-6. **Skimmed a decision record and called it read** — D20 already contained the `1 ms per 30 s`
-   fact, measured. Cost a three-PO correction cycle for something already written down.
-7. **Wrote an acceptance bar short of its own authority** — the may30 pin's B2 block has two
-   obligations; the MO's bar carried one, omitting "D and φ: verify in B2".
-8. **Propagated a PO's number without verifying it** (F-3, ~100× glutamate) into a durable PO-5
-   kickoff input AND to Sarah. PO-3 later measured it at 19× with the mechanism probably inverted.
-   **The worst of the eight** — producer-green committed by the seat that enforces the gate, after
-   defect #3 had already named the same shape. Triggered a full audit of every MO relay; that audit
-   found PO-4's 26× also unverified, which the MO then reproduced independently (it holds).
-
-**Verification owed (never accept on self-report):** PO-1's demonstrated FAILING configuration,
-not the passing run · PO-3's positive control firing and null arm returning negative · PO-4's
-pre-fix `0.9999944` measured not asserted, and every subsystem in exactly one column.
-
-**WITH SARAH (four, none blocking the MO):**
-1. **Physics:** commitment depletes `E_invasion` 26× ⇒ a committed synapse loses pump drive.
-   Bears on §8 and PO-5.
-2. **Record:** F-3 puts L·ETA-3's `ca_open` attribution in question. PO-3 recommends an
-   ERR-2-style narrowing banner, no retraction, no re-run.
-3. **`K_CLASSICAL`:** priority raised — the gap runs the RETIRED `0.05` in every driver.
-4. **`_critical_threshold` deletion:** MO ruled delete; open for veto.
-
-**Notes / decomposition (living — rewrite each cycle):**
-- Board came from the 2026-07-18 substrate audit (`docs/SUBSTRATE_AUDIT_JUL18.md`) plus
-  Sarah's re-rank of its open items. Her reorder is load-bearing and already encoded:
-  items 7/3/5 are DONE and committed; items 1+2+4 collapse into PO-1 (B2) because fixing a
-  bug in code scheduled for deletion is the wrong order of operations; item 6 splits, and
-  its ATP↔Pi half is what breaks Step E.
-- The recurring defect class in this program is **prose asserting mechanisms the code does
-  not implement** (a Hill function on the wrong gate, a 30% collapse that never runs, "no
-  fitted parameters" beside two, a quantum barrier measured inert, a 2% ATP replenish that
-  does not exist). Expect it; check for it in every PO return.
+**Status:** GEN-1 HANDING OFF 2026-07-18 ~21:10Z on context pressure. Board is live and healthy.
+**Last heartbeat:** 2026-07-18 21:10 UTC.
 
 ---
 
-## GROUNDING BRIEF — 2026-07-18 (MO boot)
+## 🔴 READ FIRST — THE COMMIT RULE (root-caused today; three sweeps before it was found)
 
-### (a) Verified current state
+**All five agents share ONE git index** (`.git/worktrees/nervous-hertz-7ccff6/index`). `git commit`
+commits **the whole index**, so a bare commit carries whatever another agent staged seconds earlier.
 
-**Time.** `date -u` → `Sat Jul 18 17:30:36 UTC 2026`. `[shell]` Not inferred.
+```
+git commit -m "..." -- <explicit paths>     # correct
+git add <path> ; git commit                 # SWEEPS other agents' staged work
+```
+**New (untracked) file:** `git add <that exact path>` then `git commit -- <that path>`, same shell
+invocation. **Verify every commit: `git show --stat HEAD`** — the file list must match intent.
+**Never** `git checkout -- <path>` / `restore` / `reset` to clean up; report provenance instead.
 
-**The tree.** `git log --oneline -5 claude/nervous-hertz-7ccff6` → `e6c7bc5 chore(model6):
-coordination backbone, tracked` / `83c3b11` / `7d97fcb` / `15abd39` / `32f2840`. `master` is at
-`683b82f`. An existing worktree for the branch is at `.claude/worktrees/nervous-hertz-7ccff6`.
-`[code SHOWN]`
+*Proven empirically, not assumed. Three sweeps happened before this was found — two the MO's
+(`dea1e91` swept PO-5's entire `L·PO5-1` log entry; `df4dde9` swept PO-2's lead), one PO-1's
+(`d95e826`). **No one was careless — they obeyed a rule that did not work.** No history was
+rewritten; provenance entries in `board.md` are the record.*
 
-**The 2π site is real and reads as described.** `vibrational_cascade_module.py:312-315`
-`[code SHOWN]`:
-> `hbar = 1.0546e-34  # J·s`
-> `x = hbar * p.omega_0 / (k_B * p.T_body)`
+---
 
-and `:85` declares `omega_0: float = 40.0e9           # Hz — lowest dominant mode` — i.e. the
-symbol is named for an *angular* frequency but declared in *Hz*, so `ℏ·f` is used where `h·f`
-is required. Duplicated at `:753-755`. The correct form sits 200 lines away in
-`model6_parameters.py:41-44` `[code SHOWN]`:
-> `"""Bose-Einstein occupation n̄ = 1/(exp(h·f/kT) − 1) for frequency f in Hz.`
-> `Uses h·f (≡ ℏ·2πf = ℏω), not the ℏ·f shortcut that drops the 2π.`
+## LIVE POs — session ids are needed to wake an idle one
 
-**The calibration fiction is a function-body literal, as claimed.**
-`vibrational_cascade_module.py:243-248` `[code SHOWN]`:
-> `# Reference: 22.1 kT (MT+ full invasion) should give r well above threshold`
-> `kT_ref = 22.1  # Reference field energy for MT+ condition`
-> `r = p.r_at_E_ref * (collective_field_kT / kT_ref) ** p.pump_exponent`
+| PO | session | state | owes |
+|---|---|---|---|
+| **PO-1** | `local_e4593171-4394-42ba-8067-c70dc97cc48e` | on PO-6a (rotated from B2, which is ACCEPTED) | ruling 006: fix `T_singlet_dimer` → 216 s, de-dup the two literals |
+| **PO-2** | `local_19dce6f2-542d-4e05-a2b5-d6964082ab56` | running; **final leg of the ontology's coupled correction** | mass-conservation measurement citing §2.4/§3 SOC linkage |
+| **PO-3** | `local_b7aeedcf-4425-4416-8389-2a57e288f7b5` | **WRAPPING** (ruling 009) | rewrite `model6-actin-invasion-driver`; route the skill edit to the MO |
+| **PO-4** | `local_0b183e0f-3949-4a59-83e0-51c4c9aec7f7` | acceptance MET both bars; on `K_CLASSICAL` | 0.05→0.005 at `run_theta_burst_45s.py:145` (ONE site) + before/after dimer delta |
+| **PO-5** | `local_d85b8dab-6753-4049-821d-90dddb7630c6` | running Unit 2 — **the §8 keystone** | pair-level selectivity: does which dimers bond depend on INPUT |
+| PO-6 | — | folded into PO-1's PO-6a rotation | — |
 
-`kT_ref` is bound inside the pump-rate function, not on the dataclass — so it is invisible to
-`TubulinCascadeParameters` and to `sweep_runner`. **Structurally unsweepable, confirmed.**
-`r_at_E_ref: float = 100.0e9` is at `:115`. (The audit and `RESEARCH_LOG_CALCIUM_DIMER` DISC-1
-both cite `:246` for `kT_ref`; that is exact.)
+**Waking an idle PO:** content goes on the backbone; the message is a **pointer only** (path + one
+line of why-now + "do not reply"). **An idle PO with work available is the MO's failure.** Check
+`isRunning` after every ruling.
 
-**The false backbone docstring is live.** `model6_parameters.py:768-769` `[code SHOWN]`:
-> `backbone toward Fröhlich condensation ... The critical pump rate r_c is computed from the`
-> `backbone lattice parameters (D, phi, chi) — not hand-tuned.`
+---
 
-This is the claim PO-1 must correct; it is the recurring defect class in one sentence.
+## WITH SARAH — only two, both genuinely hers
 
-**PO-3's constants read as the provenance audit describes.** `spine_plasticity_module.py`
-`[code SHOWN]`: `:90 k_polymerization_max: float = 0.1    # s⁻¹, rate constant for new actin`
-(no source on the line), `:109 tau_extrude: float = 180.0       # s; ... Honkura band`
-(grounded), `:115 E_ref: float = 1.87              # asymptotic enlargement under sustained
-maximal Ca (3000 s uncommitted run).` — a model asymptote frozen as a constant. `:411-412`
-shows `E_invasion` is exactly `clip((actin_enlargement − invasion_threshold) / (E_ref −
-invasion_threshold), 0, 1)`, i.e. **`E_ref` is the denominator setting the whole scale of
-`r ∝ E_invasion × ca_open`.** That is why the ratchet test is the cheap decisive one.
+1. **PO-1 Q1 — the `P_met` drive change.** MO verified the may30 pin states *"per-synapse P_met, NO
+   aggregation"* verbatim, so it is pinned not fresh. **MO endorses CONFIRM.** Revert cost: one
+   `model6_core.py` hunk; mode and 2π fixes independent.
+2. **The flat-η re-read scope.** Old per-synapse η moved **1% across the whole drive range**
+   (`above_threshold` flipped at 22.1 because 22.1 *was* `kT_ref`). **Physics bounds it hard:** its
+   only consumer is `condensation_boost → k_agg_enhanced → dimer formation`. It never reaches the
+   partition. The T1′ corroboration the MO initially worried about is **backbone** η — untouched.
 
-**The interim disclosure is DISCHARGED, verified on disk — not self-reported.**
-`MO_MODEL6.md:237-240` lists it as a standing MO action. It is already written:
-`RESEARCH_LOG_CALCIUM_DIMER.md` DECISION RECORD row `DISC-1`, dated 2026-07-18, committed as
-`7d97fcb`. `[code SHOWN]` I re-read the file; it is there. No MO action outstanding.
+**Standing suggestion, not a decision:** unpark *"constants centralization"* (`quantum-system-canonical`
+§8) for **physical** constants only. It generated four defects today. Leave probe-local params alone.
 
-### (b) Decisions + locked items found
+---
 
-`MO_MODEL6.md:216-229` §7 LOCKED `[MO_MODEL6.md]` — quoted in part:
-> `**Emergent physics only.** No constant tuned to a downstream target.`
-> `**Score the ORDER, never the times** (the T1′ scar).`
-> `**The −40 mV synaptic cap stays.** Raising it to make η ignite destroys the`
-> `plateau/synaptic separation the BTSP grounding rests on (L·ETA-3).`
-> `**T1′ is CLOSED** — 4/4, p≈3×10⁻⁶. Do not re-run, re-tune, or "improve" the geometry.`
+## PARKED, with price tags
+- **Plateau-ON arms for L·ETA-6** — >10× the ~65 s/arm plateau-OFF cost (O(n²) entanglement growth).
+  Parked because the decision it informed (PO-5's `P_product` premise) was retired by Sarah's re-scope.
+  **Open for the record only.**
+- **L·ETA-5 re-run** with the corrected null — **Sarah's call**; PO-3 pre-registered it and did NOT run it.
+- **`K_CLASSICAL`** — no longer MO-held; released to PO-4, settled by documentation.
 
-`consumer-acceptance-gate:22` `[skill consumer-acceptance-gate]`:
-> `**DONE = demonstrated at the consumer.** ... "Deployed" is a status report. "Merged" is a`
-> `status report. Neither is done.`
+---
 
-Translated by `MO_MODEL6.md:47-53` §2.3 `[MO_MODEL6.md]`:
-> `**A verdict that cannot distinguish its outcomes is not a result.**`
+## PHYSICS THAT LANDED TODAY (all MO-verified; cite these, do not re-derive)
 
-`orchestrator-session:19-20` `[skill orchestrator-session]`:
-> `It does NOT do the work and does NOT ingest workstream substance ... Pulling substance into`
-> `the orchestrator is exactly what bloated and killed the May 21/22/23 orchestrator`
-> `conversations.` — the reason this file stays thin and I read the logs' top tables only.
+- **`quantum-system-canonical` §4.3 FALSIFIED** — *"eta is the selectivity channel … which synapses
+  condense is input-dependent."* **eta is a GATE, not a selectivity channel.** Three independent
+  falsifications (ETA-4 branch-global plateau; ETA-5 accumulation on spontaneous release alone;
+  commitment depleting `E_invasion` 26.2×). Mirrored in `model6-entanglement-partition-werner` §2.
+  **This — not §8 — is the claim the board spent a day misattributing.**
+- **§2.2 UPGRADED to DERIVED** — with `P_S` floor 0.25, Werner floor 1/√2, and live `T_singlet =
+  216 s`, `P_S` crosses the Werner bound at **107.0 s**, inside the ontology's ~100–200 s band. The
+  orphan's 500 s gives 247.6 s, outside it. **216 s is the value that makes the correspondence work.**
+- **`P_product` is a CO-FACTOR with eta**, not an alternative — `multi_synapse_network.py:320-321`,
+  and both enter dissolution protection at `:341`. The board treated them as rivals all day.
+- **`K_CLASSICAL` settled by documentation** — §3 gives `0.005 [GROUNDED — Turhan 2024]`; the gap ran
+  the retired **uncited** `0.05`.
+- **J-coupling is intramolecular** (§2.2, inherited at birth from a shared ATP). `calculate_j_coupling`
+  reading `atp` and not `phosphate` is defensible; **the docstring is the error.**
+- **`SUPER-1`** (calcium log) — D21(5)/audit item 16 were **already fixed** by `15abd39`.
+- **Two `coupling_length = 5.0`** — nm (intra, `dimer_particles.py:129`) vs µm (cross,
+  `multi_synapse_network.py:96`). Factor of 1000, different forms, different layers.
 
-`talon-orchestrator:43` `[skill talon-orchestrator]`:
-> `A kickoff is a **detailed, thoughtful prompt** written fresh for the workstream ... It is`
-> `**not** a generic preamble pasted verbatim, and it is **not** a template with placeholder`
-> `blocks to fill mechanically.`
+---
 
-`autonomy-contract:31-33` `[skill autonomy-contract]`:
-> `Threads coordinate by reading and writing a shared coordination file ... NOT by messaging`
-> `each other.` — matches `coordination/README.md:5-7`.
+## MO DEFECT LEDGER — 15. **The most useful thing in this file. Do not repeat these.**
 
-`agent-grounding-protocol:45` `[skill agent-grounding-protocol]` — the reconciliation rule and
-the 2026-06-24 scar:
-> `The conversation claimed; the file disproved. File wins.`
+**The through-line: the MO trusted a document where the discipline says go to the code.** POs caught
+13 of 15; the MO caught 2 while verifying something else.
 
-This is why DISC-1 above was re-read on disk rather than taken from the commit message.
+1. Verified **prose against prose** — read `analytical_gap`'s docstring lists, concluded "frozen"; the
+   function tail steps 1 ms. Tagged it `[code SHOWN]`. *(PO-4)*
+2. **Unsourced numbers in an acceptance bar** — `1.291/2.389` had no artifact. *(PO-4)*
+3. **Named prior art without verifying it** — `eta_in_live_trial.py` as "prior art to reuse". *(PO-3)*
+4. **Omitted the poll mandate** from the first two kickoffs — the exact `consumer-acceptance-gate:34` scar.
+5. **Credited a design element that was itself the error** — praised GATE 1's `CONFINED-RATCHET`; PO-3 deleted it.
+6. **Skimmed a decision record and called it read** — D20 already held the 1 ms fact.
+7. **Wrote an acceptance bar short of its own authority** — omitted the pin's D/φ obligation.
+8. **Propagated a PO's number unverified** (F-3 "~100×") into a durable PO-5 artifact AND to Sarah.
+9. **Characterised code from a line reference** — called a live 20 s workaround a "stale comment";
+   the ruling would have shipped a double-advance. *(PO-4)*
+10. **Assumed idle POs self-resume** — they do not; the MO must push. *(Sarah)*
+11. **Misattributed authorship from commit adjacency.** *(MO, while verifying)*
+12. **Escalated physics questions the ontology answers** — had read only §8 of `quantum-system-canonical`. *(Sarah)*
+13. **Collapsed NO CONSUMER vs CONSUMER HARDCODED** — overstated T2/J-coupling to Sarah. *(PO-1)*
+14. **Read a dated log row as live status** — routed an already-fixed defect to PO-4. *(MO, while verifying)*
+15. **Swept two POs' uncommitted files** — later root-caused as the shared-index race, not carelessness. *(PO-5)*
 
-`session-discipline:122` `[skill session-discipline]`:
-> `Never use ask_user_input pop-up tool.` — consistent with the standing memory; decisions go
-> to Sarah as plain chat text.
+---
 
-**Prior failures in this area, from the logs' DECISION RECORD tables (top-of-file only):**
-`ETA-4` — the probe's first auto-verdict printed "eta stays SELECTIVE" because η==0 at silent
-synapses, but η==0 at the *driven* synapse too, so the test was vacuous. `ERR-2` — a
-measurement dispatched without reading `model6-input-engine`, which owned the input path and
-predicted the symptom verbatim. Both are dispatch-discipline failures, not physics failures,
-and both are things a kickoff can prevent. Both are written into the two kickoffs.
-
-### (c) Prior art to reuse, not rebuild
-
-- Correct pump physics for PO-1: `model6_parameters.py:46` `bose_einstein_occupation` — the
-  audit states it is verified correct across eight call sites. PO-1 **calls** it; it does not
-  re-derive a Planck factor.
-- Probe scaffolding for PO-3: `sweep/eta_in_live_trial.py` (the L·ETA-3 live-trial harness,
-  already wired to the input engine and already emitting `r` / `E_invasion` / `ca_open`) and
-  `sweep/plateau_vgcc_leak_probe.py` (the L·ETA-4 multi-synapse rig, and the source of the
-  corrected verdict logic). The ratchet test is a traversal-count extension of the former, not
-  a new harness.
-- Kickoff/acceptance method: `MO_MODEL6.md` §6 (kickoff convention) + §2.3/§2.4.
-
-### (d) The MINIMUM surgical change (this MO cycle)
-
-Post this brief; spawn exactly two POs — PO-1 (B2) and PO-3 (E_invasion ratchet) — as their
-own sessions with fresh, self-contained kickoffs; register both on `board.md` with their
-`leads/`/`queue/` files. Nothing else. PO-2 waits for PO-1's commit boundary
-(`model6_core.py` shared-file hazard, `board.md:31-32`). `K_CLASSICAL` stays parked with me.
-
-### (e) Open questions (Sarah's, escalated — not decided here)
-
-1. **The skill library was not reachable from this worktree.** `.claude/skills` is a symlink at
-   the repo root (`→ murmur-platform/murmur-platform/.claude/skills`) but absent from
-   `.claude/worktrees/nervous-hertz-7ccff6/.claude/`. `CLAUDE.md` asserts the library is
-   symlinked here; for a worktree that was false, so every named method skill was unlisted and
-   had to be read by absolute path. POs are therefore spawned at the repo root, where the
-   symlink resolves.
-2. **I cannot set my own session title.** `set_session_title` rejects the current session by
-   design. `[MASTER] Model 6` needs Sarah, or the app UI.
-3. PO-3's negative branch remains Sarah's call, per `board.md:48`. The PO measures and STOPS.
-
-### (f) Self-understanding delta
-
-The program's own board carried one line the code contradicts and one the code has already
-discharged: `MO_MODEL6.md:82` calls the `model6_parameters.py:759` docstring "false at the
-backbone today" — verified true, the docstring at `:768-769` still claims `r_c` is computed
-from D/φ/χ — while `MO_MODEL6.md:237` still lists the `kT_ref` interim disclosure as a standing
-MO action that `RESEARCH_LOG_CALCIUM_DIMER` DISC-1 shows was already written and committed at
-`7d97fcb`. The board is stale in both directions at once, which is the same defect class the
-audit named — prose asserting a state the artifacts do not hold — appearing in the
-orchestration layer rather than in the physics.
+## VERIFICATION DUTY — the MO runs it, never relays
+Every acceptance was executed by the MO itself: PO-1's pump probe + T1′ 7/7, PO-4's coverage checker
++ separation probe + reach probe, PO-1's dimension audit, PO-3's scorer, PO-4's retention probe.
+**A PO's self-report is never the evidence.** The demonstration that a check *can fail* is what gets
+verified — not the passing run.
