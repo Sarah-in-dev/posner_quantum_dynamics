@@ -210,6 +210,30 @@ when the gap begins. `rho` converges downward toward the predicted 0.8948 across
 All three were mechanism claims asserted from arithmetic rather than measurement — the defect
 class this sub-program is named for.
 
+
+#### ADDENDUM (post-hoc, MO ruling 004) — the gap IS stepping, and both failures are ONE mechanism
+
+`sweep/gap_clock_assert.py`, run after scoring. **Clock delta over a 20 s gap = 20.0000 s,
+assertion PASS** — the target's own `spine_plasticity.time` advanced in full while inactive, so
+**D19's "only active synapses are stepped" false-ratchet mechanism is RULED OUT for this probe**
+(`step_network_per_synapse` carries no active mask, unlike the shipped `run_trial:434-441`).
+
+**Recorded against interest:** `rho_mean` was 0.9915, so had the null arm passed, **GATE 1 would
+have returned `INCONCLUSIVE — GAP NOT STEPPING`, a FALSE DIAGNOSIS.** A retention threshold is a
+symptom standing in for a mechanism; ruling 004's clock assertion is the proof. Any re-run should
+assert the clock directly.
+
+**And A1.2's stated mechanism was wrong.** `rho > 1` is *not* a decaying calcium tail. Measured
+through the gap, `f_CaM ≈ 1.6e-4` and the net is **negative** (clean extrusion at `tau_extrude`)
+except at discrete moments when calcium spikes 0.11 → **3.13 µM**, saturating `f_CaM` to 0.99 and
+driving formation bursts ~5000× baseline (`+0.0432` vs a steady `−0.0024`). Those are **spontaneous
+release events**.
+
+**This unifies the two failures.** The spontaneous-release floor that voided the null arm is the
+SAME process inflating `rho` in the drive arm. **Consequence for any re-run: a longer gap would NOT
+help** — the spikes are Poisson, so a longer gap collects proportionally more. **Suppressing
+spontaneous release during gaps is the single change that fixes both arms.**
+
 #### Status
 
 `E_invasion` ratchet: **UNRESOLVED.** A re-run needs (a) a null that suppresses spontaneous

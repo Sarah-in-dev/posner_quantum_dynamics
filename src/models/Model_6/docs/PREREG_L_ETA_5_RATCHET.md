@@ -418,3 +418,66 @@ prose contradicting code. The original claim is left in place above per the log 
 **What survives:** the decision not to call `analytical_gap` is unchanged and, per PO-4, more
 strongly motivated — 0.9999944 reads as an even cleaner ratchet than a frozen clock would,
 while being no more real. The hazard was correctly identified; its magnitude was misstated.
+
+---
+
+# AMENDMENT 3 / POST-HOC CHECK — MO ruling 004: the clock-delta ASSERTION, and it corrects A1.2
+
+**Run after scoring, so this is a post-hoc diagnostic, not a scored quantity.** Ruling 004
+required a direct observation rather than a threshold: `D19` (`RESEARCH_LOG_CALCIUM_DIMER`)
+names a false-ratchet generator — *"only *active* synapses are stepped, so silent ones never
+run their decay term"* — and GATE 1 tests for it only by the *symptom* `rho_mean >= 0.99`.
+
+**Probe:** `sweep/gap_clock_assert.py`. One traversal, then a 20 s parked gap sampling the
+target's own `spine_plasticity.time` plus calcium, `f_CaM`, `formation` and `extrusion`.
+
+## Result 1 — the gap IS stepping. D19 ruled out for this probe.
+
+```
+CLOCK DELTA over the gap : 20.0000 s   (expected 20.0 s)
+ASSERTION spine clock advanced by the FULL gap: PASS
+```
+
+`step_network_per_synapse` steps **every** synapse unconditionally
+(`run_spatial_discovery.py:321-322`, no active mask), unlike the shipped `run_trial:434-441`
+which steps only active ones. So L·ETA-5 does not carry D19's defect.
+
+**Consequence for my own gate, recorded against interest:** `rho_mean` was `0.9915`, i.e.
+`>= 0.99`. **Had the null arm passed, GATE 1 would have returned `INCONCLUSIVE — GAP NOT
+STEPPING` — a FALSE DIAGNOSIS**, since the clock demonstrably advanced in full. GATE 1 is a
+symptom test standing in for a mechanism, and ruling 004 was right that an observed clock
+delta is the proof. **Any re-run should assert the clock and not rely on the retention
+threshold to detect non-stepping.**
+
+## Result 2 — A1.2's stated MECHANISM was wrong; the bias is impulsive, not a tail
+
+AMENDMENT A1.2 attributed `rho > 1` to a decaying calcium tail: *"calcium decays over
+~seconds, so `f_CaM` and therefore `formation` remain non-zero into the early gap."* The
+measurement does not support that:
+
+| t_gap (s) | ca (µM) | `f_CaM` | formation | extrusion | net |
+|---|---|---|---|---|---|
+| 8 | 0.1130 | 0.00016 | 0.000009 | 0.002420 | −0.002411 |
+| **14** | **3.1266** | **0.98964** | **0.045805** | 0.002619 | **+0.043186** |
+| 16 | 0.1151 | 0.00018 | 0.000009 | 0.002669 | −0.002660 |
+
+For most of the gap `f_CaM ≈ 1.6e-4` and the net is **negative** — clean extrusion at
+`tau_extrude`, exactly as predicted. The excess retention comes from **discrete calcium
+spikes** (0.11 → 3.13 µM) that saturate `f_CaM` to ~0.99 and produce formation bursts ~5000×
+baseline, briefly swamping extrusion. Those spikes are **spontaneous release events**, not a
+decaying transient from the traversal.
+
+## Why this matters more than a corrected footnote
+
+**It unifies the two failures into ONE mechanism.** The spontaneous release floor that voided
+the null arm (`INCONCLUSIVE_NULL_RATCHETED`) is the *same* process inflating `rho` above the
+predicted `0.8948` in the drive arm. There are not two problems with this measurement; there
+is one, and it is that **`PresynapticRelease` never goes silent**, so no gap in this design is
+a true decay window.
+
+**Therefore the re-run fix is single, not double.** The earlier write-up called for two
+independent changes (a null that suppresses spontaneous release, *and* a longer gap to clear a
+calcium tail). **A longer gap would NOT help** — the spikes are Poisson in time, so a longer
+gap collects proportionally more of them. **Suppressing spontaneous release during gaps is the
+one change that fixes both arms.** Still a protocol change to a pre-registered design, and
+still not made unilaterally.
