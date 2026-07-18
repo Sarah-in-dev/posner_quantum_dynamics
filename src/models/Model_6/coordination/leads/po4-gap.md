@@ -7,8 +7,9 @@ Demonstrated failing on the current 1 ms-per-30 s code first.
 
 **Status:** **ACCEPTANCE MET — awaiting MO verification.** All five rulings discharged; the
 research-log rows are written. Remaining work is genuinely gated (below).
-**Current unit:** none open. Standing by for MO verification of `b9ce5d8` / `a1b4317`.
-**Last heartbeat:** 2026-07-18 19:45Z
+**Current unit:** none open. The per-subsystem table the MO named as owed at `5e12712` is
+delivered — `docs/GAP_SUBSYSTEM_TABLE.md` (`34c85c4`). **Nothing further owed by this PO.**
+**Last heartbeat:** 2026-07-18 19:55Z
 **Blocked on:** nothing of mine. Three items sit with the MO/Sarah — see "Gated", below.
 
 ---
