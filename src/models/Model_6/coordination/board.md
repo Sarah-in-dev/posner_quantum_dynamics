@@ -505,3 +505,63 @@ have seen from inside this repo.
 **The pattern the MO used, for the record:** confirm `.claude/skills/` is clean and the target file
 untouched → single-file edit → **immediate explicit-path commit** to minimise the sweep window →
 verify `git show --stat` reports `1 file changed`. Confirmed: 1 file, nothing swept.
+
+---
+
+## MO CYCLE — 2026-07-18 18:55Z · defect #8, and an audit of every relay the MO has made
+
+### F-3 WITHDRAWN by PO-3, and the MO had already propagated it
+
+PO-3 measured what it had computed and withdrew F-3's central claim: the glutamate event ratio is
+**19×, not ~100×** (19.0 vs 1.0 events/traversal, 20 seeds), and the mechanism is **probably
+backwards** — the L·ETA-3 pattern *holds* each release for 100 physics steps, so on exposure
+duration it delivers **more** glutamate, not less. *"Starves the NMDARs"* is not established. Its
+`max_glu = 0.0000` observation is consistent with a Poisson mean of ~1 event (P(0) ≈ 37%). PO-3's
+own words: *"I read a single sample as confirmation of a mechanism I had not measured."*
+
+**MO DEFECT #8 — the worst of the eight.** The MO verified F-1 and F-2 against code and **did not
+verify F-3's arithmetic**, then wrote it into `requests/po5-selectivity/mo-f3-001.md` as a required
+input to a future kickoff and escalated it to Sarah. **A PO that does not yet exist was one dispatch
+away from acting on it.** The MO had *already recorded* defect #3 as "named prior art without
+verifying it" — and then propagated an unverified finding built on that same prior art.
+**Relaying a PO's number without checking it is producer-green, committed by the seat that enforces
+the gate.** Corrected in place, original preserved per the log convention.
+
+### The audit this triggered — every MO relay, checked
+
+Defect #8 is a pattern, not a slip, so the MO audited everything it has relayed upward or written
+into a durable artifact:
+
+| relayed claim | status |
+|---|---|
+| F-1 — `Model6Parameters` has no `cascade` attr | **VERIFIED** by the MO at the time (grep + `hasattr` branch) |
+| F-2 — `analytical_gap` "frozen" | **WAS WRONG** — MO checked a docstring, not the tail. Corrected; it ticks 1 ms |
+| F-3 — glutamate ~100× | **WAS WRONG, unverified by the MO.** Defect #8, corrected above |
+| PO-1's B2 acceptance | **VERIFIED** — MO ran the probe, T1′ floor and construction itself |
+| **PO-4's 26× `E_invasion` claim (the physics call with Sarah)** | **WAS UNVERIFIED — now VERIFIED, see below** |
+
+### PO-4's 26× reproduced independently — the physics call stands
+
+The MO re-ran it (5 reps, dt=0.005, 300 s, seeds 1000–1004), rather than continuing to quote it:
+
+```
+committed     volume 3.7124 +/- 0.0601   E_invasion 0.0313   conf 0.9735
+uncommitted   volume 3.0107 +/- 0.0528   E_invasion 0.8222   conf 0.0000
+
+VOLUME ordering : committed HIGHER  -> True
+E_invasion ratio: uncommitted/committed = 26.2x   (PO-4 claimed ~26x)
+```
+
+**PO-4's numbers reproduce.** `E_invasion` matches to four decimals in both arms (0.0313, 0.8222);
+volumes agree within one standard deviation; the committed arm's `conf = 0.9735` sits on the
+0.97561 steady state the MO derived from the constants independently.
+
+**So the escalation to Sarah — commitment depletes pump drive, since `r ∝ E_invasion × ca_open` —
+is MO-verified, not relayed.** It is also independently corroborated by D19 (*"commitment buys
+durability, not amplitude … drive 0→1 at fixed Ca lowers enlargement 1.447→1.099"*), a different
+probe on a different day. **Two independent measurements plus a mechanism derived from the code.**
+
+### Consequence for Sarah's queue
+
+**Decision 3 (the L·ETA-3 correction banner) is WITHDRAWN** — F-3 does not support it. The queue is
+four items, and the one at the top is now the best-evidenced claim on this board.
