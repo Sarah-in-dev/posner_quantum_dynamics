@@ -320,6 +320,46 @@ registered quantity, since its spatial behaviour is a different mechanism.
 warns explicitly — *"if the argument becomes 'and conveniently this makes the gap behave better',
 stop and re-escalate."* The registered claim is only that the locked symmetry is restored.
 
+## 1h. AMENDMENT G — 2026-07-18 22:45Z · AMENDMENT F's premise HELD; my MEASUREMENT did not isolate it
+
+**The first L·GAP-5 run printed "the ratio moved — premise wrong" and that verdict was produced by
+a CONFOUNDED measurement of mine.** The probe carried an explicit escape hatch — *"if this prints
+on unmodified code, AMENDMENT F's premise is wrong and the ruling should be re-escalated"* — and it
+fired. **I diagnosed it instead of either accepting it or quietly re-scoping.**
+
+**Diagnosis, measured.** `S` is flat at gap = 0/1/5 s (`0.999991`) and jumps discretely at 8 s and
+15 s. The jumps coincide **exactly** with **stage-3 particle-removal events**, while total
+concentration decays smoothly throughout:
+
+| gap | S | particles removed | total conc. ratio |
+|---|---|---|---|
+| 5 s | **0.999991** | **0** | 0.999380 |
+| 8 s | 1.156470 | 1 | 0.998596 |
+| 12 s | 1.156459 | 3 | 0.997089 |
+| 15 s | 1.271120 | 4 | 0.995628 |
+| 20 s | 1.271114 | 7 | 0.992586 |
+
+**So stage 2 IS spatially uniform, exactly as AMENDMENT F registered** — it dissolved 0.06% of
+concentration while moving the spatial ratio by 9×10⁻⁶. **The mover is stage 3**, which
+AMENDMENT F explicitly scoped OUT (*"stage 3 … is not part of the registered quantity"*) — and my
+measurement then failed to isolate what my registration had scoped. Removal is
+lowest-coherence-first, which is spatially biased, so it raises the templated/bare ratio.
+
+### AMENDED — the registered measurement must ISOLATE stage 2
+
+- **Gap length is fixed at 5.0 s**, the longest tested length at which **zero** particles are
+  removed.
+- **New positive control, mandatory:** particle count must be **unchanged** across the gap. If any
+  particle is removed the run is **INCONCLUSIVE — STAGE-3 CONFOUND**, never a pass or a fail.
+- **PRE-FIX registered:** `S = 1.0` within `1e-4`. **Measured: 0.999991.**
+- **POST-FIX registered:** `S = exp(−k̄·(te−1)·g)` = **0.99635** at `k̄ = 1.492e-5`, `te = 50`,
+  `g = 5`. Separation from the pre-fix value is `3.6e-3` against a measurement floor of `~1e-5`
+  — **~360× the floor**, so the discriminator resolves comfortably at the shorter gap.
+
+**Nothing is weakened:** the tolerance moves from `1e-9` to `1e-4` only because the isolated
+measurement's own floor is `~1e-5`; the pre/post separation is 360× that. The *stage-3 finding*
+is reported as a separate discovered result, not folded into the verdict.
+
 ## 2. The null that cannot show the effect
 
 Three, and all three must behave as registered or the run is INCONCLUSIVE:
