@@ -225,9 +225,19 @@ class PNCParameters:
     """
     
     # === CRITICAL NUCLEUS SIZE ===
-    # Wang et al. 2024 Nature Commun 15:1234
-    # "PNCs contain ~30 Ca²⁺ ions before nucleation"
-    critical_size: int = 30  # Ca atoms
+    # !! CITATION UNVERIFIED — DO NOT REPRODUCE EXTERNALLY (flagged 2026-07-18) !!
+    # The locator previously given here was "Wang et al. 2024 Nature Commun 15:1234".
+    # `15:1234` is placeholder-shaped (Nature Communications uses article numbers, and
+    # 1234 is the canonical dummy), the reference appears in NO REFERENCES section
+    # anywhere in this repo, and no attempt to resolve it has succeeded. It may be a
+    # fabricated or mis-transcribed locator.
+    # The CLAIM it carries — "PNCs contain ~30 Ca2+ ions before nucleation" — is
+    # plausible and consistent with the prenucleation-cluster literature the chemistry
+    # log does cite (Garcia/Mancardi 2019; the CaP nucleation MD work), but it is NOT
+    # sourced to a verified paper here.
+    # Resolve to a real citation or restate as [MODELED] before this value appears in
+    # any external write-up.
+    critical_size: int = 30  # Ca atoms — UNVERIFIED provenance, see above
     
     # === FORMATION BARRIERS ===
     # Habraken et al. 2013 Nature Commun 4:1507

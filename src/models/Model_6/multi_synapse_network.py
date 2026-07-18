@@ -1232,10 +1232,15 @@ class MultiSynapseNetwork:
         """
         Check if network crosses commitment threshold
         
-        EMERGENT from physics:
-        - Network field must exceed thermal noise (~20 kT)
-        - This naturally requires ~50 coherent dimers
-        - No fitted parameters!
+        PARTLY emergent (claim corrected 2026-07-18). This block previously ended
+        "No fitted parameters!". Two fitted parameters sit on this exact path:
+          - `field_threshold_kT = 20.0` (~:717) — the "~20 kT thermal noise" figure,
+            which carries no citation anywhere in the tree
+          - `mean_eligibility > 0.3` (below) — a chosen cut with no derivation
+        The ~50-coherent-dimer figure is also not independent: `n_dimer_threshold = 50`
+        is declared "Fisher's prediction" in model6_parameters.py, so deriving ~50 from
+        this threshold and then citing it as agreement is circular.
+        What IS emergent here: the field itself, which is computed rather than set.
         """
         if self.network_committed:
             return  # Already committed, can't uncommit
@@ -1271,7 +1276,14 @@ class MultiSynapseNetwork:
         
         # Update network entanglement tracking
         self.entanglement_tracker.collect_dimers(self.synapses, self.positions)
-        ent_metrics = self.entanglement_tracker.step(dt, self.synapses, self.positions)
+        # coupling_weights MUST be passed — `_update_entanglement` early-returns without
+        # it (~:279), so omitting it means ZERO cross-synapse bonds form on this entry
+        # point. This method is named `step_with_coordination` and the class docstring
+        # advertises "true network-level entanglement tracking"; without this argument it
+        # delivered neither. (2026-07-18 substrate audit, drift item 16.)
+        ent_metrics = self.entanglement_tracker.step(
+            dt, self.synapses, self.positions,
+            coupling_weights=getattr(self, 'coupling_weights', None))
         self._network_entanglement = ent_metrics
         
         # === COORDINATED THREE-FACTOR GATE ===
@@ -1332,7 +1344,15 @@ class MultiSynapseNetwork:
         - Dimers within a component collapse TOGETHER (perfect correlation)
         - Different components get independent coin flips
         - Per-synapse committed_count = number of dimers that collapsed to singlet
-        - Plasticity drive = Hill(committed_count) with n=4, K_half=20
+        - Plasticity drive: THIS GATE DOES NOT USE THE HILL FUNCTION (corrected
+          2026-07-18). The line previously read "Plasticity drive = Hill(committed_count)
+          with n=4, K_half=20". `_committed_count_to_drive` DOES exist (~:1319) and IS
+          live — but its ONLY caller is `_evaluate_independent_gate` (~:1561), i.e. the
+          CONTROL condition. On THIS path the May-12 DDSC rewire replaced direct
+          commitment with a measurement token consumed by CaMKII
+          (`model6_core.py` molecular_memory branch), and the docstring was never
+          updated. Here the gate is a bare `count > 0`: a SINGLE committed dimer opens
+          it, and `count` grades nothing.
 
         The gate has three factors:
         1. Quantum: committed_count > 0 (at least some committed dimers)
@@ -1421,7 +1441,12 @@ class MultiSynapseNetwork:
         """
         # Reduce bond strengths significantly (measurement effect)
         # Don't completely destroy - some residual correlation remains
-        collapse_factor = 0.3  # Bonds reduced to 30% strength
+        # DEAD (flagged 2026-07-18): `collapse_factor` is assigned and NEVER READ. The
+        # claim "bonds reduced to 30% strength" describes a mechanism that does not run.
+        # What actually happens is below: discordant bonds are removed with probability
+        # 0.8; concordant bonds are untouched. Left assigned rather than deleted so the
+        # audit trail is visible; delete it with the surrounding rewrite.
+        collapse_factor = 0.3  # UNUSED — see note above
         
         tracker = self.entanglement_tracker
         
@@ -1482,7 +1507,12 @@ class MultiSynapseNetwork:
         Same quantum physics for individual dimers (P_S determines collapse
         probability), but bonds DON'T cause joint collapse.  Returns
         committed dimer counts per synapse, converted to plasticity drive
-        via the same Hill function as the coordinated gate.
+        via the Hill function `_committed_count_to_drive` (~:1319). NOTE (2026-07-18):
+        "the same ... as the coordinated gate" was BACKWARDS — the coordinated gate does
+        NOT use it (it defers to CaMKII via the DDSC rewire). This control gate is the
+        function's only caller, so the control and the experimental condition convert
+        committed_count to drive by DIFFERENT mechanisms. That asymmetry is worth
+        knowing before the two are compared.
 
         Key difference from coordinated gate:
         - Coordinated: Connected components collapse together (correlation = 1)

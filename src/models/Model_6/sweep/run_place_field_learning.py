@@ -131,8 +131,17 @@ def step_network_per_synapse(network, dt, per_syn_stimuli):
         network._entanglement_step_counter = 0
     network._entanglement_step_counter += 1
     if network._entanglement_step_counter % 10 == 0:
+        # !! RESULTS-VALIDITY FIX (2026-07-18) !!
+        # `coupling_weights` was omitted here, and `_update_entanglement` early-returns
+        # without it (multi_synapse_network.py ~:279). Consequence: EVERY place-field run
+        # ever executed through this driver formed **ZERO cross-synapse bonds**. Any prior
+        # conclusion from this path about network-scale binding, cross-synapse topology,
+        # or the partition is therefore about a network that had no cross-synapse edges,
+        # and must be re-examined rather than merely re-run.
+        # (2026-07-18 substrate audit, drift item 16.)
         network._network_entanglement = network.entanglement_tracker.step(
-            dt, network.synapses, network.positions
+            dt, network.synapses, network.positions,
+            coupling_weights=getattr(network, 'coupling_weights', None)
         )
 
     # Coordinated gate on reward steps

@@ -40,8 +40,16 @@ re-located by name.
 
 3. **Docstrings assert mechanisms that do not exist in the code.** Three confirmed:
    - `multi_synapse_network.py:1332-1334` claims plasticity drive is
-     *"Hill(committed_count) with n=4, K_half=20"*. **No Hill function exists**; the gate is
-     `count > 0` (`:1381-1392`). Repeated for the control gate at `:1483-1486`.
+     *"Hill(committed_count) with n=4, K_half=20"*. **CORRECTED 2026-07-18 — the audit's
+     original wording ("no Hill function exists") was WRONG and is retracted.**
+     `_committed_count_to_drive` DOES exist (`:1319`) and IS live. Its **only** caller is
+     `_evaluate_independent_gate` (`:1561`) — the CONTROL condition. The coordinated gate
+     does not use it: the May-12 DDSC rewire replaced direct commitment with a token
+     consumed by CaMKII, and the docstring was never updated. So the real finding is
+     sharper: **the control and the experimental condition convert `committed_count` to
+     drive by DIFFERENT mechanisms** (control = Hill; coordinated = CaMKII integrator),
+     and `:1501` states this backwards, claiming the control uses "the same Hill function
+     as the coordinated gate".
    - `:1238-1242` claims *"EMERGENT from physics… No fitted parameters!"* while
      `field_threshold_kT = 20.0` (`:717`) and `mean_eligibility > 0.3` (`:1245`) sit on that
      exact path.
