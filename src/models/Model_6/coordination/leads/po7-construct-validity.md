@@ -444,3 +444,123 @@ outcomes** — chosen from the constants, before the run, not raised until somet
 **I am NOT relaxing the verdict to make it fire.** The threshold, the discriminators and the verdict
 vocabulary are unchanged from the prereg; only the control placement and the run duration change,
 and both are stated here before the corrected run.
+
+---
+
+# UNIT 1 PART 2 — VERDICTS. All runs done; every control shown firing before any pass.
+
+## ARM B — the F-5 tree skew. **VERDICT: NO MATERIAL DIVERGENCE. F-5 GETS STRONGER.**
+
+```
+pinned    : crossed_at=56.78  enl=0.175726  E_inv=0.042783
+NULL   (pinned vs pinned)  -> NO MATERIAL DIVERGENCE   []
+POSCTL (threshold x0.5)    -> DIVERGENT  ['crossing 56.78 vs 28.595']
+vestigial : crossed_at=56.78  enl=0.175726  E_inv=0.042783
+```
+
+**The positive control fired** (crossing moved 56.78 → 28.595), and **the null was bit-identical**,
+so the instrument both discriminates and is stable. The measurement is then **identical to all
+printed digits across the two trees.**
+
+**Answering ruling 018 §4 explicitly, as committed:** **F-5 and `mo-ruling-014` GET STRONGER.**
+F-5's finding survives a dependency skew that could have invalidated it — the vestigial tree differs
+in `model6_parameters.py` (T_singlet 500 vs 216), `model6_core.py` (the B2 pump rewire) and
+`multi_synapse_network.py`, and **none of it reaches the measured quantities**, because
+`spine_plasticity_module.py` — the sole writer of `actin_enlargement` and `E_invasion` — is
+byte-identical across the trees. **My run also independently reproduces the F-5 crossing at 56.78 s**,
+consistent with its "well under 100 s".
+
+**The hardcoded cross-worktree path at `resting_leak_probe.py:6-7` remains a real hygiene defect
+with no results consequence** — it is PO-3's file and I have not touched it.
+
+## ARM A — the two stepper copies
+
+### Gate discriminator (RNG-independent). **VERDICT: DIVERGENT.**
+
+```
+NULL   RSD vs RSD       : 100 vs 100
+POSCTL reward-only gate : 100 vs 20  -> FIRED
+RSD gate_calls = 100    RPFL gate_calls = 20
+```
+
+**Exact arithmetic, not an estimate:** 0.5 s at `dt=0.005` is 100 steps; RSD calls the coordinated
+gate every step (100), RPFL only inside the reward window 0.20–0.30 s (20). **The positive control
+independently landed on 20** — it replicated RPFL's behaviour exactly, which is a consistency check
+I did not design for and got for free.
+
+**So part 2 is ANSWERED for this discriminator: the divergence is real, 5×, and it is the D19
+defect** — RSD's own comment says the every-step call exists so the gate *"sees the falling edge of
+reward to re-arm its one-shot measurement latch, otherwise the measurement fires once per experiment
+rather than once per reward episode."* **RPFL never sees the falling edge.**
+
+### Backbone discriminators (eta, cross_bonds). **VERDICT: INCONCLUSIVE — and why is the finding.**
+
+The corrected 45 s arm **failed its own null**: RSD vs RSD, same seed, same stimuli →
+`eta_max 0 vs 0.0708632`, `cross_bonds 1059 vs 585`. The probe returned INCONCLUSIVE and printed no
+verdict, per the prereg.
+
+**I did not report that as a model defect on a single in-process observation.** I tested whether it
+was my harness — **two separate processes, fresh interpreter, identical seed and config:**
+
+```
+PROC 1: eta_max 0.09396788  cross_bonds 1848  dimers 796
+PROC 2: eta_max 0.10690230  cross_bonds 1179  dimers 822
+```
+
+**It is not my harness.** See the escalation below.
+
+---
+
+# ESCALATION — **the model is NOT reproducible at a fixed seed under drive.** Board-level.
+
+**MEASURED (separate processes, fixed seed):** `cross_bonds` **1179 vs 1848** — a **1.57×** spread on
+a topology count. Across all four driven runs today `eta_max` took **0.0, 0.0709, 0.0940, 0.1069** —
+i.e. **whether the backbone condenses at all was not reproducible at the same seed.**
+
+**MEASURED (the scope limit, and it matters):** Arm B's resting 1-synapse null was **bit-identical**.
+**The nondeterminism is regime-dependent: the resting/E_invasion path is reproducible; the driven
+multi-synapse path is not.** This is why F-5 stands and why I am not generalising the alarm.
+
+**SHOWN (code) — three unseeded generators, none reached by `np.random.seed()`:**
+- `camkii_module.py:199` — `self.rng = np.random.default_rng()`, drawn at `:300,301,318,388,389,438,439`
+- `spine_plasticity_module.py:274` — same constructor; drawn **once**, at `:441-442`
+- `multi_synapse_network.py:1188` — same, in `sample_correlated_eligibilities`
+
+`np.random.default_rng()` **with no argument seeds from OS entropy**, so a caller's
+`np.random.seed(7)` has no effect on it. **That is a declared-vs-implemented gap of exactly this
+seat's class:** drivers accept a `seed=` argument and thread it carefully through
+`SeedSequence(...).spawn(...)`, which advertises reproducibility the model does not deliver.
+
+**SHOWN — and it explains the regime split precisely:** `spine_plasticity_module.py:441-442` uses its
+rng **only** for `thermal_noise` added to `spine_volume`, gated by `p.stochastic`. It never touches
+`actin_enlargement` or `E_invasion` — **which is exactly why Arm B was bit-identical while Arm A was
+not.** The prediction and the measurement agree.
+
+**NOT ESTABLISHED, and I am not claiming it:** the causal chain from the CaMKII rng to `eta`. It is
+the leading candidate — CaMKII → DDSC commitment → cross-bond dynamics → eta, and DDSC is stochastic
+by design (Jain 2024) — but I have **not** measured it. **NEEDS MEASUREMENT.**
+
+## What this bears on — stated as questions for the MO, not as rulings
+
+1. **Any standing result that reads `cross_bonds`, `eta`, or the partition from a SINGLE driven run
+   carries an unquantified run-to-run spread.** On today's numbers that spread is up to **1.57× on
+   cross-bond count**, and it straddles the condensation threshold. **PO-5's §8 keystone work reads
+   exactly these quantities** (`f_sat = 0.176`, the ~78%-complete component).
+2. **I am NOT asserting any specific result is wrong.** Single-run *is* legitimate if the quantity's
+   spread is small relative to the effect — that is precisely what nobody has measured yet.
+3. **The fix is one-line-per-site and I have not made it.** All three files are other POs' surfaces
+   (`camkii_module.py`, `spine_plasticity_module.py` = PO-3's block, `multi_synapse_network.py` =
+   PO-5's, **live on the keystone**). Per my boundaries I **report and let the MO route it.**
+   A fix also silently changes every future run's trajectory, which is a call above this seat.
+
+## Unit 1 closing summary
+
+| part | verdict |
+|---|---|
+| 1 — do the copies differ? | **YES**, two physics-bearing differences (SHOWN) |
+| 2 — does it change physics? | **DIVERGENT** on the gate (5×, exact); **INCONCLUSIVE** on eta/cross_bonds, blocked by fixed-seed nondeterminism |
+| 3 — does any standing result depend on which ran? | **NO** — all seven external consumers provably run RSD (proved from import statements) |
+| ruling 018 §4 — F-5 / ruling 014 | **STRONGER**, measured across both trees with a control that fired |
+
+**The hazard this seat was opened on is retired. A larger one was found on the way, and it is
+escalated rather than fixed.**
