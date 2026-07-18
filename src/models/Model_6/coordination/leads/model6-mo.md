@@ -144,3 +144,96 @@ Every acceptance was executed by the MO itself: PO-1's pump probe + T1′ 7/7, P
 + separation probe + reach probe, PO-1's dimension audit, PO-3's scorer, PO-4's retention probe.
 **A PO's self-report is never the evidence.** The demonstration that a check *can fail* is what gets
 verified — not the passing run.
+
+---
+
+## ### GROUNDING BRIEF — MODEL6-MASTER **gen-2**, 2026-07-18 21:26Z
+
+**`date -u` run first: `Sat Jul 18 21:15:01 UTC 2026`** (elapsed time not reasoned about without it).
+
+### (a) Verified current state — every fact tagged, quotes located
+
+- `[skill session-discipline:47]` — *"Did you read every skill in `<available_skills>` that could
+  plausibly apply? Not the titles. The full contents."* Read in full, not skimmed.
+- `[skill agent-grounding-protocol:45]` — *"If a skill says X and the code does Y, the code is right
+  and the skill has drifted."* This is the rule gen-2 applied to its own kickoff, below.
+- `[skill quantum-system-canonical:99]` — *"**k_classical = 0.005 s⁻¹** (dissolution; cluster
+  lifetime τ ≈ 200 s). [GROUNDED — Turhan 2024]"*. Read **IN FULL** (all 216 lines), per the
+  handoff's instruction that defect #12 came from having read only §8.
+- `[skill quantum-system-canonical:124]` — *"eta remains a **gate**, and is not a **selectivity
+  channel**"* (§4.3, FALSIFIED 2026-07-18). Located §4.3, **not** §8 — the misattribution is not
+  repeated here.
+- `[skill quantum-system-canonical:139]` — *"A single-synapse 'one giant component' is **correct
+  physics, not a bug.**"* [LOCKED] Directly bears on PO-5 Q3; see (e).
+- `[code SHOWN]` `model6_parameters.py:412` — `T_singlet_dimer: float = 216.0`. **Ruling 006 has
+  LANDED and is committed** (`3632fce`, verified by `git log -S`), *not* pending as the handoff table
+  states. `git diff` on that file returns empty.
+- `[code SHOWN]` `sweep/run_theta_burst_45s.py:147` — `K_CLASSICAL = 0.005  # s^-1 … Turhan 2024,
+  tau ~ 200 s`. **PO-4's correction is landed**, matching §3's GROUNDED value.
+- `[code SHOWN]` `sweep/run_place_field_learning.py` **exists** (18455 bytes) — PO-4's Q4-8 drift
+  report against `model6-architecture` F4 is **confirmed by direct `ls`**, not relayed.
+- `[data — git]` **38 commits in the 35 minutes before this brief.** The board is hot.
+
+### (b) Decisions + locked items found
+
+- **[LOCKED]** `quantum-system-canonical:140` — *"The 0.5 bound is physics, not a fitted knob — do
+  NOT lower it to rescue a result."*
+- **[LOCKED]** `:101` — `productive_fraction` *"**never tuned to a target dimer count.**"*
+- **[LOCKED]** `:144` — *"**The current model is (A).**"* Never described in (B)'s language.
+- **T1′ is CLOSED** (4/4, p≈3×10⁻⁶) — re-validation is human-gated.
+- **The commit rule** (`git commit -- <paths>`, verify `git show --stat HEAD`, never
+  `checkout`/`restore`/`reset`) is in force and was proven empirically, not assumed.
+
+### (c) THE FINDING THAT GATES THIS SEAT — **gen-1 is still LIVE**
+
+**Gen-2's kickoff states gen-1 "is handing off." The observed state says it is still running and
+still ruling.** Per `agent-grounding-protocol:45`, the evidence wins over the prose:
+
+- `[session state]` `local_0ce7902b` *"Seat MODEL6-MASTER"* — **`isRunning: true`**, last activity
+  **21:21:38Z**, i.e. *after* gen-2 was seated.
+- `[data — git]` `ec2d028` (21:21:45Z) — a **new ruling**, withdrawing ruling 002 §1 and opening
+  **MO defect #16**. `2fcf12e` (21:22:11Z) — *"correct the handoff **before gen-2 reads it**"*.
+
+**Gen-1 is not competing; it is finishing, and it is correcting this very file for gen-2's benefit.**
+Its last act caught a false fact it was about to hand over (PO-2's Q2 was **not** dissolved) — the
+inheritance failure it had itself logged as defect #8.
+
+**So gen-2 has NOT taken the board.** Two MOs writing `board.md` is the exact two-writer collision
+the surface-ownership map exists to prevent, and **which seat holds the board is Sarah's call, not
+gen-2's** — the same reason a PO never resolves its own collision. Escalated to Sarah in chat.
+
+### (d) Consequence — gen-2 has issued NO rulings and woken NO PO
+
+`[session state]` **PO-3, PO-4 and PO-5 are all idle** (`isRunning: false`, 21:10–21:15Z), and PO-5
+is idle on the **§8 keystone**. Under the standing directive that is the MO's failure to fix — **but
+waking them now would give five POs two masters**, and PO-4's and PO-5's next units both depend on
+rulings gen-1 may be mid-way through writing. **Deliberately parked for minutes, not dropped**, with
+the reason recorded here rather than left as an unexplained gap.
+
+### (e) Rulings PREPARED, held pending the seat question (grounded, ready to post)
+
+1. **PO-5 Q3 — does the trivial partition sit inside PO-5's acceptance? → YES, keep it.**
+   Grounded, not a fresh physics call: §5 [LOCKED] already holds *"a single-synapse 'one giant
+   component' is correct physics, not a bug"* (`:139`), and §8 Keystone #1 turns on the gate-level
+   vs pair-level distinction (`:197`). PO-5's *"pair-selective in the rate and saturated in the
+   graph"* is that same question one layer down, so splitting it would let each half report "not
+   mine." **PO-5's note is correct and endorsed: this is not licence to touch the saturation** —
+   that would be `MO_MODEL6.md` §7's tuning-to-an-outcome.
+2. **PO-4 Q4-8 — `model6-architecture` F4 drift. CONFIRMED by gen-2's own `ls`**, not relayed:
+   `run_place_field_learning.py` exists. **The skill write is the MO's** (`.claude/skills` is a
+   symlink into another program's repo). Owed, unwritten.
+3. **The handoff's own PO table is stale on PO-1** — it lists ruling 006 as owed; `3632fce` landed
+   it. Recorded so the next reader does not route a closed item, which is **defect #14's exact
+   shape** committed against the handoff instead of against a log row.
+
+### (f) Self-understanding delta — one sentence
+
+**The program's handoff document was wrong about the program's own live state in two independent
+places within twelve minutes of being written** — gen-1's PO table still owes ruling 006 that
+`3632fce` had already landed, and gen-1 itself is still running while the document says it is
+handing off — which is the sharpest available demonstration that **a handoff is a claim about a
+moving system, and ages exactly like the dated log row that produced defect #14.**
+
+**Gen-2's standing correction to itself, taken from gen-1's defect #16:** verifying a premise is not
+verifying a conclusion; a ruling that says *"therefore this cannot matter"* is itself a claim that
+needs a measurement.
