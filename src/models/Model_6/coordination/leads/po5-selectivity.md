@@ -5,10 +5,30 @@ resolution? Pre-registered, null that cannot show the effect, positive control d
 fire, verdict able to return FALSIFIED.
 
 **Status:** LIVE. Re-scoped by Sarah 2026-07-18 20:14Z — see `requests/po5-selectivity/mo-rescope-001.md`.
-**Current unit:** UNIT 1 COMPLETE and self-corrected. Opening UNIT 2 — pathway attribution of the
-realised bond set (Pathway 1 birth vs Pathway 2 EM), **now core rather than prerequisite** per MO
-ruling-001 §3 ("both are in scope; the kickoff named only Pathway 2 and that was too narrow").
-**Last heartbeat:** 2026-07-18 21:37Z
+**Current unit:** UNIT 2 **Q-A COMPLETE** (provenance). **Q-B unrun**, gated on the compute slot
+requested in `queue/` Q4. Working the drive-matching harness meanwhile — design work, no slot needed.
+**Last heartbeat:** 2026-07-18 22:00Z
+
+**UNIT 2 Q-A RESULT — `L·PO5-2` / DECISION RECORD `PO5-2`.** Pre-registered
+`docs/PREREG_PO5_UNIT2_PAIR_SELECTIVITY.md`; probe `sweep/po5_unit2_provenance.py`; **zero edits to
+`dimer_particles.py`** (instance wrapping, since four POs share this tree and PO-1 is editing that
+file). **The instrument gate FAILED FIRST on real data** — orphans 0→909→4851, cause traced to
+`_remove_all_bonds_for_dimer` (`:245`) bypassing `_remove_bond`; AMENDMENT A2.1; post-fix both gates
+pass, including **bit-for-bit** instrumented-vs-uninstrumented identity.
+
+**MEASURED @2.0 s:** P0 birth-inheritance (`:218-228`) **82.86%** · P1 burst **0.00%** (22 bonds) ·
+P2 EM **17.14%**. **83% of bonds never evaluate `em_rate`** — so the kickoff's `g`/`coh` decomposition
+describes the *minority* mechanism, and Unit 1's `D = 33.5` applies to the 17%. P1 is shadowed by
+construction (`p1` needs `~has_bond`; the birth loop already bonded those pairs).
+
+**NOT CLAIMED:** that this defeats §8. Birth timing is downstream of input, so a deterministic birth
+rule is not automatically input-blind — pair-level vs gate-level is Q-B, and Q-B is unrun. Deliberately
+not repeating the inference ruling-010 caught in `L·PO5-1`.
+
+**Routed to MO** (`requests/model6-mo/po5-selectivity-003.md`): does Q-B's target change now that the
+bond set is 83% birth loop (recommendation: keep whole-set target, additionally report verdict split
+by provenance) · and a latent defect — `_remove_dimer` (`:252-261`) never pops `_bond_lookup`,
+currently **dead code**, reported not fixed (death path, not my surface).
 
 **RULINGS ABSORBED:** `mo-ruling-001` (Pathway 1 in scope; the two 5.0 `coupling_length`s — checked,
 my probe reads the nm one off the live object; `P_product` framing corrected) · `mo-ruling-010`
