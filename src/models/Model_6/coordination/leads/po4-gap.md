@@ -9,8 +9,46 @@ Demonstrated failing on the current 1 ms-per-30 s code first.
 was NOT met.** MO ruling 007 found **PHASE 12** and **PHASE 9** in neither column, i.e. my
 docstring violating the rule it states. **Now closed and mechanically enforced.** Both bars met;
 awaiting MO re-verification.
-**Current unit:** none open.
-**Last heartbeat:** 2026-07-18 20:15Z
+**Current unit:** **Q4-5 COMPLETE** (`b8fa9a1`) — awaiting MO verification. No open unit.
+**Last heartbeat:** 2026-07-18 20:58Z
+
+### 2026-07-18 20:58Z — Q4-5 done. The answer was not the one the unit assumed.
+
+**Acceptance met, and the shape of the result matters:** the MO's premise was that `run_trial`
+still omits `coupling_weights`. **Measured, it does not** — both named driver sites are already
+correct (`:96`, and `:218` fixed in `92c623f` carrying a D21 reference). **A grep would have been
+wrong in both directions**, which is why the acceptance demanded measurement.
+
+| site | result |
+|---|---|
+| `step_network_per_synapse` (`:96`) | **6/6 calls, ARRIVED**, shape [3,3], 3183 dimers |
+| `run_trial` every-10th (`:218`) | **40 `tracker.step()`, 40 with weights, 37 reached the guard** |
+
+The 3 that did **not** reach `_update_entanglement` early-returned at `n_dimers < 2` — **upstream
+of the guard**. I instrumented *both* levels specifically so "the guard rejected us" and "the
+guard was never reached" could not be conflated; conflating them would have produced a confident
+wrong answer in either direction.
+
+**FAILING-FIRST:** ran the probe against the historical pre-`92c623f` signature (no
+`coupling_weights`) — it reports `got_weights=False` and an inner EARLY RETURN. **It detects the
+omission**, which is a precondition of trusting its PASS.
+
+**BONDS: ZERO — cause identified.** `η = 0.0000` at every synapse ⇒ `k_cross ∝ √(η_i·η_j) = 0`.
+Exactly as the MO's composition note predicted. **A measured zero with an identified cause is a
+pass**, and blocker (3) is L·ETA-1/3's and not my surface.
+
+**The durable fix:** `if coupling_weights is None: return` was **silent**, and a no-op that
+announces nothing is indistinguishable from a no-op that was correct — that silence is *why* a
+fix could "cover" the file and miss a site. It now warns once, gated on `dt > 0` so the gap's
+deliberate `dt=0` prune stays quiet (warning there would train people to ignore the warning).
+Same move as the phase checker: **a rule that only holds when someone re-reads it by hand is not
+enforced.**
+
+**Routed, not fixed:** Q4-7 the last real omission
+(`Full_System_Experiments/tier5_rnn/exp_network_communication.py:200`, outside my boundary,
+likely PO-6's) · Q4-8 **skill drift** — `model6-architecture` F4 says `run_place_field_learning.py`
+"does not exist"; **it does**, I edited it this session. That belief is exactly what produces a
+partial fix, on the same file family as audit item 16.
 **Blocked on:** nothing of mine. Three items sit with the MO/Sarah — see "Gated", below.
 
 ### The correction — and why it happened is the interesting part
