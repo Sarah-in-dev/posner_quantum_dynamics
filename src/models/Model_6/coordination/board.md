@@ -471,3 +471,37 @@ it from a docstring; PO-4 rediscovered it from code.** The MO read that table's 
 stopped before D20. `MO_MODEL6.md` §1 sends the MO to those tables precisely so this cannot
 happen. **Skimming a decision record is not reading it**, and this is the concrete cost: a
 correction cycle across three POs for a fact already written down.
+
+---
+
+## MO CYCLE — 2026-07-18 18:22Z · PO-3's Q2 closed, and a new standing rule on skill writes
+
+**PO-3 Q2 — `E_ref` provenance. RULED, executed, not escalated.** PO-3 found that
+`model6-actin-invasion-driver:129` described `E_ref = 1.87` as *"read once off a 3000 s uncommitted
+run"* with **no pointer** — so the substrate audit recorded it UNVERIFIED, PO-3's kickoff inherited
+that as fact, and it was used to argue the 13× shortfall might not be readable as physics.
+
+**MO verified before writing:** `tests/check_actin_three_pool.py:142-148` is the Phase 5 run
+(3000 s, Ca=2.0 µM, drive=0) and `:286-288` prints *"Candidate physical anchor for E_ref (decision
+pending)"*. Re-run gives `1.8742` vs coded `1.87`. Skill corrected to **REPRODUCIBLE,
+SELF-REFERENTIAL** — reproducible from a named in-repo run, **not a literature measurement**.
+Committed `4bba978e3`.
+
+**Not escalated to Sarah:** a `file:line` pointer plus a status-label fix is a factual correction,
+not a decision. Escalating it would have been escalating plumbing.
+
+### NEW STANDING RULE — the MO makes all skill-library writes
+
+`posner_quantum_dynamics/.claude/skills` is a **symlink into
+`murmur-platform/murmur-platform/.claude/skills`** — a **different program's repo**, currently
+carrying **325 uncommitted files across at least four other live seats**. An edit left uncommitted
+there can be swept into an unrelated seat's commit.
+
+**Therefore:** a PO needing a `model6-*` skill changed writes a `requests/` file to the MO with the
+exact proposed text; **the MO makes the write**, because only the MO is positioned to assess the
+cross-repo state. PO-3's instinct not to edit unilaterally was correct — for a reason it could not
+have seen from inside this repo.
+
+**The pattern the MO used, for the record:** confirm `.claude/skills/` is clean and the target file
+untouched → single-file edit → **immediate explicit-path commit** to minimise the sweep window →
+verify `git show --stat` reports `1 file changed`. Confirmed: 1 file, nothing swept.
