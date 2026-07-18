@@ -126,3 +126,48 @@ occurrence to a `[PHASE 9b]` tag that exists only in PO-4's docstring, not in `m
 **That special case is a workaround for the collision and should be deleted when the numbering is
 fixed** (`DUPLICATE_PHASE_ALIASES` at the top of the checker). Flagging so it does not quietly
 become permanent — a workaround nobody remembers is how the last defect survived.
+
+---
+
+## Q4-7 · 2026-07-18 20:55Z · **The LAST unfixed `coupling_weights` omission — outside my boundary**
+
+Q4-5's remnant, located by measurement + exhaustive call-site sweep. **The two driver sites the
+MO named are already correct** (`sweep/run_spatial_discovery.py:96` and `:218`, the latter fixed
+in `92c623f` with a D21 reference in its comment; `src/models/Model_6/sweep/run_place_field_learning.py:142`
+also correct). **One call site still omits it:**
+
+- `src/models/Model_6/Full_System_Experiments/tier5_rnn/exp_network_communication.py:200`
+  — `network.entanglement_tracker.step(dt * 10, network.synapses, network.positions)`
+
+**Not in my boundary** (the rotation named the two drivers + the guard). Not fixed. **It now
+emits a runtime warning** rather than failing silently, so if it is ever run the operator sees it.
+
+**PO-4's recommendation:** this is in `Full_System_Experiments/tier5_rnn/`, which looks like a
+legacy/orphan tier — most likely PO-6's orphan-module surface rather than a live driver. Route it
+there, or confirm it is dead and delete it. **A one-line fix either way**; flagged so the "gap in
+that fix" does not survive a third time.
+
+---
+
+## Q4-8 · 2026-07-18 20:55Z · **SKILL DRIFT — `model6-architecture` says a file that exists does not**
+
+`model6-architecture` carries, twice:
+
+> **F4 — RESOLVED / MOOT (2026-06-02):** `run_place_field_learning.py` does not exist; there is
+> only ONE `step_network_per_synapse` (in `run_spatial_discovery.py`).
+
+and in the file table: *"(No longer present as of 2026-06-02. The place-field runner was
+consolidated…)"*
+
+**The file exists.** `src/models/Model_6/sweep/run_place_field_learning.py` — I edited it this
+session (`7b05153`, removing the double-advance workaround), it imports `analytical_gap`, and it
+carries its own tracker call at `:142`. Per `agent-grounding-protocol:45`, **code wins and the
+skill has drifted.**
+
+**Why it matters rather than being a tidy-up:** the skill's F4 says there is no second copy to
+fix. **That is exactly the belief that produces a partial fix** — and audit item 16 is a partial
+fix on this same family of files. A skill asserting a consumer does not exist will keep steering
+POs away from it.
+
+**PO-4's recommendation:** correct the `model6-architecture` F4 entry and the file table. Skills
+are not my surface; routing rather than editing.

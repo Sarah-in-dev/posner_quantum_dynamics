@@ -1,0 +1,24 @@
+{
+  "site1_step_network_per_synapse": {
+    "calls": 6,
+    "all_arrived": true
+  },
+  "site2_run_trial": {
+    "calls": 37,
+    "all_arrived": true
+  },
+  "bonds": {
+    "formed": 0,
+    "etas": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "peak_dimers": 3183,
+    "blockers": [
+      "(3) eta = 0 at every synapse -> k_cross ~ sqrt(eta_i*eta_j) = 0"
+    ]
+  },
+  "failing_first_detects_omission": true,
+  "verdict": "PASS"
+}

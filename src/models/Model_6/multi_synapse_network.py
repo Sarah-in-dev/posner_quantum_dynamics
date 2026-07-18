@@ -276,7 +276,27 @@ class NetworkEntanglementTracker:
         # Cross-synapse formation only runs when caller supplied coupling_weights.
         # (Backward compat: if caller doesn't pass it, no cross bonds form —
         # the test then exercises the intra-synapse path only.)
+        #
+        # THIS RETURN USED TO BE SILENT, and that silence is why the defect survived
+        # a fix that "covered" the file: substrate-audit item 16 records the
+        # 2026-07-18 fix reaching one call site in run_spatial_discovery.py and
+        # missing the other, so every learning trial formed ZERO cross-synapse bonds
+        # while looking healthy. A no-op that announces nothing is indistinguishable
+        # from a no-op that was correct. It now announces itself.
+        #
+        # dt > 0 is the discriminator: analytical_gap deliberately calls this with
+        # dt=0 to prune stale bonds only (run_theta_burst_45s.py:391), where forming
+        # nothing is the intent, not a defect. Warning there would train people to
+        # ignore the warning.
         if coupling_weights is None:
+            if dt > 0 and not getattr(self, '_warned_no_coupling_weights', False):
+                self._warned_no_coupling_weights = True
+                logger.warning(
+                    "_update_entanglement called with dt=%.4g and coupling_weights=None: "
+                    "NO cross-synapse bonds will form. If this is a driver call site, the "
+                    "network topology is empty and any result reading it is reading an "
+                    "empty graph. Pass coupling_weights=network.coupling_weights. "
+                    "(Warned once per tracker.)", dt)
             return
 
         # Bucket dimers by synapse. Order within a bucket fixes the row/col index.
