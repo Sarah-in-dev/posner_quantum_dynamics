@@ -42,6 +42,7 @@ class Dimer:
     # Local environment (updated each step)
     local_j_coupling: float = 0.0  # External J-field (ATP-derived)
     local_calcium: float = 0.0
+    event_ids: frozenset = field(default_factory=frozenset)  # PO-5 U16 provenance (empty when off)
     
     def __post_init__(self):
         if self.j_couplings_intra is None:
@@ -173,6 +174,24 @@ class DimerParticleSystem:
         # before this -- the same class as kT_ref. NOT tied to the derived 20 kT: only
         # `reference_kT` is. Same value => behaviour unchanged, verified bit-identical.
         self.k_entangle_em_base = 1.0
+        #
+        # ARM PROVENANCE (PO-5 UNIT 16): Fisher's ACTUAL mechanism. OFF BY DEFAULT.
+        # docs/PREREG_PO5_UNIT16_PROVENANCE_BUILD.md. A newborn dimer inherits up to K=2
+        # nearest recent hydrolysis events (Ca6(PO4)4 dimer = 2 singlet pairs); two dimers
+        # bond IFF they share an event (they hold the two entangled daughters of one
+        # hydrolysis). Events are sourced where calcium is elevated (atp_system.py:90's own
+        # rule), so which dimers share an event is INPUT-correlated. When False, the birth
+        # loop runs the existing clique rule unchanged and is bit-identical.
+        self.provenance_bonding = False
+        self.provenance_k = 2               # phosphate pairs per dimer
+        self.provenance_event_slots = 2     # entangled daughters per hydrolysis event
+        self.provenance_ca_threshold = 1e-6 # M; matches atp_system active-site threshold
+        self.provenance_event_rate = 0.5    # events per active cell per step (reported, not tuned)
+        self.provenance_age_s = 2.0         # events expire after this (phosphates consumed ~s)
+        self._prov_events = []              # list of dicts: id, pos_nm, t, slots_free, holders
+        self._next_event_id = 0
+        self._calcium_field = None
+        self._prov_dx_nm = self.dx_nm
         self.j_coupling_threshold = 5.0  # Hz, minimum for protection
         
         # Formation tracking
@@ -262,8 +281,12 @@ class DimerParticleSystem:
                     
                     # INHERITED ENTANGLEMENT (Fisher 2015):
                     # Phosphates from same pyrophosphate hydrolysis are born entangled
-                    # Check existing dimers for shared origin
-                    if template_bound:
+                    if self.provenance_bonding:
+                        # PO-5 UNIT 16: Fisher's actual mechanism — inherit nearest events,
+                        # bond iff shared. Replaces the clique rule entirely when on.
+                        self._assign_provenance_and_bond(dimer)
+                    elif template_bound:
+                        # Check existing dimers for shared origin (legacy clique proxy)
                         birth_window = self.birth_window  # PO-5 U7: was literal 0.1
                         _n_linked = 0
                         for other in reversed(self.dimers[:-1]):   # nearest in birth time first
@@ -392,6 +415,66 @@ class DimerParticleSystem:
     # ENTANGLEMENT DYNAMICS - THE KEY PART
     # =========================================================================
     
+    # =========================================================================
+    # PROVENANCE BONDING (PO-5 UNIT 16) — Fisher's actual mechanism, opt-in
+    # =========================================================================
+    def _step_provenance_events(self, dt: float):
+        """Generate hydrolysis events where calcium is elevated (atp_system.py:90's rule),
+        and age out old ones. Only called when provenance_bonding is on, so the RNG it
+        consumes never touches the off path."""
+        # age out expired events (phosphates consumed within ~seconds)
+        self._prov_events = [e for e in self._prov_events
+                             if self.time - e['t'] <= self.provenance_age_s
+                             and e['slots_free'] > 0]
+        if self._calcium_field is None:
+            return
+        active = np.argwhere(self._calcium_field > self.provenance_ca_threshold)
+        if active.size == 0:
+            return
+        # number of new events ~ active area * rate; placed at active cell centres
+        n_new = np.random.poisson(self.provenance_event_rate * len(active) * dt)
+        if n_new <= 0:
+            return
+        pick = active[np.random.randint(0, len(active), size=int(n_new))]
+        for cell in pick:
+            pos = np.array([(cell[0] + 0.5) * self._prov_dx_nm,
+                            (cell[1] + 0.5) * self._prov_dx_nm, 10.0])
+            self._prov_events.append({'id': self._next_event_id, 'pos': pos,
+                                      't': self.time,
+                                      'slots_free': self.provenance_event_slots,
+                                      'holders': []})
+            self._next_event_id += 1
+
+    def _assign_provenance_and_bond(self, dimer):
+        """Newborn dimer claims up to K nearest recent events with a free slot; when an
+        event's two daughters are both claimed, the two holders bond (shared entangled
+        origin). Deterministic nearest-selection — consumes no RNG."""
+        if not self._prov_events:
+            return
+        epos = np.array([e['pos'] for e in self._prov_events])
+        d = np.linalg.norm(epos - dimer.position, axis=1)
+        order = np.argsort(d)
+        claimed = []
+        for k in order:
+            e = self._prov_events[k]
+            if e['slots_free'] <= 0:
+                continue
+            e['slots_free'] -= 1
+            e['holders'].append(dimer.id)
+            claimed.append(e['id'])
+            # if this event now has two holders, the two of them share it -> bond
+            if len(e['holders']) >= 2:
+                partner = e['holders'][-2]
+                other = self._by_id_cache.get(partner) if hasattr(self, '_by_id_cache') else None
+                if other is None:
+                    other = next((x for x in self.dimers if x.id == partner), None)
+                if other is not None and other.id != dimer.id:
+                    strength = other.singlet_probability * dimer.singlet_probability
+                    self._create_bond(dimer.id, other.id, strength=strength)
+            if len(claimed) >= self.provenance_k:
+                break
+        dimer.event_ids = frozenset(claimed)
+
     def step_entanglement(self, dt: float, collective_field_kT: float = 0.0):
         """
         Update entanglement network via two pathways:
@@ -673,7 +756,13 @@ class DimerParticleSystem:
 
         # 1. Update time first
         self.time += dt
-        
+
+        # 1b. PO-5 UNIT 16: provenance events (opt-in; no-op + no RNG when off)
+        if self.provenance_bonding:
+            self._calcium_field = calcium_field
+            self._by_id_cache = {d.id: d for d in self.dimers}
+            self._step_provenance_events(dt)
+
         # 2. Population: birth/death to track concentration (FAST chemistry)
         pop_result = self.step_population(dt, dimer_concentration, template_field)
         
