@@ -1,0 +1,34 @@
+================================================================================================
+PO-5 UNIT 11 — repair arms (all opt-in, all-off = today's physics)
+================================================================================================
+
+BASELINE + ARM A (coupling_length sweep; diagnostic override):
+  baseline (all off)                 E=   407332 comps=    1.0 largest_frac=1.0000 H0=  3.0
+  A: coupling_length=1nm             E=   372170 comps=   20.0 largest_frac=0.9821 H0=  6.0
+  A: coupling_length=2nm             E=   378494 comps=    2.5 largest_frac=0.9986 H0= 10.0
+  A: coupling_length=5nm             E=   407332 comps=    1.0 largest_frac=1.0000 H0=  3.0
+  A: coupling_length=10nm            E=   459580 comps=    1.0 largest_frac=1.0000 H0=  3.0
+
+ARM B (degree cap on birth-pairing):
+  B: birth_degree_cap=1              E=   138722 comps=    1.0 largest_frac=1.0000 H0=  3.0
+  B: birth_degree_cap=2              E=   139384 comps=    1.0 largest_frac=1.0000 H0=  3.0
+  B: birth_degree_cap=4              E=   140697 comps=    1.0 largest_frac=1.0000 H0=  3.0
+  B: birth_degree_cap=8              E=   143334 comps=    1.0 largest_frac=1.0000 H0=  3.0
+
+ARM C (J-compatibility gating formation):
+  C: j_compat_formation              E=   404109 comps=    1.0 largest_frac=1.0000 H0=  3.0
+
+COMBINED:
+  B(k=4) + C                         E=   140697 comps=    1.0 largest_frac=1.0000 H0=  3.0
+  B(k=4) + C + A(1nm)                E=   105536 comps=   20.0 largest_frac=0.9821 H0=  7.5
+
+================================================================================================
+P1 baseline largest_frac = 1.0000  (anchor OK)
+P3 coupling_length: largest_frac spread over 1-10nm = 0.0179 => NOT load-bearing
+P2 arm B k=4: largest_frac = 1.0000 => does NOT fragment (P2 carries it, per Unit 7)
+P4 arm C: E 407332 -> 404109 (-0.79%) => NULL (formation gating inert too)
+
+lowest largest_frac achieved: 0.9821 by [A: coupling_length=1nm]
+
+LIMITS: 1 synapse, 1 s, 2 seeds. A fragmenting arm is NOT endorsed — B and C encode
+physics claims needing grounding independent of any result here.

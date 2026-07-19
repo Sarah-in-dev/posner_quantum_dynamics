@@ -1,0 +1,112 @@
+[
+  {
+    "label": "baseline (all off)",
+    "V": 1086.5,
+    "E": 407331.5,
+    "components": 1.0,
+    "largest_frac": 1.0,
+    "sheaf_H0": 3.0
+  },
+  {
+    "label": "A: coupling_length=1nm",
+    "V": 1086.5,
+    "E": 372170.0,
+    "components": 20.0,
+    "largest_frac": 0.982109201538957,
+    "sheaf_H0": 6.0,
+    "cl": 1.0
+  },
+  {
+    "label": "A: coupling_length=2nm",
+    "V": 1086.5,
+    "E": 378494.5,
+    "components": 2.5,
+    "largest_frac": 0.9986097693259437,
+    "sheaf_H0": 10.0,
+    "cl": 2.0
+  },
+  {
+    "label": "A: coupling_length=5nm",
+    "V": 1086.5,
+    "E": 407331.5,
+    "components": 1.0,
+    "largest_frac": 1.0,
+    "sheaf_H0": 3.0,
+    "cl": 5.0
+  },
+  {
+    "label": "A: coupling_length=10nm",
+    "V": 1086.5,
+    "E": 459579.5,
+    "components": 1.0,
+    "largest_frac": 1.0,
+    "sheaf_H0": 3.0,
+    "cl": 10.0
+  },
+  {
+    "label": "B: birth_degree_cap=1",
+    "V": 1086.5,
+    "E": 138722.5,
+    "components": 1.0,
+    "largest_frac": 1.0,
+    "sheaf_H0": 3.0,
+    "cap": 1
+  },
+  {
+    "label": "B: birth_degree_cap=2",
+    "V": 1086.5,
+    "E": 139383.5,
+    "components": 1.0,
+    "largest_frac": 1.0,
+    "sheaf_H0": 3.0,
+    "cap": 2
+  },
+  {
+    "label": "B: birth_degree_cap=4",
+    "V": 1086.5,
+    "E": 140697.0,
+    "components": 1.0,
+    "largest_frac": 1.0,
+    "sheaf_H0": 3.0,
+    "cap": 4
+  },
+  {
+    "label": "B: birth_degree_cap=8",
+    "V": 1086.5,
+    "E": 143333.5,
+    "components": 1.0,
+    "largest_frac": 1.0,
+    "sheaf_H0": 3.0,
+    "cap": 8
+  },
+  {
+    "label": "C: j_compat_formation",
+    "V": 1086.5,
+    "E": 404109.0,
+    "components": 1.0,
+    "largest_frac": 1.0,
+    "sheaf_H0": 3.0,
+    "jc": true
+  },
+  {
+    "label": "B(k=4) + C",
+    "V": 1086.5,
+    "E": 140697.0,
+    "components": 1.0,
+    "largest_frac": 1.0,
+    "sheaf_H0": 3.0,
+    "cap": 4,
+    "jc": true
+  },
+  {
+    "label": "B(k=4) + C + A(1nm)",
+    "V": 1086.5,
+    "E": 105535.5,
+    "components": 20.0,
+    "largest_frac": 0.982109201538957,
+    "sheaf_H0": 7.5,
+    "cap": 4,
+    "jc": true,
+    "cl": 1.0
+  }
+]
