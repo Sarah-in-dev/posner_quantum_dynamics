@@ -1,0 +1,56 @@
+========================================================================================================
+PO-5 UNIT 5 — genuine (non-constant) cellular sheaf on the dimer graph
+  stalk R^6 = j_couplings_intra (dead data, dimer_particles.py:40)
+  restriction = coordinate projection R^6 -> R  (real, non-identity, NO phase)
+  P1 VALIDATION: constant sheaf MUST reproduce ordinary components and cycle rank
+  P2 HYPOTHESIS: sheaf H0 > 1 where ordinary components == 1
+========================================================================================================
+
+bus=0.00  V=1182 E=380795  ordinary: components=60 cycle_rank=379673  (57s)
+    constant  H0=    60  H1=  379673  H0_engaged=     3  rank_delta=  1122
+    geometry  H0=  1072  H1=  374775  H0_engaged=     9  rank_delta=  6020
+    random    H0=   349  H1=  374052  H0_engaged=     3  rank_delta=  6743
+
+bus=0.50  V=1182 E=382243  ordinary: components=29 cycle_rank=381090  (61s)
+    constant  H0=    29  H1=  381090  H0_engaged=     1  rank_delta=  1153
+    geometry  H0=  1003  H1=  376154  H0_engaged=     6  rank_delta=  6089
+    random    H0=   277  H1=  375428  H0_engaged=     1  rank_delta=  6815
+
+bus=2.00  V=1182 E=386386  ordinary: components=14 cycle_rank=385218  (64s)
+    constant  H0=    14  H1=  385218  H0_engaged=     1  rank_delta=  1168
+    geometry  H0=   923  H1=  380217  H0_engaged=     4  rank_delta=  6169
+    random    H0=   205  H1=  379499  H0_engaged=     1  rank_delta=  6887
+
+bus=10.00  V=1182 E=405640  ordinary: components=6 cycle_rank=404464  (67s)
+    constant  H0=     6  H1=  404464  H0_engaged=     1  rank_delta=  1176
+    geometry  H0=   736  H1=  399284  H0_engaged=    10  rank_delta=  6356
+    random    H0=    89  H1=  398637  H0_engaged=     2  rank_delta=  7003
+
+bus=20.00  V=1182 E=425273  ordinary: components=1 cycle_rank=424092  (77s)
+    constant  H0=     1  H1=  424092  H0_engaged=     1  rank_delta=  1181
+    geometry  H0=   624  H1=  418805  H0_engaged=     8  rank_delta=  6468
+    random    H0=    58  H1=  418239  H0_engaged=     2  rank_delta=  7034
+
+bus=NATIVE  V=1182 E=428812  ordinary: components=1 cycle_rank=427631  (75s)
+    constant  H0=     1  H1=  427631  H0_engaged=     1  rank_delta=  1181
+    geometry  H0=   601  H1=  422321  H0_engaged=     8  rank_delta=  6491
+    random    H0=    50  H1=  421770  H0_engaged=     1  rank_delta=  7042
+
+========================================================================================================
+P1 VALIDATION: PASS — constant sheaf reproduces components AND cycle rank exactly,
+               at every bus value. The implementation is admissible.
+
+P2 — where the ORDINARY readout is saturated (components == 1):
+   bus=20.00: ordinary components=1  |  SCORED geometry H0_engaged=8  |  control random H0_engaged=2   (raw H0 624/58 — inflated by free channels, NOT scored)
+   bus=NATIVE: ordinary components=1  |  SCORED geometry H0_engaged=8  |  control random H0_engaged=1   (raw H0 601/50 — inflated by free channels, NOT scored)
+
+P2 VERDICT: SUPPORTED — sheaf H0_engaged is non-degenerate where component-counting is
+            pinned at 1. The sheaf readout carries information the current one
+            provably cannot at this operating point.
+
+CONTROL — geometry vs random channels: if these agree, the structure comes from
+having 6 coordinates, NOT from the physics, and P2 is not evidence for the claim.
+
+LIMITS: single synapse, 1 s, one seed. The channel rule is a STATED MODELLING
+CHOICE, not a derivation. No dynamics enforce this sheaf's consistency condition yet
+— A2's falsifier requires that, and this unit does NOT claim to have met it.

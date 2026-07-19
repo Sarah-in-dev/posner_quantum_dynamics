@@ -1,0 +1,218 @@
+[
+  {
+    "bus": 0.0,
+    "native_bus": 21.98429890204524,
+    "V": 1182,
+    "E": 380795,
+    "ordinary_components": 60,
+    "ordinary_cycle_rank": 379673,
+    "elapsed_s": 57.36212396621704,
+    "constant": {
+      "dim_C0": 1182,
+      "dim_C1": 380795,
+      "rank_delta": 1122,
+      "H0": 60,
+      "H1": 379673,
+      "H0_engaged": 3,
+      "n_engaged_coords": 1125
+    },
+    "geometry": {
+      "dim_C0": 7092,
+      "dim_C1": 380795,
+      "rank_delta": 6020,
+      "H0": 1072,
+      "H1": 374775,
+      "H0_engaged": 9,
+      "n_engaged_coords": 6029
+    },
+    "random": {
+      "dim_C0": 7092,
+      "dim_C1": 380795,
+      "rank_delta": 6743,
+      "H0": 349,
+      "H1": 374052,
+      "H0_engaged": 3,
+      "n_engaged_coords": 6746
+    }
+  },
+  {
+    "bus": 0.5,
+    "native_bus": 21.98429890204524,
+    "V": 1182,
+    "E": 382243,
+    "ordinary_components": 29,
+    "ordinary_cycle_rank": 381090,
+    "elapsed_s": 60.83373975753784,
+    "constant": {
+      "dim_C0": 1182,
+      "dim_C1": 382243,
+      "rank_delta": 1153,
+      "H0": 29,
+      "H1": 381090,
+      "H0_engaged": 1,
+      "n_engaged_coords": 1154
+    },
+    "geometry": {
+      "dim_C0": 7092,
+      "dim_C1": 382243,
+      "rank_delta": 6089,
+      "H0": 1003,
+      "H1": 376154,
+      "H0_engaged": 6,
+      "n_engaged_coords": 6095
+    },
+    "random": {
+      "dim_C0": 7092,
+      "dim_C1": 382243,
+      "rank_delta": 6815,
+      "H0": 277,
+      "H1": 375428,
+      "H0_engaged": 1,
+      "n_engaged_coords": 6816
+    }
+  },
+  {
+    "bus": 2.0,
+    "native_bus": 21.98429890204524,
+    "V": 1182,
+    "E": 386386,
+    "ordinary_components": 14,
+    "ordinary_cycle_rank": 385218,
+    "elapsed_s": 64.19473695755005,
+    "constant": {
+      "dim_C0": 1182,
+      "dim_C1": 386386,
+      "rank_delta": 1168,
+      "H0": 14,
+      "H1": 385218,
+      "H0_engaged": 1,
+      "n_engaged_coords": 1169
+    },
+    "geometry": {
+      "dim_C0": 7092,
+      "dim_C1": 386386,
+      "rank_delta": 6169,
+      "H0": 923,
+      "H1": 380217,
+      "H0_engaged": 4,
+      "n_engaged_coords": 6173
+    },
+    "random": {
+      "dim_C0": 7092,
+      "dim_C1": 386386,
+      "rank_delta": 6887,
+      "H0": 205,
+      "H1": 379499,
+      "H0_engaged": 1,
+      "n_engaged_coords": 6888
+    }
+  },
+  {
+    "bus": 10.0,
+    "native_bus": 21.98429890204524,
+    "V": 1182,
+    "E": 405640,
+    "ordinary_components": 6,
+    "ordinary_cycle_rank": 404464,
+    "elapsed_s": 67.0650532245636,
+    "constant": {
+      "dim_C0": 1182,
+      "dim_C1": 405640,
+      "rank_delta": 1176,
+      "H0": 6,
+      "H1": 404464,
+      "H0_engaged": 1,
+      "n_engaged_coords": 1177
+    },
+    "geometry": {
+      "dim_C0": 7092,
+      "dim_C1": 405640,
+      "rank_delta": 6356,
+      "H0": 736,
+      "H1": 399284,
+      "H0_engaged": 10,
+      "n_engaged_coords": 6366
+    },
+    "random": {
+      "dim_C0": 7092,
+      "dim_C1": 405640,
+      "rank_delta": 7003,
+      "H0": 89,
+      "H1": 398637,
+      "H0_engaged": 2,
+      "n_engaged_coords": 7005
+    }
+  },
+  {
+    "bus": 20.0,
+    "native_bus": 21.98429890204524,
+    "V": 1182,
+    "E": 425273,
+    "ordinary_components": 1,
+    "ordinary_cycle_rank": 424092,
+    "elapsed_s": 76.98095989227295,
+    "constant": {
+      "dim_C0": 1182,
+      "dim_C1": 425273,
+      "rank_delta": 1181,
+      "H0": 1,
+      "H1": 424092,
+      "H0_engaged": 1,
+      "n_engaged_coords": 1182
+    },
+    "geometry": {
+      "dim_C0": 7092,
+      "dim_C1": 425273,
+      "rank_delta": 6468,
+      "H0": 624,
+      "H1": 418805,
+      "H0_engaged": 8,
+      "n_engaged_coords": 6476
+    },
+    "random": {
+      "dim_C0": 7092,
+      "dim_C1": 425273,
+      "rank_delta": 7034,
+      "H0": 58,
+      "H1": 418239,
+      "H0_engaged": 2,
+      "n_engaged_coords": 7036
+    }
+  },
+  {
+    "bus": null,
+    "native_bus": 21.98429890204524,
+    "V": 1182,
+    "E": 428812,
+    "ordinary_components": 1,
+    "ordinary_cycle_rank": 427631,
+    "elapsed_s": 75.33932590484619,
+    "constant": {
+      "dim_C0": 1182,
+      "dim_C1": 428812,
+      "rank_delta": 1181,
+      "H0": 1,
+      "H1": 427631,
+      "H0_engaged": 1,
+      "n_engaged_coords": 1182
+    },
+    "geometry": {
+      "dim_C0": 7092,
+      "dim_C1": 428812,
+      "rank_delta": 6491,
+      "H0": 601,
+      "H1": 422321,
+      "H0_engaged": 8,
+      "n_engaged_coords": 6499
+    },
+    "random": {
+      "dim_C0": 7092,
+      "dim_C1": 428812,
+      "rank_delta": 7042,
+      "H0": 50,
+      "H1": 421770,
+      "H0_engaged": 1,
+      "n_engaged_coords": 7043
+    }
+  }
+]
