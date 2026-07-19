@@ -1,0 +1,30 @@
+PO-7 UNIT 2 keystone test -- spacing=0.2um, 5 seeds, 6 synapses
+
+  arm1_contiguous    A seed= 31337  Q_act=+0.0000 Q_shuf=-0.3075 n_multi=  1 prov_cross=   2 eta_cross=   0
+  arm1_contiguous    A seed=  4242  Q_act=+0.0000 Q_shuf=+0.0000 n_multi=  0 prov_cross=   0 eta_cross=   0
+  arm1_contiguous    A seed= 90210  Q_act=+0.0000 Q_shuf=-0.2150 n_multi=  1 prov_cross=   2 eta_cross=   0
+  arm1_contiguous    A seed=     7  Q_act=+0.0000 Q_shuf=-0.2608 n_multi=  1 prov_cross=   4 eta_cross=   0
+  arm1_contiguous    A seed=123456  Q_act=-0.0000 Q_shuf=-0.2322 n_multi=  1 prov_cross=   3 eta_cross=   0
+  arm1_contiguous    B seed= 31337  Q_act=+0.0000 Q_shuf=+0.0000 n_multi=  0 prov_cross=   0 eta_cross=   0
+  arm1_contiguous    B seed=  4242  Q_act=+0.0000 Q_shuf=-0.2900 n_multi=  1 prov_cross=   1 eta_cross=   0
+  arm1_contiguous    B seed= 90210  Q_act=+0.0000 Q_shuf=+0.0000 n_multi=  0 prov_cross=   0 eta_cross=   0
+  arm1_contiguous    B seed=     7  Q_act=+0.0000 Q_shuf=+0.0000 n_multi=  0 prov_cross=   0 eta_cross=   0
+  arm1_contiguous    B seed=123456  Q_act=+0.0000 Q_shuf=-0.3025 n_multi=  1 prov_cross=   2 eta_cross=   0
+  -> arm1_contiguous: mean Q_act=-0.0000 Q_shuf=-0.1608 d=+1.609 mean_n_multi=0.60
+
+  arm2_interleaved   A seed= 31337  Q_act=+0.0000 Q_shuf=+0.0000 n_multi=  0 prov_cross=   0 eta_cross=   0
+  arm2_interleaved   A seed=  4242  Q_act=+0.0000 Q_shuf=+0.0000 n_multi=  0 prov_cross=   0 eta_cross=   0
+  arm2_interleaved   A seed= 90210  Q_act=+0.0000 Q_shuf=-0.3275 n_multi=  1 prov_cross=   1 eta_cross=   0
+  arm2_interleaved   A seed=     7  Q_act=+0.0000 Q_shuf=-0.2925 n_multi=  1 prov_cross=   3 eta_cross=   0
+  arm2_interleaved   A seed=123456  Q_act=+0.0000 Q_shuf=+0.0000 n_multi=  0 prov_cross=   0 eta_cross=   0
+  arm2_interleaved   B seed= 31337  Q_act=+0.0000 Q_shuf=+0.0000 n_multi=  0 prov_cross=   0 eta_cross=   0
+  arm2_interleaved   B seed=  4242  Q_act=+0.0000 Q_shuf=+0.0000 n_multi=  0 prov_cross=   0 eta_cross=   0
+  arm2_interleaved   B seed= 90210  Q_act=+0.0000 Q_shuf=-0.3425 n_multi=  1 prov_cross=   2 eta_cross=   0
+  arm2_interleaved   B seed=     7  Q_act=+0.0000 Q_shuf=-0.2750 n_multi=  1 prov_cross=   1 eta_cross=   0
+  arm2_interleaved   B seed=123456  Q_act=+0.0000 Q_shuf=-0.2875 n_multi=  1 prov_cross=   2 eta_cross=   0
+  -> arm2_interleaved: mean Q_act=+0.0000 Q_shuf=-0.1525 d=+1.332 mean_n_multi=0.50
+
+=== PRE-REGISTERED VERDICT ===
+  NEGATIVE: DECOMPOSITION NULL: partition splits cleanly per-synapse (mean n_multi < 1) -- input-LOCATED but not input-COMPUTING
+
+wrote /Users/sarahdavidson/posner_quantum_dynamics/.claude/worktrees/po5-keystone/src/models/Model_6/sweep/po7_unit2_results.json

@@ -67,3 +67,23 @@ Newman Q on the synapse graph is noise-dominated. A "decomposition null" verdict
 
 **Bit-identity re-verified this cycle: PASS.** Commits `c3ba6aa`, `b03b90a` — explicit paths,
 `git show --stat` clean both times.
+
+### 2026-07-19 21:45 UTC — cycle 3 · COMPLETE
+
+**VERDICT (pre-registered): NEGATIVE — DECOMPOSITION NULL.** `mean n_multi` = 0.60 (contiguous) /
+0.50 (interleaved), both < 1 ⇒ the partition splits cleanly per-synapse. **Input-LOCATED, not
+input-COMPUTING.** Research log entry `L·PO7-1` + DECISION RECORD row written.
+
+**But the build objective SUCCEEDED:** η-free cross-synapse provenance edges and components are
+real and demonstrated (`eta_cross = 0` in all 20 runs — every cross edge is Fisher-inherited).
+
+**Bit-identity re-gated AFTER scoring: PASS** (`1034 / 369740 / 0.991922159684`).
+
+**Three design defects found in my own prereg** (dimer-level Q degenerate ≈1.0 — caught before
+scoring; "density matched by construction" false — `Q_act = +0.0000` in all 20 runs, so d=1.61/1.33
+is an artifact and a Q-PASS would have been a THIRD false positive; ARM 2 conflates layout with
+distance). All recorded in `notes.md` Q6 and `L·PO7-1` §5, none quietly absorbed.
+
+**§8 remains OPEN, not answered negative.** The fix for the next worker is in `L·PO7-1` §7:
+HIGH-vs-LOW drive on all six synapses (density matched) + constant co-active spacing + a
+cross-edge yield increase. Confound and power must be fixed together.
