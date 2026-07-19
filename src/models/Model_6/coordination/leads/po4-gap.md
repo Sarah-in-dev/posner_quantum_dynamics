@@ -5,7 +5,122 @@ with a cited timescale or is excluded with a stated reason — nothing in neithe
 measurement shows **committed vs uncommitted spine volume SEPARATING across an honest gap**.
 Demonstrated failing on the current 1 ms-per-30 s code first.
 
-**Status:** **CORRECTED 2026-07-18 20:15Z — I claimed "ACCEPTANCE MET, both bars" and one bar
+**Status: WRAPPED — 2026-07-19.** MO-VERIFIED and signed off (`mo-wrap-027.md`). Both acceptance
+bars met and mechanically enforced; rotations 002 and 003 delivered; the detailed-balance fix
+landed and verified. **No open unit. This seat is retired.**
+
+---
+
+# CLOSING HANDOVER — what is NOT on disk anywhere else
+
+*Everything below is a trap, a gotcha, or a thing a reader would misread without me here. The
+findings themselves are in `docs/K_CLASSICAL_BLAST_RADIUS.md`, `docs/PREREG_PO4_GAP.md`,
+`docs/GAP_SUBSYSTEM_TABLE.md` and the probes. **This section is only the part that would be lost.***
+
+### 1. `GAP_S = 0.1` in `gap_template_symmetry_probe.py` looks absurd. DO NOT "fix" it.
+
+It is the **longest gap with ZERO stage-3 particle removals, post-fix**. Stage 3 removes
+lowest-coherence particles, which is **spatially biased**, so it moves the templated/bare ratio by
+a mechanism the registration explicitly scoped out. Any removal ⇒ the measurement is confounded.
+**Pre-fix that length was 3.0 s; post-fix dissolution is ~33× faster so stage 3 fires by 0.25 s.**
+**If you change the drive, the synapse count, or the constants, you must RE-DERIVE this number by
+scanning gap lengths for the zero-removal boundary. Do not reuse 0.1.** The probe's stage-3 control
+will catch you if you forget — it caught me twice and caught one of gen-2's runs.
+
+### 2. The single easiest error in this area: **`template_enhancement.mean()` is the WRONG statistic**
+
+The grid mean is **1.015**. The concentration-weighted mean is **~33**. Both are "the mean". The
+first says the template factor is negligible; the second says it is the dominant term. **The second
+is right, because dimers are BORN at template sites** — formation is itself template-catalysed
+(`ca_triphosphate_complex.py:346`), so 0.03% of the grid holds **97.4%** of the particles.
+**I published the wrong one and nearly buried a 33× effect.** Anyone measuring a field-valued
+quantity in this model must weight by where the population actually is.
+
+### 3. `analytical_gap`'s TAIL runs a full `network.step(0.001, …)` — every phase, once
+
+Auditing the sub-loop alone tells you what the gap does **and it is wrong**. That tail step is why
+"the gap freezes plasticity" was wrong (it ticks 1 ms), and it was my first hypothesis for a
+confound that turned out to be stage 3. **It is a state-sync, not an advance** — but it *does* run
+formation, commitment and template feedback once. Read the tail before concluding anything about
+what a gap does or does not touch.
+
+### 4. Two probes carry `fix_is_present()` and they MUST stay identical
+
+They diverged once — one joined 4 lines, one checked a single line — and the `k_diss` assignment
+**wraps**, so they gave **opposite answers on the same code**. Worse: an earlier version matched a
+**docstring** line and reported PROSE as code state. **If you reformat the `k_diss` expression,
+both detectors break silently and will report PRE-FIX on post-fix code**, which turns a correct
+result into "PREMISE WRONG". They require: executable form, 8-space indent, 4-line join.
+
+### 5. `S_pred` degrades with gap length — do not run the symmetry check at a "realistic" gap
+
+`S_pred = exp(−k̄·(te−1)·g)` treats `te` as the scalar **max (50)**; real dissolution is a spatial
+**mixture**. Error grows monotonically: 1.25e-06 at 0.02 s → 8.54e-05 at 0.2 s. **At 20 s it will
+be badly wrong and you will conclude the fix is broken.** It is not; the closed form is. Use the
+concentration-weighted mixture if you need longer gaps.
+
+### 6. My earlier numbers say 2034 dimers; the current baseline is 1915. Nothing broke.
+
+Same seed, same drive, **zero `.py` changes** in between. **My recipe's claim that this is
+deterministic was FALSE — I asserted it from the presence of a seed and never tested it.** Gen-2
+followed that claim, hunted a code cause, and misattributed it to PO-2, who refuted it on timing.
+**PO-7 owns the real mechanism** (`be1759f`, fixed-seed nondeterminism, ~1.57× on cross_bonds).
+**Do not treat any cross-session numeric difference in this codebase as evidence of a code change
+until PO-7's finding is resolved.** And note my probe was *stable* across 4 processes when I tested
+it — so the nondeterminism is intermittent or configuration-specific, which makes it worse, not
+better.
+
+### 7. The blast-radius doc's Part I says D17 is `NEEDS RE-MEASUREMENT`. **Part II supersedes it.**
+
+Part I judged against the `K` correction alone. **Part II shows the two corrections move in
+OPPOSITE directions** — `K` alone makes the gap 10× slower, `K`+template makes it **3.3× faster**
+than the conditions D17 was measured under. Faster clearing **cannot** manufacture unbounded
+accumulation, so D17's "no runaway" survives *a fortiori*. **Both corrections are now landed, so
+D17 is YES and no heavy run is owed.** A reader stopping at Part I will wrongly think a 5-hour
+re-run is outstanding.
+
+### 8. UNRESOLVED and now ~3.3× BIGGER because of my own fix: the gap discards dissolved calcium
+
+`apply_return` is called at `model6_core.py:484`/`:782` — **the within-trial path only. The gap
+never calls it.** Every dimer the gap dissolves has its calcium (6 Ca/dimer) and phosphate silently
+discarded. **My template fix made this leak ~3.3× larger.** Routed to PO-2 as Q4-13, **never
+resolved before the wrap.** If you compute mass balance across a gap it will not close, and that is
+this, not your error. *My own advance/exclude table says "calcium clamped at baseline" — that is
+honest for **relaxation** and does **not** cover the **source term**. That gap in my own table is
+mine.*
+
+### 9. `template_bound` is set ONLY at dimer creation, never re-evaluated
+
+This is the load-bearing reason PHASE 12 (template feedback) stays EXCLUDED from the gap even
+though the gap now advances the volume that gates it, and even though the gap now *reads* the
+template field. `set_n_templates` mutating the field mid-run does **not** re-flag existing dimers
+(`dimer_particles.py:205`). **Easy to misread as an inconsistency in the exclusion table. It is
+not.**
+
+### 10. Two small provenance traps
+
+- **`gap_retention_probe.GAP_S = 20.0` and `gap_template_symmetry_probe.GAP_S = 0.1` are unrelated
+  constants** that share a name and mean different things.
+- **MO ruling 005 cites an "AMENDMENT 2" of my pre-registration that never existed.** My amendments
+  are lettered **A–G**. That citation is MO drift, not a missing document — do not hunt for it.
+
+### 11. Delete the checker's workaround when the duplicate label is fixed
+
+`gap_phase_coverage_check.py` special-cases `DUPLICATE_PHASE_ALIASES` because `model6_core.py`
+labels **two** phases `PHASE 9` (`:599` eligibility, `:617` the three-factor gate). **That
+special case is a workaround for someone else's typo and should die with it** (Q4-6). A workaround
+nobody remembers is exactly how the last defect survived.
+
+### 12. The stage-3 control is the most reusable thing here
+
+Not the findings — the **control**. "Assert the particle count is unchanged, else INCONCLUSIVE"
+caught two of my errors and one confounded run of gen-2's. **Any new gap measurement should assert
+it or state why not.** Same for the `fix_is_present()` pattern: a probe that cannot name which code
+state it measured will eventually print confident, wrong prose.
+
+---
+
+**Status (historical):** CORRECTED 2026-07-18 20:15Z — I claimed "ACCEPTANCE MET, both bars" and one bar
 was NOT met.** MO ruling 007 found **PHASE 12** and **PHASE 9** in neither column, i.e. my
 docstring violating the rule it states. **Now closed and mechanically enforced.** Both bars met;
 awaiting MO re-verification.
