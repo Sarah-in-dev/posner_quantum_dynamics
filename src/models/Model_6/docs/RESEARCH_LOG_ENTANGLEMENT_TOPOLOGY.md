@@ -65,6 +65,7 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| PO5-12 | 2026-07-19 | **DEEP RESEARCH: provenance-bonding is FAITHFUL to Fisher, computational capability UNPROVEN — de-risk before build.** External (adversarially-verified primary sources) + internal (code map). **GREEN:** Fisher's inheritance is strictly pairwise/provenance — two Posners entangle iff they share a common-origin phosphate pair; *"dimers bond iff they share a hydrolysis event"* is literally his channel, and the clique + distance-kernel rules are both wrong. **RED (fix both, 3-0):** (1) Posner is **Ca₉(PO₄)₆ = 6 phosphates**, drawn from ~3 events ⇒ MULTI-EVENT hyperedge structure, not degree-4 pairwise; (2) genuine inter-Posner entanglement does NOT survive (Player & Hore: seconds; no inversion symmetry) ⇒ lean on the CLASSICAL common-cause reading. **THE GATE:** the object is exactly the s=1 Random Intersection Graph (threshold c=n·Σp_w², clique union, richer-than-density below m<n³) — but **NO source shows it carries INPUT-DEPENDENT partition structure**, which is the exact §8 property unproven for the replacement too. **Caveats:** "bond" = entanglement edge not chemical binding; a QDS binding-induced channel is orthogonal and invisible to a provenance graph. **Internal:** ~50–75 lines / 3 files, gated & bit-identical-off; ATP layer already computes the burst mask (`atp_system.py:111`) and discards it (`:119`) — capture not invent; one physics call = the birth↔event spatial-join rule. **DECISION: de-risk with an abstract RIG sim (minutes, no physics) BEFORE the build** — test input-dependent vs input-constant event assignment for partition-beyond-density; the research names this as the gate. | [external lit + internal map] | `L·PO5-12` below |
 | PO5-11 | 2026-07-19 | **TOPOLOGY IS A FUNCTION OF DENSITY ALONE — §8's "scalar as computation", on a contrast that varies.** **Unit 13:** the fidelity cut (only lever that fragments) is **COSMETIC** — advisor's spatial covariate shows birth geometry identical between drive conditions (r_med d=0.00) and the partition follows (max d=0.54). Per-seed rows: SUSTAINED and PULSED are **BIT-IDENTICAL** in V/positions/topology — drive PATTERN never reaches the population (`peak_conc = np.max`, a peak not an integral, `:174`; write-once bonds never revisit). **Unit 14:** amplitude DOES vary V (per-seed [1101,1192]); fitting topology~V, every cut measure has residual scatter ≤ seed noise (comps_cut 1.26, lf_cut 1.23, H0_cut 1.00) ⇒ **the partition carries exactly what the scalar V carries.** **Correction owed:** Units 9/10/13 used the pattern contrast that Unit 13 shows doesn't reach the population, so their nulls were under-founded (Unit 9's sign-reversal now reads as a non-contrast); keystone conclusion unchanged, Unit 14 establishes it properly. **Convergence with L·PO5-10:** no input dimension reaches the topology as pair structure — the population is peak-saturated and write-once, the bond rules are input-blind proxies, because the model has no representation of the entangling origin. **Next step is the provenance build, not another test.** External + internal deep research commissioned. | [GROUNDED, measured — negative] | `L·PO5-11` below |
 | PO5-10 | 2026-07-19 | **THE EM PATHWAY IS NOT AN ENTANGLING MECHANISM; the clique is NOT what percolates; the fidelity cut is the only lever.** **(1) STRUCTURAL/LOCC:** `em_rate` is a classical scalar scaling a *local* formation rate — a local operation, which cannot create entanglement (theorem). Entangling needs a direct `H_ij` or a common quantised mode; `em_rate` has neither. The code's own docstring already concedes there is no microscopic Hamiltonian and a ~10¹⁵ Hz vs ~Hz gap. **Dichotomy:** bonds are genuine entanglement ⇒ the pathway cannot make them; or they are classical correlations ⇒ the partition claim loses quantum grounding. **Asymmetry:** P0 (83%) has a real entangling origin (shared pyrophosphate) implemented as an unphysical clique; **P2 (17%) has no mechanism at all and is what percolates.** **(2) Unit 11:** degree cap k=4 removes **65% of edges**, `largest_frac` stays **1.0000**; k=1 also 1.0000; J-compat null (−0.8%); all-three −74% → still 0.9821. **Density is not the problem**, and this refutes the round-1 prediction that fixing the clique would fragment. **Per-event matching is unimplementable** — dimers are born from a concentration field, no per-phosphate provenance; the clique is a proxy for a **missing representation**, which is the diagnosis: Fisher's mechanism is inheritance, and every available proxy is input-blind by construction. **(3) Unit 12:** intra bonds have NO fidelity threshold (bare existence); storing `F=P_S_i·P_S_j·g(r)` and sweeping gives largest_frac 1.0000→**0.8314** and sheaf H⁰ **3→15** — the only lever that moves. **⚠ Two conceded defects: the bimodality is MANUFACTURED by the uncited 5 nm plateau, and `F` is a CATEGORY ERROR built from a rate term — fidelity must come from state, `F(t)=¼+(F₀−¼)e^(−t/T₂)`. No threshold nominated.** **(4) The ℝ⁶ latent space is populated with INPUT-INDEPENDENT NOISE** — `j_couplings_intra` is an independent per-dimer `normal(0.15,0.15,6)` draw (std 0.1478, median ‖ΔJ‖₂ 0.4864), so bonding on it cannot carry input information whatever the metric. The latent-dimension *principle* survives; this instance dies. **(5) OPEN:** dipolar coupling is a genuine parameter-free option (19.58 Hz @1nm … 0.02 Hz @10nm verified) but the claimed 1–2 nm range needs a ~100 ms competing timescale nobody can name — against T₂=216 s it reaches 10 nm, *more* permissive than today. **Do not build on it yet.** | [GROUNDED, measured + structural] | `L·PO5-10` below |
 | PO5-9 | 2026-07-19 | **THE TRANSIENT HYPOTHESIS FAILS — and it falsifies a `PO5-7` claim written the same day.** Probe `sweep/po5_unit8_transient.py`, pre-registered, **no overrides** — only when we look. **P1 FALSIFIED: the field is `min = max = 22.095` at EVERY sample from t=0.01 s on.** Unit 7's `range [0.000, 22.095]` was one or two samples before the first physics step, **not a gradual rise**. **`PO5-7`'s "it starts at zero and climbs every run / transits the whole fragmented→blob range" is WITHDRAWN** — the field reaches operating value in ~2 timesteps and stays. Error shape: **reading a min/max range as a trajectory without checking the time series** — the same mistake as reading a mean without its spread, one level up. **P2 fired on the registered criterion (`components>1 AND largest_frac<0.99`) at t=0.01–0.02, but the criterion was TOO WEAK and PO-5 does not bank the pass:** those states are 10–14 components with `largest_frac` 0.962–0.983 — a giant component holding 96–98% plus crumbs, not a fragmented state. **Substantively this is P3: saturation precedes any structure.** A discriminating bar would have been `largest_frac < 0.5`, as Unit 7 used. **This CLOSES the most hopeful remaining possibility** — there is no early critical window; the graph is a blob from the first measurable instant at the native field. | [GROUNDED, measured — negative] | `L·PO5-9` below |
@@ -98,6 +99,79 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·PO5-12 — DEEP RESEARCH (external + internal): provenance-bonding is FAITHFUL to Fisher, but its computational capability is UNPROVEN and must be de-risked before the build · 2026-07-19 `[external lit review, adversarially verified; internal code map]`
+
+**External:** deep-research harness, 5 angles, 3-vote adversarial verification, primary sources
+(Fisher 2015 Annals of Physics / arXiv 1508.05929; Swift/Fisher/Radzihovsky 2018; Player & Hore 2018
+J.R.Soc.Interface; Agarwal 2021/2023; RIG literature Karoński–Scheinerman–Singer-Cohen, Deijfen–Kets).
+**Internal:** codebase change-surface map (agent, read-only).
+
+#### GREEN — provenance-bonding is Fisher's ACTUAL mechanism (high confidence, 3-0)
+
+Fisher's inheritance is **strictly PAIRWISE and provenance-based**: enzymatic hydrolysis of ONE
+pyrophosphate (PPi → Pi + Pi) leaves the two daughter ³¹P spins in a two-qubit singlet; two Posners
+are entangled **iff they each carry one member of a shared, common-origin pair.** Verbatim Fisher:
+*"if two such Posner molecules share an entangled phosphate pair, their spins will be entangled."*
+**So "dimers carry their hydrolysis events, bond iff they share one" is literally Fisher's channel —
+and the current clique (born-in-a-window, all-to-all) and distance-kernel rules are both wrong.**
+
+#### RED FLAGS — two premises to fix, both high-confidence 3-0
+
+1. **Stoichiometry.** Fisher's Posner is **Ca₉(PO₄)₆ — SIX phosphates**, not Ca₆(PO₄)₄/~4. Since a
+   Posner holds 6 phosphates and each hydrolysis supplies only 2 entangled partners, **a node draws
+   from ~3 events → the coincidence structure is MULTI-EVENT (a hyperedge per event), not clean
+   pairwise.** (The model's own "Ca₆(PO₄)₄ dimer" is a deliberate Agarwal-based divergence from
+   Fisher's canonical Posner — a known modeling choice, not an error — but the provenance object still
+   needs the multi-event/hyperedge form, not degree-4-pairwise.)
+2. **Genuine entanglement almost certainly does NOT survive.** Player & Hore: inter-Posner singlet
+   lifetime is **seconds, not the required long times**; two independently tumbling Posners lack the
+   inversion symmetry that shields a single molecule, so intermolecular singlets cannot be protected.
+   **⇒ lean on the CLASSICAL common-cause reading, not the quantum one.** Provenance-bonding is
+   legitimate under both (shared origin is a textbook common cause), so this does not kill the build —
+   it reframes its justification.
+
+#### THE GATE — the one thing the research does NOT establish (high confidence, and it is decisive)
+
+The proposed object is exactly the **s=1 general Random Intersection Graph** (nodes = dimers, shared
+event = edge). Known math: sharp giant-component threshold `c = n·Σ_w p_w²`; edge set is a union of
+event-induced cliques; **ER-equivalent only when features are very large (m ≥ n³), and BELOW that it
+provably carries clique/triangle structure beyond mere density.** So it is *richer than density* —
+necessary. **But NO source shows the RIG carries INPUT-DEPENDENT partition structure** (partitions
+that change with stimulus, not just with density). *"Faithfulness to Fisher is established;
+computational capability distinct from density is NOT."* **This is the exact §8 property PO-5 has
+failed to find five times, now shown to be unproven in the literature for the proposed replacement
+too.**
+
+#### Two caveats that shape the build
+
+- **"Bond" must mean the ENTANGLEMENT EDGE, not literal chemical binding.** Fisher separates
+  inheritance (provenance) from binding (readout). Conflating them misrepresents him.
+- **A competing channel exists and a pure provenance graph is blind to it:** Quantum Dynamical
+  Selection predicts binding-*induced* pseudospin entanglement between two Posners, NOT conditioned on
+  shared provenance. Orthogonal to this model; noted, not built.
+
+#### Internal change surface (agent-mapped, read-only)
+
+**Smaller than PO-5 estimated: ~50–75 lines across three files, all gated by a `provenance_bonding`
+flag, bit-identical when off.** The ATP layer **already computes the per-event burst mask**
+(`atp_system.py:111` `burst_events = np.random.rand(...) < burst_probability`) and **discards it at
+:119** — so provenance raw material exists transiently and need only be captured, not invented. Bulk
+of work: capture events (id/time/location), thread across `atp_system → model6_core → dimer_particles`
+(all currently pass only fields). **One genuine physics/design call surfaced:** births are placed by
+sampling a probability field, so matching a birth to its event(s) needs a spatial-join rule (nearest?
+in-cell? within-radius?) — *that rule IS the "which phosphates ended up in which dimer" physics.*
+
+#### DECISION POSTURE
+
+Build is faithful and the code path is cheap — **but the research says its computational payload is
+unproven, and that is the precise thing five prior units failed to find.** **Recommendation: de-risk
+FIRST with an abstract RIG simulation** (pure graph, no physics, minutes) — assign events to nodes
+under input-varying vs input-constant regimes and test whether the partition moves beyond density. If
+yes → the 50–75-line build is worth it. If no → the whole provenance direction is dead and days are
+saved. **This is not more drift: it is the validation the research explicitly names as the gate.**
+
+
 
 ### L·PO5-11 — the topology is a FUNCTION OF DENSITY ALONE; and the input→population channel is measured shut · 2026-07-19 `[GROUNDED, measured — negative]`
 
