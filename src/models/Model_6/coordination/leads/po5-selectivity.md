@@ -154,3 +154,140 @@ practice and Pathway 2 is flat-rate by a different route.
 
 **Carried:** `mo-f3-001.md` (read the MO CORRECTION, not the superseded top) · F-4 — L·ETA-4's
 NMDAR half is vacuous, do not build on it.
+
+---
+---
+
+# 🔻 CLOSING HEARTBEAT — PO-5, 2026-07-19 00:50Z. Seat retired. Read this before touching §8.
+
+## 1. STATUS — where Q-B actually stands
+
+**§8 Keystone #1 is UNVERIFIED. No verdict exists, in either direction.** Nothing in any PO-5
+artifact licenses a claim that the keystone holds or fails.
+
+| unit | state |
+|---|---|
+| **Unit 1** — `g`-inertness | **COMPLETE.** `g` is **LIVE** (`f_sat = 0.176`, `D = 33.5`). `L·PO5-1`. One inference withdrawn (CORRECTION 1). |
+| **Unit 2 Q-A** — bond provenance | **COMPLETE.** P0 birth **82.86%** / P1 **0.00%** / P2 EM **17.14%**. Both instrument gates pass. `L·PO5-2`. |
+| **Unit 2 Q-B** — the keystone | **ATTEMPTED, NO VERDICT.** Ran 58.2 min, 9/9 runs, every gate passed, scorer was built wrong. `L·PO5-3`. |
+| **Q-B rebuild** | **COMPLETE + VALIDATED, never run on physics.** A2.7. |
+
+**PO-5 holds no compute. The slot was released 23:25Z and never re-taken.**
+
+## 2. TO RUN Q-B — the exact recipe
+
+```
+# 1. run the matrix (~60 min, exclusive heavy slot). ALWAYS cd first — see trap T1.
+cd /Users/sarahdavidson/posner_quantum_dynamics/.claude/worktrees/nervous-hertz-7ccff6
+nohup /Users/sarahdavidson/posner_quantum_dynamics/venv/bin/python -u \
+  src/models/Model_6/sweep/po5_unit2_qb_selectivity.py > <logfile> 2>&1 &
+
+# 2. score OFFLINE — the probe no longer scores, by MO ruling 028
+/Users/sarahdavidson/posner_quantum_dynamics/venv/bin/python -u \
+  src/models/Model_6/sweep/po5_unit2_score.py \
+  src/models/Model_6/sweep/po5_unit2_qb_results.json
+```
+
+- **The scorer self-validates before it will touch real data** (planted → CONFIRMED 9.128, flat →
+  FALSIFIED 1.028). If that gate fails it aborts. **Do not bypass it.**
+- **The probe persists cells+pairs after EVERY run.** A scoring bug can no longer cost physics —
+  that rule cost 58 minutes to learn.
+- **Fixed global lattice**: cells keyed by **absolute** coords. Never index by a run's own occupied
+  set (that is what killed the first scorer).
+- **Cost:** ~290–460 s/run × 9 + a pre-flight ⇒ **~60 min**.
+
+### ⛔ `MIN_CELLS = 10` MUST NOT BE RELAXED
+Also `MIN_OCC = 5`, `RATIO_CONFIRM = 3.0`, `RATIO_FALSIFY = 1.5`. **Expect pressure to lower
+`MIN_CELLS`** — individual runs gave only **6–14** occupied cells, so the **all-run intersection may
+well land below 10.** If it does, **the correct output is "the instrument cannot resolve pair
+structure in this geometry at 6 nm cells"** — a finding about the measurement, reported as one. That
+is a registered hard stop (A2.6) and MO-binding (ruling 028). Lowering it to obtain a verdict would
+manufacture one.
+
+## 3. WHAT EXISTS NOWHERE ON DISK — the irreplaceable part
+
+### 3a. ⚠️ TWO THINGS IN MY OWN ARTIFACTS ARE WRONG OR WILL VANISH — fix these first
+
+**(i) The multi-seed pre-flight I promised is NOT IMPLEMENTED.**
+`requests/model6-mo/po5-selectivity-008.md` says the pre-flight will assert the **all-run
+intersection across multiple seeds**. **It does not.** `po5_unit2_qb_selectivity.py:323` still reads
+`pf = run_arm("A", 999, T, dt, samples, log)` — **one seed.** That single-seed pre-flight is exactly
+what produced L·PO5-3's flaw 2 (certified an arm at 13 cells whose runs actually ranged 6–14). **A
+successor reading 008 would believe this is done. It is not. Implement it before spending the slot.**
+
+**(ii) Every raw log I cite is UNTRACKED and will be lost.** `results/` is **gitignored**
+(`.gitignore:30 *.log`, `:63 *.json`). `git ls-files results/po5/` returns **zero**. The four failure
+logs my log entries cite as evidence — `unit2_qb_KILLED_cell40.log`,
+`unit2_qb_PREFLIGHT_FAIL_cell8.log`, `unit2_qb_SCORER_CRASH_cell6.log`,
+`unit2_provenance_FAILING_v1.log` — **exist only in this worktree and are not committed.** The
+committed JSONs under `sweep/` survive only because they were **force-added** (`git add -f`). If
+those logs matter to anyone, force-add them now; otherwise the L·PO5-3 narrative loses its evidence.
+
+### 3b. §8 OVERCLAIM RISKS — the ones I was pressed toward and refused
+
+**THE BIG ONE. "83% of bonds come from a deterministic rule with no input term, therefore the graph
+is input-blind, therefore §8 fails." THIS IS WRONG. DO NOT WRITE IT.** It is the most seductive
+sentence available in my results and I declined it twice under direct pressure; MO ruling 019
+explicitly barred the MO from shortcutting it. **Why it is wrong:** the birth loop
+(`dimer_particles.py:218-228`) is deterministic *in its pairing rule* — given which dimers exist,
+where, and when, it bonds every template-bound pair born within 100 ms. **But which dimers are born,
+where, and when is downstream of calcium, which is downstream of input.** The determinism is in the
+pairing, **not in the population** — and the population is precisely where input can enter. Whether
+that carries **pair-level** or merely **gate-level** information is the unrun question. *Nothing is
+known about it.*
+
+**`comps = 1` IS NOT A FAILURE.** `quantum-system-canonical:139` [LOCKED]: *"A single-synapse 'one
+giant component' is correct physics, not a bug."* **I made this exact error** and was corrected by
+ruling 010; the withdrawal is `L·PO5-1` CORRECTION 1. The intra graph being one saturated blob is
+the predicted result at single-synapse scale, not evidence against the keystone.
+
+**`D = 33.5` sounds stronger than it is.** Unit 1's 33× dynamic range in `g` is real — and applies to
+the **17%** of bonds that go through `em_rate`. **83% never evaluate it.** Quoting `D = 33.5` as
+"the bond rate is strongly pair-resolved" without that qualifier misrepresents the system.
+
+**The saturation decline 0.944 → 0.606 over 30 s is MEASURED; its CAUSE IS NOT.** It is *consistent
+with* a birth-blob eroding into a distance-shaped graph. **That mechanism was never measured** and I
+labelled it explicitly not-claimed. Do not upgrade it.
+
+**The detection floor 0.80 is in SYNTHETIC units, not physical ones.** It is an amplitude added to a
+0.30 baseline on a 2-cell block of a 16-cell synthetic lattice. It bounds **the scorer**, calibrated
+on synthetic geometry. **It is not a physical bond-probability bound and real-data sensitivity may
+differ.** State it as an instrument property or not at all.
+
+### 3c. TRAPS THAT COST ME TIME
+
+- **T1 — the shell cwd resets between calls.** A command chain beginning without `cd` runs in the
+  **wrong worktree** (`xenodochial-rubin-cad5db`, ~20 commits stale). It cost me a launch: `cp`
+  failed, `&&` short-circuited, and **nothing ran and nothing committed while appearing to succeed.**
+  **Prefix every command with the explicit `cd`.**
+- **T2 — two `sweep/` trees, and my code spans both.** The probe lives in
+  `src/models/Model_6/sweep/` but imports `presynaptic_release` from the **repo-root** `./sweep/` via
+  `sys.path.insert(0, os.path.join(PROJECT_ROOT, "sweep"))`. Move either file and it breaks. The
+  corroborating `observe_pathway2_selectivity.py` is also repo-root.
+- **T3 — the `unknown` provenance bucket is a silent blind spot.** It was 0 in Q-A only because the
+  instrument wraps **all three** bond-creation sites. **Add a fourth creation site and `unknown`
+  absorbs it while conservation still passes.** Re-audit `_create_bond` call sites before trusting
+  any future provenance split.
+- **T4 — instance-level wrapping is lost on re-init.** The instrumentation patches the *instance*.
+  Deep-copy or re-initialise the network and the wrappers silently vanish, leaving provenance empty
+  and conservation trivially "passing" on an empty map.
+- **T5 — `_remove_dimer` is confirmed unreachable BY MEASUREMENT, not just by grep.** The A2.3
+  tripwire logged **zero calls across a full 9-run protocol.** That is stronger evidence than the
+  call-site grep and is worth keeping when PO-7 addresses the defect (`:252-261` discards from
+  `entanglement_bonds` without popping `_bond_lookup`).
+- **T6 — paired seeds are deliberate.** Arms A and B share seeds 101–103 (both `np.random` **and**
+  the `PresynapticRelease` object); the NULL uses 201–203 for both. That pairing is by design — do
+  not "fix" it into independent seeding without re-deriving what the null then measures.
+
+### 3d. THE ONE JUDGEMENT I WOULD PASS ON
+
+The design question I was working when the seat closed, unresolved and worth more than the re-run:
+**given that 83% of bonds come from birth-pairing, is a drive-matched INPUT-A/B *timing* contrast
+actually the sharpest test of pair-level dependence?** A same-total-drive/different-timing contrast
+shifts **birth cohorts**, which is the P0 mechanism's own input channel — that may discriminate §8's
+pair-level from gate-level far more directly than the current spatial-residual statistic. **I would
+settle that before spending another hour of slot.**
+
+**Final word: the honest state of §8 after a full day on it is UNVERIFIED, with a validated
+instrument that has never been pointed at physics. That is a smaller result than anyone wanted, and
+it is the true one.**
