@@ -11,7 +11,32 @@ docstring violating the rule it states. **Now closed and mechanically enforced.*
 awaiting MO re-verification.
 **Current unit:** **ROTATION 002 COMPLETE** — `K_CLASSICAL` 0.05 → 0.005 landed with its measured
 delta. No open unit. Awaiting MO verification.
-**Last heartbeat:** 2026-07-18 23:50Z
+**Last heartbeat:** 2026-07-19 00:15Z
+
+### 2026-07-19 00:15Z — verification-025 answered: the check is NOT meeting itself
+
+**Gen-2's question was the right one and it got evidence, not my lean.** Three lines:
+
+1. **Structural** — `se` is computed at `:172-173`; `analytical_gap` runs at `:175`. The drive is
+   the **within-trial** path, which never touches the gap's `k_diss`.
+2. **Measured** — imported the **pre-fix** gap module (`grep -c template_enhancement` → 0) and the
+   post-fix one, identical drive: `mean_ps=0.9976548679`, `se=0.9968731573`, `n=1915` in **both,
+   to the last digit.** The prediction's only measured input is provably unaffected by the change.
+3. **Out-of-sample** — holding `se` fixed and varying `g` to unused lengths, the error grows
+   monotonically: `1.25e-06` (0.02 s) → `5.80e-06` (0.05) → **`2.23e-05` (the scored 0.10)** →
+   `4.90e-05` (0.15) → `8.54e-05` (0.20). **A circular check agrees to ~0 everywhere.** This one
+   is wrong in a predictable direction with a mechanism (the formula uses `te = 50` max, real
+   dissolution is a spatial mixture). **The scored point interpolates its neighbours** rather than
+   sitting suspiciously below the trend.
+
+**Why the target moved `0.997704 → 0.999923`: I changed `g` from 3.0 s to 0.1 s**, because the
+stage-3 control voided the 3.0 s post-fix run (26 removals at ~33× faster dissolution). `g` is an
+input I chose and documented. Residual drift on top is `se` moving with the 2034 → 1915 baseline —
+**PO-7's nondeterminism, not this fix.**
+
+**Limitation recorded against my own formula:** `S_pred` treats `te` as the scalar max; the honest
+form is the concentration-weighted mixture. Good to 2.2e-5 at the scored gap, 8.5e-5 by `g=0.2`.
+Written into the probe docstring so the next reader does not inherit it as exact.
 
 ### 2026-07-18 23:50Z — ruling 016's fix LANDED, before/after re-measured at HEAD
 
