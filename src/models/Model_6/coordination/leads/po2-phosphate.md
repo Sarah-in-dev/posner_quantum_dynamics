@@ -7,7 +7,7 @@ consumption.
 
 **Status:** LIVE — grounding brief returned 2026-07-18 19:46Z.
 **Current unit:** pre-registration (§2.4), then the conservation probe committed FAILING first.
-**Last heartbeat:** 2026-07-18 23:33Z
+**Last heartbeat:** 2026-07-19 00:16Z
 **Blocked on:** — (two open questions in `queue/po2-phosphate.md`, neither blocking; working on)
 
 ## HEARTBEAT LOG
@@ -315,3 +315,17 @@ evidence that it DOES. I recommend PO-6 proceed with that stated as a known-open
 **Ruling 021 item 1 (keep the falsification findable) — VERIFIED in 4 places**, first being DECISION RECORD row PO2-8 (*"S = 0.0060 with the ENTIRE pool free — 170× below threshold"*), plus the parameter's own grounding block, the `add_phosphate_from_atp` docstring, and prereg A2.5. **One gap I cannot close myself:** `model6-dimer-formation-chemistry` carries `k_base`/`k_classical` groundings but nothing on `metabolic_to_structural_fraction` — a sceptic reading the chemistry skill would not learn the 0.02 was ungrounded. **Skill write REQUESTED with exact text, not made** (standing rule: only the MO writes the symlinked library).
 
 **COMPUTE: still holding at #2, nothing started.** All of the above is reading and `git log`.
+
+### 2026-07-19 00:16Z — RULING 021 COMPLETE. Depletion does not survive grounding; slot not needed.
+
+**Not idle — both units gen-2 listed were already delivered** (acid-base path in `disclosure-001` §5; falsification placement in `po2-002` §5). Gen-2 named the polling gap as its own; noting it only for orientation. **The genuinely open unit was the depletion measurement, and it is now done.**
+
+**`requests/model6-mo/po2-003-ruling021-complete.md` + research-log row PO2-9.**
+
+**PO2-6'S ONE-WAY VALVE IS CLOSED AT THE GROUNDED VALUE.** Trend analysis on the already-persisted 20 s run — **zero new compute**: `frac=0.02` slope −4.85e-03/s, **R²=0.999167, t=−84.85, monotonic TRUE**, time-to-zero **34.4 min** (reproducing the earlier ~32 min extrapolation to within 7%). `frac=1.0` slope **+8.05e-05/s (positive)**, **R²=0.083528, t=+0.74, monotonic FALSE**. **Magnitude down 60×, sign flipped, no significant trend.** Loss of monotonicity is the discriminator — a one-way valve predicts it and nothing else here does.
+
+**Stated as the ruling requires: I did NOT run to binding.** At 0.02 that is ~413,000 steps ≈ **10–17 h single-core**, not worth an exclusive slot against a drain already fitted at R²=0.999; at the grounded value there is nothing to run to. **Limit: 20 s window only; a slow nonlinearity beyond it would not appear, and I do not claim the pool can never bind.**
+
+**COMPUTE: I NO LONGER NEED THE SLOT.** The depletion question was answerable from persisted data. **PO-5 should keep it.**
+
+**Attribution — gen-2's rebuttal ACCEPTED in part.** Its bit-identical measurement of PO-4's probe beats my inference from PO-7's committed verdict, so **my nondeterminism alternative is withdrawn.** That was my *secondary* argument. **My primary was timing and it is untouched:** `9ddf002` at 22:32:39Z predates the 23:00Z window open by 27m21s, so it was live at both endpoints. **And gen-2's rebuttal sharpens rather than weakens this** — I checked the window: `be1759f`, `da97dec`, `285211d`, `9f5994c`, `7c48696`, `09ff2fb` are coordination markdown, two probe scripts and one log line. **NO model source file changed in the window.** So: commit live at both ends + no model code changed + probe bit-identical ⇒ **the 5.9% cannot be attributed to the tree at all**, and points at how the two measurements were taken. **That is in gen-2's run provenance, not checkable from here. Not asserting the measurement is wrong — asserting the attribution fails.**
