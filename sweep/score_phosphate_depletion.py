@@ -32,21 +32,39 @@ T_CRIT = 2.0          # |t| threshold registered in A2.6
 
 
 def fit(x, y, deg=1):
-    """Least squares with slope standard error and t statistic."""
+    """
+    Least squares with per-coefficient standard errors and t statistics.
+
+    SCORER BUG FOUND AND FIXED DURING THE RUN (2026-07-19), disclosed rather than quietly
+    patched. A2.6 registered `NONLINEAR` as "significant curvature (quadratic term
+    significant)", but the first implementation never tested the quadratic coefficient's
+    significance — it reached NONLINEAR only as an else-branch when the SLOPE was
+    significant and the series was non-monotonic. So a genuinely curving trace with a flat
+    net slope would have scored NO_DRAIN_TO_BOUND and the curvature would have gone
+    unreported. Now the quadratic coefficient gets a real t test.
+
+    THIS IS THE STANDING RULE EARNING ITS KEEP: the bug was found by scoring a partial
+    trace while the run was still going, and fixing it cost ZERO compute. Under the old
+    pattern it would have surfaced after the slot was spent — which is what happened to
+    PO-5.
+    """
     n = len(x)
-    coeffs = np.polyfit(x, y, deg)
+    coeffs, cov = np.polyfit(x, y, deg, cov=True)
     yhat = np.polyval(coeffs, x)
     resid = y - yhat
     dof = n - (deg + 1)
     ss_res = float((resid ** 2).sum())
     ss_tot = float(((y - y.mean()) ** 2).sum())
     r2 = 1 - ss_res / ss_tot if ss_tot > 0 else float("nan")
-    sxx = float(((x - x.mean()) ** 2).sum())
-    se_slope = np.sqrt(ss_res / dof / sxx) if dof > 0 and sxx > 0 else float("nan")
-    slope = coeffs[-2] if deg >= 1 else float("nan")
+    se = np.sqrt(np.diag(cov))                       # per-coefficient SEs
+    tstats = [float(c / s) if s else float("nan") for c, s in zip(coeffs, se)]
+    # np.polyfit returns highest power first: slope is index -2, curvature index 0 (deg 2)
+    slope = float(coeffs[-2]) if deg >= 1 else float("nan")
+    se_slope = float(se[-2]) if deg >= 1 else float("nan")
     t = slope / se_slope if se_slope else float("nan")
-    return dict(slope=float(slope), se=float(se_slope), t=float(t), r2=float(r2),
-                dof=dof, coeffs=[float(c) for c in coeffs])
+    return dict(slope=slope, se=se_slope, t=float(t), r2=float(r2), dof=dof,
+                coeffs=[float(c) for c in coeffs], se_all=[float(s) for s in se],
+                t_all=tstats, t_curv=float(tstats[0]) if deg >= 2 else float("nan"))
 
 
 def main():
@@ -97,12 +115,26 @@ def main():
     print(f"  t                    : {lin['t']:+.2f}   (dof {lin['dof']}, |t| crit {T_CRIT})")
     print(f"  R^2 (linear)         : {lin['r2']:.6f}")
     print(f"  monotonic decreasing : {monotonic_down}")
-    print(f"  quadratic term       : {quad['coeffs'][0]:+.3e}  (R^2 {quad['r2']:.6f})")
+    print(f"  quadratic term       : {quad['coeffs'][0]:+.3e}  "
+          f"t={quad['t_curv']:+.2f}  (R^2 {quad['r2']:.6f})")
     print()
 
     # 95% upper bound on |slope| ~ |slope| + 2*SE, and what it implies
     ub = abs(lin["slope"]) + T_CRIT * lin["se"]
     min_time_min = (S0 / ub) / 60.0 if ub > 0 else float("inf")
+
+    # NONLINEAR is now tested on its OWN registered criterion (significant curvature),
+    # ahead of the linear verdicts — a curving trace with a flat net slope must not be
+    # reported as "no drain". See the fit() docstring for the bug this fixes.
+    if abs(quad["t_curv"]) >= T_CRIT:
+        print(f"  VERDICT : NONLINEAR")
+        print(f"  because : quadratic coefficient is significant "
+              f"(t={quad['t_curv']:+.2f}, |t| >= {T_CRIT}).")
+        print(f"            Neither 'flat' nor 'linear drain' describes this trace, so the")
+        print(f"            linear bound below would be misleading and is NOT the verdict.")
+        print(f"            linear slope for reference: {lin['slope']:+.6e}/s "
+              f"(t={lin['t']:+.2f})")
+        return 4
 
     if abs(lin["t"]) < T_CRIT:
         print(f"  VERDICT : NO_DRAIN_TO_BOUND")
