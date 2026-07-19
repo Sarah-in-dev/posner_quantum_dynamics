@@ -65,7 +65,10 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
-| PO5-5 | 2026-07-19 | **THE BUS IS A REAL PERCOLATION CONTROL PARAMETER — components 60→1 — AND THE SYSTEM NATIVELY SITS PAST THE TRANSITION.** Probe `sweep/po5_unit4_bus_percolation.py`, predictions registered pre-run; raw JSON **and log committed**. Architecture verified in code: `model6_core.py:555` tryptophan → `collective_field_kT`; `dimer_particles.py:454` `em_rate = k_base*(collective_field_kT/reference_kT)*coh*g` — a single **global** scalar gain on every pair. **Positive control PASSED** (bus=0 ⇒ 0 P2 bonds ⇒ components_all == components_P0only). **Measured:** bus 0/0.1/0.25/0.5/1/2/5/10/20 → components **60/44/39/29/20/14/7/6/1**, monotone. **NATIVE bus = 21.98 kT** (vs `reference_kT`=20, `FIELD_THRESHOLD_KT`=20) → **1 component**. **(1)** A transition EXISTS — the architecture has an operating point where topology can hold information. **(2)** The system is parked **past** it: the informative band is bus ≈0.1–5 (7–44 components) and the model runs ~4×+ above it — **wrong phase, not broken mechanism.** **(3)** λ₂ is **exactly 0** in every fragmented state and only informative once connected (0.9106, 0.9807) ⇒ component-count and λ₂ are exactly complementary, and **the live path reads only `dim ker L₀` while sitting in the connected phase — reading the one channel provably empty at its own operating point.** λ₂ used as DIAGNOSTIC only, per A5. **NOT shown:** the condensate is not reconnected — this overrides the bus directly and says nothing about whether `backbone_eta*E_invasion` (`model6_core.py:543`, both factors 0.0000 in live trials) can reach it. **No §8 verdict.** | [GROUNDED, measured] | `L·PO5-5` below |
+| PO5-8 | 2026-07-19 | **THE 100 ms BIRTH WINDOW IS NOT DERIVED — flagged sweepable 2026-05-29, never swept, and it decides the architecture.** Documentary, no compute. `model6-research-findings-may29:66`: *"birth_window value: 100ms hardcoded. Within Fisher's 1s budget. Conservative but defensible. **Tunable parameter — candidate for TALON sweep, not arbitrary calibration.**"* So its only grounding is an **upper** bound (~1 s, Fisher). **Unit 7's structure-preserving regime (2–10 ms) is inside the same permitted band**, so sweeping it is sanctioned, not tuning — and it was nominated for a sweep seven weeks ago and never done. **A parameter recorded as "conservative but defensible" turns out to decide whether §8's keystone can work at all** (P0 threshold ~2–10 ms vs native 100 ms = 10–50× above). **Mechanism gap, also already known and STILL UNCORRECTED:** `:64`/`:141` record that the docstring *"Phosphates from same pyrophosphate hydrolysis are born entangled"* **OVERCLAIMS — actual gate is spatial proximity to template field**; verified 2026-07-19 the docstring at `dimer_particles.py:234-236` is unchanged. Fisher entangles TWO phosphates from ONE molecule (a pair); the code entangles ALL template-bound dimers in a 100 ms window (a clique) — and the clique reading is what generates the 60–90-dimer groups that percolate the graph. **No value change proposed.** | [GROUNDED, documentary] | `L·PO5-8` below |
+| PO5-7 | 2026-07-19 | **BOTH MECHANISMS PERCOLATE INDEPENDENTLY — `PO5-5` CORRECTED TWICE.** Pre-registered as a self-correction before the run; `birth_window` promoted to an attribute, **bit-identical verified**. **P1 CONFIRMED: `largest_frac ≥ 0.8725` at EVERY bus incl. 0 (zero P2 bonds), χ peaks at bus=0 and decays monotonically ⇒ the bus does NOT form the giant component. `PO5-5`'s "the BUS is a real percolation control parameter" is WRONG.** **The follow-up framing ("it only absorbs stragglers") is ALSO wrong:** at native bus with the birth window shrunk 50× — which fragments P0 to `largest_frac = 0.4145` alone — the field still gives `largest_frac = 1.0000`. **The field spans the graph BY ITSELF regardless of birth structure.** ⇒ **the system is DOUBLY supercritical; fragmenting requires reducing BOTH levers, which retires every single-lever fix including PO-5's own SOC/regulation proposal.** P0 threshold measured ~2–10 ms vs native 100 ms. **And the number PO-5 had been averaging away:** native field = mean 21.984, **std 1.558, range [0.000, 22.095]** — it **starts at zero and climbs every run**, so the system transits the whole fragmented→blob range each time and parks above it, while every measurement in this program sampled only the endpoint. | [GROUNDED, measured] | `L·PO5-7` below |
+| PO5-6 | 2026-07-19 | **J-MISMATCH DISSOLUTION: NOT SUPPORTED — and the dissolution channel is INERT.** Pre-registered before the Tier-3 code change; opt-in flag, **flag-off verified bit-identical**. `(B−A)/spread = 0.00` at all three bus values; REAL vs OFF differ by 29–49 bonds out of ~300k (≈0.015%), identical components and sheaf H0. **Computed cause:** `k_disentangle = 0.01*(1-coh)/(1+protection) ≈ 9.95e-05 /s` with `coh≈0.98`; P(dissolve) over 30 s is 0.003 OFF vs 0.009 ON. **The graph is effectively WRITE-ONCE**, so nothing multiplying dissolution can matter — and this retro-explains `PO5-1`'s 0.944→0.606 saturation decline as **dimer death, not bond dissolution**. **Consequence: structural gating must act on FORMATION, not decay; PO-5 aimed at the wrong term.** **⚠ The scrambled control is CONFOUNDED — `np.random.permutation` draws from the global RNG and shifts the downstream stream, so arm C is a different realisation, not a matched control; its `(B−C)/spread` flips sign (+1.07, −0.71). Do not cite arm C.** The verdict rests on REAL vs OFF, a clean null. Per prereg: the mechanism is wrong, the scale is NOT re-registered, and the recommendation on file is to revert. | [GROUNDED, measured — negative] | `L·PO5-6` below |
+| PO5-5 | 2026-07-19 | **[CORRECTED TWICE BY PO5-7 — the bus is NOT the percolation control parameter and does NOT merely absorb stragglers; see that row. The measured sweep numbers stand; the framing does not.]**  **THE BUS IS A REAL PERCOLATION CONTROL PARAMETER — components 60→1 — AND THE SYSTEM NATIVELY SITS PAST THE TRANSITION.** Probe `sweep/po5_unit4_bus_percolation.py`, predictions registered pre-run; raw JSON **and log committed**. Architecture verified in code: `model6_core.py:555` tryptophan → `collective_field_kT`; `dimer_particles.py:454` `em_rate = k_base*(collective_field_kT/reference_kT)*coh*g` — a single **global** scalar gain on every pair. **Positive control PASSED** (bus=0 ⇒ 0 P2 bonds ⇒ components_all == components_P0only). **Measured:** bus 0/0.1/0.25/0.5/1/2/5/10/20 → components **60/44/39/29/20/14/7/6/1**, monotone. **NATIVE bus = 21.98 kT** (vs `reference_kT`=20, `FIELD_THRESHOLD_KT`=20) → **1 component**. **(1)** A transition EXISTS — the architecture has an operating point where topology can hold information. **(2)** The system is parked **past** it: the informative band is bus ≈0.1–5 (7–44 components) and the model runs ~4×+ above it — **wrong phase, not broken mechanism.** **(3)** λ₂ is **exactly 0** in every fragmented state and only informative once connected (0.9106, 0.9807) ⇒ component-count and λ₂ are exactly complementary, and **the live path reads only `dim ker L₀` while sitting in the connected phase — reading the one channel provably empty at its own operating point.** λ₂ used as DIAGNOSTIC only, per A5. **NOT shown:** the condensate is not reconnected — this overrides the bus directly and says nothing about whether `backbone_eta*E_invasion` (`model6_core.py:543`, both factors 0.0000 in live trials) can reach it. **No §8 verdict.** | [GROUNDED, measured] | `L·PO5-5` below |
 | PO5-4b | 2026-07-19 | **PO5-4 PROMOTED: the indifference-graph mechanism CONFIRMED 18/18 across 3 seeds × 2 arms** (`sweep/po5_unit3_birth_cohorts_results.json`, committed). Registered prediction `components(P0) = 1 + count(birth gaps > 0.1 s)` held at **every** sample. **AND ONE SINGLE-SEED CLAIM IN PO5-4 IS CORRECTED:** PO5-4 reported PULSED produced *no more* >100 ms gaps than SUSTAINED and flagged it as weak (2 samples). With 3 seeds the opposite holds — **PULSED max gap 3.5650 s / 6 gaps / 6 cohorts vs SUSTAINED 2.6700 s / 5 gaps / 4 cohorts.** **Drive pattern DOES modulate burst structure**, so formation can be gated finely enough to split the P0 graph — the channel §8 needs is alive, where the single-seed run suggested it might not be. The weak-signal flag on PO5-4 did its job. | [GROUNDED, measured] | `L·PO5-4` above |
 | PO5-4 | 2026-07-19 | **THE P0 GRAPH IS AN INDIFFERENCE GRAPH ON BIRTH TIME — PREDICTED==MEASURED 5/5 — AND P2 IS WHAT ERASES THE STRUCTURE.** Pre-registered `docs/PREREG_PO5_UNIT3_BIRTH_COHORTS.md` (`becc8e3`, before the run); probe `sweep/po5_unit3_birth_cohorts.py`. **REPORTED not MO-VERIFIED — the run's log lived in gitignored `results/` and the worktree was removed by consolidation mid-run; the probe IS committed, so re-running promotes it.** **Registered prediction: components(P0) = 1 + count(birth gaps > 0.1 s). Held exactly at 5/5 samples** (SUSTAINED t=1/3/5 → 2/4/6; PULSED t=1/3 → 2/5), `max_glu = 1.000`. Mechanism confirmed from `dimer_particles.py:218-228` + `:210`: bond iff both template-bound and `|Δbirth| < 0.1 s`, and a whole `step_population` batch shares one birth_time ⇒ **unit-interval graph on the birth-time axis**, components = maximal runs with no >100 ms gap, no fitted quantity. **PO-5's OWN PROSE REASONING WAS FALSIFIED:** it predicted continuous births ⇒ one component; births are **bursty** — 12–17 distinct birth times in 5 s, gaps to **2.665 s**, ~60–90 dimers per event ⇒ **SIX P0 components under sustained drive.** **THE INVERSION:** the FULL graph measures `comps = 1, largest_frac = 1.000` (`L·PO5-1`) while P0-only has 6, and P0 is 82.86% of bonds vs P2's 17.14% (`L·PO5-2`) ⇒ **the temporal cohort structure EXISTS and the 17% spatially-mediated P2 bonds BRIDGE the cohorts into one blob.** The intra partition is trivial not because formation is structureless but because **a spatially promiscuous minority pathway erases a temporally structured majority.** **Weak, 2 samples:** PULSED produced no more >100 ms gaps than SUSTAINED (0.755 vs 0.770 s), hinting birth timing follows supersaturation dynamics rather than instantaneous drive — **NOT established.** **NO §8 VERDICT:** whether input modulates cohort structure, and whether it survives P2 bridging, is unrun; "P2 erases the structure" is NOT "§8 fails". **Do NOT weaken P2 to preserve cohorts** — that is tuning to an outcome (§7 LOCKED). | [GROUNDED, measured — REPORTED] | `L·PO5-4` below |
 | PO5-3 | 2026-07-18 | **Q-B RAN 58.2 MIN ON THE EXCLUSIVE SLOT, ALL 9 RUNS, EVERY GATE PASSED — AND RETURNED NO VERDICT.** Pre-registered (A2.2–A2.6, all before the run); probe `sweep/po5_unit2_qb_selectivity.py`. **Gates all PASS:** instrument conservation; A2.3 `_remove_dimer` tripwire **zero calls** (confirming that defect is unreachable under a full protocol); positive control `max_glu > 0` every run (min 1.000); drive matching A=2.7540 vs B=2.7460 (**0.3%**, registered ≤5%). **Then scoring crashed** — `ValueError: shapes (169,) vs (36,)`. **`ratio` was never computed; NOTHING is claimed about §8 in either direction and the keystone stands exactly as unverified as before.** **Three flaws, all PO-5's:** (1) **the statistic was never comparable across runs** — cells indexed by *each run's own* occupied set, so index *i* meant a different physical location per run; Frobenius distance between them is meaningless **even when shapes coincide**, so had the counts matched this would have produced *a confident number that was silently garbage* — **the crash is the lucky outcome**; (2) the A2.6 pre-flight sampled **one** seed (13 cells) and certified an arm whose occupancy actually ranged **6–14**, with only 3 of 9 runs clearing `MIN_CELLS = 10` — the same single-sample-as-confirmation error PO-3 named when withdrawing F-3; (3) **the scored intermediate was not persisted, so a SCORING bug destroyed 58 minutes of PHYSICS** — and `sweep/score_leta5.py` had already solved this, was named as prior art in PO-5's own grounding brief, and was not composed from. **Fix, needing zero compute:** fixed **global** lattice (absolute cell coords), comparison on the all-run intersection, matrices persisted, scoring split into an offline scorer composed from `score_leta5.py`, validated on synthetic data before physics is spent. **NO registered threshold is being moved** — if the all-run intersection falls below `MIN_CELLS`, the honest verdict is *"the instrument cannot resolve pair structure in this geometry"*, per the registered hard stop. **Logged rather than swept because L·ETA-5 set the precedent:** a properly-conducted run that does not answer its question is a result about the instrument, and the next PO building a cross-run spatial statistic here needs to know per-run occupancy indexing does not survive the comparison step. | [GROUNDED, measured — null about the INSTRUMENT] | `L·PO5-3` below |
@@ -92,6 +95,140 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·PO5-8 — the 100 ms birth window is NOT derived, was flagged sweepable on 2026-05-29, was never swept, and it turns out to decide the architecture · 2026-07-19 `[GROUNDED, documentary]`
+
+**No compute. A provenance check, prompted by Unit 7 measuring that this parameter sets whether
+the topology can carry information at all.**
+
+**What the program already knew, `model6-research-findings-may29`:**
+
+> `:66` — *"**birth_window value:** 100ms hardcoded. Within Fisher's 1s budget. Conservative but
+> defensible. **Tunable parameter — candidate for TALON sweep, not arbitrary calibration.**"*
+> `:199` — *"birth_window 100ms in correct regime (Fisher 2015 <1s budget)"*
+
+**So the 100 ms is bounded, not measured.** Its only grounding is an *upper* bound — Fisher's ~1 s
+coherence budget. Anything below 1 s is equally "defensible" on that basis, and **Unit 7's
+structure-preserving regime (2–10 ms) sits inside the same permitted band.** Sweeping it is
+therefore **sanctioned, not tuning** — it was explicitly nominated for a sweep on 2026-05-29 and
+**never swept in the seven weeks since.**
+
+**The consequence, stated plainly:** a parameter recorded as *"conservative but defensible"* is the
+one that decides whether §8's keystone can work. Unit 7 measured the P0 percolation threshold at
+~2–10 ms against a native 100 ms — **10–50× above it.** "Defensible within a bound" was doing far
+more load-bearing work than that phrasing implies.
+
+#### The mechanism gap, also already known and still uncorrected
+
+> `:64` — *"The docstring at `dimer_particles.py:218-219` ('Phosphates from same pyrophosphate
+> hydrolysis are born entangled') **OVERCLAIMS what the code does.** Comment should be updated to
+> reflect spatial-temporal proxy."*
+> `:141` — *"**Actual gate is spatial proximity to template field** (scaffolding protein density)."*
+
+**Verified 2026-07-19: the docstring is UNCHANGED** (`dimer_particles.py:234-236` still reads
+*"Phosphates from same pyrophosphate hydrolysis are born entangled"*). Flagged 2026-05-29, still
+present.
+
+This is the gap PO-5 rediscovered independently in `L·PO5-2`: **Fisher's mechanism entangles TWO
+phosphates from ONE pyrophosphate — a pair. The code entangles ALL template-bound dimers born in a
+100 ms window — a clique.** The program identified the overclaim seven weeks ago; what was not
+noticed is that the all-to-all reading is what generates the 60–90-dimer cliques that percolate the
+graph.
+
+**Not proposing a value change.** The finding is that the parameter is unmeasured inside a wide
+permitted band and is load-bearing. What it needs is grounding, or an honest sweep with the response
+reported — not a setting chosen because it yields the desired topology.
+
+---
+
+### L·PO5-7 — BOTH mechanisms percolate independently; `L·PO5-5` is corrected TWICE · 2026-07-19 `[GROUNDED, measured]`
+
+**Pre-registered:** `docs/PREREG_PO5_UNIT7_CRITICAL_POINT.md`, registered **as a self-correction**
+before the run. **Probe:** `sweep/po5_unit7_critical_point.py`. **Raw committed.**
+`birth_window` promoted from two local literals to an attribute, **verified bit-identical**
+(`1034 / 369740 / 0.991922159684`).
+
+#### P1 CONFIRMED — the bus does NOT form the giant component
+
+`largest_frac >= 0.8725` at **every** bus value including **0**, where there are **zero** P2 bonds.
+χ (mean finite-cluster size) peaks at bus = 0 and decays monotonically (23.63 → 1.00 → 0.00), so the
+threshold in the bus direction is **at or below the lowest accessible value**.
+
+**`L·PO5-5`'s headline — *"the BUS is a real percolation control parameter"* — is WRONG and is
+corrected here.**
+
+#### And the follow-up framing was ALSO wrong
+
+PO-5 then said the bus *"only absorbs stragglers."* Measured at native bus with the birth window
+shrunk 50× (which fragments P0 to `largest_frac = 0.4145` on its own):
+
+| birth window | largest_frac @ bus=0 | largest_frac @ NATIVE bus |
+|---|---|---|
+| 2 ms | **0.4145** (fragmented) | **1.0000** |
+| 10 ms | 0.5079 | 1.0000 |
+| 50 ms | 0.8663 | 1.0000 |
+| 100 ms (native) | 0.8945 | 1.0000 |
+
+**At native strength the field spans the whole graph BY ITSELF, regardless of birth structure.** It
+is not a straggler-absorber; it is an independently sufficient percolating structure.
+
+**So the system is DOUBLY supercritical: P0 alone percolates, and P2 alone percolates. Fragmenting
+the graph requires reducing BOTH. Neither lever alone can work** — which retires every single-lever
+fix previously proposed, including PO-5's own SOC/regulation suggestion.
+
+**P0's threshold is ~2–10 ms** (largest_frac crosses 0.5 between 2 and 10 ms) against a native
+100 ms.
+
+#### The number PO-5 had been averaging away
+
+```
+NATIVE field: mean 21.984   std 1.558   range [0.000, 22.095]
+```
+
+**It STARTS AT ZERO and climbs to ~22 every run.** PO-5 reported only the mean in `L·PO5-5`. The
+system therefore **transits the entire fragmented→blob range on every run and then parks above it**,
+and every measurement in this program — including all of PO-5's — sampled only the endpoint.
+Followed up in Unit 8.
+
+---
+
+### L·PO5-6 — J-mismatch dissolution: NOT SUPPORTED. The dissolution channel is inert. · 2026-07-19 `[GROUNDED, measured — negative]`
+
+**Pre-registered:** `docs/PREREG_PO5_UNIT6_J_MISMATCH.md`, committed **before** the code change.
+**Tier-3 change**, opt-in, flag-off **verified bit-identical** to pre-change code.
+
+**Verdict at all three bus values: `NOT SUPPORTED (no effect)`.** `(B−A)/spread = 0.00` everywhere;
+REAL vs OFF differ by 29–49 bonds out of ~291,000–324,000 (≈0.015%), with identical component counts
+and identical sheaf H0.
+
+**Why, computed rather than guessed:**
+
+```
+k_disentangle (OFF) = 0.01*(1-coh)/(1+protection) = 9.95e-05 /s
+typical J-mismatch multiplier                     = 3.0x
+P(a bond dissolves) over  1 s : OFF 0.00010  ON 0.00030
+                    over 30 s : OFF 0.00298  ON 0.00891
+```
+
+**With `coh ≈ 0.98` the `(1-coh)` factor makes the base rate ~1e-4/s. The graph is effectively
+WRITE-ONCE.** Tripling a rate that small cannot matter on any timescale this model runs. This also
+retro-explains `L·PO5-1`'s saturation decline (0.944 → 0.606 over 30 s): that was **dimers dying and
+taking bonds with them**, not bonds dissolving.
+
+**Consequence:** any structural gating must act on **formation** (`em_rate`), not decay. PO-5 aimed
+at the wrong term.
+
+**⚠ The scrambled control arm is CONFOUNDED and its numbers must not be cited.**
+`np.random.permutation(delta)` draws from the **global** NumPy RNG, shifting the downstream random
+stream, so arm C is a different random realisation rather than a matched control. Its
+`(B−C)/spread` flips sign across bus values (+1.07, −0.71) — noise. **The verdict does not depend on
+it**: REAL vs OFF is a clean within-arm null. Needs a dedicated RNG before arm C means anything.
+
+**Per the pre-registration, the honest conclusion is that PO-5's proposed mechanism is wrong.**
+`j_mismatch_scale` is NOT re-registered at a friendlier value. Recommendation on file: revert the
+edit rather than keep a dead mechanism in source.
+
+
 
 ### L·PO5-5 — the BUS is a real percolation control parameter (60 -> 1 components), and the system natively sits PAST the transition · 2026-07-19 `[GROUNDED, measured]`
 
