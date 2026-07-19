@@ -65,6 +65,7 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| PO5-13 | 2026-07-19 | **PROVENANCE BONDING BUILT (first non-blob graph) — but the computation test is a FALSE POSITIVE the probe declared and PO-5 OVERRODE.** Build: Fisher's actual mechanism in `dimer_particles.py`, opt-in, **provenance-off bit-identical**; events at Ca-elevated cells (2 slots), dimer claims ≤2 nearest, bond iff shared; EM pathway skipped (LOCC). **Mechanism works:** 459,889-bond blob (off) → **~500 bonds, largest_frac 0.05** (on) — genuinely sparse/pairwise, the first non-blob in the whole investigation. **⚠ BUT the probe's verdict "carries input-dependent partition" is WRONG:** it scored `Q(input)=0.15 >> Q(shuffled)=0`, but the "input label" was spatial half — so Q detects **spatial locality (GEOMETRY, §8-insufficient)**, not input. **The decisive A-vs-B input contrast is d=0.02 — flat null.** Same criterion-mis-registration as Units 8/9/13. **Honest verdict: NOT keystone-supported.** The provenance assortativity is spatial, and single-synapse pulsed-vs-sustained doesn't vary the spatial Ca pattern (the peak-saturated weak-contrast wall again). Establishes: mechanism faithful + sparse + carries spatial structure. Does NOT establish either way whether input that genuinely varies spatial Ca would move the partition — and sharpens the tension that the pair-level channel may need the multi-synapse scale §7#1 said it doesn't. No constant tuned; d=0.02 holds regardless of event_rate. | [GROUNDED, measured — mechanism yes, keystone no] | `L·PO5-13` below |
 | PO5-12 | 2026-07-19 | **DEEP RESEARCH: provenance-bonding is FAITHFUL to Fisher, computational capability UNPROVEN — de-risk before build.** External (adversarially-verified primary sources) + internal (code map). **GREEN:** Fisher's inheritance is strictly pairwise/provenance — two Posners entangle iff they share a common-origin phosphate pair; *"dimers bond iff they share a hydrolysis event"* is literally his channel, and the clique + distance-kernel rules are both wrong. **RED (fix both, 3-0):** (1) ⚠ the research said "fix stoichiometry to Ca₉(PO₄)₆" — WRONG, contradicts LOCKED `quantum-system-canonical:43` (Agarwal: the Ca₆(PO₄)₄ DIMER is the qubit, the Ca₉ trimer is inert). Correct object is the dimer, 4 spins = 2 singlet pairs ⇒ ≤2 events/node. Physics was already documented; the workflow mis-corrected it — PO-5 process failure; (2) genuine inter-Posner entanglement does NOT survive (Player & Hore: seconds; no inversion symmetry) ⇒ lean on the CLASSICAL common-cause reading. **THE GATE:** the object is exactly the s=1 Random Intersection Graph (threshold c=n·Σp_w², clique union, richer-than-density below m<n³) — but **NO source shows it carries INPUT-DEPENDENT partition structure**, which is the exact §8 property unproven for the replacement too. **Caveats:** "bond" = entanglement edge not chemical binding; a QDS binding-induced channel is orthogonal and invisible to a provenance graph. **Internal:** ~50–75 lines / 3 files, gated & bit-identical-off; ATP layer already computes the burst mask (`atp_system.py:111`) and discards it (`:119`) — capture not invent; one physics call = the birth↔event spatial-join rule. **DECISION: de-risk with an abstract RIG sim (minutes, no physics) BEFORE the build** — test input-dependent vs input-constant event assignment for partition-beyond-density; the research names this as the gate. | [external lit + internal map] | `L·PO5-12` below |
 | PO5-11 | 2026-07-19 | **TOPOLOGY IS A FUNCTION OF DENSITY ALONE — §8's "scalar as computation", on a contrast that varies.** **Unit 13:** the fidelity cut (only lever that fragments) is **COSMETIC** — advisor's spatial covariate shows birth geometry identical between drive conditions (r_med d=0.00) and the partition follows (max d=0.54). Per-seed rows: SUSTAINED and PULSED are **BIT-IDENTICAL** in V/positions/topology — drive PATTERN never reaches the population (`peak_conc = np.max`, a peak not an integral, `:174`; write-once bonds never revisit). **Unit 14:** amplitude DOES vary V (per-seed [1101,1192]); fitting topology~V, every cut measure has residual scatter ≤ seed noise (comps_cut 1.26, lf_cut 1.23, H0_cut 1.00) ⇒ **the partition carries exactly what the scalar V carries.** **Correction owed:** Units 9/10/13 used the pattern contrast that Unit 13 shows doesn't reach the population, so their nulls were under-founded (Unit 9's sign-reversal now reads as a non-contrast); keystone conclusion unchanged, Unit 14 establishes it properly. **Convergence with L·PO5-10:** no input dimension reaches the topology as pair structure — the population is peak-saturated and write-once, the bond rules are input-blind proxies, because the model has no representation of the entangling origin. **Next step is the provenance build, not another test.** External + internal deep research commissioned. | [GROUNDED, measured — negative] | `L·PO5-11` below |
 | PO5-10 | 2026-07-19 | **THE EM PATHWAY IS NOT AN ENTANGLING MECHANISM; the clique is NOT what percolates; the fidelity cut is the only lever.** **(1) STRUCTURAL/LOCC:** `em_rate` is a classical scalar scaling a *local* formation rate — a local operation, which cannot create entanglement (theorem). Entangling needs a direct `H_ij` or a common quantised mode; `em_rate` has neither. The code's own docstring already concedes there is no microscopic Hamiltonian and a ~10¹⁵ Hz vs ~Hz gap. **Dichotomy:** bonds are genuine entanglement ⇒ the pathway cannot make them; or they are classical correlations ⇒ the partition claim loses quantum grounding. **Asymmetry:** P0 (83%) has a real entangling origin (shared pyrophosphate) implemented as an unphysical clique; **P2 (17%) has no mechanism at all and is what percolates.** **(2) Unit 11:** degree cap k=4 removes **65% of edges**, `largest_frac` stays **1.0000**; k=1 also 1.0000; J-compat null (−0.8%); all-three −74% → still 0.9821. **Density is not the problem**, and this refutes the round-1 prediction that fixing the clique would fragment. **Per-event matching is unimplementable** — dimers are born from a concentration field, no per-phosphate provenance; the clique is a proxy for a **missing representation**, which is the diagnosis: Fisher's mechanism is inheritance, and every available proxy is input-blind by construction. **(3) Unit 12:** intra bonds have NO fidelity threshold (bare existence); storing `F=P_S_i·P_S_j·g(r)` and sweeping gives largest_frac 1.0000→**0.8314** and sheaf H⁰ **3→15** — the only lever that moves. **⚠ Two conceded defects: the bimodality is MANUFACTURED by the uncited 5 nm plateau, and `F` is a CATEGORY ERROR built from a rate term — fidelity must come from state, `F(t)=¼+(F₀−¼)e^(−t/T₂)`. No threshold nominated.** **(4) The ℝ⁶ latent space is populated with INPUT-INDEPENDENT NOISE** — `j_couplings_intra` is an independent per-dimer `normal(0.15,0.15,6)` draw (std 0.1478, median ‖ΔJ‖₂ 0.4864), so bonding on it cannot carry input information whatever the metric. The latent-dimension *principle* survives; this instance dies. **(5) OPEN:** dipolar coupling is a genuine parameter-free option (19.58 Hz @1nm … 0.02 Hz @10nm verified) but the claimed 1–2 nm range needs a ~100 ms competing timescale nobody can name — against T₂=216 s it reaches 10 nm, *more* permissive than today. **Do not build on it yet.** | [GROUNDED, measured + structural] | `L·PO5-10` below |
@@ -99,6 +100,63 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·PO5-13 — provenance bonding BUILT and works (first non-blob graph), but the computation test is a FALSE POSITIVE the probe declared and PO-5 overrode · 2026-07-19 `[GROUNDED, measured — mechanism yes, keystone NO]`
+
+**Pre-registered:** `docs/PREREG_PO5_UNIT16_PROVENANCE_BUILD.md`. **Build:** provenance-based bonding
+in `dimer_particles.py`, opt-in, **provenance-off bit-identical** (`1034 / 369740 / 0.991922159684`).
+Fisher's actual mechanism (per `L·PO5-12`): events at calcium-elevated cells (2 slots each), a
+newborn dimer claims its ≤2 nearest events, two dimers bond iff they share an event. Provenance also
+skips the EM pathway (LOCC non-entangling, percolates alone — `L·PO5-10`).
+
+#### THE MECHANISM WORKS — the first non-blob graph in the investigation
+
+| | bonds | components | largest_frac |
+|---|---|---|---|
+| provenance OFF (clique+EM) | 459,889 | 1 | 1.000 |
+| **provenance ON** | ~500 | ~700 | **0.05** |
+
+A genuinely sparse, pairwise, fragmented graph. Every prior mechanism produced a blob; this one does
+not. That part is real and it is new.
+
+#### ⚠ THE COMPUTATION TEST IS A FALSE POSITIVE — the probe said SUCCESS, PO-5 says NO
+
+`po5_unit16_computation_test.py`'s verdict function printed *"PROVENANCE CARRIES INPUT-DEPENDENT
+PARTITION BEYOND DENSITY."* **It is wrong, and PO-5 overrides it.** The probe scored on
+`Q(input) = 0.15 >> Q(shuffled) = 0` — but the "input label" was **which spatial half a dimer sits
+in**, so Q=0.15 detects **spatial locality** (dimers bond to neighbours because they claim the
+nearest events). **That is GEOMETRY, which §8 explicitly rules insufficient** (`g` is geometry, not
+input). The decisive quantity is the actual input contrast:
+
+**COND-A vs COND-B (sustained vs pulsed), 5 seeds: component effect size d = 0.02 — a flat null.**
+Changing the input does NOT change the partition.
+
+So: the metric passed without answering the question — the same criterion-mis-registration error as
+Units 8, 9, 13. **The honest verdict is NOT keystone-supported.**
+
+#### Why the null, and what it does and does NOT close
+
+The provenance assortativity is **spatial** (nearest-event claiming), and at single-synapse scale the
+pulsed-vs-sustained contrast does not produce meaningfully different *spatial* calcium patterns — the
+same peak-saturated, weak-contrast wall as Units 9/10/13/14. So this run tested provenance with an
+input that barely varies the spatial pattern. **It establishes:** the mechanism is faithful, sparse,
+and carries spatial structure. **It does NOT establish, either way:** whether input that genuinely
+varies the spatial calcium pattern would move the partition. Unit 15 proved the RIG CAN carry input
+structure *if event-sharing is assortative-by-input*; the build produced assortativity-by-SPACE, and
+this test's input does not drive the space.
+
+#### What a real test needs (registered for next time, not run)
+
+An input contrast that produces **demonstrably different spatial calcium patterns** — which
+single-synapse, one-nanodomain geometry may be unable to provide (§5 LOCKED: one synapse = one
+component). The honest possibility is that **the pair-level input channel requires the multi-synapse
+scale** the whole program was told the keystone does NOT need (§7 #1 "single-synapse-scale"). That
+tension (`po5-selectivity-002.md` §2) is now sharpened by a measurement, not just argued.
+
+**No constant tuned.** event_rate was swept for an unsaturated regime, not to a target; the verdict
+stands on d=0.02 regardless of rate.
+
+
 
 ### L·PO5-12 — DEEP RESEARCH (external + internal): provenance-bonding is FAITHFUL to Fisher, but its computational capability is UNPROVEN and must be de-risked before the build · 2026-07-19 `[external lit review, adversarially verified; internal code map]`
 
