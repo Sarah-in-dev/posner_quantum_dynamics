@@ -1,0 +1,44 @@
+t= 0.05s inst_cross=  0 cum_cross=   0 syn_pairs_ever= 0/15 n_multi=  0 prov_total=  32 dimers=4553
+t=  0.1s inst_cross=  0 cum_cross=   0 syn_pairs_ever= 0/15 n_multi=  0 prov_total=  67 dimers=5675
+t= 0.15s inst_cross=  0 cum_cross=   0 syn_pairs_ever= 0/15 n_multi=  0 prov_total= 105 dimers=6319
+t=  0.2s inst_cross=  0 cum_cross=   0 syn_pairs_ever= 0/15 n_multi=  0 prov_total= 119 dimers=6344
+t= 0.25s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 153 dimers=6417
+t=  0.3s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 163 dimers=6440
+t= 0.35s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 217 dimers=6523
+t=  0.4s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 217 dimers=6522
+t= 0.45s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 267 dimers=6591
+t=  0.5s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 267 dimers=6590
+t= 0.55s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 267 dimers=6590
+t=  0.6s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 267 dimers=6589
+t= 0.65s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 267 dimers=6588
+t=  0.7s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 267 dimers=6588
+t= 0.75s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 267 dimers=6587
+t=  0.8s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 267 dimers=6587
+t= 0.85s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 286 dimers=6609
+t=  0.9s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 286 dimers=6608
+t= 0.95s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 286 dimers=6608
+t=  1.0s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 286 dimers=6607
+t= 1.05s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 286 dimers=6605
+t=  1.1s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 286 dimers=6604
+t= 1.15s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 286 dimers=6604
+t=  1.2s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 286 dimers=6602
+t= 1.25s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 353 dimers=6689
+t=  1.3s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 429 dimers=6775
+t= 1.35s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 450 dimers=6802
+t=  1.4s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 450 dimers=6801
+t= 1.45s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 453 dimers=6808
+t=  1.5s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 481 dimers=6837
+t= 1.55s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 481 dimers=6835
+t=  1.6s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 481 dimers=6835
+t= 1.65s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 481 dimers=6832
+t=  1.7s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 481 dimers=6831
+t= 1.75s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 481 dimers=6830
+t=  1.8s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 481 dimers=6829
+t= 1.85s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 481 dimers=6827
+t=  1.9s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 481 dimers=6825
+t= 1.95s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 481 dimers=6824
+t=  2.0s inst_cross=  2 cum_cross=   2 syn_pairs_ever= 1/15 n_multi=  1 prov_total= 481 dimers=6823
+
+wrote /Users/sarahdavidson/posner_quantum_dynamics/.claude/worktrees/po5-keystone/src/models/Model_6/sweep/po7_unit1b_power_results.json
+
+READ THIS AS: does cum_cross / synapse_pairs_ever keep RISING, or flatten? Rising => longer T_SIM buys real power for Unit 2. Flat => the layer's cross-synapse channel has a CEILING and cannot support the keystone test as built.

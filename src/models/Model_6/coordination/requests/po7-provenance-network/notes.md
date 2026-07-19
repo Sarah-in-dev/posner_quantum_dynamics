@@ -96,3 +96,41 @@ later ("born-with" semantics).
 
 **Recommendation:** keep it — it is faithful to the per-synapse build — but report the
 affected fraction so a large value cannot silently suppress edge formation.
+
+## Q6 — MY PREREG'S "density matched by construction" CLAIM IS WRONG (found mid-run, recorded)
+
+**Found 2026-07-19 ~21:20 UTC, from Unit 2's first scored row, BEFORE the verdict was read.**
+
+The prereg asserts *"Density matched by construction: every condition activates exactly 3 of 6
+synapses."* **That is false in the way that matters.** Equal *counts* of active synapses is not
+matched *density across the graph's nodes*: inactive synapses sit at -70 mV, generate almost no
+calcium, hence almost no dimers, hence no events and no edges. Cross edges can therefore form
+ONLY among active synapses — **trivially, by density**, not by computation.
+
+Evidence, first scored row: `Q_act = +0.0000` exactly, with `Q_shuf = -0.3075`. Q_act=0 is
+Newman modularity's DEGENERATE value when every edge lies inside one community (e_11=1, a_1=1
+=> Q = 1-1 = 0). The apparent effect is an artifact of the null, not a signal.
+
+**ARM 2 does not rescue this.** ARM 2 was registered as the guard against the SPATIAL confound
+and it does that job correctly. But interleaved `{0,2,4}` has the identical density structure —
+edges can only appear among the three driven synapses. **Neither arm separates input-COMPUTING
+from density.** This is L·PO5-11's finding ("topology is a function of density alone") reappearing
+in a metric I designed to avoid L·PO5-13, and I did not see it when writing the prereg.
+
+**Consequence:** a "PASS" printed by the Unit 2 verdict function on the Q criteria would be a
+THIRD false positive in this series, not a keystone result. It is reported as confounded
+regardless of what the function prints. The `n_multi` (decomposition) criterion is unaffected and
+remains meaningful.
+
+**THE DESIGN FIX for the next worker (this is the real deliverable of Unit 2):**
+drive **all six synapses above dimer-forming threshold** so every node carries comparable
+density, and vary the input as **HIGH vs LOW drive** on the two groups rather than
+**ON vs OFF**. Then activation identity varies while density is genuinely matched, and Q against
+activation identity means what it was supposed to mean. Combined with the interleaved ARM 2
+layout, that design is confounded by neither space nor density.
+
+**Blocking caveat on that fix:** it does not solve the sparsity ceiling (Unit 1b: 2 cross edges,
+1/15 synapse pairs, saturating). Any redesign must ALSO raise cross-edge yield — via
+`provenance_net_reach_nm`, `provenance_net_event_rate`, or the born-with claiming rule — before
+a modularity statistic on the synapse graph has enough edges to carry a verdict. **Fix the
+confound and the power together, or the next test is unreadable too.**
