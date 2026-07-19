@@ -1,0 +1,27 @@
+============================================================================================
+CLAIM A — MONOGAMY BOUND
+============================================================================================
+  V (entangled dimers) = 1034    E (edges) = 369740
+  monogamy bound: <= 4 singlet-strength bonds per dimer (4 x 31P spins per Ca6(PO4)4)
+  mean degree   = 715.2   (179x the bound)
+  median degree = 833.0
+  max degree    = 902   (226x the bound)
+  dimers over bound: 1034/1034  (100.0%)
+  edges in excess of the bound: 367672 / 369740  (99.44% of the graph is physically inadmissible)
+  max admissible E under monogamy = 2068 (vs actual 369740, i.e. 179x over)
+
+============================================================================================
+CLAIM B — DOES THE UNIT-5 SHEAF DECOMPOSE?
+============================================================================================
+  edges joining DIFFERENT axis-pair blocks: 0 / 369740
+  (channel rule pairs +axis with -axis, so edges join channel 2m <-> 2m+1;
+   channels fuse in PAIRS => 3 blocks {0,1},{2,3},{4,5}, not 6 independent ones)
+    block {0,1} (axis 0): edges= 124365 engaged_coords= 1858 components=1
+    block {2,3} (axis 1): edges=  92271 engaged_coords= 1847 components=1
+    block {4,5} (axis 2): edges= 153104 engaged_coords= 1956 components=1
+  sum of per-block components = 3
+  H0_engaged computed on the full channel graph = 3
+  DECOMPOSITION IDENTITY HOLDS: True
+  => CONFIRMED: H0_engaged is a SUM of independent graph-component counts — a direct sum of graph Laplacians, not irreducible sheaf structure.
+
+wrote /Users/sarahdavidson/posner_quantum_dynamics/.claude/worktrees/po5-keystone/src/models/Model_6/sweep/po7_unit3_results.json

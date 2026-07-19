@@ -1,0 +1,37 @@
+{
+  "V": 1034,
+  "E": 369740,
+  "monogamy": {
+    "bound_per_dimer": 4,
+    "mean_degree": 715.1644100580271,
+    "median_degree": 833.0,
+    "max_degree": 902.0,
+    "n_over_bound": 1034,
+    "frac_over_bound": 1.0,
+    "excess_edges": 367672.0,
+    "max_admissible_E": 2068
+  },
+  "sheaf": {
+    "cross_block_edges": 0,
+    "per_block": {
+      "0": {
+        "n_edges": 124365,
+        "n_engaged_coords": 1858,
+        "components": 1
+      },
+      "1": {
+        "n_edges": 92271,
+        "n_engaged_coords": 1847,
+        "components": 1
+      },
+      "2": {
+        "n_edges": 153104,
+        "n_engaged_coords": 1956,
+        "components": 1
+      }
+    },
+    "sum_block_components": 3,
+    "H0_engaged_full": 3,
+    "decomposition_holds": true
+  }
+}
