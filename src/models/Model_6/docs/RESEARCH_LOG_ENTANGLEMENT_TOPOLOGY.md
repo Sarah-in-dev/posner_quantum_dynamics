@@ -65,6 +65,8 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| PO5-5 | 2026-07-19 | **THE BUS IS A REAL PERCOLATION CONTROL PARAMETER — components 60→1 — AND THE SYSTEM NATIVELY SITS PAST THE TRANSITION.** Probe `sweep/po5_unit4_bus_percolation.py`, predictions registered pre-run; raw JSON **and log committed**. Architecture verified in code: `model6_core.py:555` tryptophan → `collective_field_kT`; `dimer_particles.py:454` `em_rate = k_base*(collective_field_kT/reference_kT)*coh*g` — a single **global** scalar gain on every pair. **Positive control PASSED** (bus=0 ⇒ 0 P2 bonds ⇒ components_all == components_P0only). **Measured:** bus 0/0.1/0.25/0.5/1/2/5/10/20 → components **60/44/39/29/20/14/7/6/1**, monotone. **NATIVE bus = 21.98 kT** (vs `reference_kT`=20, `FIELD_THRESHOLD_KT`=20) → **1 component**. **(1)** A transition EXISTS — the architecture has an operating point where topology can hold information. **(2)** The system is parked **past** it: the informative band is bus ≈0.1–5 (7–44 components) and the model runs ~4×+ above it — **wrong phase, not broken mechanism.** **(3)** λ₂ is **exactly 0** in every fragmented state and only informative once connected (0.9106, 0.9807) ⇒ component-count and λ₂ are exactly complementary, and **the live path reads only `dim ker L₀` while sitting in the connected phase — reading the one channel provably empty at its own operating point.** λ₂ used as DIAGNOSTIC only, per A5. **NOT shown:** the condensate is not reconnected — this overrides the bus directly and says nothing about whether `backbone_eta*E_invasion` (`model6_core.py:543`, both factors 0.0000 in live trials) can reach it. **No §8 verdict.** | [GROUNDED, measured] | `L·PO5-5` below |
+| PO5-4b | 2026-07-19 | **PO5-4 PROMOTED: the indifference-graph mechanism CONFIRMED 18/18 across 3 seeds × 2 arms** (`sweep/po5_unit3_birth_cohorts_results.json`, committed). Registered prediction `components(P0) = 1 + count(birth gaps > 0.1 s)` held at **every** sample. **AND ONE SINGLE-SEED CLAIM IN PO5-4 IS CORRECTED:** PO5-4 reported PULSED produced *no more* >100 ms gaps than SUSTAINED and flagged it as weak (2 samples). With 3 seeds the opposite holds — **PULSED max gap 3.5650 s / 6 gaps / 6 cohorts vs SUSTAINED 2.6700 s / 5 gaps / 4 cohorts.** **Drive pattern DOES modulate burst structure**, so formation can be gated finely enough to split the P0 graph — the channel §8 needs is alive, where the single-seed run suggested it might not be. The weak-signal flag on PO5-4 did its job. | [GROUNDED, measured] | `L·PO5-4` above |
 | PO5-4 | 2026-07-19 | **THE P0 GRAPH IS AN INDIFFERENCE GRAPH ON BIRTH TIME — PREDICTED==MEASURED 5/5 — AND P2 IS WHAT ERASES THE STRUCTURE.** Pre-registered `docs/PREREG_PO5_UNIT3_BIRTH_COHORTS.md` (`becc8e3`, before the run); probe `sweep/po5_unit3_birth_cohorts.py`. **REPORTED not MO-VERIFIED — the run's log lived in gitignored `results/` and the worktree was removed by consolidation mid-run; the probe IS committed, so re-running promotes it.** **Registered prediction: components(P0) = 1 + count(birth gaps > 0.1 s). Held exactly at 5/5 samples** (SUSTAINED t=1/3/5 → 2/4/6; PULSED t=1/3 → 2/5), `max_glu = 1.000`. Mechanism confirmed from `dimer_particles.py:218-228` + `:210`: bond iff both template-bound and `|Δbirth| < 0.1 s`, and a whole `step_population` batch shares one birth_time ⇒ **unit-interval graph on the birth-time axis**, components = maximal runs with no >100 ms gap, no fitted quantity. **PO-5's OWN PROSE REASONING WAS FALSIFIED:** it predicted continuous births ⇒ one component; births are **bursty** — 12–17 distinct birth times in 5 s, gaps to **2.665 s**, ~60–90 dimers per event ⇒ **SIX P0 components under sustained drive.** **THE INVERSION:** the FULL graph measures `comps = 1, largest_frac = 1.000` (`L·PO5-1`) while P0-only has 6, and P0 is 82.86% of bonds vs P2's 17.14% (`L·PO5-2`) ⇒ **the temporal cohort structure EXISTS and the 17% spatially-mediated P2 bonds BRIDGE the cohorts into one blob.** The intra partition is trivial not because formation is structureless but because **a spatially promiscuous minority pathway erases a temporally structured majority.** **Weak, 2 samples:** PULSED produced no more >100 ms gaps than SUSTAINED (0.755 vs 0.770 s), hinting birth timing follows supersaturation dynamics rather than instantaneous drive — **NOT established.** **NO §8 VERDICT:** whether input modulates cohort structure, and whether it survives P2 bridging, is unrun; "P2 erases the structure" is NOT "§8 fails". **Do NOT weaken P2 to preserve cohorts** — that is tuning to an outcome (§7 LOCKED). | [GROUNDED, measured — REPORTED] | `L·PO5-4` below |
 | PO5-3 | 2026-07-18 | **Q-B RAN 58.2 MIN ON THE EXCLUSIVE SLOT, ALL 9 RUNS, EVERY GATE PASSED — AND RETURNED NO VERDICT.** Pre-registered (A2.2–A2.6, all before the run); probe `sweep/po5_unit2_qb_selectivity.py`. **Gates all PASS:** instrument conservation; A2.3 `_remove_dimer` tripwire **zero calls** (confirming that defect is unreachable under a full protocol); positive control `max_glu > 0` every run (min 1.000); drive matching A=2.7540 vs B=2.7460 (**0.3%**, registered ≤5%). **Then scoring crashed** — `ValueError: shapes (169,) vs (36,)`. **`ratio` was never computed; NOTHING is claimed about §8 in either direction and the keystone stands exactly as unverified as before.** **Three flaws, all PO-5's:** (1) **the statistic was never comparable across runs** — cells indexed by *each run's own* occupied set, so index *i* meant a different physical location per run; Frobenius distance between them is meaningless **even when shapes coincide**, so had the counts matched this would have produced *a confident number that was silently garbage* — **the crash is the lucky outcome**; (2) the A2.6 pre-flight sampled **one** seed (13 cells) and certified an arm whose occupancy actually ranged **6–14**, with only 3 of 9 runs clearing `MIN_CELLS = 10` — the same single-sample-as-confirmation error PO-3 named when withdrawing F-3; (3) **the scored intermediate was not persisted, so a SCORING bug destroyed 58 minutes of PHYSICS** — and `sweep/score_leta5.py` had already solved this, was named as prior art in PO-5's own grounding brief, and was not composed from. **Fix, needing zero compute:** fixed **global** lattice (absolute cell coords), comparison on the all-run intersection, matrices persisted, scoring split into an offline scorer composed from `score_leta5.py`, validated on synthetic data before physics is spent. **NO registered threshold is being moved** — if the all-run intersection falls below `MIN_CELLS`, the honest verdict is *"the instrument cannot resolve pair structure in this geometry"*, per the registered hard stop. **Logged rather than swept because L·ETA-5 set the precedent:** a properly-conducted run that does not answer its question is a result about the instrument, and the next PO building a cross-run spatial statistic here needs to know per-run occupancy indexing does not survive the comparison step. | [GROUNDED, measured — null about the INSTRUMENT] | `L·PO5-3` below |
 | PO5-2 | 2026-07-18 | **83% OF THE BOND SET COMES FROM A THIRD, DETERMINISTIC MECHANISM THAT NEITHER PATHWAY DECOMPOSITION NAMES.** Pre-registered `docs/PREREG_PO5_UNIT2_PAIR_SELECTIVITY.md` §2; probe `sweep/po5_unit2_provenance.py`; **provenance recovered with ZERO edits to `dimer_particles.py`** (instance-level wrapping, four POs share this tree). Classification is EXACT not statistical — `:439` `p1 = both_ent & same_burst & both_tmpl & ~has_bond`, `:450` `p2 = both_ent & ~p1`, phases separated by wrapping `step_population` vs `step_entanglement`. **The instrument gate FAILED FIRST on real data** (orphans 0→909→4851); cause traced to `_remove_all_bonds_for_dimer` (`:245`) popping `_bond_lookup` without routing through `_remove_bond`; AMENDMENT A2.1, instrument fixed, physics untouched; failing run preserved. **Post-fix both gates PASS:** conservation exact (missing=0, orphan=0 vs 474256 live bonds) and instrumented-vs-uninstrumented **bit-for-bit identical** on n_dimers/n_entangled/n_bonds/mean P_S. **MEASURED at t=2.0s:** P0 birth-inheritance (`:218-228`) **392952 = 82.86%**, P1 burst **22 = 0.00%**, P2 EM **81282 = 17.14%**. **Two structural findings:** (1) the dominant site is the birth loop at `:218-228`, which is **deterministic — no rate, no RNG draw, no distance term** — bonding every template-bound dimer born within 100 ms unconditionally, i.e. a near-complete blob by construction; **83% of bonds never evaluate `em_rate` at all**, so Unit 1's `D = 33.5` spread in `g` applies only to the 17% minority, and the kickoff's `em_rate` decomposition (`mo-rescope-001.md:49-53`, `quantum-computation-and-attribution` §7 #1) describes the minority mechanism. (2) **P1 is shadowed by construction** — `p1` requires `~has_bond` and the birth loop has already bonded every same-burst template-bound pair, so P1 is near-dead code (22 bonds). **EXPLICITLY NOT CLAIMED:** that this defeats §8. Birth timing and template binding are downstream of input, so a deterministic birth rule is **not automatically input-blind**; whether it carries **pair-level** vs §8's **gate-level** information is Q-B, and **Q-B is unrun**. No keystone verdict is stated or implied — the inference `L·PO5-1` CORRECTION 1 withdrew is not repeated. **Latent defect routed, not fixed:** `_remove_dimer` (`:252-261`) discards from `entanglement_bonds` but never pops `_bond_lookup`; currently **dead code** (no call sites), so nothing is broken today. | [GROUNDED, measured] | `L·PO5-2` below |
@@ -90,6 +92,72 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·PO5-5 — the BUS is a real percolation control parameter (60 -> 1 components), and the system natively sits PAST the transition · 2026-07-19 `[GROUNDED, measured]`
+
+**Probe:** `sweep/po5_unit4_bus_percolation.py` (predictions registered in its header before the
+run). **Raw:** `sweep/po5_unit4_bus_percolation_results.json`, `po5_unit4_run.log` — **committed
+this time**, not left in gitignored `results/`.
+
+#### The architecture, verified in code — not an analogy
+
+`model6_core.py:555` `self._collective_field_kT = trp_state['output']['collective_field_kT']`, and
+`dimer_particles.py:454` `em_rate = k_base * (collective_field_kT / reference_kT) * coh * g`.
+**The tryptophan module is the network; `collective_field_kT` is a single global scalar gain on
+every pair's bond rate; dimers are the bits.**
+
+#### Measured (single synapse, 1 s, seed 7777, override applied at `dp.step`)
+
+| bus (kT) | P2 bonds | components | largest_frac | λ₂ |
+|---|---|---|---|---|
+| 0.00 | 0 | **60** | 0.8866 | 0 |
+| 0.10 | 319 | 44 | 0.9636 | 0 |
+| 0.25 | 744 | 39 | 0.9679 | 0 |
+| 0.50 | 1447 | 29 | 0.9763 | 0 |
+| 1.00 | 2823 | 20 | 0.9839 | 0 |
+| 2.00 | 5586 | 14 | 0.9890 | 0 |
+| 5.00 | 13447 | 7 | 0.9949 | 0 |
+| 10.00 | 24828 | 6 | 0.9958 | 0 |
+| 20.00 | 44459 | **1** | 1.0000 | 0.9106 |
+| **NATIVE 21.98** | — | **1** | 1.0000 | 0.9807 |
+
+**Positive control PASSED:** bus = 0 gives exactly **zero** P2 bonds and `components_all ==
+components_P0only`, so the override demonstrably acts on the intended term.
+
+#### Three findings
+
+**1. A TRANSITION EXISTS.** Components fall monotonically 60 → 1 as the bus rises. The architecture
+**does** have an operating point at which the topology can hold information. This was the open
+question and the answer is yes.
+
+**2. THE SYSTEM IS PARKED PAST IT.** The tryptophan module natively produces **21.98 kT** (against
+`reference_kT = 20.0` and `FIELD_THRESHOLD_KT = 20.0`), which yields **one component**. The
+informative band is roughly bus **0.1–5**, giving 7–44 distinguishable components. **The model runs
+at least ~4× above the top of that band.** The mechanism is not incapable; it is **in the wrong
+phase**.
+
+**3. THE READOUT IS BLIND AT THE NATIVE OPERATING POINT — now measured, not argued.** λ₂ is
+**exactly 0** in every fragmented state (λ₂ > 0 iff connected) and only becomes informative once
+connected (0.9106, 0.9807). So component-count and λ₂ are exactly complementary: in the fragmented
+phase components carry everything and λ₂ nothing; in the connected phase components are pinned at 1
+and **all** remaining structure is in λ₂. **The live path reads only component count
+(`dim ker L₀`), and the system sits in the connected phase — it reads the one channel provably empty
+at its own operating point.** Per A5, λ₂ is used here strictly as a **diagnostic**, never proposed
+as the readout.
+
+#### What this does NOT show
+
+**The condensate is NOT reconnected.** This probe overrides the bus directly. It says nothing about
+whether `backbone_eta * E_invasion` (`model6_core.py:543`) can reach it — and both factors measure
+0.0000 in every live trial (η in this run's own backbone diagnostic; `E_invasion` per PO-4). **No §8
+verdict** — this is about whether an operating point exists, not about whether input reaches it.
+
+#### Limits
+Single synapse, 1 s, one seed per bus value. `components_P0only = 60` counts non-template-bound
+dimers as singletons (Unit 3 counted only template-bound), so P0 component counts are not directly
+comparable between the two units; within this sweep the comparison is consistent.
+
+
 
 ### L·PO5-4 — the P0 graph IS an indifference graph on birth time (5/5 predicted==measured), births are BURSTY not continuous, and P2 is what erases the structure · 2026-07-19 `[GROUNDED, measured — REPORTED, log did not survive]`
 
