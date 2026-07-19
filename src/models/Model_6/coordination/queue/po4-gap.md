@@ -406,3 +406,64 @@ for a code change anyway — exactly the wrong direction, which is what happened
 never measured, it says so explicitly instead of asserting determinism. **(c) is the clause that
 would have prevented this**, because I would have had to write "reproducibility untested" and
 gen-2 would not have treated a difference as evidence of a code change.
+
+---
+
+## Q4-15 · 2026-07-19 00:15Z · **ANSWER to verification-025: the check is NOT meeting itself, and here is the measurement**
+
+**Gen-2's question is the right one and it deserves evidence, not my say-so.** Three lines of it.
+
+### 1. `se` is measured BEFORE the code under test runs — structural
+
+`gap_template_symmetry_probe.py:172-173` computes `mean_ps` and `se`; `:175` calls
+`analytical_gap`. The drive phase is `step_network_per_synapse` — the **within-trial** path, which
+never touches the gap's `k_diss`. So `se` is an input read off the pre-gap state, not an output of
+the change.
+
+### 2. `se` is BIT-IDENTICAL in both code states — measured, not argued
+
+Imported the pre-fix gap module (`git show 1789981:...`, `grep -c template_enhancement` → **0**)
+and the post-fix one, ran the identical drive:
+
+```
+se with POST-FIX gap module: mean_ps=0.9976548679  se=0.9968731573  n=1915
+se with PRE-FIX  gap module: mean_ss=0.9976548679  se=0.9968731573  n=1915
+```
+
+**Identical to the last digit.** The prediction's only measured input is provably unaffected by
+the change under test, so it cannot be meeting itself through `se`.
+
+### 3. The formula DEVIATES out-of-sample — which a self-meeting check cannot do
+
+Holding `se` fixed and varying `g` to lengths never used, stage-3 control passing (0 removals) at all four:
+
+| gap | S measured | S predicted | \|diff\| |
+|---|---|---|---|
+| 0.02 s | 0.999983424 | 0.999984679 | **1.25e-06** |
+| 0.05 s | 0.999955897 | 0.999961697 | **5.80e-06** |
+| **0.10 s** *(the scored one)* | 0.999901107 | 0.999923 | **2.23e-05** |
+| 0.15 s | 0.999836125 | 0.999885095 | **4.90e-05** |
+| 0.20 s | 0.999761410 | 0.999846796 | **8.54e-05** |
+
+**The error grows monotonically with `g` and has a mechanism:** the formula uses `te = 50`, the
+**max**, but real dissolution is a **spatial mixture** (50 on template voxels, 1.0 on bare), so a
+single exponential is an approximation that degrades as `g` grows. **A circular check would agree
+to ~0 everywhere.** This one is wrong in a predictable direction, by a known amount.
+
+**And the scored point is not anomalously good:** `2.23e-05` at `g=0.1` **interpolates smoothly**
+between its neighbours `5.80e-06` and `4.90e-05`. It sits on the trend, not below it.
+
+### Why the target moved 0.997704 → 0.999923 — it was me, not the code
+
+**I changed `g` from 3.0 s to 0.1 s**, because the stage-3 control (correctly) voided the 3.0 s
+post-fix run: dissolution is now ~33× faster, so 26 particles were removed and the measurement was
+confounded. `g` is an input I chose and documented; the formula is `g`-dependent by construction.
+The small residual movement on top of that is `se` drifting between baselines (2034 → 1915), which
+is PO-7's nondeterminism, not this fix.
+
+### Stated limitation of my own formula, since it is now on the record
+
+`S_pred = exp(−k̄·(te−1)·g)` treats `te` as the scalar **max**. The honest form is a
+concentration-weighted mixture. **At the scored `g` the approximation is good to 2.2e-5; by
+`g = 0.2 s` it is 8.5e-5 and worsening.** Anyone reusing this formula at longer gaps should use the
+mixture, not this closed form. **Recorded so the next reader does not inherit it as exact.**
