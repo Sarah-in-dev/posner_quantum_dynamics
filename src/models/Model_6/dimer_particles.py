@@ -140,6 +140,10 @@ class DimerParticleSystem:
         self.j_mismatch_scale = 0.15        # Hz = std of the model's own Agarwal-DFT J
                                             # distribution (:49). NOT tuned to an outcome.
         self.coherence_threshold = 0.3  # Minimum for entanglement
+        # PO-5 UNIT 7: promoted from two local literals (:222 birth loop, :389 Pathway 1)
+        # so the P0 percolation control parameter is reachable. Same value => behaviour
+        # unchanged; verified bit-identical before use.
+        self.birth_window = 0.1       # s, "same ATP burst" window
         self.j_coupling_threshold = 5.0  # Hz, minimum for protection
         
         # Formation tracking
@@ -231,7 +235,7 @@ class DimerParticleSystem:
                     # Phosphates from same pyrophosphate hydrolysis are born entangled
                     # Check existing dimers for shared origin
                     if template_bound:
-                        birth_window = 0.1  # 100ms - same ATP burst
+                        birth_window = self.birth_window  # PO-5 U7: was literal 0.1
                         for other in self.dimers[:-1]:  # Exclude just-added dimer
                             if other.template_bound and other.is_entangled:
                                 if abs(other.birth_time - dimer.birth_time) < birth_window:
@@ -404,7 +408,7 @@ class DimerParticleSystem:
         # Reference scale: 20 kT is strong field (full MT invasion + activity)
         reference_kT = 20.0
         k_entangle_em_base = 1.0  # Base rate at reference field (1/s)
-        birth_window = 0.1        # 100ms - same ATP hydrolysis burst
+        birth_window = self.birth_window   # PO-5 U7: was literal 0.1
 
         ids = np.fromiter((d.id for d in self.dimers), dtype=np.int64, count=n)
         P = np.fromiter((d.singlet_probability for d in self.dimers), dtype=float, count=n)
