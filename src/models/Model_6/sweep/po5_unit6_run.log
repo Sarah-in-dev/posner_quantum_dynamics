@@ -1,0 +1,29 @@
+================================================================================================
+PO-5 UNIT 6 — J-mismatch dissolution: A=OFF  B=REAL  C=SCRAMBLED(control)
+================================================================================================
+
+--- bus=0.5 ---
+  OFF        components     13.3 +/-   2.5   bonds    290985   sheafH0   9.3 +/-  0.5
+  REAL       components     13.3 +/-   2.5   bonds    290936   sheafH0   9.3 +/-  0.5
+  SCRAMBLED  components     10.7 +/-   0.9   bonds    296127   sheafH0   5.0 +/-  1.6
+
+--- bus=20.0 ---
+  OFF        components      1.0 +/-   0.0   bonds    321792   sheafH0   3.7 +/-  0.9
+  REAL       components      1.0 +/-   0.0   bonds    321763   sheafH0   3.7 +/-  0.9
+  SCRAMBLED  components      1.3 +/-   0.5   bonds    324055   sheafH0   3.3 +/-  0.5
+
+--- bus=NATIVE ---
+  OFF        components      1.0 +/-   0.0   bonds    324296   sheafH0   3.3 +/-  0.5
+  REAL       components      1.0 +/-   0.0   bonds    324267   sheafH0   3.3 +/-  0.5
+  SCRAMBLED  components      1.3 +/-   0.5   bonds    326300   sheafH0   3.3 +/-  0.5
+
+================================================================================================
+bus=   0.5  A=   13.3  B=   13.3  C=   10.7   (B-A)/spread=  0.00  (B-C)/spread=  1.07
+          -> NOT SUPPORTED (no effect): B ~= A, the rule changes nothing
+bus=  20.0  A=    1.0  B=    1.0  C=    1.3   (B-A)/spread=  0.00  (B-C)/spread= -0.71
+          -> NOT SUPPORTED (no effect): B ~= A, the rule changes nothing
+bus=NATIVE  A=    1.0  B=    1.0  C=    1.3   (B-A)/spread=  0.00  (B-C)/spread= -0.71
+          -> NOT SUPPORTED (no effect): B ~= A, the rule changes nothing
+
+LIMITS: single synapse, 1 s, 3 seeds. A SUPPORTED verdict raises the physics
+question (does intra-dimer J gate inter-dimer entanglement?) — it does not settle it.
