@@ -5,11 +5,31 @@ resolution? Pre-registered, null that cannot show the effect, positive control d
 fire, verdict able to return FALSIFIED.
 
 **Status:** LIVE. Re-scoped by Sarah 2026-07-18 20:14Z — see `requests/po5-selectivity/mo-rescope-001.md`.
-**Current unit:** UNIT 2 Q-B — **RAN 58.2 min, ALL 9 RUNS, ALL GATES PASSED, AND RETURNED NO
-VERDICT.** The scorer crashed; the flaw is in the comparison layer, not the physics.
-**🔓 SLOT RELEASED 2026-07-18 23:25Z — PO-2 and PO-4 are unblocked, take it.** PO-5 needs no compute
-to do the next step and will re-request only after the scorer is validated offline.
-**Last heartbeat:** 2026-07-18 23:25Z
+**Current unit:** UNIT 2 Q-B — **offline rebuild COMPLETE and VALIDATED (A2.7, zero compute).**
+Slot **RE-REQUESTED** (`requests/model6-mo/po5-selectivity-008.md`), sequenced **behind PO-2**.
+**🔓 SLOT STILL RELEASED — PO-5 holds no compute.**
+**Last heartbeat:** 2026-07-19 00:44Z
+
+**A2.7 — what ruling 028 required, delivered:** scorer separates **known FLAT → FALSIFIED (1.028)**
+from **known PLANTED → CONFIRMED (9.128)**. Fixed **global** lattice (absolute cell coords,
+all-run intersection) retires L·PO5-3 flaw 1 at the root. Scoring split into
+`sweep/po5_unit2_score.py`, composed from `score_leta5.py`; probe persists cells+pairs **after every
+run**; end-to-end verified probe → JSON → scorer → verdict. Scorer **refuses** real data unless
+planted-vs-flat separates first.
+
+**DISCLOSED — the moment tuning could have entered:** the first planted control (amp 0.60) scored
+**2.905**, just under `RATIO_CONFIRM = 3.0`. **The threshold was NOT lowered.** A positive control on
+the decision boundary tests nothing, so the *control* was strengthened to amp 2.0; every registered
+threshold stands.
+
+**DETECTION FLOOR = 0.80** (amp→ratio: 0.2→1.37, 0.4→2.08, 0.6→2.91, **0.8→3.77**, 2.0→9.13).
+**This is the gain from the failed run:** a future FALSIFIED is no longer a bare negative but the
+bounded claim *"no input-driven pair-level effect ≥ ~0.8 in `P_bond` on a 2-cell block, 6 nm cells,
+under these conditions"* — **fixed before the data is seen**, so it cannot be back-fitted.
+
+**Pre-flight change so L·PO5-3 flaw 2 cannot recur:** it asserts the **all-run intersection** across
+a multi-seed sample, not one seed. If that is below `MIN_CELLS`, **PO-5 STOPS and reports that the
+instrument cannot resolve pair structure in this geometry.** No threshold moves.
 
 **WHAT THE SLOT BOUGHT, stated plainly: no verdict on §8.** All 9 runs completed; instrument
 conservation PASS; A2.3 `_remove_dimer` tripwire PASS (zero calls); positive control `max_glu > 0`
