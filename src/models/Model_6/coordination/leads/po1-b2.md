@@ -404,3 +404,87 @@ today (`singlet_thermal`) — belongs in the orphan deletion batch, not a separa
 **What is left on this surface is gated or needs a decision:** the deletions (isotope gate) and
 the seven INERT dimensions. **If the isotope gate lifts I can execute the whole batch — orphan
 modules, orphan-only fields, and the two DELETE-verdict dimensions — as one reviewable commit.**
+
+---
+
+# ⏹ WRAPPED — 2026-07-19, per `requests/po1-b2/mo-wrap-024.md`
+
+**Status: WRAPPED.** Acceptance MET and MO-verified. Nothing owed. Not polling, not starting a
+unit. Tree clean; every file I touched is committed.
+
+## The 7 remaining INERT dimensions — executable by someone who was not here
+
+Registry with reasons: `sweep/quantum_dimensions.py` → `INERT_DIMENSIONS`.
+Re-verify any time with `python src/models/Model_6/sweep/dimension_consumer_audit.py`
+(expects 3 controls PASS; `reads == 0` is the definitive verdict).
+
+| dim | imp | verdict | why |
+|---|---|---|---|
+| `q1_d_modes` | high | none yet | NO CONSUMER. B2 proved `D_modes` does no physics at **either** pump site — only ω₀ and Q enter `P_c`. |
+| `q1_phi_dissipation` | high | none yet | NO CONSUMER. Declaration only, zero reads. |
+| `q1_chi_redistribution` | high | none yet | NO CONSUMER. Declaration only, zero reads. |
+| `q1_kT_per_modulation` | high | none yet | NO CONSUMER. Declaration only, zero reads. |
+| `q2_j_coupling_hz` | high | none yet | NO CONSUMER + scale mismatch. `J_intrinsic_dimer = 15.0 Hz`: one write, **zero reads anywhere**. Live J is the ATP field + per-dimer `N(0.15,0.15)` — ~100× below. Re-targeting = choosing *which* J. Physics call. |
+| `q2_k_agg_baseline` | high | **DELETE** (ruling 012 §2) | WRONG UNITS: values are first-order `s⁻¹` dissolution rates (two are exactly grounded/retired `K_CLASSICAL`); `k_base` is second-order `M⁻¹s⁻¹`. `sweep_runner.py:92` now RAISES. **Do not "fix the guard".** |
+| `stim_ca_amplitude` | **critical** | **DELETE** (ruling 012 §3) | MECHANISM DISCLAIMED. Calcium amplitude is DERIVED (Naraghi-Neher), which *replaced* the calibrated 0.5 µM/channel snapshot. **Do not wire it** — that reinstates the retired anti-pattern. |
+
+**The first four are the same finding four times** (backbone params that B2 proved inert) and
+should be decided as one, not individually.
+
+## ⚠ Things I know that are written down NOWHERE ELSE
+
+This is the irreplaceable part. Everything above is reconstructible from git; this is not.
+
+1. **`requests/model6-mo/po1-handoff-gen2.md` IS NOW STALE — and I pointed gen-2 at it as
+   "the state".** It predates ruling 012, ruling 017, SWEEP-3 and SWEEP-4; **17 commits have
+   touched my surface since.** Its *limits* and *traps* sections remain accurate and are still
+   worth reading; its *state* section is not. **Read this WRAPPED block instead for state.**
+   My error — I should have refreshed it or removed the pointer.
+
+2. **`dead_parameter_audit.py` exits 1 by design when dead fields exist** (`return 0 if not
+   dead else 1`). It is **not** a failure. Anyone wiring it into CI will read exit=1 as broken.
+
+3. **matplotlib is broken in this venv** — `python -c "import matplotlib.pyplot"` fails with a
+   `pyparsing ImportError` on **unmodified** code. This blocks running anything under
+   `Full_System_Experiments/`. It is environmental, predates my work, and is why my
+   `exp_sensitivity_analysis.py` edit was verified by `py_compile` and **never executed**.
+
+4. **A live defect nobody owns:** `exp_sensitivity_analysis.py` block #4 —
+   `coupling.k_agg_baseline` does not resolve, so the sensitivity analysis **silently reports
+   one fewer parameter than it claims**, with no signal in its output. Same class as the guard
+   I was told to fix; ruling 012 named only `:176-179`, so I kept to that and routed this.
+
+5. **On `index.lock`: WAIT, never `rm`.** All agents share one git index. I hit a collision;
+   removing the lock would have corrupted another PO's in-flight commit. It cleared in ~1 s.
+
+6. **Three deliberate design choices a successor might "improve" and thereby break:**
+   - `sweep_runner` **warns** about inert dimensions rather than dropping them. Dropping would
+     *hide* the defect. Do not "clean this up".
+   - `burst_duration_ms` default is **40.0, not 50.0** — 50 was declared and never simulated;
+     40 ms is 4 pulses @100 Hz, the canonical theta-burst unit. "Restoring" 50 silently changes
+     every default run from 4 pulses to 5.
+   - The two de-duplicated coherence sites hold **different param objects**:
+     `dimer_particles` has `Model6Parameters` (needs `.quantum`); `quantum_coherence` has
+     `QuantumParameters` directly.
+
+7. **The 108-dead-field list is deliberately NOT persisted as a list** — the script is the
+   artifact, so it cannot go stale. Re-run it; do not trust a copied list.
+
+8. **`calcium_system` and `implicit_diffusion` are NOT orphans**, whatever the board's
+   six-orphan list says. `calcium_system` is imported at `analytical_calcium_system.py:535`
+   inside a live `use_analytical=False` fallback. **Deleting it on that list breaks a live
+   module.** Only `eligibility_trace` and `singlet_dynamics` have no importer.
+
+9. **Routed and unresolved:** `singlet_thermal = 0.25` (read only by an orphan; hardcoded in
+   **three** files) and `singlet_entanglement_threshold = 0.5` (dead; live bound is the class
+   constant `WERNER_ENTANGLEMENT_BOUND`). **These are the two numbers that select 216 s over
+   500 s** — the arithmetic under §2.2's central correspondence rests on constants declared
+   where nothing reads them. Ruling 006's shape, unfixed. See `po1-reply-ruling017b.md`.
+
+## Closing
+
+Two of my own false statements and one blind-observable near-miss are recorded in the log
+(`B2-4`, `de8e0df`) rather than quietly fixed — a successor should assume the same rate applies
+to anything here I did not explicitly verify.
+
+Wrapped in good standing. — PO-1 / PO-6a
