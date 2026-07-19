@@ -81,9 +81,11 @@ def instrument(dp, bus_override):
         try: return o_ent(*a, **k)
         finally: state["phase"] = None
 
-    def w_create(i, j, s):
+    def w_create(i, j, strength=0.0):
+        # NB: dimer_particles.py:228 passes strength= as a KEYWORD, :444/:458 positionally.
+        # The parameter must keep the name `strength` or the keyword call fails.
         key = (min(i, j), max(i, j)); already = key in dp._bond_lookup
-        r = o_create(i, j, s)
+        r = o_create(i, j, strength)
         if not already and key in dp._bond_lookup:
             if state["phase"] == "population":
                 org = "P0"
