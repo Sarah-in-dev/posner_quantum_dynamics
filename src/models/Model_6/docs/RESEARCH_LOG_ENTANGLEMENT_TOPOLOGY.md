@@ -65,6 +65,7 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| PO5-9 | 2026-07-19 | **THE TRANSIENT HYPOTHESIS FAILS — and it falsifies a `PO5-7` claim written the same day.** Probe `sweep/po5_unit8_transient.py`, pre-registered, **no overrides** — only when we look. **P1 FALSIFIED: the field is `min = max = 22.095` at EVERY sample from t=0.01 s on.** Unit 7's `range [0.000, 22.095]` was one or two samples before the first physics step, **not a gradual rise**. **`PO5-7`'s "it starts at zero and climbs every run / transits the whole fragmented→blob range" is WITHDRAWN** — the field reaches operating value in ~2 timesteps and stays. Error shape: **reading a min/max range as a trajectory without checking the time series** — the same mistake as reading a mean without its spread, one level up. **P2 fired on the registered criterion (`components>1 AND largest_frac<0.99`) at t=0.01–0.02, but the criterion was TOO WEAK and PO-5 does not bank the pass:** those states are 10–14 components with `largest_frac` 0.962–0.983 — a giant component holding 96–98% plus crumbs, not a fragmented state. **Substantively this is P3: saturation precedes any structure.** A discriminating bar would have been `largest_frac < 0.5`, as Unit 7 used. **This CLOSES the most hopeful remaining possibility** — there is no early critical window; the graph is a blob from the first measurable instant at the native field. | [GROUNDED, measured — negative] | `L·PO5-9` below |
 | PO5-8 | 2026-07-19 | **THE 100 ms BIRTH WINDOW IS NOT DERIVED — flagged sweepable 2026-05-29, never swept, and it decides the architecture.** Documentary, no compute. `model6-research-findings-may29:66`: *"birth_window value: 100ms hardcoded. Within Fisher's 1s budget. Conservative but defensible. **Tunable parameter — candidate for TALON sweep, not arbitrary calibration.**"* So its only grounding is an **upper** bound (~1 s, Fisher). **Unit 7's structure-preserving regime (2–10 ms) is inside the same permitted band**, so sweeping it is sanctioned, not tuning — and it was nominated for a sweep seven weeks ago and never done. **A parameter recorded as "conservative but defensible" turns out to decide whether §8's keystone can work at all** (P0 threshold ~2–10 ms vs native 100 ms = 10–50× above). **Mechanism gap, also already known and STILL UNCORRECTED:** `:64`/`:141` record that the docstring *"Phosphates from same pyrophosphate hydrolysis are born entangled"* **OVERCLAIMS — actual gate is spatial proximity to template field**; verified 2026-07-19 the docstring at `dimer_particles.py:234-236` is unchanged. Fisher entangles TWO phosphates from ONE molecule (a pair); the code entangles ALL template-bound dimers in a 100 ms window (a clique) — and the clique reading is what generates the 60–90-dimer groups that percolate the graph. **No value change proposed.** | [GROUNDED, documentary] | `L·PO5-8` below |
 | PO5-7 | 2026-07-19 | **BOTH MECHANISMS PERCOLATE INDEPENDENTLY — `PO5-5` CORRECTED TWICE.** Pre-registered as a self-correction before the run; `birth_window` promoted to an attribute, **bit-identical verified**. **P1 CONFIRMED: `largest_frac ≥ 0.8725` at EVERY bus incl. 0 (zero P2 bonds), χ peaks at bus=0 and decays monotonically ⇒ the bus does NOT form the giant component. `PO5-5`'s "the BUS is a real percolation control parameter" is WRONG.** **The follow-up framing ("it only absorbs stragglers") is ALSO wrong:** at native bus with the birth window shrunk 50× — which fragments P0 to `largest_frac = 0.4145` alone — the field still gives `largest_frac = 1.0000`. **The field spans the graph BY ITSELF regardless of birth structure.** ⇒ **the system is DOUBLY supercritical; fragmenting requires reducing BOTH levers, which retires every single-lever fix including PO-5's own SOC/regulation proposal.** P0 threshold measured ~2–10 ms vs native 100 ms. **And the number PO-5 had been averaging away:** native field = mean 21.984, **std 1.558, range [0.000, 22.095]** — it **starts at zero and climbs every run**, so the system transits the whole fragmented→blob range each time and parks above it, while every measurement in this program sampled only the endpoint. | [GROUNDED, measured] | `L·PO5-7` below |
 | PO5-6 | 2026-07-19 | **J-MISMATCH DISSOLUTION: NOT SUPPORTED — and the dissolution channel is INERT.** Pre-registered before the Tier-3 code change; opt-in flag, **flag-off verified bit-identical**. `(B−A)/spread = 0.00` at all three bus values; REAL vs OFF differ by 29–49 bonds out of ~300k (≈0.015%), identical components and sheaf H0. **Computed cause:** `k_disentangle = 0.01*(1-coh)/(1+protection) ≈ 9.95e-05 /s` with `coh≈0.98`; P(dissolve) over 30 s is 0.003 OFF vs 0.009 ON. **The graph is effectively WRITE-ONCE**, so nothing multiplying dissolution can matter — and this retro-explains `PO5-1`'s 0.944→0.606 saturation decline as **dimer death, not bond dissolution**. **Consequence: structural gating must act on FORMATION, not decay; PO-5 aimed at the wrong term.** **⚠ The scrambled control is CONFOUNDED — `np.random.permutation` draws from the global RNG and shifts the downstream stream, so arm C is a different realisation, not a matched control; its `(B−C)/spread` flips sign (+1.07, −0.71). Do not cite arm C.** The verdict rests on REAL vs OFF, a clean null. Per prereg: the mechanism is wrong, the scale is NOT re-registered, and the recommendation on file is to revert. | [GROUNDED, measured — negative] | `L·PO5-6` below |
@@ -95,6 +96,59 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·PO5-9 — the transient hypothesis FAILS, and it falsifies a claim PO-5 wrote into this log minutes earlier · 2026-07-19 `[GROUNDED, measured — negative]`
+
+**Pre-registered** in `sweep/po5_unit8_transient.py`'s header before the run. **No overrides — the
+system running natively; the only change is WHEN we look.** 3 seeds × 11 sample times.
+
+#### P1 FALSIFIED — there is no rise
+
+```
+field across ALL samples, all seeds: min = 22.095   max = 22.095
+```
+
+**The field is already saturated at the first sample (t = 0.01 s) and never moves.** Unit 7's
+`range [0.000, 22.095]` came from one or two samples at the very start of the run, before the first
+physics step took effect — **not from a gradual sweep.**
+
+**This directly falsifies `L·PO5-7`'s claim**, written earlier the same day, that the field *"STARTS
+AT ZERO and climbs to ~22 every run"* and that the system *"transits the entire fragmented→blob range
+on every run."* **It does not.** It reaches its operating value within ~2 timesteps and stays. That
+claim is **WITHDRAWN**; `L·PO5-7` is annotated. The error was reading a min/max range as a
+trajectory without checking the time series — the same shape as reading a mean without its spread,
+one level up.
+
+#### P2 "confirmed" on the registered criterion — and the criterion was too weak
+
+The registered test was `components > 1 AND largest_frac < 0.99`. It fires at t = 0.01–0.02. But:
+
+| t | components | largest_frac |
+|---|---|---|
+| 0.010 | 10–14 | 0.962 – 0.983 |
+| 0.020 | 6–11 | 0.980 – 0.993 |
+| 0.040 | 4–6 | 0.994 – 0.996 |
+
+**That is a giant component holding 96–98% of dimers plus a handful of crumbs — not a fragmented,
+informative state.** The giant component is present at the earliest observable moment. **Read
+substantively the answer is P3, not P2:** saturation precedes any structure, and the transient
+hypothesis fails.
+
+**The registered criterion was too lenient and PO-5 says so rather than banking the pass.**
+`largest_frac < 0.99` admits "blob plus crumbs". A criterion that could have discriminated would
+have required something like `largest_frac < 0.5` — the same bar Unit 7 used to call P0 fragmented.
+
+#### What this closes
+
+The most hopeful remaining possibility — that the computation happens in an early critical window and
+the endpoint destroys it — **is closed.** There is no such window. The graph is a blob from the first
+measurable instant, at the native field, under this drive.
+
+#### Limits
+Single synapse, 3 seeds, one drive condition, 1 s. Says nothing about whether input modulates
+whatever little structure exists in the first 20 ms.
+
+
 
 ### L·PO5-8 — the 100 ms birth window is NOT derived, was flagged sweepable on 2026-05-29, was never swept, and it turns out to decide the architecture · 2026-07-19 `[GROUNDED, documentary]`
 
@@ -179,7 +233,14 @@ fix previously proposed, including PO-5's own SOC/regulation suggestion.
 **P0's threshold is ~2–10 ms** (largest_frac crosses 0.5 between 2 and 10 ms) against a native
 100 ms.
 
-#### The number PO-5 had been averaging away
+#### ⚠ WITHDRAWN by `L·PO5-9` (same day) — the section below is WRONG
+
+**PO-5 read Unit 7's `range [0.000, 22.095]` as a trajectory. It is not.** Unit 8 sampled the field
+directly across the run: **min = max = 22.095 at every sample from t = 0.01 s onward.** The field
+reaches its operating value within ~2 timesteps. **There is no transit, no sweep, and no dynamic
+crossing.** The text below is preserved per the log convention; do not build on it.
+
+#### The number PO-5 had been averaging away [WITHDRAWN — see above]
 
 ```
 NATIVE field: mean 21.984   std 1.558   range [0.000, 22.095]
