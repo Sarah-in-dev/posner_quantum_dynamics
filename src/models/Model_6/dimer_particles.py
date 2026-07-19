@@ -144,6 +144,29 @@ class DimerParticleSystem:
         # so the P0 percolation control parameter is reachable. Same value => behaviour
         # unchanged; verified bit-identical before use.
         self.birth_window = 0.1       # s, "same ATP burst" window
+
+        # --- PO-5 UNIT 11: three opt-in repair arms (ALL OFF BY DEFAULT) --------
+        # docs/PREREG_PO5_UNIT11_REPAIR_ARMS.md. With all three False the code is
+        # byte-for-byte today's physics; verified bit-identical before use.
+        #
+        # ARM B (degree cap): Fisher's mechanism is PAIRWISE -- one pyrophosphate,
+        # two phosphates, one singlet. Coincidence is not an entangling operation and
+        # entanglement is not transitive, so all-to-all bonding within a window
+        # manufactures edges with no physical origin. True per-event matching needs
+        # molecular provenance the model does not have (dimers are born from a
+        # CONCENTRATION FIELD, :210-213 -- no pyrophosphate objects, no per-phosphate
+        # origin). This caps birth-partners at k instead, as the nearest proxy:
+        # Ca6(PO4)4 carries 4 phosphates, so k=4 is the Fisher-consistent degree.
+        self.birth_degree_cap = 0        # 0 = uncapped (today's behaviour)
+        #
+        # ARM C (J-compatibility on FORMATION): Unit 6 established dissolution is
+        # inert (k~1e-4/s, write-once), so any structural gating must act on
+        # formation. Routes the R^6 j_couplings_intra -- currently collapsed to
+        # std/mean at :310-311 and never seen by the entanglement layer -- into the
+        # birth-bond decision. UNVERIFIED PHYSICS: that intra-dimer J gates
+        # inter-dimer entanglement is an assumption, not established.
+        self.j_compat_formation = False
+        self.j_compat_tol = 0.15         # Hz; std of the model's own Agarwal-DFT J
         self.j_coupling_threshold = 5.0  # Hz, minimum for protection
         
         # Formation tracking
@@ -236,12 +259,21 @@ class DimerParticleSystem:
                     # Check existing dimers for shared origin
                     if template_bound:
                         birth_window = self.birth_window  # PO-5 U7: was literal 0.1
-                        for other in self.dimers[:-1]:  # Exclude just-added dimer
+                        _n_linked = 0
+                        for other in reversed(self.dimers[:-1]):   # nearest in birth time first
+                            if self.birth_degree_cap and _n_linked >= self.birth_degree_cap:
+                                break                              # ARM B
                             if other.template_bound and other.is_entangled:
                                 if abs(other.birth_time - dimer.birth_time) < birth_window:
+                                    if self.j_compat_formation:    # ARM C
+                                        dj = np.abs(np.asarray(other.j_couplings_intra)
+                                                    - np.asarray(dimer.j_couplings_intra)).min()
+                                        if dj > self.j_compat_tol:
+                                            continue
                                     # Shared origin - inherit entanglement
                                     strength = other.singlet_probability * dimer.singlet_probability
                                     self._create_bond(dimer.id, other.id, strength=strength)
+                                    _n_linked += 1
         
         # --- DEATH: Remove particles if significantly above target ---
         elif difference < 0:
