@@ -634,3 +634,153 @@ the right one**, and a rule quoting a superseded figure is the drift this seat e
 - **Not touching PO-5's or PO-3's surfaces**, and not re-running anything of PO-4's.
 
 **Status:** Unit 1 COMPLETE and ACCEPTED. **HOLDING for Sarah's ruling on the seeding question.**
+
+---
+
+# CLOSING HEARTBEAT — PO-7 construct-validity. 2026-07-18. **Seat wrapped.**
+
+Written on the MO's closing request. **Status: Unit 1 COMPLETE and ACCEPTED (ruling 023). Held from
+23:45Z for a seeding decision that did not come; hold released into this wrap. No unit started, no
+generator seeded, nothing de-duplicated.**
+
+## 1. UNIT 1 — final verdict in one place
+
+**Question:** do the two `step_network_per_synapse` copies differ, does the difference change
+physics, and does any standing result depend on which one ran?
+
+**Part 1 — they differ, in two physics-bearing ways (SHOWN):**
+1. `sweep/run_spatial_discovery.py:88-89` calls `network._update_backbone_field()`;
+   `src/models/Model_6/sweep/run_place_field_learning.py:116-156` **has no such call at any line.**
+   Physics via `quantum-system-canonical:118` — *"`eta = 0 ⇒ k_cross = 0` is arithmetic and stands."*
+2. RSD `:101-106` calls the coordinated gate **every step** (its comment cites the D19 falling-edge
+   latch re-arm); RPFL `:148-150` calls it **only on reward steps**. **D19 is live in the RPFL copy.**
+
+**Part 2 — split, and the split is the finding:**
+- **Gate discriminator: DIVERGENT, exact.** Null 100 vs 100; positive control FIRED (100 → 20);
+  measurement **RSD 100 vs RPFL 20** over the same 100 steps. Closed-form: 0.5 s at `dt=0.005` is 100
+  steps, reward window 0.20–0.30 s is 20. The positive control independently landed on 20.
+- **Backbone discriminators (`eta`, `cross_bonds`): INCONCLUSIVE — cause stated and measured.** The
+  45 s arm **failed its own null**. Not reported as a model defect on that alone: two separate
+  processes at a fixed seed diverged, so it is not the harness. **The instrument underneath is
+  nondeterministic; see §2.**
+
+**Part 3 — NO standing result depends on which copy ran.** All seven external consumers resolve to
+the RSD copy, **proved from import statements, not inferred and not run**:
+`sweep/test_learning_pathway.py:33` · `gap_clock_assert.py:20` · `resting_leak_probe.py:8` ·
+`eta_in_live_trial.py:58` · `einvasion_ratchet_probe.py:66` · `gap_dissolution_probe.py:53` ·
+`coupling_weights_reach_probe.py:51`. **Zero files import `run_place_field_learning`;** its copy's
+only consumer is its own `:268`. **The hazard this seat was opened on is retired.**
+
+**Arm B (F-5 tree skew): NO MATERIAL DIVERGENCE — F-5 and ruling 014 STRONGER.** Null bit-identical,
+positive control FIRED (crossing 56.78 → 28.595), measurement identical to all printed digits across
+both worktrees. F-5's `MO-VERIFIED` tag restored on this. `resting_leak_probe.py:6-7` still hardcodes
+an absolute path into the vestigial `gifted-almeida-4e8a7b` tree — **hygiene defect, no results
+consequence, PO-3's file, untouched.**
+
+**Probe:** `src/models/Model_6/sweep/po7_stepper_divergence_probe.py` (committed BEFORE each run).
+
+## 2. THE NONDETERMINISM ESCALATION — inherit this whole, including the correction
+
+**MEASURED — four directly comparable runs, one script, one config (2 synapses, 45 s, seed 7):**
+
+| run | eta_max | cross_bonds | dimers |
+|---|---|---|---|
+| proc 1 | 0.09396788 | 1848 | 796 |
+| proc 2 | 0.10690230 | 1179 | 822 |
+| in-process A | 0.04873884 | 2578 | 873 |
+| in-process B | 0.10690230 | 1536 | 653 |
+
+**`cross_bonds` spread 2.19×** (1179 → 2578). `eta_max` spread 2.19×, and counting the Arm A null the
+range **includes 0.0** — **whether the backbone condenses at all was not reproducible at a fixed
+seed.** *(Ruling 023 quotes my earlier **1.57×**; that was two runs and I superseded it at `306840b`.
+**2.19× is the figure.** The standing rule in 023 §3 is strengthened by the correction, not weakened.)*
+
+**SHOWN — three unseeded generators, `np.random.default_rng()` with no argument, seeded from OS
+entropy and therefore untouched by any caller's `np.random.seed()`:**
+- `camkii_module.py:199` — drawn at `:300,301,318,388,389,438,439`
+- `spine_plasticity_module.py:274` — drawn **once**, at `:441-442`, thermal noise on `spine_volume` only
+- `multi_synapse_network.py:1188` — in `sample_correlated_eligibilities`, called at `:1236`
+
+**WHY THE FIX IS A PHYSICS DECISION, NOT HYGIENE.** `p.stochastic` defaults to **`True`**
+(`camkii_module.py:70,129,153`; `spine_plasticity_module.py:175`) — the stochasticity is a **declared
+modelling choice**, and **DDSC is stochastic by design** (Jain 2024, `quantum-system-canonical:131`).
+So seeding asks *which stochasticity is physics and which is accidental.* It is three lines and it is
+not a three-line decision: it changes stochastic behaviour across five POs' live surfaces at once and
+would invalidate every in-flight measurement including PO-5's keystone run. **Sarah's call. Do not
+seed on a successor's own authority.**
+
+### THE CORRECTION — DO NOT LOSE IT, AND DO NOT OVER-GENERALISE THE ALARM
+
+**My original boundary "driven vs resting" is FALSIFIED, by the MO's measurement.** Gen-2 re-ran
+PO-4's `gap_template_symmetry_probe` (2 synapses, 30 drive steps) **twice at the same HEAD `3928f2d`,
+both outcomes pre-registered before the result**: **bit-identical** — 1915 particles, te 34.59/32.81
+both times. **A driven multi-synapse run reproduced to the last particle. Driven is NOT sufficient
+for nondeterminism.**
+
+**Ruling 023 states the replacement as "which MODULES a run reaches." That needs one refinement,
+established by read (no run), and a successor should have it because the unrefined version misroutes
+the next unit:**
+- `model6_core.py:679` steps CaMKII **every step** — its own comment: *"runs every step regardless of
+  gate"* — and the draws are gated on `p.stochastic`, which defaults `True`.
+- **So PO-4's probe DOES reach two of the three generators and DOES draw from them every step, and is
+  still bit-identical.** Reach alone is therefore not the discriminator.
+
+**The boundary is per-OUTPUT dependence.** Three cases; only the third is nondeterministic:
+**(a)** never drawn · **(b) drawn, but the measured quantity has no dependence path from the draw** ·
+**(c)** drawn and dependent. **Arm B and PO-4's probe are both (b).** Arm B is the confirmation: I
+predicted from `spine_plasticity_module.py:441-442` that `E_invasion` would be immune *while its
+generator kept drawing*, then measured it immune. **A module-reach trace would flag PO-4's probe
+at-risk and be wrong.**
+
+**Net for a successor: the alarm is REAL and BOUNDED.** Real in case (c) — driven runs reading `eta`,
+`cross_bonds`, the partition. Bounded because (b) exists and is common. **Ruling 023 §3's standing
+rule holds: a driven multi-synapse delta needs N ≥ 3 repeats and a stated spread, or it is UNRESOLVED
+— not a number.** The resting/`E_invasion` path is explicitly NOT affected, by measurement.
+
+**Never run, still the decision-relevant missing number:** the N-run distributional pass. Four runs is
+a **range, not a distribution** — no variance, bounds nothing.
+
+## 3. WHAT EXISTS NOWHERE ON DISK — the irreplaceable part
+
+**A. The `_remove_dimer` item in the closing request is MISATTRIBUTED — and this correction exists
+only here.** The request describes it as *"routed to you by PO-5 and still unfixed."* **Verified
+before writing: it was never routed to me.** `requests/po7-construct-validity/` contains exactly two
+files — `mo-ruling-018.md` and `mo-ruling-023.md` — and neither mentions it. Every on-disk trace sits
+in **PO-5's** lane (`leads/po5-selectivity.md`, `requests/model6-mo/po5-selectivity-003..007.md`,
+`requests/po5-selectivity/mo-ruling-019.md`, `-028.md`, `board.md`, the Sarah handoff). Further:
+`mo-ruling-028.md:19` and the handoff at `:64-65` record the `_remove_dimer` **tripwire as a control
+that PASSED with zero calls** in PO-5's Q-B run — not as an unfixed defect. **I am not its owner, I
+have not verified PO-5's run, and I have nothing to add to it. A successor must go to PO-5's
+artifacts, not to mine.** Recording this because a wrap instruction is a claim like any other, and an
+inherited to-do that its supposed owner never received is how phantom work outlives a program.
+
+**B. My shell silently reset into the WRONG WORKTREE mid-session, and a commit no-op'd.** Late in the
+session the cwd flipped to `intelligent-kowalevski-0d741d` (branch `claude/inspiring-sammet-aef0e0`);
+a `git commit` there reported **"nothing to commit, working tree clean"** and committed nothing, while
+the edit itself had landed correctly because the Edit tool used an absolute path. **Caught only by the
+`git show --stat HEAD` verify step.** This is F4's root cause — *"a check run in the wrong tree"* —
+arriving unprompted, in the session that was documenting it. **Successor: absolute paths for edits,
+`git branch --show-current` before committing, and treat a "working tree clean" on a commit you
+expected to land as a defect, not a no-op.**
+
+**C. The probe's results artifact is NOT tracked and is already partly lost.**
+`po7_stepper_divergence_results.json` is **gitignored** (I did not force-add it), and **Arm A's second
+run OVERWROTE Arm B's results in that file.** Every number above survives **only as prose in this
+lead file**; the raw logs were in a session-local scratchpad that does not persist. **The lead file is
+the record — re-running the probe will not reproduce the Arm B json.**
+
+**D. An unexplained observation that may be the fastest route into §2's open question.** Across two
+*independent* runs, `eta_max` agreed to ~9 significant figures — **0.10690229616257775** (proc 2) vs
+**0.10690229564527311** (in-process B) — **while `cross_bonds` in those same two runs differed 1179 vs
+1536.** A near-invariant `eta` sitting on top of a bond graph that varies by 30% is odd. It hints the
+nondeterminism enters the **topology** while `eta` is pinned by an aggregate that is nearly invariant
+to it. **I never chased it and it appears nowhere else.** If the boundary unit is ever opened, this is
+where I would start.
+
+**E. The tool for this defect class already exists.** `po7_stepper_divergence_probe.py`'s `_load()`
+imports a module from an arbitrary worktree by absolute path, so cross-tree A/B comparison is a
+solved problem here — that is how Arm B settled F-5. Reuse it; do not rebuild it.
+
+**Status: WRAPPED.** Unit 1 complete and accepted. Q7-1 escalated to Sarah and unresolved by design.
+Q7-2/Q7-3 routings placed with the MO. Q7-4/Q7-5 filed. **Nothing seeded, nothing de-duplicated, no
+other owner's file touched.**
