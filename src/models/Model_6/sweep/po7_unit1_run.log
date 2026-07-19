@@ -1,0 +1,27 @@
+spacing= 0.2 seed= 31337  cross=   2 intra=  215 peak_cross=   2 overlap=0.036 events=107
+spacing= 0.2 seed=  4242  cross=   3 intra=  170 peak_cross=   3 overlap=0.056 events=113
+spacing= 0.4 seed= 31337  cross=   1 intra=  212 peak_cross=   1 overlap=0.014 events=129
+spacing= 0.4 seed=  4242  cross=   0 intra=  178 peak_cross=   0 overlap=0.000 events=121
+spacing= 0.6 seed= 31337  cross=   0 intra=  244 peak_cross=   0 overlap=0.000 events=152
+spacing= 0.6 seed=  4242  cross=   0 intra=  210 peak_cross=   0 overlap=0.000 events=146
+spacing= 0.8 seed= 31337  cross=   0 intra=  244 peak_cross=   0 overlap=0.000 events=152
+spacing= 0.8 seed=  4242  cross=   0 intra=  210 peak_cross=   0 overlap=0.000 events=146
+spacing= 1.2 seed= 31337  cross=   0 intra=  244 peak_cross=   0 overlap=0.000 events=152
+spacing= 1.2 seed=  4242  cross=   0 intra=  210 peak_cross=   0 overlap=0.000 events=146
+spacing= 2.0 seed= 31337  cross=   0 intra=  248 peak_cross=   0 overlap=0.000 events=152
+spacing= 2.0 seed=  4242  cross=   0 intra=  210 peak_cross=   0 overlap=0.000 events=146
+
+=== PER-SPACING SUMMARY (mean over seeds) ===
+  spacing= 0.2um  mean_cross=    2.5  mean_peak_cross=    2.5  mean_overlap=0.046  seeds_with_cross=2/2
+  spacing= 0.4um  mean_cross=    0.5  mean_peak_cross=    0.5  mean_overlap=0.007  seeds_with_cross=1/2
+  spacing= 0.6um  mean_cross=    0.0  mean_peak_cross=    0.0  mean_overlap=0.000  seeds_with_cross=0/2
+  spacing= 0.8um  mean_cross=    0.0  mean_peak_cross=    0.0  mean_overlap=0.000  seeds_with_cross=0/2
+  spacing= 1.2um  mean_cross=    0.0  mean_peak_cross=    0.0  mean_overlap=0.000  seeds_with_cross=0/2
+  spacing= 2.0um  mean_cross=    0.0  mean_peak_cross=    0.0  mean_overlap=0.000  seeds_with_cross=0/2
+
+=== REGISTERED PREDICTION CHECK ===
+  zero cross edges at spacing > 0.9um : True
+  some cross edges at spacing <= 0.8um: True
+  VERDICT: GEOMETRY CONFIRMED - layer forms cross-synapse edges in the predicted band
+
+wrote /Users/sarahdavidson/posner_quantum_dynamics/.claude/worktrees/po5-keystone/src/models/Model_6/sweep/po7_unit1_results.json

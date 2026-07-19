@@ -1,0 +1,202 @@
+{
+  "rows": [
+    {
+      "spacing_um": 0.2,
+      "seed": 31337,
+      "final_prov_bonds": 217,
+      "final_cross_bonds": 2,
+      "final_intra_bonds": 215,
+      "peak_cross_bonds": 2,
+      "peak_prov_bonds": 217,
+      "peak_overlap_frac": 0.03571428571428571,
+      "peak_events": 107
+    },
+    {
+      "spacing_um": 0.2,
+      "seed": 4242,
+      "final_prov_bonds": 173,
+      "final_cross_bonds": 3,
+      "final_intra_bonds": 170,
+      "peak_cross_bonds": 3,
+      "peak_prov_bonds": 173,
+      "peak_overlap_frac": 0.05555555555555555,
+      "peak_events": 113
+    },
+    {
+      "spacing_um": 0.4,
+      "seed": 31337,
+      "final_prov_bonds": 213,
+      "final_cross_bonds": 1,
+      "final_intra_bonds": 212,
+      "peak_cross_bonds": 1,
+      "peak_prov_bonds": 213,
+      "peak_overlap_frac": 0.013513513513513514,
+      "peak_events": 129
+    },
+    {
+      "spacing_um": 0.4,
+      "seed": 4242,
+      "final_prov_bonds": 178,
+      "final_cross_bonds": 0,
+      "final_intra_bonds": 178,
+      "peak_cross_bonds": 0,
+      "peak_prov_bonds": 178,
+      "peak_overlap_frac": 0.0,
+      "peak_events": 121
+    },
+    {
+      "spacing_um": 0.6,
+      "seed": 31337,
+      "final_prov_bonds": 244,
+      "final_cross_bonds": 0,
+      "final_intra_bonds": 244,
+      "peak_cross_bonds": 0,
+      "peak_prov_bonds": 244,
+      "peak_overlap_frac": 0.0,
+      "peak_events": 152
+    },
+    {
+      "spacing_um": 0.6,
+      "seed": 4242,
+      "final_prov_bonds": 210,
+      "final_cross_bonds": 0,
+      "final_intra_bonds": 210,
+      "peak_cross_bonds": 0,
+      "peak_prov_bonds": 210,
+      "peak_overlap_frac": 0.0,
+      "peak_events": 146
+    },
+    {
+      "spacing_um": 0.8,
+      "seed": 31337,
+      "final_prov_bonds": 244,
+      "final_cross_bonds": 0,
+      "final_intra_bonds": 244,
+      "peak_cross_bonds": 0,
+      "peak_prov_bonds": 244,
+      "peak_overlap_frac": 0.0,
+      "peak_events": 152
+    },
+    {
+      "spacing_um": 0.8,
+      "seed": 4242,
+      "final_prov_bonds": 210,
+      "final_cross_bonds": 0,
+      "final_intra_bonds": 210,
+      "peak_cross_bonds": 0,
+      "peak_prov_bonds": 210,
+      "peak_overlap_frac": 0.0,
+      "peak_events": 146
+    },
+    {
+      "spacing_um": 1.2,
+      "seed": 31337,
+      "final_prov_bonds": 244,
+      "final_cross_bonds": 0,
+      "final_intra_bonds": 244,
+      "peak_cross_bonds": 0,
+      "peak_prov_bonds": 244,
+      "peak_overlap_frac": 0.0,
+      "peak_events": 152
+    },
+    {
+      "spacing_um": 1.2,
+      "seed": 4242,
+      "final_prov_bonds": 210,
+      "final_cross_bonds": 0,
+      "final_intra_bonds": 210,
+      "peak_cross_bonds": 0,
+      "peak_prov_bonds": 210,
+      "peak_overlap_frac": 0.0,
+      "peak_events": 146
+    },
+    {
+      "spacing_um": 2.0,
+      "seed": 31337,
+      "final_prov_bonds": 248,
+      "final_cross_bonds": 0,
+      "final_intra_bonds": 248,
+      "peak_cross_bonds": 0,
+      "peak_prov_bonds": 248,
+      "peak_overlap_frac": 0.0,
+      "peak_events": 152
+    },
+    {
+      "spacing_um": 2.0,
+      "seed": 4242,
+      "final_prov_bonds": 210,
+      "final_cross_bonds": 0,
+      "final_intra_bonds": 210,
+      "peak_cross_bonds": 0,
+      "peak_prov_bonds": 210,
+      "peak_overlap_frac": 0.0,
+      "peak_events": 146
+    }
+  ],
+  "summary": [
+    {
+      "spacing_um": 0.2,
+      "mean_cross": 2.5,
+      "mean_intra": 192.5,
+      "mean_peak_cross": 2.5,
+      "mean_overlap": 0.04563492063492063,
+      "seeds_with_any_cross": 2
+    },
+    {
+      "spacing_um": 0.4,
+      "mean_cross": 0.5,
+      "mean_intra": 195.0,
+      "mean_peak_cross": 0.5,
+      "mean_overlap": 0.006756756756756757,
+      "seeds_with_any_cross": 1
+    },
+    {
+      "spacing_um": 0.6,
+      "mean_cross": 0.0,
+      "mean_intra": 227.0,
+      "mean_peak_cross": 0.0,
+      "mean_overlap": 0.0,
+      "seeds_with_any_cross": 0
+    },
+    {
+      "spacing_um": 0.8,
+      "mean_cross": 0.0,
+      "mean_intra": 227.0,
+      "mean_peak_cross": 0.0,
+      "mean_overlap": 0.0,
+      "seeds_with_any_cross": 0
+    },
+    {
+      "spacing_um": 1.2,
+      "mean_cross": 0.0,
+      "mean_intra": 227.0,
+      "mean_peak_cross": 0.0,
+      "mean_overlap": 0.0,
+      "seeds_with_any_cross": 0
+    },
+    {
+      "spacing_um": 2.0,
+      "mean_cross": 0.0,
+      "mean_intra": 229.0,
+      "mean_peak_cross": 0.0,
+      "mean_overlap": 0.0,
+      "seeds_with_any_cross": 0
+    }
+  ],
+  "prediction_above_0p9um_zero": true,
+  "prediction_below_0p8um_nonzero": true,
+  "verdict": "GEOMETRY CONFIRMED - layer forms cross-synapse edges in the predicted band",
+  "config": {
+    "n_synapses": 6,
+    "pattern": "linear",
+    "t_sim_s": 0.4,
+    "dt_s": 0.005,
+    "tracker_every": 10,
+    "seeds": [
+      31337,
+      4242
+    ],
+    "reach_nm": 500.0,
+    "grid_span_nm": 400.0
+  }
+}
