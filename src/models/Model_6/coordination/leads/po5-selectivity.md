@@ -5,9 +5,36 @@ resolution? Pre-registered, null that cannot show the effect, positive control d
 fire, verdict able to return FALSIFIED.
 
 **Status:** LIVE. Re-scoped by Sarah 2026-07-18 20:14Z — see `requests/po5-selectivity/mo-rescope-001.md`.
-**Current unit:** UNIT 2 **Q-B RUNNING** on the exclusive heavy slot (ruling 019).
-**SLOT STATUS: HELD AND IN USE — not released.** Released here the moment Q-B returns.
-**Last heartbeat:** 2026-07-18 23:20Z
+**Current unit:** UNIT 2 Q-B — **RAN 58.2 min, ALL 9 RUNS, ALL GATES PASSED, AND RETURNED NO
+VERDICT.** The scorer crashed; the flaw is in the comparison layer, not the physics.
+**🔓 SLOT RELEASED 2026-07-18 23:25Z — PO-2 and PO-4 are unblocked, take it.** PO-5 needs no compute
+to do the next step and will re-request only after the scorer is validated offline.
+**Last heartbeat:** 2026-07-18 23:25Z
+
+**WHAT THE SLOT BOUGHT, stated plainly: no verdict on §8.** All 9 runs completed; instrument
+conservation PASS; A2.3 `_remove_dimer` tripwire PASS (zero calls); positive control `max_glu > 0`
+PASS (min 1.000); drive matching PASS (A=2.7540 vs B=2.7460, 0.3%). **Then the scoring step raised
+`ValueError: operands could not be broadcast together with shapes (169,) (36,)`.**
+
+**THREE FLAWS, mine, and the third is the expensive one:**
+1. **The statistic is not comparable across runs.** Cells were indexed by *each run's own* occupied
+   set (`remap` = sorted occupied cells), so index *i* denotes a **different physical location** in
+   every run. Frobenius distance between such matrices is meaningless even when the shapes happen to
+   match. **This is a design flaw, not a coding slip.**
+2. **Occupied-cell count varies 6–14 across seeds**; only 3 of 9 runs cleared `MIN_CELLS = 10`. The
+   A2.6 pre-flight sampled **one** seed (13 cells) and was unrepresentative of the arm.
+3. **I did not persist the scored intermediate**, so a scoring bug destroyed 58 minutes of physics.
+   **PO-3 had already solved this** — `sweep/score_leta5.py` scores offline from a persisted trace.
+   That pattern was in front of me and I did not compose from it. A no-reinvention miss.
+
+**Next, and it needs ZERO compute:** rebuild the statistic on a **fixed global lattice** (absolute
+cell coordinates, so a cell means the same place in every run), compare on the cell set occupied in
+**all** runs, persist the matrices, and split scoring into a separate offline scorer. **Validate it
+on synthetic data before requesting the slot again.**
+
+**Not moving `MIN_OCC` or `MIN_CELLS`.** If the all-run intersection is below `MIN_CELLS`, the
+honest answer is that the instrument cannot resolve pair structure in this geometry — which is a
+finding about the measurement and is reported as one, per the registered hard stop.
 
 **MY DEFECT, corrected:** this file read *"Q-B unrun, gated on the compute slot"* while Q-B was
 running, so the MO correctly read PO-5 as idle for ~50 min off a stale heartbeat. **The MO offered to
