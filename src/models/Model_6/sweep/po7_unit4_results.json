@@ -1,0 +1,15 @@
+{
+  "gate_on_path_unchanged": true,
+  "cross": 2,
+  "intra": 215,
+  "n_bonds": 217,
+  "n_tagged": 217,
+  "spin_index_usage": {
+    "1": 350,
+    "0": 84
+  },
+  "indices_in_range": true,
+  "n_mediators": 434,
+  "max_bonds_per_spin": 1,
+  "n_spins_over_bound": 0
+}

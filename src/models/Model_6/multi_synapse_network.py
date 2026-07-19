@@ -129,6 +129,13 @@ class NetworkEntanglementTracker:
         self._prov_time: float = 0.0                           # tracker-local clock for event aging
         self._prov_seen: set = set()                           # global_ids already granted provenance (born-with)
         self._prov_last_stats: dict = {}                       # diagnostics for the probe (overlap fraction etc.)
+        # PO-7 (advisor R4): WHICH-SPIN provenance. Fisher's inheritance names the phosphate
+        # slot, not just the partner. 4 spins per Ca6(PO4)4, K=2 claims => claim j takes spin j.
+        # Side-band only — no dynamics read these, so they perturb nothing on any path. They are
+        # the prerequisite for the monogamy bound (a spin mediates at most one bond) and for a
+        # channel rule derived from the inherited pair instead of bond direction.
+        self._prov_slot_of: Dict = {}                          # global_id -> {event_id: spin idx}
+        self._prov_bond_spins: Dict = {}                       # (gid_lo, gid_hi) -> (spin_lo, spin_hi)
 
     @property
     def entanglement_bonds(self):
@@ -448,13 +455,17 @@ class NetworkEntanglementTracker:
             if (a not in current_ids or b not in current_ids
                     or not (ent_of.get(a, False) and ent_of.get(b, False))):
                 self._prov_bonds.pop(key, None)
+                self._prov_bond_spins.pop(key, None)
                 continue
             f = float(P_of[a] * P_of[b])
             if P_of[a] <= 0.5 or P_of[b] <= 0.5:
                 self._prov_bonds.pop(key, None)   # coherence death
+                self._prov_bond_spins.pop(key, None)
             else:
                 self._prov_bonds[key] = f
         self._prov_seen &= current_ids
+        for gid in [g for g in self._prov_slot_of if g not in current_ids]:
+            self._prov_slot_of.pop(gid, None)
 
         # (2) Age out expired events (phosphates consumed within ~seconds).
         self._prov_events = [e for e in self._prov_events
@@ -505,12 +516,20 @@ class NetworkEntanglementTracker:
                     if e['slots_free'] <= 0:
                         continue
                     e['slots_free'] -= 1
+                    spin_here = claimed              # this dimer's spin receiving the daughter
                     e['holders'].append(gid)
+                    e.setdefault('holder_spins', []).append(spin_here)
+                    self._prov_slot_of.setdefault(gid, {})[e['id']] = spin_here
                     if len(e['holders']) >= 2:
                         partner = e['holders'][-2]
                         if partner != gid and partner in current_ids:
                             key = (min(gid, partner), max(gid, partner))
                             self._prov_bonds[key] = float(P_of[gid] * P_of[partner])
+                            # the mediating spin pair for this shared-origin edge
+                            partner_spin = e['holder_spins'][-2]
+                            self._prov_bond_spins[key] = ((partner_spin, spin_here)
+                                                          if partner < gid
+                                                          else (spin_here, partner_spin))
                     claimed += 1
                     if claimed >= self.provenance_net_k:
                         break

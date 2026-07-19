@@ -1,0 +1,25 @@
+========================================================================================
+GATE — provenance-ON regression (the tag must change nothing)
+========================================================================================
+  cross =    2   expected 2
+  intra =  215   expected 215
+  ON-PATH UNCHANGED: PASS
+
+========================================================================================
+TAG INTEGRITY
+========================================================================================
+  provenance bonds: 217   with a recorded mediating spin pair: 217
+  dimers carrying a slot map: 367
+  spin-index usage across bond endpoints: {0: 84, 1: 350}
+  (K=2 claims per dimer => indices must be a subset of {0,1})
+  INDICES IN RANGE: PASS
+
+========================================================================================
+MONOGAMY AUDIT ON THE PROVENANCE GRAPH (a spin mediates AT MOST ONE bond)
+========================================================================================
+  distinct (dimer, spin) mediators in use: 434
+  max bonds asked of a single spin: 1
+  spins over the bound: 0 / 434
+  => provenance graph is monogamy-CLEAN at this operating point
+
+wrote /Users/sarahdavidson/posner_quantum_dynamics/.claude/worktrees/po5-keystone/src/models/Model_6/sweep/po7_unit4_results.json

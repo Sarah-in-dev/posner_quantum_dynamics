@@ -190,6 +190,10 @@ class DimerParticleSystem:
         self.provenance_age_s = 2.0         # events expire after this (phosphates consumed ~s)
         self._prov_events = []              # list of dicts: id, pos_nm, t, slots_free, holders
         self._next_event_id = 0
+        # PO-7 (advisor R4): WHICH-SPIN provenance. Side-band only — nothing reads these yet,
+        # so they cannot perturb dynamics on any path.
+        self._prov_slot_of = {}             # dimer.id -> {event_id: spin index 0..3}
+        self._prov_bond_spins = {}          # (id_lo, id_hi) -> (spin_lo, spin_hi) mediating pair
         self._calcium_field = None
         self._prov_dx_nm = self.dx_nm
         self.j_coupling_threshold = 5.0  # Hz, minimum for protection
@@ -448,7 +452,17 @@ class DimerParticleSystem:
     def _assign_provenance_and_bond(self, dimer):
         """Newborn dimer claims up to K nearest recent events with a free slot; when an
         event's two daughters are both claimed, the two holders bond (shared entangled
-        origin). Deterministic nearest-selection — consumes no RNG."""
+        origin). Deterministic nearest-selection — consumes no RNG.
+
+        PO-7 (advisor R4): the WHICH-SPIN tag. Fisher's inheritance does not merely say
+        "these two dimers bond" — it says which ³¹P slot in each dimer holds the inherited
+        spin. A Ca₆(PO₄)₄ dimer has 4 spins; K=2 claims, so claim j occupies spin j. The
+        two holders of one event are then linked through a SPECIFIC mediating spin pair.
+        Recorded side-band (`_prov_slot_of`, `_prov_bond_spins`) — no dynamics read it yet,
+        so this is bit-identical with provenance ON as well as OFF. It is the prerequisite
+        for (a) the monogamy bound (a spin mediates at most one bond) and (b) a channel rule
+        derived from the inherited pair rather than from bond direction.
+        """
         if not self._prov_events:
             return
         epos = np.array([e['pos'] for e in self._prov_events])
@@ -460,8 +474,11 @@ class DimerParticleSystem:
             if e['slots_free'] <= 0:
                 continue
             e['slots_free'] -= 1
+            spin_here = len(claimed)                 # this dimer's spin receiving the daughter
             e['holders'].append(dimer.id)
+            e.setdefault('holder_spins', []).append(spin_here)
             claimed.append(e['id'])
+            self._prov_slot_of.setdefault(dimer.id, {})[e['id']] = spin_here
             # if this event now has two holders, the two of them share it -> bond
             if len(e['holders']) >= 2:
                 partner = e['holders'][-2]
@@ -471,6 +488,12 @@ class DimerParticleSystem:
                 if other is not None and other.id != dimer.id:
                     strength = other.singlet_probability * dimer.singlet_probability
                     self._create_bond(dimer.id, other.id, strength=strength)
+                    # the mediating spin pair: partner's spin for this event, and ours
+                    partner_spin = e['holder_spins'][-2]
+                    key = (min(dimer.id, partner), max(dimer.id, partner))
+                    self._prov_bond_spins[key] = ((partner_spin, spin_here)
+                                                  if partner < dimer.id
+                                                  else (spin_here, partner_spin))
             if len(claimed) >= self.provenance_k:
                 break
         dimer.event_ids = frozenset(claimed)
