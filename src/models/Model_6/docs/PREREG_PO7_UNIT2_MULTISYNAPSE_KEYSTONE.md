@@ -50,8 +50,27 @@ synapses are active" from "the partition tracks where things are."**
 
 ## Statistics (fixed now)
 
-- `Q_act` — Newman modularity of the entanglement graph against the 2-group **activation-identity**
-  label (each dimer labelled by whether its synapse is in that run's active set).
+### Amendment, registered BEFORE any scored run — the graph is SYNAPSE-level, not dimer-level
+
+While implementing, I caught a mis-registration in my own first draft and am recording it rather
+than quietly fixing it. The draft computed `Q` on the **dimer-level** graph. But
+`intra_synapse_bonds_cache` is the dense per-synapse clique — the single-synapse fingerprint alone
+carries **E = 369 740** intra edges — and **every intra edge lies inside one synapse, hence inside
+one activation label.** Dimer-level `Q` against activation identity would therefore sit near 1.0
+**by construction, for any input whatsoever**: a statistic that can only pass. That is exactly the
+failure this document's guard exists to reject, and it would have manufactured a second false
+positive on top of L·PO5-13.
+
+**The graph is therefore the 6-node SYNAPSE graph** — the object
+`quantum-system-canonical` §5 and `model6-entanglement-partition-werner` §1 both name:
+> "synapses = nodes, cross-synapse bonds = edges"
+
+Nodes are synapses; edge weight `W_ij` counts **cross-synapse** bonds (provenance + η, each above
+the Werner bound). Intra-synapse clique edges are excluded — they carry no cross-synapse
+information and their only effect is to saturate the statistic.
+
+- `Q_act` — Newman modularity of the **synapse-level cross-bond graph** against the 2-group
+  **activation-identity** label (each synapse labelled active / inactive in that run).
 - `Q_shuf` — same, with synapse→label assignment permuted. The null.
 - `n_multi` — number of connected components spanning **≥2 synapses**. The decomposition statistic.
 - Effect size: Cohen's `d` across seeds.
