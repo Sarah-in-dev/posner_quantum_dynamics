@@ -1,0 +1,45 @@
+============================================================================================
+MEASURED INPUTS (from the run, not assumed)
+============================================================================================
+  D_phosphate (coded, free solution) = 8.900e-10 m^2/s  = 890 um^2/s
+  k_base                              = 1.892e+04 M^-1 s^-1
+  template_enhancement (mean)         = 1.015
+  [PNC] over active grid cells: median=1.567e-08 M  p90=1.567e-08 M  max=1.818e-04 M
+  active cells: 10000 / 10000
+
+============================================================================================
+DERIVED CLAIM RADIUS   r = sqrt(6D / k_incorp),  k_incorp = k_eff * [PNC]
+============================================================================================
+
+  D =  890.0 um^2/s   [free solution (as coded)]
+    [PNC]=1.567e-08 M (median)  k_incorp=3.008e-04 s^-1  r_claim=   4,213,584 nm  (  4,213.58 um)
+    [PNC]=1.567e-08 M (   p90)  k_incorp=3.008e-04 s^-1  r_claim=   4,213,584 nm  (  4,213.58 um)
+    [PNC]=1.818e-04 M (   max)  k_incorp=3.489e+00 s^-1  r_claim=      39,120 nm  (     39.12 um)
+
+  D =  296.7 um^2/s   [cytoplasmic crowding /3]
+    [PNC]=1.567e-08 M (median)  k_incorp=3.008e-04 s^-1  r_claim=   2,432,714 nm  (  2,432.71 um)
+    [PNC]=1.567e-08 M (   p90)  k_incorp=3.008e-04 s^-1  r_claim=   2,432,714 nm  (  2,432.71 um)
+    [PNC]=1.818e-04 M (   max)  k_incorp=3.489e+00 s^-1  r_claim=      22,586 nm  (     22.59 um)
+
+  D =  222.5 um^2/s   [cytoplasmic crowding /4]
+    [PNC]=1.567e-08 M (median)  k_incorp=3.008e-04 s^-1  r_claim=   2,106,792 nm  (  2,106.79 um)
+    [PNC]=1.567e-08 M (   p90)  k_incorp=3.008e-04 s^-1  r_claim=   2,106,792 nm  (  2,106.79 um)
+    [PNC]=1.818e-04 M (   max)  k_incorp=3.489e+00 s^-1  r_claim=      19,560 nm  (     19.56 um)
+
+============================================================================================
+VERDICT ON THE CODED CONSTANT
+============================================================================================
+  derived r_claim spans 19,560 nm ... 4,213,584 nm
+  coded provenance_net_reach_nm = 500 nm
+  => The coded reach is SMALLER than every derived value (by 39x at the most conservative end).
+     Per advisor R4 §4.2: 'If it comes out much larger, the yield ceiling is a
+     settings artifact.' The cross-edge ceiling is therefore NOT a physical
+     property of the mechanism — it is the reach constant being far too small.
+
+wrote /Users/sarahdavidson/posner_quantum_dynamics/.claude/worktrees/po5-keystone/src/models/Model_6/sweep/po7_unit7_claim_radius_results.json
+
+STATED ASSUMPTIONS: (1) k_incorp is the PSEUDO-FIRST-ORDER PNC consumption rate
+k_eff*[PNC]; (2) the competing sink is dimer formation only — no phosphate buffering,
+efflux, or metabolic re-uptake is modelled (params note phosphate buffering is absent);
+(3) sqrt(6D/k) is the 3-D reaction-diffusion length. Each would move the number, and
+all three push the SAME way: adding sinks raises k_incorp and SHRINKS r.

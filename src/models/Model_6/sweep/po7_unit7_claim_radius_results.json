@@ -1,0 +1,88 @@
+{
+  "D_phosphate_free_m2_s": 8.9e-10,
+  "k_base_M_s": 18918.670959917737,
+  "template_enhancement_mean": 1.0147,
+  "pnc_M": {
+    "median": 1.566785569497221e-08,
+    "p90": 1.566785569497221e-08,
+    "max": 0.0001817681616469212,
+    "n_active_cells": 10000
+  },
+  "rows": [
+    {
+      "D_m2_s": 8.9e-10,
+      "crowding": "free solution (as coded)",
+      "pnc_level": "median",
+      "pnc_M": 1.566785569497221e-08,
+      "k_incorp_s": 0.0003007723071368001,
+      "r_claim_m": 0.00421358447245442
+    },
+    {
+      "D_m2_s": 8.9e-10,
+      "crowding": "free solution (as coded)",
+      "pnc_level": "p90",
+      "pnc_M": 1.566785569497221e-08,
+      "k_incorp_s": 0.0003007723071368001,
+      "r_claim_m": 0.00421358447245442
+    },
+    {
+      "D_m2_s": 8.9e-10,
+      "crowding": "free solution (as coded)",
+      "pnc_level": "max",
+      "pnc_M": 0.0001817681616469212,
+      "k_incorp_s": 3.4893625781926936,
+      "r_claim_m": 3.911988585660277e-05
+    },
+    {
+      "D_m2_s": 2.966666666666667e-10,
+      "crowding": "cytoplasmic crowding /3",
+      "pnc_level": "median",
+      "pnc_M": 1.566785569497221e-08,
+      "k_incorp_s": 0.0003007723071368001,
+      "r_claim_m": 0.0024327141294247863
+    },
+    {
+      "D_m2_s": 2.966666666666667e-10,
+      "crowding": "cytoplasmic crowding /3",
+      "pnc_level": "p90",
+      "pnc_M": 1.566785569497221e-08,
+      "k_incorp_s": 0.0003007723071368001,
+      "r_claim_m": 0.0024327141294247863
+    },
+    {
+      "D_m2_s": 2.966666666666667e-10,
+      "crowding": "cytoplasmic crowding /3",
+      "pnc_level": "max",
+      "pnc_M": 0.0001817681616469212,
+      "k_incorp_s": 3.4893625781926936,
+      "r_claim_m": 2.2585876629977042e-05
+    },
+    {
+      "D_m2_s": 2.225e-10,
+      "crowding": "cytoplasmic crowding /4",
+      "pnc_level": "median",
+      "pnc_M": 1.566785569497221e-08,
+      "k_incorp_s": 0.0003007723071368001,
+      "r_claim_m": 0.00210679223622721
+    },
+    {
+      "D_m2_s": 2.225e-10,
+      "crowding": "cytoplasmic crowding /4",
+      "pnc_level": "p90",
+      "pnc_M": 1.566785569497221e-08,
+      "k_incorp_s": 0.0003007723071368001,
+      "r_claim_m": 0.00210679223622721
+    },
+    {
+      "D_m2_s": 2.225e-10,
+      "crowding": "cytoplasmic crowding /4",
+      "pnc_level": "max",
+      "pnc_M": 0.0001817681616469212,
+      "k_incorp_s": 3.4893625781926936,
+      "r_claim_m": 1.9559942928301385e-05
+    }
+  ],
+  "coded_reach_nm": 500.0,
+  "derived_r_min_nm": 19559.942928301385,
+  "derived_r_max_nm": 4213584.472454419
+}
