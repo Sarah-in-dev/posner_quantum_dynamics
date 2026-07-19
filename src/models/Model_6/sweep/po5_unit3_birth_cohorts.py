@@ -184,9 +184,13 @@ def main():
     print("=" * 86, flush=True)
 
     results, glus = [], {}
+    SEEDS = [4242, 4243, 4244]
     for arm in ("SUSTAINED", "PULSED"):
-        r, g = run(arm, seed=4242)
-        results += r; glus[arm] = g
+        for sd in SEEDS:
+            r, g = run(arm, seed=sd)
+            for row in r:
+                row["seed"] = sd
+            results += r; glus[f"{arm}_{sd}"] = g
 
     ok = all(r["match"] for r in results)
     any_gap = any(r["n_gaps_over_window"] > 0 for r in results)
@@ -206,7 +210,7 @@ def main():
         nb = max(r["n_gaps_over_window"] for r in rows)
         mc = rows[-1]["measured_components"]
         print(f"  {arm:10s} max birth gap {mg:.4f}s | gaps>100ms: {nb} | "
-              f"final P0 components: {mc} | max_glu {glus[arm]:.3f}")
+              f"final P0 components: {mc}")
     print()
     if not any_gap:
         print("  NO arm produced a birth gap > 100 ms.")
