@@ -55,3 +55,31 @@ The grounding brief; the network-shared-event build committed (bit-identical-off
 pre-registered multi-synapse test with its guard-statement; the verdict WITH the decomposition-null
 result; a `RESEARCH_LOG` entry + DECISION RECORD row. **Either answer is a result** — a clean negative
 (partition decomposes per-synapse) is as valuable as a pass.
+
+---
+
+## ⚠ HANDOFF ADDENDUM — 2026-07-19 · you INHERIT in-progress work, do not start from scratch
+
+A prior worker on this task built ~156 lines of the network-shared-event layer before being
+stopped. **PO-5 erroneously reverted it, then recovered it from transcript and committed it** —
+commit message begins `wip(model6): RECOVERED PO-7 work`. It is on the branch now.
+
+**What is already built (verify, don't rebuild):**
+- `multi_synapse_network.py`: opt-in flag `self.provenance_network = False` (+ `_net_event_rate`,
+  `_net_reach_nm = 500`, `_net_age_s`, `_net_slots = 2`, `_net_k = 2`, `_prov_seen`), and a
+  `_step_network_provenance(dt, synapses, positions)` method called from `step()` under the flag.
+- `sweep/po7_bitident_check.py`: the bit-identity harness.
+- **Off-path bit-identity is VERIFIED with this edit in place** (`1034/369740/0.991922159684`).
+
+**What is NOT done (your work starts here):**
+1. **Validate the network-provenance layer at the DATA level** — the prior worker's own note:
+   *"each synapse is internally sparse; test whether cross-synapse edges actually form, sweeping
+   spacing/reach/rate."* That validation was never completed. **Confirm cross-synapse edges form,
+   and measure the event-pool OVERLAP fraction — the §8 regime is PARTIAL overlap (0 = trivial,
+   full = trivial).** Read `_step_network_provenance` in full first; do not trust it until you have
+   SHOWN it produces cross-synapse edges.
+2. Everything else in this kickoff above: the pre-registered multi-synapse test (activation-identity
+   modularity, decomposition null, the pre-registration guard), ≥5 seeds, verdict with limits.
+
+**Still begin with the `### GROUNDING BRIEF`** — including a line-quoted read of the recovered
+`_step_network_provenance` so we know YOU verified what you inherited, not just trusted it.
