@@ -525,6 +525,13 @@ class DimerParticleSystem:
         if n < 2:
             return
 
+        # PO-5 UNIT 16: provenance bonding REPLACES the phenomenological pathways. The EM
+        # path is not an entangling mechanism (LOCC, L·PO5-10) and percolates the graph on
+        # its own (L·PO5-7), so when provenance is the bond source, skip Pathways 1/2 and
+        # disentanglement entirely — the birth-time provenance edges are the whole graph.
+        if self.provenance_bonding:
+            return
+
         # EM-mediated entanglement: rate scales with field strength
         # Reference scale: 20 kT is strong field (full MT invasion + activity)
         reference_kT = 20.0
