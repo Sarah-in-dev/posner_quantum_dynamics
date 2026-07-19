@@ -250,6 +250,53 @@ down.** A third adjustment would stop being a geometric derivation and start bei
 honest report at that point is *"the instrument cannot resolve pair structure in this geometry at the
 registered `MIN_CELLS`"* — which is itself a finding about the measurement, and is reported as one.
 
+## AMENDMENT A2.7 — the rebuilt statistic, the offline scorer, and its validation (MO ruling 028)
+
+Registered after L·PO5-3 (Q-B ran, all gates passed, no verdict) and before any re-run.
+
+**(a) Fixed global lattice.** Cells are keyed by **absolute** coordinates
+`(floor(x/CELL_NM), floor(y/CELL_NM))`, so a cell denotes the same physical place in every run.
+Comparison is restricted to the cell set occupied at `>= MIN_OCC` in **all** runs. This retires
+L·PO5-3's flaw 1, where per-run occupancy indexing made matrices incomparable even at equal shape.
+
+**(b) Scoring is OFFLINE and separate** — `sweep/po5_unit2_score.py`, composed from
+`sweep/score_leta5.py`. The probe now persists cells and per-subset pair counts **after every run**;
+a scoring bug can no longer destroy physics. Per ruling 028 this is binding program-wide.
+
+**(c) The scorer must SEPARATE signal from absence, not merely run.** Registered gate, run before any
+real data may be scored:
+
+| synthetic case | required verdict | observed |
+|---|---|---|
+| known FLAT (no arm differs) | `FALSIFIED` | **FALSIFIED**, ratio **1.028** |
+| known PLANTED pair structure in arm B | `CONFIRMED` | **CONFIRMED**, ratio **9.128** |
+
+**If either fails the module aborts and no real data may be scored.**
+
+**(d) Disclosure — the moment tuning could have entered, and did not.** The first planted control
+used amplitude **0.60** and scored **ratio 2.905**, just under `RATIO_CONFIRM = 3.0` →
+`INCONCLUSIVE`. **The threshold was NOT lowered to 2.5 to make it pass.** The correct diagnosis is
+that a positive control sitting on the decision boundary tests nothing; the *control* was
+strengthened to amplitude 2.0, and every registered threshold stands untouched
+(`RATIO_CONFIRM = 3.0`, `RATIO_FALSIFY = 1.5`, `MIN_OCC = 5`, `MIN_CELLS = 10`).
+
+**(e) Detection floor — the sensitivity characterisation, at zero compute.** Sweeping planted
+amplitude with thresholds fixed:
+
+| amp | 0.20 | 0.40 | 0.60 | **0.80** | 1.00 | 1.50 | 2.00 | 3.00 |
+|---|---|---|---|---|---|---|---|---|
+| ratio | 1.367 | 2.081 | 2.905 | **3.767** | 4.647 | 6.878 | 9.128 | 13.646 |
+| verdict | FALSIFIED | INCONC | INCONC | **CONFIRMED** | CONF | CONF | CONF | CONF |
+
+**Smallest planted amplitude reaching CONFIRMED: 0.80** (units: added bond probability on the
+planted cell-pair block).
+
+**This is what makes a future negative worth having.** A `FALSIFIED` from this instrument is not a
+bare "no effect" — it is the bounded statement **"no input-driven pair-level effect at or above
+~0.8 in `P_bond` on a 2-cell block, at 6 nm cells, under these conditions."** A negative result on
+§8's keystone is only as good as the effect size it can exclude, and that number is now known
+**before** the data is seen.
+
 ## 7. Compute
 
 Q-A validation and the smoke test are cheap (single short run). **The full Q-B matrix is 9 runs and

@@ -183,63 +183,39 @@ def instrument(dp):
 # ===========================================================================
 # The statistic
 # ===========================================================================
-def pbond_matrices(dp, state):
-    """Return (P_bond dict by subset, cell coords, occupancy). PREREG §3."""
+def persistable_cells_and_pairs(dp, state):
+    """Emit ABSOLUTE-lattice cell occupancies and per-subset pair counts.
+
+    L·PO5-3 fix: cells are keyed by absolute coordinates (floor(x/CELL_NM), floor(y/CELL_NM)),
+    NOT by this run's own occupied set, so a cell denotes the same physical place in every
+    run and matrices built from this are comparable across runs. Scoring is done OFFLINE by
+    sweep/po5_unit2_score.py (MO ruling 028).
+    """
     ent = [d for d in dp.dimers if d.is_entangled]
     if len(ent) < 2:
         return None
     pos = np.asarray([d.position for d in ent], dtype=float)
     ids = [d.id for d in ent]
-    idx = {i: k for k, i in enumerate(ids)}
-    cell = np.floor(pos[:, :2] / CELL_NM).astype(int)      # 2-D binning (z span is 20 nm)
-    keys = [tuple(c) for c in cell]
-    uniq = sorted(set(keys))
-    cidx = {c: k for k, c in enumerate(uniq)}
-    occ = np.zeros(len(uniq))
-    for k in keys:
-        occ[cidx[k]] += 1
-    keep = [k for k, c in enumerate(uniq) if occ[k] >= MIN_OCC]
-    if len(keep) < 2:
-        return None
-    keep_set = {uniq[k] for k in keep}
-    remap = {c: n for n, c in enumerate(sorted(keep_set))}
-    K = len(remap)
+    cell_of = {}
+    occ = {}
+    for k, i in enumerate(ids):
+        c = (int(np.floor(pos[k, 0] / CELL_NM)), int(np.floor(pos[k, 1] / CELL_NM)))
+        key = f"({c[0]},{c[1]})"
+        cell_of[i] = key
+        occ[key] = occ.get(key, 0) + 1
 
-    subsets = {"ALL": None, "P0_birth_inherit": "P0_birth_inherit",
-               "P1_burst": "P1_burst", "P2_em": "P2_em"}
-    counts = {s: np.zeros((K, K)) for s in subsets}
-    nb = {s: 0 for s in subsets}
-
+    pairs = {s: {} for s in ["ALL", "P0_birth_inherit", "P1_burst", "P2_em"]}
     for (a_id, b_id), bond in dp._bond_lookup.items():
-        ka, kb = idx.get(a_id), idx.get(b_id)
-        if ka is None or kb is None:
+        ca, cb = cell_of.get(a_id), cell_of.get(b_id)
+        if ca is None or cb is None:
             continue
-        ca, cb = keys[ka], keys[kb]
-        if ca not in remap or cb not in remap:
-            continue
-        ia, ib = remap[ca], remap[cb]
+        k = f"{ca}|{cb}" if ca <= cb else f"{cb}|{ca}"
         org = state["origin"].get((a_id, b_id), "unknown")
-        for s, want in subsets.items():
-            if want is None or want == org:
-                counts[s][ia, ib] += 1; counts[s][ib, ia] += 1
-                nb[s] += 1
-
-    n = np.zeros(K)
-    for k in keys:
-        if k in remap:
-            n[remap[k]] += 1
-    avail = np.outer(n, n).astype(float)
-    np.fill_diagonal(avail, n * (n - 1))       # counts[a,a] was double-incremented too
-    avail[avail == 0] = np.nan
-
-    cent = np.array([[c[0] + 0.5, c[1] + 0.5] for c in sorted(remap)]) * CELL_NM
-    sep = np.linalg.norm(cent[:, None, :] - cent[None, :, :], axis=-1)
-
-    out = {}
-    for s in subsets:
-        P = counts[s] / avail
-        out[s] = {"P": P, "n_bonds": nb[s]}
-    return {"subsets": out, "sep": sep, "occ": n, "K": K}
+        pairs["ALL"][k] = pairs["ALL"].get(k, 0) + 1
+        if org in pairs:
+            pairs[org][k] = pairs[org].get(k, 0) + 1
+    n_occ = sum(1 for v in occ.values() if v >= MIN_OCC)
+    return {"cells": occ, "pairs": pairs, "K": n_occ}
 
 
 def residual(P, sep):
@@ -299,7 +275,7 @@ def run_arm(arm, seed, T, dt, samples, log):
         net.synapses[0].step(dt, {"voltage": -10e-3, "reward": False, "glutamate": glu})
         t += dt
         if nxt < len(samples) and t >= samples[nxt] - dt / 2:
-            m = pbond_matrices(dp, state)
+            m = persistable_cells_and_pairs(dp, state)
             snaps.append({"t": round(t, 3), "mats": m,
                           "n_bonds": len(dp._bond_lookup),
                           "n_dimers": len(dp.dimers)})
@@ -330,8 +306,10 @@ def main():
         with open(out_path, "w") as f:
             json.dump({"thresholds": {"CONFIRM": RATIO_CONFIRM, "FALSIFY": RATIO_FALSIFY,
                                       "CELL_NM": CELL_NM, "MIN_OCC": MIN_OCC},
-                       "runs": [{k: v for k, v in r.items() if k != "snaps"} for r in results]},
-                      f, indent=2)
+                       "runs": [dict(r, cells=r["snaps"][-1]["mats"]["cells"],
+                                     pairs=r["snaps"][-1]["mats"]["pairs"])
+                                if r["snaps"] and r["snaps"][-1]["mats"] else r
+                                for r in results]}, f, indent=2)
 
     print("=" * 78)
     print("PO-5 UNIT 2 · Q-B — pair-level input selectivity")
@@ -386,54 +364,25 @@ def main():
     print(f"  drive matching A vs B                    : {'PASS' if drive_ok else 'FAIL'}"
           f"  (A={dA:.4f} B={dB:.4f})")
 
-    # ---- score, whole set + provenance split (A2.2) ----
-    print("\nSCORES  (PRIMARY = ALL; sub-sets are SECONDARY and decide nothing — A2.2)")
-    verdicts = {}
-    for subset in ["ALL", "P0_birth_inherit", "P1_burst", "P2_em"]:
-        def Rs(lbl):
-            o = []
-            for r in results:
-                if r["label"] != lbl:
-                    continue
-                m = r["snaps"][-1]["mats"]
-                if m is None:
-                    continue
-                o.append(residual(m["subsets"][subset]["P"], m["sep"]))
-            return o
-        RA, RB, RN = Rs("A"), Rs("B"), Rs("NULL")
-        nb = np.mean([r["snaps"][-1]["mats"]["subsets"][subset]["n_bonds"]
-                      for r in results if r["snaps"][-1]["mats"]]) if results else 0
-        K = results[0]["snaps"][-1]["mats"]["K"] if results[0]["snaps"][-1]["mats"] else 0
-        if subset != "ALL" and nb < SUBSET_MIN_BONDS:
-            print(f"  {subset:20s} INSUFFICIENT (mean {nb:.0f} bonds < {SUBSET_MIN_BONDS})")
-            verdicts[subset] = "INSUFFICIENT"
-            continue
-        d_null = _mean_pairdist(RA + RN) if (RA and RN) else 0.0
-        d_in = _mean_pairdist_between(RA, RB) if (RA and RB) else None
-        ratio = (d_in / d_null) if (d_in is not None and d_null > 0) else None
-        v = classify(ratio, K, drive_ok, instrument_ok and posctl_ok)
-        verdicts[subset] = v
-        rtxt = f"{ratio:.3f}" if ratio is not None else "n/a"
-        tag = "PRIMARY" if subset == "ALL" else "secondary"
-        print(f"  {subset:20s} d_input={d_in if d_in is None else round(d_in,5)} "
-              f"d_null={d_null:.5f} ratio={rtxt} cells={K} -> {v}  [{tag}]")
-
-    print("\n" + "=" * 78)
-    print(f"VERDICT (PRIMARY, whole realised bond set): {verdicts.get('ALL')}")
-    print("=" * 78)
-    print("A2.2 precedence: the whole-set verdict stands regardless of any sub-set result.")
-    print(f"LIMITS: single synapse, {T}s, 3 seeds/arm, cell={CELL_NM}nm — a FALSIFIED is")
-    print("'pair-flat at or above the cell scale under these conditions'.")
-
+    # ---- NO SCORING HERE. MO ruling 028: scoring is a separate offline step. ----
     with open(out_path, "w") as f:
-        json.dump({"verdicts": verdicts, "drive_A": dA, "drive_B": dB,
-                   "instrument_ok": instrument_ok, "posctl_ok": posctl_ok,
-                   "drive_ok": drive_ok, "total_elapsed_s": total,
-                   "thresholds": {"CONFIRM": RATIO_CONFIRM, "FALSIFY": RATIO_FALSIFY,
-                                  "CELL_NM": CELL_NM, "MIN_OCC": MIN_OCC},
-                   "runs": [{k: v for k, v in r.items() if k != "snaps"} for r in results]},
+        json.dump({"drive_A": dA, "drive_B": dB, "instrument_ok": instrument_ok,
+                   "posctl_ok": posctl_ok, "drive_ok": drive_ok,
+                   "total_elapsed_s": total,
+                   "thresholds": {"CELL_NM": CELL_NM, "MIN_OCC": MIN_OCC},
+                   "runs": [{"arm": r["arm"], "seed": r["seed"], "label": r["label"],
+                             "integ_drive": r["integ_drive"], "max_glu": r["max_glu"],
+                             "elapsed_s": r["elapsed_s"],
+                             "conservation_ok": r["conservation_ok"],
+                             "remove_dimer_calls": r["remove_dimer_calls"],
+                             "cells": r["snaps"][-1]["mats"]["cells"],
+                             "pairs": r["snaps"][-1]["mats"]["pairs"]}
+                            for r in results if r["snaps"] and r["snaps"][-1]["mats"]]},
                   f, indent=2)
-    print(f"\npersisted -> {out_path}")
+    print(f"\npersisted scored intermediate -> {out_path}")
+    print("SCORE IT OFFLINE:  python src/models/Model_6/sweep/po5_unit2_score.py "
+          + out_path)
+    print("(the scorer self-validates on planted-vs-flat before it will score real data)")
 
 
 if __name__ == "__main__":
