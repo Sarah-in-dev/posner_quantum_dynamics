@@ -1,0 +1,17 @@
+========================================================================================
+EVENT LIFECYCLE — the coincidence window
+========================================================================================
+  events observed: 428   (age window = 2.0 s, slots = 2)
+  never claimed :    64  (15.0%)
+  claimed once  :     3  (0.7%)
+  fully consumed:   361  (84.3%)  <- these are the bond-makers
+
+  creation -> FIRST claim (s):  median=0.0000 mean=0.0067 p90=0.0500 max=0.1500
+  creation -> SECOND claim (s): median=0.0000 mean=0.0065 p90=0.0500 max=0.1500
+
+  => COINCIDENCE WINDOW (p90 of creation->second claim): 0.0500 s
+  => a stagger offset of ~0.200 s should separate the conditions
+     (vs 2.0 s if events survived the full age window)
+  => REGIME B (cheap): events consumed fast
+
+wrote /Users/sarahdavidson/posner_quantum_dynamics/.claude/worktrees/po5-keystone/src/models/Model_6/sweep/po7_unit5_event_lifetime_results.json

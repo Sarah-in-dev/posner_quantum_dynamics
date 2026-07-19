@@ -1,0 +1,17 @@
+{
+  "n_events": 428,
+  "unclaimed": 64,
+  "claimed_once": 3,
+  "fully_consumed": 361,
+  "age_window_s": 2.0,
+  "first_claim_s": {
+    "median": 0.0,
+    "p90": 0.04999999999999999,
+    "max": 0.14999999999999997
+  },
+  "second_claim_s": {
+    "median": 0.0,
+    "p90": 0.04999999999999999,
+    "max": 0.14999999999999997
+  }
+}
