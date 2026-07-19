@@ -167,6 +167,12 @@ class DimerParticleSystem:
         # inter-dimer entanglement is an assumption, not established.
         self.j_compat_formation = False
         self.j_compat_tol = 0.15         # Hz; std of the model's own Agarwal-DFT J
+        #
+        # ARM E: base EM rate. Promoted from a function-body literal (was `k_entangle_em_base
+        # = 1.0` inside step_entanglement) so it is reachable. UNGROUNDED and unsweepable
+        # before this -- the same class as kT_ref. NOT tied to the derived 20 kT: only
+        # `reference_kT` is. Same value => behaviour unchanged, verified bit-identical.
+        self.k_entangle_em_base = 1.0
         self.j_coupling_threshold = 5.0  # Hz, minimum for protection
         
         # Formation tracking
@@ -439,7 +445,7 @@ class DimerParticleSystem:
         # EM-mediated entanglement: rate scales with field strength
         # Reference scale: 20 kT is strong field (full MT invasion + activity)
         reference_kT = 20.0
-        k_entangle_em_base = 1.0  # Base rate at reference field (1/s)
+        k_entangle_em_base = self.k_entangle_em_base  # PO-5 U12: was literal 1.0
         birth_window = self.birth_window   # PO-5 U7: was literal 0.1
 
         ids = np.fromiter((d.id for d in self.dimers), dtype=np.int64, count=n)
