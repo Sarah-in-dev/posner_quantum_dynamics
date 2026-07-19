@@ -38,6 +38,24 @@ WHY A SPATIAL DISCRIMINATOR
 NOT REGISTERED, deliberately: whether the post-fix behaviour is "better". Ruling
 016 warns that "conveniently this makes the gap behave better" is the nearest
 failure mode. The claim is only that a LOCKED symmetry is currently broken.
+
+IS THE PREDICTION CIRCULAR? No -- MO verification-025 asked, and it is answered by
+measurement, not assertion (queue Q4-15):
+  * se is computed BELOW at lines ~172-173, and analytical_gap runs at ~175. The
+    drive phase is step_network_per_synapse -- the WITHIN-TRIAL path, which never
+    touches the gap's k_diss. se is an input off the pre-gap state.
+  * MEASURED bit-identical in both code states: importing the pre-fix gap module
+    vs the post-fix one and running the identical drive gives
+    mean_ps=0.9976548679, se=0.9968731573, n=1915 in BOTH, to the last digit.
+  * OUT-OF-SAMPLE the formula DEVIATES, monotonically with g: 1.25e-06 at 0.02 s,
+    5.80e-06 at 0.05, 2.23e-05 at the scored 0.10, 4.90e-05 at 0.15, 8.54e-05 at
+    0.20. A circular check would agree to ~0 everywhere.
+
+LIMITATION of this formula, stated because it is now on the record: S_pred treats
+te as the scalar MAX (50). Real dissolution is a spatial MIXTURE (50 on template
+voxels, 1.0 on bare), so the single exponential is an approximation that degrades
+with g -- good to 2.2e-5 at the scored gap, 8.5e-5 by g=0.2 and worsening. Use the
+concentration-weighted mixture, not this closed form, at longer gaps.
 """
 import os
 import sys
