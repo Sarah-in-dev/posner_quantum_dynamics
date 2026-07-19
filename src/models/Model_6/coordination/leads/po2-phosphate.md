@@ -528,3 +528,43 @@ mechanism, the debit conclusion, the dimer attribution) and **three were upheld 
 already issued**. I also had to be corrected — by Sarah's steer to the literature, which
 overturned my own pre-registration. **Neither direction of correction was avoidable by being more
 careful; both came from going back to the source.** That is the transferable part.
+
+---
+
+## ADDENDUM TO THE CLOSING HEARTBEAT — 2026-07-19 · the charter, finally answered
+
+**Reopened after closing, on Sarah's instruction, because the closing heartbeat reported a finished
+checklist and never answered the question the seat existed for.**
+
+**PO-2's charter was not "make the ledger balance."** It was: *the SOC engine the program is built
+around does not exist as implemented* — conservation being the **prerequisite** for testing that,
+not the test. I delivered the prerequisite and closed.
+
+**THE ANSWER (research-log row PO2-11, no new compute — arithmetic on PO2-1/3/4/10):**
+
+**The finite phosphate pool cannot be the SOC reset feedback.**
+- **82.4 h** to deplete vs a **60 s** trial ⇒ **4,945× too slow**; 0.0202% consumed per trial.
+- On the gate, `S ∝ P^0.4` vs `S ∝ Ca^0.6`: phosphate moves `S` **0.008%/trial**, calcium **188×
+  per burst** ⇒ **calcium out-drives phosphate ~2.3 × 10⁶ on the gating quantity.**
+- **Not an A2.5 artifact:** at the retired `0.02` it was still **34× too slow.** Never viable.
+- **Cannot be rescued by pool size:** trial-timescale self-limiting needs **0.202 µM** against a
+  literature range of **0.29–2.3 mM** — **1,434× below the literature floor.** Structurally
+  incapable within physiology, not merely slow.
+
+**SCOPE, strictly:** the pin names **three** reset legs (phosphate, dissolution, commitment
+collapse). **I ruled out the first, at the drive tested. The other two are untouched.** Not "SOC is
+dead" — "the phosphate leg is."
+
+**ROUTED, not decided —** `requests/model6-mo/po2-004-crux2-and-po6-spec.md`:
+- **To Sarah:** this is the first hard evidence on the pin's **crux #2**, and it bears on calc #2's
+  clause that SOC-resolution of `g` is feasible *"only if a negative depletion feedback closes the
+  loop… If no feedback → a fine-tuning problem (**a real strike**)."* One of three legs is now out
+  of range. **Her call, not mine.**
+- **To PO-6:** the sweep needs **redesign, not just unblocking** — its phosphate axis is inert on
+  its own timescale, so as specified it would measure calcium dynamics and report them as
+  self-organization. Four concrete requirements in Part C.
+
+**The failure worth carrying forward:** every piece of this was already in my own rows. I filed each
+as an incidental "limit" on a checklist item and never assembled them. **A correct measurement filed
+against the wrong question is still the wrong deliverable** — and a steady queue of well-formed
+rulings made executing them feel like progress right up to the point I closed the seat.
