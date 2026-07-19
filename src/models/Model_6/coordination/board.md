@@ -11,12 +11,22 @@ list. This file is the live registry; that file is the durable plan. Read both.
 ## Active POs
 | PO | Objective | Status | Owner files | Last update |
 |---|---|---|---|---|
-| `model6-mo` | the MO itself (meta/coordinator) | GROUNDED — brief committed `093c675` | `board.md`, `MO_MODEL6.md` | 2026-07-18 17:30Z |
-| `po1-b2` | B2 — retire the per-synapse pump site | **BUILDING** — acceptance probe committed FAILING first `fa12009` (mode ratio 5000, FAIL) | `vibrational_cascade_module.py`, backbone params (`model6_parameters.py:759-805`) | 2026-07-18 17:35Z |
-| `po3-einvasion` | E_invasion provenance + the ratchet test | **COMPLETE, STOPPED** — L·ETA-5 scored VOID (MO-verified); acceptance PARTIAL; re-run is Sarah's call | `spine_plasticity_module.py` actin/E_invasion block, its `sweep/` probe | 2026-07-18 17:50Z |
-| `po5-selectivity` | **§8 KEYSTONE** — does which dimers bond depend on INPUT, at pair resolution? | **DISPATCHED — chip pending** (`task_2b2ef4b5`) | Pathway 2 bond formation in `dimer_particles.py`, own `sweep/` probe | 2026-07-18 20:18Z |
-| `po2-phosphate` | the phosphate loop — make the finite pool finite | **DISPATCHED — chip pending** (`task_e54e9c25`) | `atp_system.py`, phosphate path in `model6_core.py` | 2026-07-18 19:05Z |
-| `po4-gap` | the analytical gap, biologically grounded | **DISPATCHED — chip pending** (`task_daa62deb`) | `analytical_gap` in BOTH drivers, `run_theta_burst_45s.py` | 2026-07-18 17:52Z |
+> **⚠ THIS TABLE WAS STALE FOR ~7 HOURS — rewritten by MO gen-2, 2026-07-19 00:15Z.** It still read
+> *"DISPATCHED — chip pending"* for three seats that had long since delivered, and *"BUILDING"* for
+> one that was wrapped and archived. **That is this program's characteristic defect — a dated record
+> read as live status — sitting in the MO's own live registry.** Status here is now maintained at
+> each ruling. **If a row's "last update" is older than the newest `MO CYCLE` entry below, trust the
+> entry, not the row.**
+
+| PO | Objective | Status | Owner files | Last update |
+|---|---|---|---|---|
+| `model6-mo` | the MO itself (meta/coordinator) | **LIVE — gen-2** (gen-1 stood down `74df885`) | `board.md`, `MO_MODEL6.md`, all skill writes | 2026-07-19 00:15Z |
+| `po1-b2` | B2 + PO-6a — retire the per-synapse pump site; the sweep audit | **🔻 WRAPPED & ARCHIVED** — acceptance MO-verified at measurement level (`9ebda0e`), both positive controls fired; closing heartbeat `7d3ca82` carries 9 items existing nowhere else | *(released)* | 2026-07-19 00:06Z |
+| `po3-einvasion` | E_invasion provenance + the ratchet test | **🔻 WRAPPED & ARCHIVED** — L·ETA-5 VOID (correctly, not published); **F-5 MO-verified**; archived before its closing heartbeat, loss stated in the wrap entry | *(released)* | 2026-07-19 00:15Z |
+| `po5-selectivity` | **§8 KEYSTONE** — does which dimers bond depend on INPUT, at pair resolution? | **LIVE — Q-B RUNNING on the exclusive heavy slot.** Process confirmed alive, 46+ min CPU; PO-5's own estimate ~90 min for the 9-run matrix, **so it is INSIDE estimate.** ⚠ session stopped while the run continues | Pathway 1/2 in `dimer_particles.py`, `multi_synapse_network.py` partition path, own `sweep/` probes | 2026-07-19 00:12Z |
+| `po2-phosphate` | the phosphate loop — make the finite pool finite | **LIVE** — conservation MET, self-limiting UNEXERCISED; ruling 021 units open (log the 0.02 falsification; does the ~32 min depletion survive at the grounded value) | `atp_system.py`, phosphate path in `model6_core.py` | 2026-07-19 00:15Z |
+| `po4-gap` | the analytical gap, biologically grounded | **LIVE — one question from wrap.** Rotations 002 + 003 complete, template-symmetry fix landed (`85d8915`); `MO-VERIFIED` **held** pending verification-025 (the registered target moved) | `analytical_gap` in both drivers, `run_theta_burst_45s.py` | 2026-07-19 00:11Z |
+| `po7-construct-validity` | **§8 Keystone #2** — declared vs implemented | **LIVE — HOLDING by MO order** for Sarah's seeding ruling. Unit 1 COMPLETE and ACCEPTED; escalated fixed-seed nondeterminism under drive | own `sweep/` probes; **reads both steppers, edits neither** | 2026-07-19 00:15Z |
 
 _(The MO adds a row here + the PO's `leads/`/`queue/` files when it spawns one.)_
 
