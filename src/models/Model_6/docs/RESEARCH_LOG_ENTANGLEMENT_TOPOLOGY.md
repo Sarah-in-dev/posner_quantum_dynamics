@@ -65,6 +65,7 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| PO5-4 | 2026-07-19 | **THE P0 GRAPH IS AN INDIFFERENCE GRAPH ON BIRTH TIME — PREDICTED==MEASURED 5/5 — AND P2 IS WHAT ERASES THE STRUCTURE.** Pre-registered `docs/PREREG_PO5_UNIT3_BIRTH_COHORTS.md` (`becc8e3`, before the run); probe `sweep/po5_unit3_birth_cohorts.py`. **REPORTED not MO-VERIFIED — the run's log lived in gitignored `results/` and the worktree was removed by consolidation mid-run; the probe IS committed, so re-running promotes it.** **Registered prediction: components(P0) = 1 + count(birth gaps > 0.1 s). Held exactly at 5/5 samples** (SUSTAINED t=1/3/5 → 2/4/6; PULSED t=1/3 → 2/5), `max_glu = 1.000`. Mechanism confirmed from `dimer_particles.py:218-228` + `:210`: bond iff both template-bound and `|Δbirth| < 0.1 s`, and a whole `step_population` batch shares one birth_time ⇒ **unit-interval graph on the birth-time axis**, components = maximal runs with no >100 ms gap, no fitted quantity. **PO-5's OWN PROSE REASONING WAS FALSIFIED:** it predicted continuous births ⇒ one component; births are **bursty** — 12–17 distinct birth times in 5 s, gaps to **2.665 s**, ~60–90 dimers per event ⇒ **SIX P0 components under sustained drive.** **THE INVERSION:** the FULL graph measures `comps = 1, largest_frac = 1.000` (`L·PO5-1`) while P0-only has 6, and P0 is 82.86% of bonds vs P2's 17.14% (`L·PO5-2`) ⇒ **the temporal cohort structure EXISTS and the 17% spatially-mediated P2 bonds BRIDGE the cohorts into one blob.** The intra partition is trivial not because formation is structureless but because **a spatially promiscuous minority pathway erases a temporally structured majority.** **Weak, 2 samples:** PULSED produced no more >100 ms gaps than SUSTAINED (0.755 vs 0.770 s), hinting birth timing follows supersaturation dynamics rather than instantaneous drive — **NOT established.** **NO §8 VERDICT:** whether input modulates cohort structure, and whether it survives P2 bridging, is unrun; "P2 erases the structure" is NOT "§8 fails". **Do NOT weaken P2 to preserve cohorts** — that is tuning to an outcome (§7 LOCKED). | [GROUNDED, measured — REPORTED] | `L·PO5-4` below |
 | PO5-3 | 2026-07-18 | **Q-B RAN 58.2 MIN ON THE EXCLUSIVE SLOT, ALL 9 RUNS, EVERY GATE PASSED — AND RETURNED NO VERDICT.** Pre-registered (A2.2–A2.6, all before the run); probe `sweep/po5_unit2_qb_selectivity.py`. **Gates all PASS:** instrument conservation; A2.3 `_remove_dimer` tripwire **zero calls** (confirming that defect is unreachable under a full protocol); positive control `max_glu > 0` every run (min 1.000); drive matching A=2.7540 vs B=2.7460 (**0.3%**, registered ≤5%). **Then scoring crashed** — `ValueError: shapes (169,) vs (36,)`. **`ratio` was never computed; NOTHING is claimed about §8 in either direction and the keystone stands exactly as unverified as before.** **Three flaws, all PO-5's:** (1) **the statistic was never comparable across runs** — cells indexed by *each run's own* occupied set, so index *i* meant a different physical location per run; Frobenius distance between them is meaningless **even when shapes coincide**, so had the counts matched this would have produced *a confident number that was silently garbage* — **the crash is the lucky outcome**; (2) the A2.6 pre-flight sampled **one** seed (13 cells) and certified an arm whose occupancy actually ranged **6–14**, with only 3 of 9 runs clearing `MIN_CELLS = 10` — the same single-sample-as-confirmation error PO-3 named when withdrawing F-3; (3) **the scored intermediate was not persisted, so a SCORING bug destroyed 58 minutes of PHYSICS** — and `sweep/score_leta5.py` had already solved this, was named as prior art in PO-5's own grounding brief, and was not composed from. **Fix, needing zero compute:** fixed **global** lattice (absolute cell coords), comparison on the all-run intersection, matrices persisted, scoring split into an offline scorer composed from `score_leta5.py`, validated on synthetic data before physics is spent. **NO registered threshold is being moved** — if the all-run intersection falls below `MIN_CELLS`, the honest verdict is *"the instrument cannot resolve pair structure in this geometry"*, per the registered hard stop. **Logged rather than swept because L·ETA-5 set the precedent:** a properly-conducted run that does not answer its question is a result about the instrument, and the next PO building a cross-run spatial statistic here needs to know per-run occupancy indexing does not survive the comparison step. | [GROUNDED, measured — null about the INSTRUMENT] | `L·PO5-3` below |
 | PO5-2 | 2026-07-18 | **83% OF THE BOND SET COMES FROM A THIRD, DETERMINISTIC MECHANISM THAT NEITHER PATHWAY DECOMPOSITION NAMES.** Pre-registered `docs/PREREG_PO5_UNIT2_PAIR_SELECTIVITY.md` §2; probe `sweep/po5_unit2_provenance.py`; **provenance recovered with ZERO edits to `dimer_particles.py`** (instance-level wrapping, four POs share this tree). Classification is EXACT not statistical — `:439` `p1 = both_ent & same_burst & both_tmpl & ~has_bond`, `:450` `p2 = both_ent & ~p1`, phases separated by wrapping `step_population` vs `step_entanglement`. **The instrument gate FAILED FIRST on real data** (orphans 0→909→4851); cause traced to `_remove_all_bonds_for_dimer` (`:245`) popping `_bond_lookup` without routing through `_remove_bond`; AMENDMENT A2.1, instrument fixed, physics untouched; failing run preserved. **Post-fix both gates PASS:** conservation exact (missing=0, orphan=0 vs 474256 live bonds) and instrumented-vs-uninstrumented **bit-for-bit identical** on n_dimers/n_entangled/n_bonds/mean P_S. **MEASURED at t=2.0s:** P0 birth-inheritance (`:218-228`) **392952 = 82.86%**, P1 burst **22 = 0.00%**, P2 EM **81282 = 17.14%**. **Two structural findings:** (1) the dominant site is the birth loop at `:218-228`, which is **deterministic — no rate, no RNG draw, no distance term** — bonding every template-bound dimer born within 100 ms unconditionally, i.e. a near-complete blob by construction; **83% of bonds never evaluate `em_rate` at all**, so Unit 1's `D = 33.5` spread in `g` applies only to the 17% minority, and the kickoff's `em_rate` decomposition (`mo-rescope-001.md:49-53`, `quantum-computation-and-attribution` §7 #1) describes the minority mechanism. (2) **P1 is shadowed by construction** — `p1` requires `~has_bond` and the birth loop has already bonded every same-burst template-bound pair, so P1 is near-dead code (22 bonds). **EXPLICITLY NOT CLAIMED:** that this defeats §8. Birth timing and template binding are downstream of input, so a deterministic birth rule is **not automatically input-blind**; whether it carries **pair-level** vs §8's **gate-level** information is Q-B, and **Q-B is unrun**. No keystone verdict is stated or implied — the inference `L·PO5-1` CORRECTION 1 withdrew is not repeated. **Latent defect routed, not fixed:** `_remove_dimer` (`:252-261`) discards from `entanglement_bonds` but never pops `_bond_lookup`; currently **dead code** (no call sites), so nothing is broken today. | [GROUNDED, measured] | `L·PO5-2` below |
 | PO5-1 | 2026-07-18 | **[PARTLY SUPERSEDED — see CORRECTION 1 in `L·PO5-1`: the measurements stand, the "trivial partition" INFERENCE is withdrawn as wrong-layer, `quantum-system-canonical:139` LOCKS single-synapse one-giant-component as correct physics.]** **`g` IS LIVE — the 1/r³ is NOT inert, and BOTH standing predictions about it were wrong. But the graph it builds is a ~78%-complete SINGLE COMPONENT, so the pair-resolution in the RATE does not reach the TOPOLOGY.** Pre-registered `docs/PREREG_PO5_UNIT1_G_INERTNESS.md` (committed `cc80fcc` before the run); probe `src/models/Model_6/sweep/po5_unit1_g_inertness.py` (`1dbef17`); classifier demonstrated ABORTing on a deliberately broken threshold before it was allowed to score. Single synapse, -10 mV, 5 s, dt=0.005, 4 sample times. **Measured:** `f_sat = 0.176` (only 17.6% of pairs inside the 5 nm clamp, vs the ≥0.90 registered saturation bar), `r_p10/p50/p90 = 3.70/9.75/16.11 nm`, `r_max = 36.45`, `g_p10..p90 = 2.99e-2 .. 1.00`, **dynamic range `D = 33.5`**, stable to 3 decimals across all four samples. **Verdict `LIVE`-under-stated-conditions.** **Both priors refuted:** the board/kickoff (`board.md:919-922`, `mo-rescope-001.md:55-59`) predicted `g ≈ 1` **inert by saturation** — no, only 17.6% clamp; PO-5's own grounding brief predicted `g ≈ 3.7e-5` **inert by vanishing** off the 400 nm birth domain — no, dimers cluster at templates and sit ~10 nm apart, so the brief's a-priori was wrong by ~15× in `r` and is recorded as such. `model6-entanglement-partition-werner:60`'s *"intra edges at ~7 nm"* is the prose that was RIGHT (`r_p10 = 3.70`, `r_p50 = 9.75`). **THE CONSEQUENCE, which is the finding:** realised intra bond saturation is **0.75–0.83** and the corroborating probe (`sweep/observe_pathway2_selectivity.py`) reads **`comps = 1`, `largest_frac = 1.000`** at t=5 s and t=10 s, with bonded-pair median separation **9.5 nm vs all-pair 10.3 nm** — i.e. the bonded set is barely distinguishable from the all-pairs set. **A rate that varies 33× across pairs is producing a near-complete graph with a trivial partition.** Since the computation IS the partition (`model6-entanglement-partition-werner`, LOCKED), pair-resolution in `em_rate` that does not survive into the component structure buys the keystone nothing. **NOT YET ATTRIBUTED — UNVERIFIED:** whether the saturation is Pathway 1 (birth entanglement, `dimer_particles.py:218-228`, which bonded 94.4% of pairs at the very first sample) or Pathway 2. That separation is PO-5 Unit 2 and no claim is made on it here. **`g` is GEOMETRY, not input — this unit does NOT advance §8's keystone**, it establishes that the later pair-level test is not operating on a constant. | [GROUNDED, measured] | `L·PO5-1` below |
@@ -89,6 +90,84 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·PO5-4 — the P0 graph IS an indifference graph on birth time (5/5 predicted==measured), births are BURSTY not continuous, and P2 is what erases the structure · 2026-07-19 `[GROUNDED, measured — REPORTED, log did not survive]`
+
+**Pre-registered:** `docs/PREREG_PO5_UNIT3_BIRTH_COHORTS.md`, committed `becc8e3` **before** the run.
+**Probe:** `src/models/Model_6/sweep/po5_unit3_birth_cohorts.py`, same commit.
+**Reopened on Sarah's direction after the PO-5 seat closed.**
+
+⚠️ **PROVENANCE — read this before citing.** The run executed, but its log lived in `results/`,
+which is gitignored, and **the `nervous-hertz-7ccff6` worktree was removed by the consolidation while
+the run was still in flight.** The numbers below were read directly from the probe's live output and
+are **REPORTED, not MO-VERIFIED**, per `CONSOLIDATION_2026-07-19.md`'s rule. **The probe and its
+pre-registration are committed, so this is fully reproducible by re-running it** — that is the
+correct way to promote these to MO-VERIFIED. This is exactly the loss PO-5's closing heartbeat
+warned about (§3a-ii), landing on PO-5's own final run within hours.
+
+#### The registered prediction, and it held
+
+> **PREDICTED components of the P0-only bond graph = `1 + count(birth-time gaps > 0.1 s)`**
+
+| arm | t | template-bound | distinct births | max gap | gaps >0.1s | predicted | measured | |
+|---|---|---|---|---|---|---|---|---|
+| SUSTAINED | 1.0 | 1022 | 12 | 0.4700 s | 1 | 2 | 2 | **MATCH** |
+| SUSTAINED | 3.0 | 1044 | 14 | 0.7700 s | 3 | 4 | 4 | **MATCH** |
+| SUSTAINED | 5.0 | 1046 | 16 | 2.6650 s | 5 | 6 | 6 | **MATCH** |
+| PULSED | 1.0 | 1013 | 12 | 0.7550 s | 1 | 2 | 2 | **MATCH** |
+| PULSED | 3.0 | 1087 | 17 | 0.7550 s | 4 | 5 | 5 | **MATCH** |
+
+**5 of 5 samples matched exactly. `max_glu = 1.000` (positive control fired).** The PULSED arm's
+final sample was not observed before the worktree was removed.
+
+**The mechanism is confirmed:** the P0 bond graph is a **unit-interval (indifference) graph on the
+birth-time axis**, exactly as derived from `dimer_particles.py:218-228` + `:210`. Its components are
+the maximal runs of births with no gap > 100 ms — predicted from birth times alone, with no fitted
+quantity, and reproduced exactly at every sample.
+
+#### PO-5's own reasoning was WRONG, and the measurement corrected it
+
+PO-5 predicted in prose that *"under sustained drive, births occur at most 5 ms timesteps, so gaps
+are ≪ 100 ms ⇒ one component."* **False.** Births are **bursty**: only **12–17 distinct birth times
+in 5 s**, with gaps up to **2.665 s**. **The P0 graph has SIX components under sustained drive, not
+one.** Each birth event creates ~60–90 dimers at once, so the graph is a handful of large cliques,
+not a continuum.
+
+#### The consequence, and it inverts the earlier picture
+
+The **full** graph was measured at **`comps = 1`, `largest_frac = 1.000`** (`L·PO5-1`, corroborating
+probe). The **P0-only** graph has **6**. Since P0 is 82.86% of bonds and P2 is 17.14% (`L·PO5-2`):
+
+> **The temporal cohort structure EXISTS — and the 17% spatially-mediated P2 bonds are what BRIDGE
+> the cohorts into a single blob.**
+
+So the intra partition is not trivial because formation is structureless. It is trivial because a
+**spatially promiscuous minority pathway erases the temporally structured majority.** The pair-level
+information is created and then washed out.
+
+#### Also observed, weakly
+
+PULSED did **not** produce more >100 ms birth gaps than SUSTAINED (max gap 0.755 s vs 0.770 s at
+t = 3.0). **Two samples, one seed — weak.** It suggests birth timing is governed by the
+concentration/supersaturation dynamics rather than by instantaneous drive, which would mean input
+cannot gate formation timing directly. **NOT established; flagged for measurement.**
+
+#### What is NOT claimed
+
+**No §8 verdict.** This tests a mechanism. Whether input can modulate the cohort structure — and
+whether that survives P2 bridging into the final partition — is unrun. **Do not read "P2 erases the
+structure" as "§8 fails":** it locates where the structure goes, not whether input put any there.
+
+**Do NOT respond by weakening P2 to preserve cohorts.** That would be tuning a constant to reach an
+outcome (`MO_MODEL6.md` §7 LOCKED). The bridging is the physics as written; if it erases the
+partition, that is the finding.
+
+#### Limits
+
+Single synapse, 5 s, one seed per arm, 3 samples (SUSTAINED) + 2 (PULSED). REPORTED, not
+MO-VERIFIED. Re-run `po5_unit3_birth_cohorts.py` to promote.
+
+
 
 ### L·PO5-3 — Q-B ran, every gate passed, and it returned NO VERDICT. The statistic was never comparable across runs. · 2026-07-18 `[GROUNDED, measured — null result about the INSTRUMENT]`
 
