@@ -65,6 +65,7 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| PO5-3 | 2026-07-18 | **Q-B RAN 58.2 MIN ON THE EXCLUSIVE SLOT, ALL 9 RUNS, EVERY GATE PASSED — AND RETURNED NO VERDICT.** Pre-registered (A2.2–A2.6, all before the run); probe `sweep/po5_unit2_qb_selectivity.py`. **Gates all PASS:** instrument conservation; A2.3 `_remove_dimer` tripwire **zero calls** (confirming that defect is unreachable under a full protocol); positive control `max_glu > 0` every run (min 1.000); drive matching A=2.7540 vs B=2.7460 (**0.3%**, registered ≤5%). **Then scoring crashed** — `ValueError: shapes (169,) vs (36,)`. **`ratio` was never computed; NOTHING is claimed about §8 in either direction and the keystone stands exactly as unverified as before.** **Three flaws, all PO-5's:** (1) **the statistic was never comparable across runs** — cells indexed by *each run's own* occupied set, so index *i* meant a different physical location per run; Frobenius distance between them is meaningless **even when shapes coincide**, so had the counts matched this would have produced *a confident number that was silently garbage* — **the crash is the lucky outcome**; (2) the A2.6 pre-flight sampled **one** seed (13 cells) and certified an arm whose occupancy actually ranged **6–14**, with only 3 of 9 runs clearing `MIN_CELLS = 10` — the same single-sample-as-confirmation error PO-3 named when withdrawing F-3; (3) **the scored intermediate was not persisted, so a SCORING bug destroyed 58 minutes of PHYSICS** — and `sweep/score_leta5.py` had already solved this, was named as prior art in PO-5's own grounding brief, and was not composed from. **Fix, needing zero compute:** fixed **global** lattice (absolute cell coords), comparison on the all-run intersection, matrices persisted, scoring split into an offline scorer composed from `score_leta5.py`, validated on synthetic data before physics is spent. **NO registered threshold is being moved** — if the all-run intersection falls below `MIN_CELLS`, the honest verdict is *"the instrument cannot resolve pair structure in this geometry"*, per the registered hard stop. **Logged rather than swept because L·ETA-5 set the precedent:** a properly-conducted run that does not answer its question is a result about the instrument, and the next PO building a cross-run spatial statistic here needs to know per-run occupancy indexing does not survive the comparison step. | [GROUNDED, measured — null about the INSTRUMENT] | `L·PO5-3` below |
 | PO5-2 | 2026-07-18 | **83% OF THE BOND SET COMES FROM A THIRD, DETERMINISTIC MECHANISM THAT NEITHER PATHWAY DECOMPOSITION NAMES.** Pre-registered `docs/PREREG_PO5_UNIT2_PAIR_SELECTIVITY.md` §2; probe `sweep/po5_unit2_provenance.py`; **provenance recovered with ZERO edits to `dimer_particles.py`** (instance-level wrapping, four POs share this tree). Classification is EXACT not statistical — `:439` `p1 = both_ent & same_burst & both_tmpl & ~has_bond`, `:450` `p2 = both_ent & ~p1`, phases separated by wrapping `step_population` vs `step_entanglement`. **The instrument gate FAILED FIRST on real data** (orphans 0→909→4851); cause traced to `_remove_all_bonds_for_dimer` (`:245`) popping `_bond_lookup` without routing through `_remove_bond`; AMENDMENT A2.1, instrument fixed, physics untouched; failing run preserved. **Post-fix both gates PASS:** conservation exact (missing=0, orphan=0 vs 474256 live bonds) and instrumented-vs-uninstrumented **bit-for-bit identical** on n_dimers/n_entangled/n_bonds/mean P_S. **MEASURED at t=2.0s:** P0 birth-inheritance (`:218-228`) **392952 = 82.86%**, P1 burst **22 = 0.00%**, P2 EM **81282 = 17.14%**. **Two structural findings:** (1) the dominant site is the birth loop at `:218-228`, which is **deterministic — no rate, no RNG draw, no distance term** — bonding every template-bound dimer born within 100 ms unconditionally, i.e. a near-complete blob by construction; **83% of bonds never evaluate `em_rate` at all**, so Unit 1's `D = 33.5` spread in `g` applies only to the 17% minority, and the kickoff's `em_rate` decomposition (`mo-rescope-001.md:49-53`, `quantum-computation-and-attribution` §7 #1) describes the minority mechanism. (2) **P1 is shadowed by construction** — `p1` requires `~has_bond` and the birth loop has already bonded every same-burst template-bound pair, so P1 is near-dead code (22 bonds). **EXPLICITLY NOT CLAIMED:** that this defeats §8. Birth timing and template binding are downstream of input, so a deterministic birth rule is **not automatically input-blind**; whether it carries **pair-level** vs §8's **gate-level** information is Q-B, and **Q-B is unrun**. No keystone verdict is stated or implied — the inference `L·PO5-1` CORRECTION 1 withdrew is not repeated. **Latent defect routed, not fixed:** `_remove_dimer` (`:252-261`) discards from `entanglement_bonds` but never pops `_bond_lookup`; currently **dead code** (no call sites), so nothing is broken today. | [GROUNDED, measured] | `L·PO5-2` below |
 | PO5-1 | 2026-07-18 | **[PARTLY SUPERSEDED — see CORRECTION 1 in `L·PO5-1`: the measurements stand, the "trivial partition" INFERENCE is withdrawn as wrong-layer, `quantum-system-canonical:139` LOCKS single-synapse one-giant-component as correct physics.]** **`g` IS LIVE — the 1/r³ is NOT inert, and BOTH standing predictions about it were wrong. But the graph it builds is a ~78%-complete SINGLE COMPONENT, so the pair-resolution in the RATE does not reach the TOPOLOGY.** Pre-registered `docs/PREREG_PO5_UNIT1_G_INERTNESS.md` (committed `cc80fcc` before the run); probe `src/models/Model_6/sweep/po5_unit1_g_inertness.py` (`1dbef17`); classifier demonstrated ABORTing on a deliberately broken threshold before it was allowed to score. Single synapse, -10 mV, 5 s, dt=0.005, 4 sample times. **Measured:** `f_sat = 0.176` (only 17.6% of pairs inside the 5 nm clamp, vs the ≥0.90 registered saturation bar), `r_p10/p50/p90 = 3.70/9.75/16.11 nm`, `r_max = 36.45`, `g_p10..p90 = 2.99e-2 .. 1.00`, **dynamic range `D = 33.5`**, stable to 3 decimals across all four samples. **Verdict `LIVE`-under-stated-conditions.** **Both priors refuted:** the board/kickoff (`board.md:919-922`, `mo-rescope-001.md:55-59`) predicted `g ≈ 1` **inert by saturation** — no, only 17.6% clamp; PO-5's own grounding brief predicted `g ≈ 3.7e-5` **inert by vanishing** off the 400 nm birth domain — no, dimers cluster at templates and sit ~10 nm apart, so the brief's a-priori was wrong by ~15× in `r` and is recorded as such. `model6-entanglement-partition-werner:60`'s *"intra edges at ~7 nm"* is the prose that was RIGHT (`r_p10 = 3.70`, `r_p50 = 9.75`). **THE CONSEQUENCE, which is the finding:** realised intra bond saturation is **0.75–0.83** and the corroborating probe (`sweep/observe_pathway2_selectivity.py`) reads **`comps = 1`, `largest_frac = 1.000`** at t=5 s and t=10 s, with bonded-pair median separation **9.5 nm vs all-pair 10.3 nm** — i.e. the bonded set is barely distinguishable from the all-pairs set. **A rate that varies 33× across pairs is producing a near-complete graph with a trivial partition.** Since the computation IS the partition (`model6-entanglement-partition-werner`, LOCKED), pair-resolution in `em_rate` that does not survive into the component structure buys the keystone nothing. **NOT YET ATTRIBUTED — UNVERIFIED:** whether the saturation is Pathway 1 (birth entanglement, `dimer_particles.py:218-228`, which bonded 94.4% of pairs at the very first sample) or Pathway 2. That separation is PO-5 Unit 2 and no claim is made on it here. **`g` is GEOMETRY, not input — this unit does NOT advance §8's keystone**, it establishes that the later pair-level test is not operating on a constant. | [GROUNDED, measured] | `L·PO5-1` below |
 | AUDIT-1 | 2026-07-18 | **SUBSTRATE AUDIT — full adversarial code audit, `docs/SUBSTRATE_AUDIT_JUL18.md`.** Four parallel read-only agents, `file:line` required for every claim, UNVERIFIED where code could not confirm. **Five headline findings:** (1) **factor-of-2pi error** on the per-synapse pump — `vibrational_cascade_module.py:315` uses `hbar*f` on a LINEAR frequency, n_bar inflated **6.28x**; the backbone pump is CORRECT (`h*f`, `model6_parameters.py:46`). (2) **The calibration fiction survives and is unsweepable** — `kT_ref = 22.1` is a function-body literal (`:246`), invisible to the params dataclass and to sweep_runner; with `r_at_E_ref = 100e9` it makes **r/r_c ~ 1.045 at MT+ an arithmetic identity, not a result**. (3) **Three docstrings assert mechanisms absent from the code** — a Hill function (`multi_synapse_network.py:1332-1334` vs `:1381-1392`), a 30% collapse (`:1423-1425`, `collapse_factor` never read), and "No fitted parameters!" (`:1238-1242`) beside two fitted parameters. (4) **Cited sources contradict their values** — phi/chi cite Zhang 2019 which gives 6 GHz / 0.07 GHz; code uses 10 GHz / 0.05 GHz. (5) **The two pump sites run different threshold physics** — backbone `n_ex = n_bar_s`, per-synapse still Zhang Eq. 4. **WHAT SURVIVES:** the entanglement/partition layer — Werner 0.5 is a THEOREM not a cutoff, eta is exactly `(r-1)/(r+1)` with no fitted curve, commitment is a real CaMKII integrator with a genuine DDSC delay. **Debt REGRESSED:** ~151 dead parameter fields (was ~120), six orphan modules, none removed. Also found: `phosphate_total` goes stale so J-coupling reads a field ignoring dimer consumption; ATP<->Pi is not mass-conserving; `step_with_coordination` and `run_place_field_learning` still form ZERO cross-synapse bonds (a gap in the same-day fix). | [GROUNDED, code SHOWN] | `docs/SUBSTRATE_AUDIT_JUL18.md` |
@@ -88,6 +89,79 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·PO5-3 — Q-B ran, every gate passed, and it returned NO VERDICT. The statistic was never comparable across runs. · 2026-07-18 `[GROUNDED, measured — null result about the INSTRUMENT]`
+
+**Pre-registered:** `docs/PREREG_PO5_UNIT2_PAIR_SELECTIVITY.md` incl. AMENDMENTS A2.2–A2.6, all
+committed before the run. **Probe:** `sweep/po5_unit2_qb_selectivity.py`.
+**Raw:** `results/po5/unit2_qb_SCORER_CRASH_cell6.log`, `sweep/po5_unit2_qb_results.json` (per-run
+metadata only — see flaw 3). **Ran on the exclusive heavy slot granted by MO ruling 019.**
+
+**SCORED VERDICT: NONE. `ratio` was never computed. Nothing is claimed about §8 in either
+direction.** The §8 keystone remains exactly as unverified as before this run.
+
+#### What ran, and what passed
+
+All 9 runs completed in **3492 s (58.2 min)** — inside the ~90 min estimate. **Every registered gate
+passed:**
+
+| gate | result |
+|---|---|
+| instrument conservation (provenance ≡ `_bond_lookup`) | **PASS** |
+| A2.3 `_remove_dimer` tripwire | **PASS** — zero calls, confirming the defect is unreachable |
+| positive control `max_glu > 0` every run | **PASS** (min 1.000) |
+| drive matching A vs B (registered ≤5%) | **PASS** — A = 2.7540, B = 2.7460 → **0.3%** |
+
+**The physics ran and the guards worked.** Then scoring raised
+`ValueError: operands could not be broadcast together with shapes (169,) (36,)`.
+
+#### Three flaws, and the crash is the least of them
+
+**1. The statistic was never comparable across runs — a DESIGN flaw, not a coding slip.** Cells were
+indexed by *each run's own* occupied set (`remap` = that run's sorted occupied cells), so index *i*
+denotes a **different physical location in every run**. A Frobenius distance between two such
+matrices is meaningless **even when the shapes coincide** — meaning that had cell counts happened to
+match, this would have produced a *confident number that was silently garbage* instead of a crash.
+**The crash is the lucky outcome.**
+
+**2. The pre-flight was unrepresentative.** Occupied cells ranged **6–14 across seeds** (13, 6, 6,
+14, 6, 7, 8, 12, 9); only **3 of 9** runs cleared `MIN_CELLS = 10`. A2.6's pre-flight sampled **one**
+seed, read 13, and certified the arm. Same error PO-3 named in withdrawing F-3: *"I read a single
+sample as confirmation of a mechanism I had not measured."*
+
+**3. The scored intermediate was not persisted, so a SCORING bug destroyed 58 minutes of PHYSICS.**
+The `P_bond` matrices lived in memory and were excluded from `persist()`. **`sweep/score_leta5.py`
+already solved this** — PO-3 scores offline from a persisted trace, and L·ETA-5 records that the
+in-run verdict was void while the offline scorer was authoritative. **That prior art was named in
+PO-5's own grounding brief and not composed from.** This is the reinvention failure, and it is what
+turned a small bug into an hour of the program's only heavy slot.
+
+#### Why this is logged as a result rather than swept
+
+L·ETA-5 set the precedent: a properly-conducted measurement that does not answer its question is a
+result **about the instrument**. This one is weaker than L·ETA-5's — that run's null arm carried real
+physics, this one produced no comparable quantity at all — but the record belongs here, because the
+next PO to build a cross-run spatial statistic in this codebase needs to know that **per-run
+occupancy indexing does not survive the comparison step.**
+
+#### What changes before any re-run — no compute required
+
+Fixed **global** lattice (absolute cell coordinates, so a cell is the same place in every run);
+comparison restricted to the cell set occupied in **all** runs; matrices **persisted**; scoring split
+into a **separate offline scorer**, composed from `score_leta5.py`; scorer **validated on synthetic
+data with known answers** before physics is spent.
+
+**Registered thresholds are NOT being moved.** `MIN_OCC = 5`, `MIN_CELLS = 10`, `RATIO_CONFIRM = 3.0`,
+`RATIO_FALSIFY = 1.5` and the A2.2 precedence all stand. **If the all-run intersection falls below
+`MIN_CELLS`, the honest verdict is that the instrument cannot resolve pair structure in this
+geometry** — reported as a finding about the measurement, per the registered hard stop.
+
+#### What survives and is reusable
+
+The instrumentation layer is validated and unaffected: provenance conservation exact, the A2.3
+tripwire confirmed the `_remove_dimer` defect unreachable under a full 9-run protocol, drive matching
+holds to 0.3%, and the release-inside-the-physics-loop pattern reproduced `max_glu = 1.000` in every
+arm — the positive control `mo-f3-001` requires.
 
 ### L·PO5-2 — **83% of the bond set is formed by a THIRD mechanism neither pathway decomposition names, and it is deterministic** · 2026-07-18 `[GROUNDED, measured]`
 
