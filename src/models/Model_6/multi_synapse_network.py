@@ -437,11 +437,23 @@ class NetworkEntanglementTracker:
         current_ids = set(abs_xy.keys())
 
         # (1) Prune prov bonds: endpoint gone OR either endpoint decohered (coherence death).
+        # PO-7 fix (a): fidelity is REFRESHED from the live P_S each step, not frozen at claim
+        # time. _find_all_clusters tests these values against the Werner bound, so a stale F let
+        # a decohered pair keep counting as an edge. F = P_S_i * P_S_j, recomputed here.
+        # PO-7 fix (b): coherence death prunes on P_S <= 0.5 (the Werner bound), matching this
+        # method's docstring and the per-synapse build. The prior code tested is_entangled only —
+        # the same dropped-coherence-death channel as the U16 write-once bug (07fd02a).
         for key in list(self._prov_bonds.keys()):
             a, b = key
             if (a not in current_ids or b not in current_ids
                     or not (ent_of.get(a, False) and ent_of.get(b, False))):
                 self._prov_bonds.pop(key, None)
+                continue
+            f = float(P_of[a] * P_of[b])
+            if P_of[a] <= 0.5 or P_of[b] <= 0.5:
+                self._prov_bonds.pop(key, None)   # coherence death
+            else:
+                self._prov_bonds[key] = f
         self._prov_seen &= current_ids
 
         # (2) Age out expired events (phosphates consumed within ~seconds).
