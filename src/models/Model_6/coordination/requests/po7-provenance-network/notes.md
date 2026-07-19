@@ -1,5 +1,33 @@
 # PO-7 — open questions, with my recommendation (not blocking; I keep working)
 
+## Q0 — STATISTICAL POWER: the scored test may be underpowered, and a thin null would overclaim
+
+**Raised 2026-07-19 ~20:52 UTC, from Unit 1's first 6 rows, BEFORE Unit 2 was run.**
+
+Unit 1 measures, at the pre-registered spacing of 0.2 µm, only **2–3 cross-synapse provenance
+edges per run** (against ~200 intra). At 0.4 µm it is 0–1; at ≥0.6 µm it is 0.
+
+Unit 2's statistic is Newman modularity on the **6-node synapse graph**. With 2–3 edges among 6
+nodes, `Q` is dominated by noise and `n_multi` (components spanning ≥2 synapses) can be at most
+2–3 by construction. **A "decomposition null" verdict from a probe this thin would be
+overclaiming a negative** — asserting the mechanism does not compute when the measurement simply
+could not have detected it either way. That is the same criterion-mis-registration family as
+Units 8/9/13/16b, just pointing the other direction.
+
+**Recommendation (adopted): run a cheap POWER CHECK before committing to the scored Unit 2** —
+cross-edge count vs `T_SIM` at 0.2 µm, one seed, no scoring. Two outcomes, both useful:
+- **Edges accumulate with sim time** ⇒ raise `T_SIM` for Unit 2 to reach adequate power, then run
+  the pre-registered test as written. Raising power is decided BEFORE scoring and is not
+  tuning-to-verdict; the verdict function and spacing rule are unchanged.
+- **Edges saturate at ~3** ⇒ the honest finding is that **the layer cannot generate enough
+  cross-synapse structure to support the §8 keystone test at all** at the committed
+  `reach_nm=500` / `event_rate=0.5`. That is a stronger, more useful result than a thin null, and
+  it is reported as a **characterization of the mechanism's ceiling**, not as a keystone verdict.
+
+Either way the §8 keystone question would remain **not-yet-answered** rather than answered
+negative — and saying so is the honest report. Reporting the ceiling is not a failure to deliver;
+it is the finding that the cross-synapse channel, as built, is too sparse to carry the test.
+
 ## Q1 — the kickoff's {1,2,3} vs {4,5,6} split IS the spatial half, i.e. the L·PO5-13 trap
 
 **This is the most important thing on this page.** The kickoff specifies conditions

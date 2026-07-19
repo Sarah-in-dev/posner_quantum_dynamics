@@ -31,3 +31,39 @@ mis-registration class that nulled Units 8/9/13/16b.
 geometric prediction registered in the probe header BEFORE the run.
 
 **Open questions** → `notes.md` (recommendations recorded; not blocking).
+
+### 2026-07-19 21:05 UTC — cycle 2
+
+**Unit 1 (geometry locator, 9/12 rows in) — the layer DOES form η-free cross-synapse edges,
+but only in a narrow, very sparse band:**
+
+| spacing | cross edges (per seed) | overlap |
+|---|---|---|
+| 0.2 µm | 2, 3 | 0.036, 0.056 |
+| 0.4 µm | 1, 0 | 0.014, 0.000 |
+| 0.6 µm | 0, 0 | 0.000 |
+| 0.8 µm | 0, 0 | 0.000 |
+| 1.2 / 2.0 µm | pending (falsification rows) | — |
+
+Monotone decline with spacing, hard zero by 0.6 µm — consistent with the registered geometric
+prediction (reach 500 nm vs 400 nm grid span). **Pre-registered spacing rule selects 0.2 µm**
+(mean overlap 0.046 vs midpoint 0.028 of the observed 0–0.056 range), independently of yield.
+
+**Unit 1b (power check, unscored) — first cross-synapse COMPONENT demonstrated, then a CEILING:**
+- `t=0.25 s`: first cross edges, `n_multi=1` — **a connected component spanning two synapses.**
+  This is the first data-level proof the layer does what it was built to do, η-free.
+- `t=0.25 → 0.60 s`: **seven consecutive flat steps.** `cum_cross` pinned at 2,
+  `syn_pairs_ever` at 1/15, while `prov_total` grew 153→267. The cross channel stalls while the
+  intra channel keeps running.
+- **Causal read (candidate, pending full trace):** `dimers` saturates (~6590, birth ≈ death) and
+  provenance is **born-with** — only newly-seen dimers claim events (`:504`). Once the population
+  stops growing, new claims decay, and cross-synapse claims (a ~1% tail) stop almost entirely.
+  The ceiling follows from the born-with rule × population saturation, not from geometry alone.
+
+**Consequence for the scored test (flagged, notes.md Q0):** with 2 cross edges across 6 synapses,
+Newman Q on the synapse graph is noise-dominated. A "decomposition null" verdict from that would
+**overclaim a negative.** Distinction being held: *"the mechanism cannot support the test"* ≠
+*"the mechanism fails the test."* Only the former would be supported; §8 would remain OPEN.
+
+**Bit-identity re-verified this cycle: PASS.** Commits `c3ba6aa`, `b03b90a` — explicit paths,
+`git show --stat` clean both times.
