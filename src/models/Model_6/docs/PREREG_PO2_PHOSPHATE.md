@@ -306,6 +306,63 @@ bounded — and that the real bound must come from somewhere physical (conservat
 exists, or the dissolution rate). **I will report a runaway; I will not re-tune the fraction to
 prevent one.** §7 LOCKED: emergent physics only, no constant tuned to a downstream target.
 
+## 6e. AMENDMENT A2.6 — the heavy-slot run: a BOUND, not a binding, and why
+
+*(2026-07-18/19. Registered BEFORE the run. MO gen-2 granted the exclusive slot to "replace the
+~32 min extrapolation with a run that sees the pool actually bind, **or state that you did not**.")*
+
+**MEASURED CALIBRATION, before committing the slot: 5.1 model-steps/s** on this hardware
+(500 steps in 97.2 s, full `Model6QuantumSynapse`).
+
+**Therefore run-to-binding is not purchasable with this slot, and I am saying so before spending
+it rather than after:**
+
+| target | steps @ dt=0.005 | wall time |
+|---|---|---|
+| binding at `frac=0.02` (34.4 min simulated) | 413,000 | **22.3 h** |
+| one 50-min arm | 15,425 | 50 min → **77 s simulated** (3.9× the 20 s window) |
+
+**And binding at the grounded value is not a target at all** — PO2-9 measured no drain there
+(slope +8.05e-05/s, t=+0.74, non-monotonic). **There is nothing to run to.** Running `0.02` to
+binding would spend 22 h confirming, at R²=0.999, a configuration **that is no longer in the code.**
+
+### What the slot IS spent on, and the registered criterion
+
+**One arm, at the GROUNDED value, on the longest horizon the slot allows** — because the genuinely
+open question is the one PO2-9 itself named as its limit: *"a slow nonlinearity outside this window
+would not appear here."*
+
+**REGISTERED DELIVERABLE: an upper bound on the grounded drain rate.** Extending the span ~4×
+at fixed sampling density improves the slope standard error by ~span^1.5, so the run should
+resolve a drain roughly **8× smaller** than the 20 s window could.
+
+**Registered verdict criteria, fixed now:**
+
+- **`NO_DRAIN_TO_BOUND`** — |slope| not significant at |t| < 2 (two-sided, ~p>0.05 at this n).
+  Report the **95% upper confidence bound on |slope|** and the implied **minimum time-to-depletion**.
+  *This is the expected outcome and it is a BOUND, never a proof of zero.*
+- **`DRAIN_DETECTED`** — slope significantly negative (t ≤ −2) **and** monotonic. Then PO2-9's
+  conclusion is **overturned on a longer horizon**, the valve is not closed at the grounded value,
+  and that is a finding I report against my own prior result.
+- **`NONLINEAR`** — significant curvature (quadratic term significant) — the pool is neither
+  draining linearly nor flat, and neither prior framing holds.
+- **`INVALID`** — conservation drifts beyond ε during the run, i.e. the ledger broke and no
+  depletion claim is readable from it.
+
+**Conservation is carried as a live guard for the whole run**, so a long run cannot silently
+produce a depletion number off a broken ledger.
+
+### Compliance with the new standing rule (persist-then-score)
+
+Per gen-2's rule — *"a run that costs a heavy slot MUST persist its scored intermediate to disk,
+and scoring MUST be a separate offline step"* — and composing from `sweep/score_leta5.py`'s shape:
+
+- **`sweep/phosphate_depletion_bound_probe.py`** writes the trace incrementally and **computes no
+  verdict.**
+- **`sweep/score_phosphate_depletion.py`** re-reads the persisted trace offline and applies the
+  criteria above. **A scoring bug therefore costs zero compute to fix** — which is exactly the
+  58 minutes PO-5 lost.
+
 ## 7. Limits of this measurement, stated in advance
 
 - It measures **mass conservation of phosphate**, nothing else. Conservation is **necessary, not
