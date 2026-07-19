@@ -107,6 +107,29 @@ class NetworkEntanglementTracker:
         self.cross_synapse_bonds: Dict[Tuple, float] = {}        # tracker-owned cross-spine edges, weight = P_S_i × P_S_j
         self.intra_synapse_bonds_cache: Dict[Tuple, float] = {}  # rebuilt each collect_dimers from per-synapse systems
 
+        # === PO-7: NETWORK-SHARED PROVENANCE EVENTS (opt-in; all-off bit-identical) ===
+        # Fisher's inheritance channel lifted from per-synapse to a NETWORK pool. Hydrolysis
+        # events carry ABSOLUTE (x,y) network coordinates; a newborn dimer in ANY synapse claims
+        # its nearest events within reach, and two dimers (possibly in DIFFERENT synapses) that
+        # claim the two daughters of one event bond — a cross-synapse edge, Fisher-inherited from
+        # a shared hydrolysis origin, and therefore η-FREE (no condensate mediation, so the dead
+        # pump r≈0.077/η=0 does not block it). Kept in a SEPARATE container so the η-gated
+        # _update_entanglement dissolution never rewrites these edges. Off => empty => no unions
+        # in _find_all_clusters => identical partition. See docs/PREREG_PO7_NETWORK_PROVENANCE.md.
+        self.provenance_network: bool = False                    # master opt-in flag
+        self.provenance_net_event_rate: float = 0.5             # events / active-cell / step (reported, not tuned)
+        self.provenance_net_age_s: float = 2.0                  # events expire (phosphates consumed ~s)
+        self.provenance_net_reach_nm: float = 500.0            # claim radius (shared-origin phosphate diffusion reach)
+        self.provenance_net_ca_threshold: float = 1e-6         # M; matches atp_system active-site rule
+        self.provenance_net_event_slots: int = 2               # entangled daughters per hydrolysis event
+        self.provenance_net_k: int = 2                         # phosphate pairs per Ca6(PO4)4 dimer (LOCKED qsc:43)
+        self._prov_bonds: Dict[Tuple, float] = {}              # (gid_i, gid_j) -> Werner F = P_S_i*P_S_j
+        self._prov_events: list = []                           # shared pool: {id,pos(abs nm xy),t,slots_free,holders}
+        self._prov_next_event_id: int = 0
+        self._prov_time: float = 0.0                           # tracker-local clock for event aging
+        self._prov_seen: set = set()                           # global_ids already granted provenance (born-with)
+        self._prov_last_stats: dict = {}                       # diagnostics for the probe (overlap fraction etc.)
+
     @property
     def entanglement_bonds(self):
         """Union of cross-synapse and intra-synapse bonds. Computed on demand.
@@ -205,7 +228,11 @@ class NetworkEntanglementTracker:
 
         # Update entanglement bonds
         self._update_entanglement(dt, coupling_weights)
-        
+
+        # PO-7: network-shared provenance events (opt-in; no state/RNG touched when off).
+        if self.provenance_network:
+            self._step_network_provenance(dt, synapses, positions)
+
         # Find largest connected cluster
         largest_cluster = self._find_largest_cluster()
         
@@ -371,6 +398,125 @@ class NetworkEntanglementTracker:
                     self.cross_synapse_bonds[(gid_A[r], gid_B[c])] = float(F_werner[r, c])
                 for r, c in zip(*np.nonzero(diss)):
                     self.cross_synapse_bonds.pop((gid_A[r], gid_B[c]), None)
+
+    def _step_network_provenance(self, dt: float, synapses: List, positions: np.ndarray):
+        """PO-7: NETWORK-SHARED hydrolysis-event pool -> η-free cross-synapse edges.
+
+        Only called when self.provenance_network is True (guarded by the caller in step()),
+        so every state mutation and RNG draw here is off the default path. Faithful to the
+        per-synapse provenance in dimer_particles.py, lifted to the network:
+          - events are INPUT-PLACED: sourced at each synapse's calcium-elevated cells
+            (atp_system's active-site rule), positioned in ABSOLUTE network nm;
+          - a newborn dimer (in ANY synapse) claims its <=k nearest events within reach that
+            still have a free slot (deterministic nearest-selection, born-with provenance);
+          - the two holders of one event's two daughters BOND (shared entangled origin), with
+            Werner fidelity F = P_S_i * P_S_j. If the two holders sit in DIFFERENT synapses the
+            edge is cross-synapse — Fisher-inherited, needing NO η (no condensate mediation).
+        Edges die by coherence death (either endpoint P_S <= 0.5) exactly as the per-synapse
+        build does. Kept in self._prov_bonds so the η-gated _update_entanglement never rewrites
+        them; _find_all_clusters unions them under the same Werner bound.
+        """
+        self._prov_time += dt  # tracker-local clock (tracker has no self.time)
+        # Absolute (x,y) nm position, P_S and entanglement of every current dimer, by global_id.
+        grid_center = {}
+        for syn_idx, synapse in enumerate(synapses):
+            ps = getattr(synapse, 'dimer_particles', None)
+            if ps is not None:
+                grid_center[syn_idx] = np.array(
+                    [ps.grid_shape[0] * ps.dx_nm / 2.0, ps.grid_shape[1] * ps.dx_nm / 2.0])
+        abs_xy, P_of, ent_of = {}, {}, {}
+        for d in self.all_dimers:
+            si = d['synapse_idx']
+            c = grid_center.get(si)
+            if c is None:
+                continue
+            syn_nm = np.asarray(d['synapse_pos_um'][:2], float) * 1000.0
+            abs_xy[d['global_id']] = syn_nm + (np.asarray(d['dimer'].position[:2], float) - c)
+            P_of[d['global_id']] = float(d['P_S'])
+            ent_of[d['global_id']] = bool(d['dimer'].is_entangled)
+        current_ids = set(abs_xy.keys())
+
+        # (1) Prune prov bonds: endpoint gone OR either endpoint decohered (coherence death).
+        for key in list(self._prov_bonds.keys()):
+            a, b = key
+            if (a not in current_ids or b not in current_ids
+                    or not (ent_of.get(a, False) and ent_of.get(b, False))):
+                self._prov_bonds.pop(key, None)
+        self._prov_seen &= current_ids
+
+        # (2) Age out expired events (phosphates consumed within ~seconds).
+        self._prov_events = [e for e in self._prov_events
+                             if self._prov_time - e['t'] <= self.provenance_net_age_s
+                             and e['slots_free'] > 0]
+
+        # (3) Generate new events from each synapse's calcium field, placed in ABSOLUTE nm.
+        for syn_idx, synapse in enumerate(synapses):
+            ps = getattr(synapse, 'dimer_particles', None)
+            c = grid_center.get(syn_idx)
+            if ps is None or c is None:
+                continue
+            try:
+                ca = synapse.calcium.get_concentration()
+            except Exception:
+                ca = None
+            if ca is None:
+                continue
+            active = np.argwhere(ca > self.provenance_net_ca_threshold)
+            if active.size == 0:
+                continue
+            n_new = np.random.poisson(self.provenance_net_event_rate * len(active) * dt)
+            if n_new <= 0:
+                continue
+            syn_nm = np.asarray(positions[syn_idx][:2], float) * 1000.0
+            pick = active[np.random.randint(0, len(active), size=int(n_new))]
+            for cell in pick:
+                local = np.array([(cell[0] + 0.5) * ps.dx_nm, (cell[1] + 0.5) * ps.dx_nm])
+                self._prov_events.append({'id': self._prov_next_event_id,
+                                          'pos': syn_nm + (local - c), 't': self._prov_time,
+                                          'slots_free': self.provenance_net_event_slots,
+                                          'holders': []})
+                self._prov_next_event_id += 1
+
+        # (4) Assign provenance to newly-seen dimers (born-with); claim <=k nearest events in reach.
+        new_ids = sorted(g for g in current_ids if g not in self._prov_seen)
+        if self._prov_events and new_ids:
+            epos = np.array([e['pos'] for e in self._prov_events])
+            for gid in new_ids:
+                self._prov_seen.add(gid)
+                dist = np.linalg.norm(epos - abs_xy[gid], axis=1)
+                order = np.argsort(dist)
+                claimed = 0
+                for k in order:
+                    if dist[k] > self.provenance_net_reach_nm:
+                        break  # sorted ascending: nothing farther is reachable
+                    e = self._prov_events[k]
+                    if e['slots_free'] <= 0:
+                        continue
+                    e['slots_free'] -= 1
+                    e['holders'].append(gid)
+                    if len(e['holders']) >= 2:
+                        partner = e['holders'][-2]
+                        if partner != gid and partner in current_ids:
+                            key = (min(gid, partner), max(gid, partner))
+                            self._prov_bonds[key] = float(P_of[gid] * P_of[partner])
+                    claimed += 1
+                    if claimed >= self.provenance_net_k:
+                        break
+        else:
+            self._prov_seen |= set(new_ids)
+
+        # Diagnostics for the probe: cross vs intra edge split and event-pool overlap fraction.
+        n_cross = sum(1 for (a, b) in self._prov_bonds if a[0] != b[0])
+        multi = sum(1 for e in self._prov_events
+                    if len({h[0] for h in e['holders']}) >= 2)
+        claimed_evt = sum(1 for e in self._prov_events if e['holders'])
+        self._prov_last_stats = {
+            'n_events': len(self._prov_events),
+            'n_prov_bonds': len(self._prov_bonds),
+            'n_cross_bonds': n_cross,
+            'n_intra_bonds': len(self._prov_bonds) - n_cross,
+            'overlap_frac': (multi / claimed_evt) if claimed_evt else 0.0,
+        }
 
     def _calculate_coupling(self, d_i: dict, d_j: dict) -> float:
         """
@@ -549,6 +695,15 @@ class NetworkEntanglementTracker:
                     union(id_i, id_j)
                     bonded_ids.add(id_i)
                     bonded_ids.add(id_j)
+        # PO-7: η-free network-provenance edges, same Werner bound. Empty when the flag is
+        # off, so this loop is a no-op on the default path (bit-identical partition).
+        if self.provenance_network:
+            for (id_i, id_j), fidelity in self._prov_bonds.items():
+                if fidelity > self.WERNER_ENTANGLEMENT_BOUND:
+                    if id_i in parent and id_j in parent:
+                        union(id_i, id_j)
+                        bonded_ids.add(id_i)
+                        bonded_ids.add(id_j)
 
         # Group bonded dimers by root
         clusters = {}
