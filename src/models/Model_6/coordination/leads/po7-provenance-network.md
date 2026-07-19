@@ -87,3 +87,20 @@ distance). All recorded in `notes.md` Q6 and `L·PO7-1` §5, none quietly absorb
 **§8 remains OPEN, not answered negative.** The fix for the next worker is in `L·PO7-1` §7:
 HIGH-vs-LOW drive on all six synapses (density matched) + constant co-active spacing + a
 cross-edge yield increase. Confound and power must be fixed together.
+
+### 2026-07-19 — CORRECTION (Sarah): the cross-synapse premise is unphysical
+
+Phosphate provenance is **local**. Cross-synapse entanglement is mediated by the condensate
+backbone (`model6-entanglement-partition-werner` §2: `k_cross = 0.5·√(η_i·η_j)·w_spatial·P_product`,
+`w_spatial = exp(−d/5 µm)` = the CONDENSATE coupling length). PO-7 read §1 and never read §2.
+
+**Withdrawn:** the network event pool as a physical claim; the "2 µm landmine" (it is CORRECT
+physics); the Unit-2 verdict; the Unit-7 claim-radius derivation; Unit 6 (killed); the R4 packet.
+
+**Survives, all local:** monogamy violated 179× (99.44% of edges inadmissible); provenance
+monogamy-CLEAN (0/434 over bound); the which-spin slot tag; coincidence window ≤50 ms ⇒
+`provenance_net_age_s` non-operative; two real inherited defects fixed; the Unit-5 sheaf is a
+direct sum of 3 graph Laplacians.
+
+**The finding that replaces the objective:** there is no η-free cross-synapse route, so **η being
+dead is a HARD BLOCKER, not something to engineer around.** Full record: `L·PO7-2`.

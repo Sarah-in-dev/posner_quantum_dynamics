@@ -1,3 +1,30 @@
+> # ⚠ WITHDRAWN — DO NOT SEND · 2026-07-19
+>
+> **This packet's core framing is wrong and it must not go to the advisor as written.**
+>
+> It assumes phosphate provenance can act as a CROSS-SYNAPSE channel. It cannot. Per
+> `model6-entanglement-partition-werner` §2 the cross-synapse mechanism is
+> `k_cross = K_ENTANGLE_EM_BASE(0.5)·sqrt(eta_i·eta_j)·w_spatial·P_product`, with
+> `w_spatial = exp(-d/5 µm)` the **condensate coupling length** — cross-synapse entanglement is
+> mediated by the Fröhlich backbone, not by a phosphate travelling between synapses. Direct
+> entanglement is only ever local.
+>
+> **Consequently withdrawn from this packet:** §2.1's "landmine" (the 2 µm structural zero is
+> CORRECT physics, not a settings bug); §2.3's keystone verdict (scored a mechanism that should
+> not exist); §4's whole architectural question (premised on cross-synapse provenance); §4.2's
+> claim-radius ask (moot — reach was never limiting inside one 400 nm nanodomain).
+>
+> **What survives and is still worth the advisor's time — all LOCAL:** the monogamy violation
+> (mean degree 715 vs a bound of 4; 99.44% of edges inadmissible), provenance being
+> monogamy-CLEAN without a cap, the ≤50 ms coincidence window making `provenance_net_age_s`
+> non-operative, and the Unit-5 sheaf being a direct sum of 3 graph Laplacians rather than
+> irreducible sheaf structure.
+>
+> **The finding that replaces the question:** if entanglement is only local there is no η-free
+> cross-synapse route, so **η being dead is a hard blocker, not something to engineer around.**
+>
+> Full correction: `RESEARCH_LOG_ENTANGLEMENT_TOPOLOGY.md` entry `L·PO7-2`.
+
 # Advisor packet — round 4: the multi-synapse scale, and a confound we could not design out
 **PO-7 · 2026-07-19 · after building the network-shared provenance layer and running the keystone test**
 

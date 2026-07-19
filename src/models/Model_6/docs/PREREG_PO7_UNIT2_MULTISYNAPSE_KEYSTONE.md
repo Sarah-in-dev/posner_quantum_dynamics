@@ -1,3 +1,11 @@
+> # ⚠ SUPERSEDED — not a valid pre-registration · 2026-07-19
+>
+> It pre-registers a CROSS-SYNAPSE provenance test. Phosphate provenance is local; the mechanism it scores does not exist. The run happened and its decomposition null is UNINFORMATIVE, not a finding.
+>
+> Cross-synapse entanglement is mediated by the condensate backbone (`eta`), not by
+> shared phosphate origin — `model6-entanglement-partition-werner` §2. See
+> `RESEARCH_LOG_ENTANGLEMENT_TOPOLOGY.md` entry `L·PO7-2`.
+
 # PRE-REGISTRATION — PO-7 Unit 2: the multi-synapse §8 keystone test
 
 **Registered 2026-07-19, BEFORE the scored run. PO-7.**

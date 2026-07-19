@@ -1,3 +1,11 @@
+> # ⚠ SUPERSEDED — not a valid pre-registration · 2026-07-19
+>
+> It pre-registers a CROSS-SYNAPSE synchrony contrast. Phosphate provenance is local, so co-elevation of NEIGHBOURING synapses cannot gate a shared-origin claim. The run was killed mid-execution and was never scored.
+>
+> Cross-synapse entanglement is mediated by the condensate backbone (`eta`), not by
+> shared phosphate origin — `model6-entanglement-partition-werner` §2. See
+> `RESEARCH_LOG_ENTANGLEMENT_TOPOLOGY.md` entry `L·PO7-2`.
+
 # PRE-REGISTRATION — PO-7 Unit 6: synchrony vs stagger at matched density
 
 **Registered 2026-07-19, BEFORE the scored run. PO-7. Advisor R4 step 2.**

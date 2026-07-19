@@ -65,6 +65,7 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| PO7-2 | 2026-07-19 | **⚠ CORRECTION — `L·PO7-1`'s CROSS-SYNAPSE PREMISE IS UNPHYSICAL AND IS WITHDRAWN. Phosphate provenance is a LOCAL mechanism; it is not a cross-synapse channel.** Sarah's correction, verified against `model6-entanglement-partition-werner` §2: the model's cross-synapse mechanism is `k_cross = K_ENTANGLE_EM_BASE(0.5)·√(η_i·η_j)·w_spatial·P_product`, hard-gated on both spines `mt_invaded`, with `w_spatial = exp(−d/5 µm)` the **CONDENSATE coupling length** — cross-synapse entanglement is mediated by the Fröhlich backbone, **not** by a phosphate traversing between synapses. Direct entanglement is only ever local. **Grounding failure:** PO-7 read §1 (*where* the partition lives) and treated it as licensing a mechanism only §2 describes; §2 was never read. The kickoff's premise ("a dimer in ANY synapse claims events in absolute network coordinates") was inherited without checking it against the mechanism. **WITHDRAWN:** the network-shared event pool as a physical claim; `L·PO7-1`'s framing of the 2 µm structural zero as a "landmine" (**it is CORRECT PHYSICS — phosphate should not reach**; PO-7 inverted it); the Unit-2 keystone verdict (tested a mechanism that should not exist); the Unit-7 claim-radius derivation (moot — within one 400 nm nanodomain the 500 nm reach was never limiting); Unit 6 (killed mid-run); the R4 advisor packet's core framing. **The tell PO-7 missed:** cross edges required forcing spacing to 0.2 µm, and PO-7 recorded that this "excludes the upper half of the physiological range" as a *limitation* rather than as evidence the mechanism was wrong. **WHAT SURVIVES — all local, all unaffected:** (1) **monogamy violation** — mean degree 715 vs the hard 4-spin bound, max 902, 100% of dimers over, **99.44% of edges physically inadmissible**, max admissible E=2068 vs actual 369740; (2) **provenance is monogamy-CLEAN** — max 1 bond per spin, 0/434 mediators over bound, where the clique rule violates 179×; (3) the **WHICH-SPIN slot tag** (Fisher names the phosphate slot, not just the partner) — more useful now, since local is the only scale that matters; (4) **coincidence window ≤50 ms** ⇒ `provenance_net_age_s = 2.0` is NON-OPERATIVE and needs no justification; (5) two real inherited defects fixed (frozen fidelity; dropped coherence death); (6) the Unit-5 sheaf is a **direct sum of 3 graph Laplacians** (cross-block edges 0/369740, identity verified), so it is not irreducible sheaf structure. **THE REAL FINDING THIS EXPOSES:** the charter sought cross-synapse edges *without* η because the pump is dead (r≈0.077, η=0). If entanglement is only local, **there is no η-free route** — so **η being dead is a HARD BLOCKER on cross-synapse entanglement, not an obstacle to engineer around.** The provenance network was getting the desired answer by changing the physics. The dead pump is the target. | [CORRECTION — supersedes `L·PO7-1`'s cross-synapse claims] | `L·PO7-2` below |
 | PO7-1 | 2026-07-19 | **NETWORK-SHARED PROVENANCE BUILT AND VALIDATED (η-free cross-synapse edges are REAL) — but the multi-synapse §8 keystone is a PRE-REGISTERED NEGATIVE: decomposition null.** **Build:** lifted provenance events from per-synapse to a NETWORK pool (`multi_synapse_network._step_network_provenance`), opt-in, **off-path bit-identical `1034/369740/0.991922159684`** (re-gated after scoring). Repaired two defects in the inherited WIP: **frozen fidelity** (F stored at claim time, never refreshed, while `_find_all_clusters` tested it against the live Werner bound) and **dropped coherence death** (pruned on `is_entangled`, not `P_S<=0.5` — the U16 write-once shape again). **Unit 1 — the layer WORKS:** cross-synapse provenance edges form, η-free (`eta_cross = 0` in all 20 scored runs — the dead pump contributes nothing; every cross edge is Fisher-inherited). Registered geometric prediction held exactly: zero cross edges above 0.9 µm, nonzero below (grid span 400 nm vs reach 500 nm). **⚠ At the COMMITTED DEFAULT `spacing_um=2.0` cross edges are STRUCTURALLY IMPOSSIBLE** — the layer as inherited could never have produced one, and a run at defaults would have recorded a physical-looking null for a purely geometric reason. **Unit 1b — a hard CEILING:** cross edges appear once (t=0.25 s, 2 edges, 1/15 synapse pairs) then never again through t=2.0 s while `prov_total` grows 153→481 (+328 bonds, ZERO new cross edges). **Unit 2 (pre-registered, 5 seeds, 2 arms) — NEGATIVE, decomposition null:** `mean n_multi` = **0.60** (contiguous) / **0.50** (interleaved), both < 1 ⇒ the partition splits cleanly per-synapse. **Input-LOCATED, not input-COMPUTING.** Seed dominates the condition contrast (seed 7 high-yield in every arm; seeds flip direction between A and B) — the L·PO5-13 `d=0.02` shape by a different route. **⚠ THREE DESIGN DEFECTS FOUND IN MY OWN PREREG, all recorded not absorbed:** (1) dimer-level Q would have been ≈1.0 BY CONSTRUCTION (all ~370k intra-clique edges sit inside one activation label) — caught BEFORE scoring, moved to the synapse-level graph; (2) **"density matched by construction" is FALSE** — inactive synapses at −70 mV make no dimers, so cross edges can only form among active ones trivially; `Q_act = +0.0000` in **all 20 runs** (Newman's degenerate value when every edge lies in one community) and `d=1.61/1.33` is an artifact of the null going negative, NOT a signal — **a PASS on Q would have been a THIRD false positive**; (3) ARM 2 interleaving changes co-active spacing 0.2→0.4 µm, so criterion 3 conflates layout with distance. **What this does NOT close:** whether a density-matched, adequately-powered design would move the partition. §8 remains OPEN, not answered negative. | [GROUNDED, measured — mechanism YES, keystone NO] | `L·PO7-1` below |
 | PO5-13 | 2026-07-19 | **PROVENANCE BONDING BUILT (first non-blob graph) — but the computation test is a FALSE POSITIVE the probe declared and PO-5 OVERRODE.** Build: Fisher's actual mechanism in `dimer_particles.py`, opt-in, **provenance-off bit-identical**; events at Ca-elevated cells (2 slots), dimer claims ≤2 nearest, bond iff shared; EM pathway skipped (LOCC). **Mechanism works:** 459,889-bond blob (off) → **~500 bonds, largest_frac 0.05** (on) — genuinely sparse/pairwise, the first non-blob in the whole investigation. **⚠ BUT the probe's verdict "carries input-dependent partition" is WRONG:** it scored `Q(input)=0.15 >> Q(shuffled)=0`, but the "input label" was spatial half — so Q detects **spatial locality (GEOMETRY, §8-insufficient)**, not input. **The decisive A-vs-B input contrast is d=0.02 — flat null.** Same criterion-mis-registration as Units 8/9/13. **Honest verdict: NOT keystone-supported.** The provenance assortativity is spatial, and single-synapse pulsed-vs-sustained doesn't vary the spatial Ca pattern (the peak-saturated weak-contrast wall again). Establishes: mechanism faithful + sparse + carries spatial structure. Does NOT establish either way whether input that genuinely varies spatial Ca would move the partition — and sharpens the tension that the pair-level channel may need the multi-synapse scale §7#1 said it doesn't. No constant tuned; d=0.02 holds regardless of event_rate. | [GROUNDED, measured — mechanism yes, keystone no] | `L·PO5-13` below |
 | PO5-12 | 2026-07-19 | **DEEP RESEARCH: provenance-bonding is FAITHFUL to Fisher, computational capability UNPROVEN — de-risk before build.** External (adversarially-verified primary sources) + internal (code map). **GREEN:** Fisher's inheritance is strictly pairwise/provenance — two Posners entangle iff they share a common-origin phosphate pair; *"dimers bond iff they share a hydrolysis event"* is literally his channel, and the clique + distance-kernel rules are both wrong. **RED (fix both, 3-0):** (1) ⚠ the research said "fix stoichiometry to Ca₉(PO₄)₆" — WRONG, contradicts LOCKED `quantum-system-canonical:43` (Agarwal: the Ca₆(PO₄)₄ DIMER is the qubit, the Ca₉ trimer is inert). Correct object is the dimer, 4 spins = 2 singlet pairs ⇒ ≤2 events/node. Physics was already documented; the workflow mis-corrected it — PO-5 process failure; (2) genuine inter-Posner entanglement does NOT survive (Player & Hore: seconds; no inversion symmetry) ⇒ lean on the CLASSICAL common-cause reading. **THE GATE:** the object is exactly the s=1 Random Intersection Graph (threshold c=n·Σp_w², clique union, richer-than-density below m<n³) — but **NO source shows it carries INPUT-DEPENDENT partition structure**, which is the exact §8 property unproven for the replacement too. **Caveats:** "bond" = entanglement edge not chemical binding; a QDS binding-induced channel is orthogonal and invisible to a provenance graph. **Internal:** ~50–75 lines / 3 files, gated & bit-identical-off; ATP layer already computes the burst mask (`atp_system.py:111`) and discards it (`:119`) — capture not invent; one physics call = the birth↔event spatial-join rule. **DECISION: de-risk with an abstract RIG sim (minutes, no physics) BEFORE the build** — test input-dependent vs input-constant event assignment for partition-beyond-density; the research names this as the gate. | [external lit + internal map] | `L·PO5-12` below |
@@ -101,6 +102,92 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·PO7-2 — ⚠ CORRECTION: the cross-synapse provenance premise is unphysical and is withdrawn; what survives is local · 2026-07-19 `[CORRECTION — supersedes L·PO7-1's cross-synapse claims]`
+
+**Raised by Sarah; verified against the mechanism skill before accepting.** Appended rather than
+edited, per this log's append-only rule.
+
+#### The physics PO-7 got wrong
+
+`model6-entanglement-partition-werner` §2 states the cross-synapse mechanism outright:
+
+```
+k_cross = K_ENTANGLE_EM_BASE(0.5) * sqrt(eta_i * eta_j) * w_spatial * P_product
+```
+
+hard-gated on both spines `mt_invaded`, with **`w_spatial = exp(-distance / 5.0 µm)` — the
+CONDENSATE coupling length.** Cross-synapse entanglement is mediated by the Fröhlich backbone /
+tryptophan network. **Phosphate provenance is LOCAL**: dimers born in one nanodomain from one
+hydrolysis event share an origin. It is not, and was never, a cross-synapse channel.
+
+#### How the error happened (the grounding failure, named)
+
+PO-7 read §1 of that skill — *where* the partition lives — and treated it as licensing a
+mechanism that only §2 describes. §2 sits one screen below §1 and was never read. The kickoff's
+premise ("hydrolysis events carry absolute network coordinates; a dimer in ANY synapse can claim
+an event within reach") was inherited and validated *as implemented* without ever being checked
+against the mechanism it was supposed to instantiate. Every downstream unit inherited it.
+
+**The tell that was recorded and misread:** cross edges only formed when spacing was forced to
+0.2 µm, and PO-7 wrote in `notes.md` Q2 that the required spacing "excludes the upper half of the
+physiological spine-spacing range" — filing it as a *limitation of the result* rather than as
+evidence the *mechanism* was wrong. A mechanism that only works at unphysical geometry is not a
+mechanism with a caveat.
+
+#### Withdrawn
+
+- The network-shared event pool **as a physical claim** (the code remains, flag-gated and
+  bit-identical-off; it is not deleted, but it does not model a real channel).
+- `L·PO7-1`'s framing of the 2 µm structural zero as a **"landmine"**. **It is correct physics** —
+  phosphate should not reach an adjacent synapse. PO-7 reported the model being right as a bug.
+- The **Unit-2 keystone verdict** — it scored a mechanism that should not exist. Its decomposition
+  null is uninformative, not a finding.
+- The **Unit-7 claim-radius derivation** — moot. Within a single 400 nm nanodomain a 500 nm reach
+  was never the limiting factor, so the reaction-diffusion length answers a question that does not
+  arise. (The arithmetic is not wrong; the question is.)
+- **Unit 6** (synchrony vs stagger) — killed mid-run; it was a cross-synapse design.
+- The **R4 advisor packet's core framing**. It must not go out as written.
+
+#### What survives — all local, none of it touched by the correction
+
+1. **Monogamy is violated catastrophically.** Four ³¹P spins per Ca₆(PO₄)₄ bound a dimer to ≤4
+   singlet-strength bonds. Measured at the standing fingerprint point: mean degree **715.2**
+   (179×), max **902** (226×), **1034/1034 dimers over bound**, **99.44% of edges physically
+   inadmissible**, max admissible E = **2068** against an actual **369,740**.
+2. **Provenance bonding is monogamy-CLEAN** — max 1 bond per spin, **0 of 434** mediators over
+   bound. It satisfies the bound with no cap and no tuning, where the clique rule breaks it by two
+   orders of magnitude. This is independent physical evidence for provenance **as the local
+   bonding rule**, and it does not depend on any input-computing claim.
+3. **The WHICH-SPIN slot tag** — Fisher's inheritance names the phosphate slot, not just the
+   partner. Now recorded (`_prov_slot_of`, `_prov_bond_spins`), side-band, ON-path regression
+   verified. More useful after this correction, not less: local is the only scale that matters.
+4. **The coincidence window is ≤50 ms** (p90 creation→second claim; 84.3% of events consumed
+   within one tracker step) against a nominal 2.0 s age ⇒ **`provenance_net_age_s` is
+   NON-OPERATIVE** and needs no physical justification.
+5. **Two real inherited defects fixed** — frozen fidelity (F stored at claim time while
+   `_find_all_clusters` tested it against the live Werner bound) and dropped coherence death
+   (pruned on `is_entangled`, not `P_S<=0.5`). Both are defects on any reading of the physics.
+6. **The Unit-5 sheaf is a direct sum of graph Laplacians** — cross-block edges **0 / 369,740**,
+   decomposition identity verified numerically. Not irreducible sheaf structure. (Correction to
+   the advisor's own count: the channel rule fuses channels in PAIRS, giving **3** blocks
+   `{0,1},{2,3},{4,5}`, not 6; at this operating point each block has exactly 1 component, so
+   `H0_engaged = 3` = the number of spatial axes.)
+
+#### ⚠ The real finding this exposes
+
+The charter sought cross-synapse edges **without η**, reasoning that the pump is dead
+(r≈0.077, η=0) and a route around it was needed. **If direct entanglement is only ever local,
+there is no η-free route.** Therefore:
+
+> **η being dead is a HARD BLOCKER on cross-synapse entanglement — not an obstacle to engineer
+> around.**
+
+The network-provenance layer was a way of obtaining the desired answer by changing the physics.
+That is a more consequential result than anything in `L·PO7-1`, and it relocates the target: the
+dead pump (`r≈0.077`) is the thing to fix, and §8's cross-synapse keystone is blocked behind it.
+
+
 
 ### L·PO7-1 — network-shared provenance BUILT and VALIDATED (η-free cross-synapse edges are real), multi-synapse §8 keystone is a pre-registered NEGATIVE (decomposition null), and three design defects found in my own pre-registration · 2026-07-19 `[GROUNDED, measured — mechanism YES, keystone NO]`
 
