@@ -1,0 +1,38 @@
+====================================================================================================
+PO-5 UNIT 4 — is `collective_field_kT` (the BUS) a percolation control parameter?
+  P1: bus=0 => zero P2 bonds => components == P0-only count  (override positive control)
+  P2: bus up => components -> 1
+  P3: no intermediate state at ANY value => NO_TRANSITION (a finding)
+====================================================================================================
+
+[native] measuring what the tryptophan module actually produces...
+  NATIVE bus value = 21.9843 kT   (reference_kT=20.0, FIELD_THRESHOLD_KT=20.0)
+  -> components 1, saturation 0.6144, lambda2 9.8074e-01
+
+    bus  n_ent   n_bonds     n_P2     sat  comps  P0comps  lgfrac     lambda2   sec
+------------------------------------------------------------------------------------
+   0.00   1182    380795        0  0.5456     60       60  0.8866 -5.6858e-13    65
+   0.10   1182    381114      319  0.5460     44       60  0.9636 -1.1950e-12    66
+   0.25   1182    381540      744  0.5466     39       60  0.9679 -7.0592e-13    66
+   0.50   1182    382243     1447  0.5476     29       60  0.9763 -1.7014e-12    66
+   1.00   1182    383620     2823  0.5496     20       60  0.9839 -1.3642e-12    67
+   2.00   1182    386386     5586  0.5536     14       60  0.9890 -6.6247e-13    67
+   5.00   1182    394253    13447  0.5649      7       60  0.9949 -3.4106e-13    68
+  10.00   1182    405640    24828  0.5812      6       60  0.9958 -1.2056e-13    70
+  20.00   1182    425273    44459  0.6093      1       60  1.0000  9.1055e-01    74
+
+====================================================================================================
+P1 override positive control : PASS
+P3 VERDICT: TRANSITION EXISTS — 7 bus value(s) give an intermediate
+   component count. The architecture HAS an operating point for a modulator.
+     bus=0.10 -> 44 components, largest_frac 0.9636
+     bus=0.25 -> 39 components, largest_frac 0.9679
+     bus=0.50 -> 29 components, largest_frac 0.9763
+     bus=1.00 -> 20 components, largest_frac 0.9839
+     bus=2.00 -> 14 components, largest_frac 0.9890
+     bus=5.00 -> 7 components, largest_frac 0.9949
+     bus=10.00 -> 6 components, largest_frac 0.9958
+
+LIMITS: single synapse, 1 s, one seed per bus value. The condensate is NOT
+reconnected — this overrides the bus directly and says nothing about whether
+backbone_eta * E_invasion can reach it. lambda2 is a diagnostic (A5), not a readout.

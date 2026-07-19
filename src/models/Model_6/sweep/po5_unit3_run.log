@@ -1,0 +1,42 @@
+======================================================================================
+PO-5 UNIT 3 — is the P0 bond graph an indifference graph on birth time?
+  PREDICTION (registered): components(P0) == 1 + count(gaps > 0.1 s)
+======================================================================================
+  [SUSTAINED] t=1.0 tb= 1022 births=  12 maxgap=0.4700s gaps>0.1s=  1  pred=  2 meas=  2  MATCH
+  [SUSTAINED] t=3.0 tb= 1044 births=  14 maxgap=0.7700s gaps>0.1s=  3  pred=  4 meas=  4  MATCH
+  [SUSTAINED] t=5.0 tb= 1046 births=  16 maxgap=2.6650s gaps>0.1s=  5  pred=  6 meas=  6  MATCH
+  [SUSTAINED] done in 359s, max_glu=1.000
+  [SUSTAINED] t=1.0 tb= 1101 births=  12 maxgap=0.5200s gaps>0.1s=  2  pred=  3 meas=  3  MATCH
+  [SUSTAINED] t=3.0 tb= 1112 births=  13 maxgap=0.8100s gaps>0.1s=  3  pred=  4 meas=  4  MATCH
+  [SUSTAINED] t=5.0 tb= 1113 births=  14 maxgap=2.6700s gaps>0.1s=  4  pred=  5 meas=  5  MATCH
+  [SUSTAINED] done in 470s, max_glu=1.000
+  [SUSTAINED] t=1.0 tb= 1158 births=  17 maxgap=0.3900s gaps>0.1s=  3  pred=  4 meas=  4  MATCH
+  [SUSTAINED] t=3.0 tb= 1147 births=  17 maxgap=0.3900s gaps>0.1s=  3  pred=  4 meas=  4  MATCH
+  [SUSTAINED] t=5.0 tb= 1128 births=  17 maxgap=0.3900s gaps>0.1s=  3  pred=  4 meas=  4  MATCH
+  [SUSTAINED] done in 518s, max_glu=1.000
+  [PULSED] t=1.0 tb= 1013 births=  12 maxgap=0.7550s gaps>0.1s=  1  pred=  2 meas=  2  MATCH
+  [PULSED] t=3.0 tb= 1087 births=  17 maxgap=0.7550s gaps>0.1s=  4  pred=  5 meas=  5  MATCH
+  [PULSED] t=5.0 tb= 1074 births=  18 maxgap=3.5650s gaps>0.1s=  5  pred=  6 meas=  6  MATCH
+  [PULSED] done in 414s, max_glu=1.000
+  [PULSED] t=1.0 tb= 1076 births=  11 maxgap=0.5200s gaps>0.1s=  2  pred=  3 meas=  3  MATCH
+  [PULSED] t=3.0 tb= 1080 births=  12 maxgap=0.5400s gaps>0.1s=  3  pred=  4 meas=  4  MATCH
+  [PULSED] t=5.0 tb= 1094 births=  15 maxgap=2.3250s gaps>0.1s=  6  pred=  7 meas=  7  MATCH
+  [PULSED] done in 489s, max_glu=1.000
+  [PULSED] t=1.0 tb= 1095 births=  14 maxgap=0.5300s gaps>0.1s=  2  pred=  3 meas=  3  MATCH
+  [PULSED] t=3.0 tb= 1106 births=  15 maxgap=0.7300s gaps>0.1s=  3  pred=  4 meas=  4  MATCH
+  [PULSED] t=5.0 tb= 1123 births=  17 maxgap=1.6500s gaps>0.1s=  5  pred=  6 meas=  6  MATCH
+  [PULSED] done in 524s, max_glu=1.000
+
+======================================================================================
+STRUCTURAL VERDICT: CONFIRMED   (18/18 samples match)
+======================================================================================
+  SUSTAINED  max birth gap 2.6700s | gaps>100ms: 5 | final P0 components: 4
+  PULSED     max birth gap 3.5650s | gaps>100ms: 6 | final P0 components: 6
+
+  At least one arm produced a birth gap > 100 ms -> formation CAN be gated
+     finely enough to split the P0 graph. That is the channel §8 needs.
+
+LIMITS: single synapse, 5 s, one seed per arm. Tests a MECHANISM, not
+input-selectivity. No §8 verdict is produced or implied.
+
+persisted -> /Users/sarahdavidson/posner_quantum_dynamics/.claude/worktrees/po5-keystone/src/models/Model_6/sweep/po5_unit3_birth_cohorts_results.json
