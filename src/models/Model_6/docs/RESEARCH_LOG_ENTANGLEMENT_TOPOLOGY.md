@@ -65,6 +65,7 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| PO5-10 | 2026-07-19 | **THE EM PATHWAY IS NOT AN ENTANGLING MECHANISM; the clique is NOT what percolates; the fidelity cut is the only lever.** **(1) STRUCTURAL/LOCC:** `em_rate` is a classical scalar scaling a *local* formation rate — a local operation, which cannot create entanglement (theorem). Entangling needs a direct `H_ij` or a common quantised mode; `em_rate` has neither. The code's own docstring already concedes there is no microscopic Hamiltonian and a ~10¹⁵ Hz vs ~Hz gap. **Dichotomy:** bonds are genuine entanglement ⇒ the pathway cannot make them; or they are classical correlations ⇒ the partition claim loses quantum grounding. **Asymmetry:** P0 (83%) has a real entangling origin (shared pyrophosphate) implemented as an unphysical clique; **P2 (17%) has no mechanism at all and is what percolates.** **(2) Unit 11:** degree cap k=4 removes **65% of edges**, `largest_frac` stays **1.0000**; k=1 also 1.0000; J-compat null (−0.8%); all-three −74% → still 0.9821. **Density is not the problem**, and this refutes the round-1 prediction that fixing the clique would fragment. **Per-event matching is unimplementable** — dimers are born from a concentration field, no per-phosphate provenance; the clique is a proxy for a **missing representation**, which is the diagnosis: Fisher's mechanism is inheritance, and every available proxy is input-blind by construction. **(3) Unit 12:** intra bonds have NO fidelity threshold (bare existence); storing `F=P_S_i·P_S_j·g(r)` and sweeping gives largest_frac 1.0000→**0.8314** and sheaf H⁰ **3→15** — the only lever that moves. **⚠ Two conceded defects: the bimodality is MANUFACTURED by the uncited 5 nm plateau, and `F` is a CATEGORY ERROR built from a rate term — fidelity must come from state, `F(t)=¼+(F₀−¼)e^(−t/T₂)`. No threshold nominated.** **(4) The ℝ⁶ latent space is populated with INPUT-INDEPENDENT NOISE** — `j_couplings_intra` is an independent per-dimer `normal(0.15,0.15,6)` draw (std 0.1478, median ‖ΔJ‖₂ 0.4864), so bonding on it cannot carry input information whatever the metric. The latent-dimension *principle* survives; this instance dies. **(5) OPEN:** dipolar coupling is a genuine parameter-free option (19.58 Hz @1nm … 0.02 Hz @10nm verified) but the claimed 1–2 nm range needs a ~100 ms competing timescale nobody can name — against T₂=216 s it reaches 10 nm, *more* permissive than today. **Do not build on it yet.** | [GROUNDED, measured + structural] | `L·PO5-10` below |
 | PO5-9 | 2026-07-19 | **THE TRANSIENT HYPOTHESIS FAILS — and it falsifies a `PO5-7` claim written the same day.** Probe `sweep/po5_unit8_transient.py`, pre-registered, **no overrides** — only when we look. **P1 FALSIFIED: the field is `min = max = 22.095` at EVERY sample from t=0.01 s on.** Unit 7's `range [0.000, 22.095]` was one or two samples before the first physics step, **not a gradual rise**. **`PO5-7`'s "it starts at zero and climbs every run / transits the whole fragmented→blob range" is WITHDRAWN** — the field reaches operating value in ~2 timesteps and stays. Error shape: **reading a min/max range as a trajectory without checking the time series** — the same mistake as reading a mean without its spread, one level up. **P2 fired on the registered criterion (`components>1 AND largest_frac<0.99`) at t=0.01–0.02, but the criterion was TOO WEAK and PO-5 does not bank the pass:** those states are 10–14 components with `largest_frac` 0.962–0.983 — a giant component holding 96–98% plus crumbs, not a fragmented state. **Substantively this is P3: saturation precedes any structure.** A discriminating bar would have been `largest_frac < 0.5`, as Unit 7 used. **This CLOSES the most hopeful remaining possibility** — there is no early critical window; the graph is a blob from the first measurable instant at the native field. | [GROUNDED, measured — negative] | `L·PO5-9` below |
 | PO5-8 | 2026-07-19 | **THE 100 ms BIRTH WINDOW IS NOT DERIVED — flagged sweepable 2026-05-29, never swept, and it decides the architecture.** Documentary, no compute. `model6-research-findings-may29:66`: *"birth_window value: 100ms hardcoded. Within Fisher's 1s budget. Conservative but defensible. **Tunable parameter — candidate for TALON sweep, not arbitrary calibration.**"* So its only grounding is an **upper** bound (~1 s, Fisher). **Unit 7's structure-preserving regime (2–10 ms) is inside the same permitted band**, so sweeping it is sanctioned, not tuning — and it was nominated for a sweep seven weeks ago and never done. **A parameter recorded as "conservative but defensible" turns out to decide whether §8's keystone can work at all** (P0 threshold ~2–10 ms vs native 100 ms = 10–50× above). **Mechanism gap, also already known and STILL UNCORRECTED:** `:64`/`:141` record that the docstring *"Phosphates from same pyrophosphate hydrolysis are born entangled"* **OVERCLAIMS — actual gate is spatial proximity to template field**; verified 2026-07-19 the docstring at `dimer_particles.py:234-236` is unchanged. Fisher entangles TWO phosphates from ONE molecule (a pair); the code entangles ALL template-bound dimers in a 100 ms window (a clique) — and the clique reading is what generates the 60–90-dimer groups that percolate the graph. **No value change proposed.** | [GROUNDED, documentary] | `L·PO5-8` below |
 | PO5-7 | 2026-07-19 | **BOTH MECHANISMS PERCOLATE INDEPENDENTLY — `PO5-5` CORRECTED TWICE.** Pre-registered as a self-correction before the run; `birth_window` promoted to an attribute, **bit-identical verified**. **P1 CONFIRMED: `largest_frac ≥ 0.8725` at EVERY bus incl. 0 (zero P2 bonds), χ peaks at bus=0 and decays monotonically ⇒ the bus does NOT form the giant component. `PO5-5`'s "the BUS is a real percolation control parameter" is WRONG.** **The follow-up framing ("it only absorbs stragglers") is ALSO wrong:** at native bus with the birth window shrunk 50× — which fragments P0 to `largest_frac = 0.4145` alone — the field still gives `largest_frac = 1.0000`. **The field spans the graph BY ITSELF regardless of birth structure.** ⇒ **the system is DOUBLY supercritical; fragmenting requires reducing BOTH levers, which retires every single-lever fix including PO-5's own SOC/regulation proposal.** P0 threshold measured ~2–10 ms vs native 100 ms. **And the number PO-5 had been averaging away:** native field = mean 21.984, **std 1.558, range [0.000, 22.095]** — it **starts at zero and climbs every run**, so the system transits the whole fragmented→blob range each time and parks above it, while every measurement in this program sampled only the endpoint. | [GROUNDED, measured] | `L·PO5-7` below |
@@ -96,6 +97,115 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·PO5-10 — the EM pathway is NOT AN ENTANGLING MECHANISM; the clique is not what percolates; and the fidelity cut is the only lever · 2026-07-19 `[GROUNDED, measured + structural]`
+
+**Units 11–12**, plus two structural findings from the round-2 advisor exchange.
+
+#### 1. STRUCTURAL — the pathway carrying the percolation cannot create entanglement
+
+`dimer_particles.py`'s EM-pathway docstring already concedes: *"The microscopic Hamiltonian for
+EM-mediated nuclear spin coupling in biological systems **remains an open question**. The
+UV-frequency tryptophan field (~10¹⁵ Hz) **cannot couple directly to nuclear spin dynamics (~Hz)**
+via standard dispersive mechanisms. Our **phenomenological treatment** captures…"*
+
+**The frequency gap is a symptom; the LOCC argument is the disease.** A field amplitude Φ that
+modulates a *formation rate at each dimer independently* is a **local** operation. Local operations
+cannot create entanglement — a theorem, not a modelling concern. Creating entanglement between two
+nuclear spins requires either **(a)** a direct interaction term `H_ij`, or **(b)** a common quantised
+mode with virtual-excitation exchange. **`em_rate` has neither** — it is a classical scalar scaling a
+rate.
+
+**The dichotomy, and the program cannot take both branches:**
+- if the bonds are **genuine entanglement** → the EM pathway cannot create them;
+- if they are **classical correlations** → the mechanism is fine but the entanglement-partition
+  claim loses its quantum grounding.
+
+**The asymmetry worth carrying:** **P0 (83%) has a legitimate entangling origin** — shared
+pyrophosphate is a real common origin — but is implemented as an unphysical clique. **P2 (17%) has
+no entangling mechanism at all** — and P2 is what percolates (Units 7, 11). *The mechanism with
+physical grounding is implemented wrongly; the one carrying the result has no grounding.*
+
+#### 2. MEASURED — removing the clique changes nothing (Unit 11, native field, 2 seeds)
+
+| arm | edges | components | largest_frac |
+|---|---|---|---|
+| baseline | 407,332 | 1.0 | 1.0000 |
+| degree cap k=4 (Fisher-consistent) | 140,697 (**−65%**) | 1.0 | **1.0000** |
+| degree cap k=1 | 138,722 (−66%) | 1.0 | **1.0000** |
+| J-compatibility on formation | 404,109 (−0.8%) | 1.0 | 1.0000 |
+| coupling_length 5→1 nm | 372,170 | 20.0 | 0.9821 |
+| all three combined | 105,536 (**−74%**) | 20.0 | 0.9821 |
+
+**Two-thirds of edges delete with zero effect on connectivity. Density is not the problem.** This
+also **refutes the round-1 prediction** that fixing the clique would fragment the graph: the physics
+of that critique was right (coincidence is not entangling, entanglement is not transitive) but the
+*diagnosis* was wrong — Unit 7 had already shown P2 spans alone.
+
+**Per-event matching is not implementable.** Dimers are born from a **concentration field**
+(`:210-213`) — no pyrophosphate objects, no per-phosphate provenance. **The 100 ms clique is a proxy
+for a representation the model does not have.** Filed as the diagnosis, not the obstacle: Fisher's
+mechanism is *inheritance*, and a model with no origin representation must substitute proxies —
+every available proxy (birth window, distance kernel) being input-blind by construction is why no
+threshold sweep rescues §8.
+
+#### 3. MEASURED — the fidelity cut is the only lever that moves (Unit 12)
+
+Intra bonds have **no fidelity threshold**: connectivity is *bare existence*, so a bond made at 15 nm
+counts identically to one made at 3 nm. Storing `F = P_S_i·P_S_j·g(r_ij)` and sweeping (**no value
+nominated**; the skill's *"do NOT apply the 0.5 bound to intra"* is respected — measured `F ≈ 0.36`
+at 7 nm, so the caution is quantitatively right):
+
+| threshold | edges kept | components | largest_frac | sheaf H⁰ |
+|---|---|---|---|---|
+| 0.00 | 100% | 1.0 | 1.0000 | 3.0 |
+| 0.20 | 32% | 5.0 | 0.9957 | 10.5 |
+| 0.30 | 26% | 7.0 | 0.9943 | 14.5 |
+| 0.50 | 21% | 11.0 | **0.8314** | **15.0** |
+
+`F` distribution is **bimodal** (p10 = 0.019, med = 0.090, p90 = 0.980), split at the `g` plateau.
+**Sheaf H⁰ rises monotonically 3 → 15** — readout resolution and graph structure moving together for
+the first time.
+
+**⚠ TWO KNOWN DEFECTS IN THIS `F`, both conceded:** (i) the bimodality is **manufactured** — the
+split sits exactly at the 5 nm plateau, which is a numerical regularisation of a 1/r³ divergence, not
+physics, and `coupling_length` is uncited; (ii) **`F` is a category error** — it is built from a
+*rate* term, reproducing the very dead-store pattern it was meant to fix. Fidelity must come from
+**state**: `F(t) = ¼ + (F₀ − ¼)·exp(−t/T₂)`. **No threshold may be nominated on the current `F`.**
+
+#### 4. MEASURED — the ℝ⁶ latent space is populated with INPUT-INDEPENDENT NOISE
+
+`j_couplings_intra = np.random.normal(0.15, 0.15, size=6)`, drawn **independently per dimer at
+construction** (`:48-50`) with no dependence on position, birth time, calcium or input. Measured
+between-dimer spread: per-coordinate std **0.1478 Hz**, median `‖J_i − J_j‖₂` **0.4864 Hz**.
+
+**So the latent dimension is not unpopulated — it is populated with noise that has no causal path
+from input.** Bonding on ℝ⁶ compatibility therefore *cannot* carry input information, whatever the
+metric. (PO-5's `min_k|ΔJ|` rule was separately too permissive — a union of six slabs, not a metric —
+but fixing it to `‖·‖₂` would bond on better-measured noise.) **The latent-dimension principle
+survives; this instance of it does not.** For it to bite, the ℝ⁶ would have to be *derived* from
+something input-coupled.
+
+#### 5. OPEN — the dipolar-coupling proposal needs a timescale before anyone builds on it
+
+Direct ³¹P–³¹P nuclear dipolar coupling is a genuine option (a): a real Hamiltonian, genuinely
+entangling, **no free parameter** (coupling fixed by γ_P). PO-5 verified the magnitudes:
+
+```
+r =  1 nm : 19.58 Hz   t_ent ≈    51 ms
+r =  2 nm :  2.45 Hz   t_ent ≈   409 ms
+r =  5 nm :  0.16 Hz   t_ent ≈   6.4 s
+r = 10 nm :  0.02 Hz   t_ent ≈  51.1 s
+```
+
+**But the claimed ~1–2 nm range does not follow.** `t_ent` must be compared to something; against
+T₂ = 216 s or dimer lifetime ~1000 s (`k_dissolution = 0.001/s`), entanglement still forms at 10 nm
+and fails only past ~15–20 nm — **more permissive than the current 5 nm plateau**, against a measured
+median separation of 9.75 nm. **The proposal is sound; the range claim requires a ~100 ms competing
+timescale that PO-5 cannot identify** (the model has no dimer diffusion). **Flagged as open — do not
+build on it until that timescale is named.**
+
+
 
 ### L·PO5-9 — the transient hypothesis FAILS, and it falsifies a claim PO-5 wrote into this log minutes earlier · 2026-07-19 `[GROUNDED, measured — negative]`
 
