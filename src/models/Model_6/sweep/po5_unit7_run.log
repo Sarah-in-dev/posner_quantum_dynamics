@@ -1,0 +1,44 @@
+============================================================================================
+PO-5 UNIT 7 — locating the percolation threshold (chi peaks AT it)
+============================================================================================
+
+--- ARM BUS (bw=0.1 native): does the bus form the giant component? ---
+  bus=     0 bw=0.1    V= 1054 comps=  46.0 largest_frac=0.8945 2nd=  45.0 chi=   23.63
+  bus=     1 bw=0.1    V= 1054 comps=   5.0 largest_frac=0.9962 2nd=   1.0 chi=    1.00
+  bus=    10 bw=0.1    V= 1054 comps=   1.0 largest_frac=1.0000 2nd=   0.0 chi=    0.00
+  bus=NATIVE bw=0.1    V= 1054 comps=   1.0 largest_frac=1.0000 2nd=   0.0 chi=    0.00
+
+--- ARM BW @ bus=0 (P0 isolated): where does P0 percolate? ---
+  bus=     0 bw=0.002  V= 1054 comps=  57.0 largest_frac=0.4145 2nd= 136.5 chi=   65.65
+  bus=     0 bw=0.01   V= 1054 comps=  55.5 largest_frac=0.5079 2nd= 120.0 chi=   54.75
+  bus=     0 bw=0.05   V= 1054 comps=  47.0 largest_frac=0.8663 2nd=  52.5 chi=   26.52
+  bus=     0 bw=0.1    V= 1054 comps=  46.0 largest_frac=0.8945 2nd=  45.0 chi=   23.63
+
+--- ARM BW @ NATIVE bus: does P2 rescue a fragmented P0? ---
+  bus=NATIVE bw=0.002  V= 1054 comps=   1.0 largest_frac=1.0000 2nd=   0.0 chi=    0.00
+  bus=NATIVE bw=0.01   V= 1054 comps=   1.0 largest_frac=1.0000 2nd=   0.0 chi=    0.00
+  bus=NATIVE bw=0.05   V= 1054 comps=   1.0 largest_frac=1.0000 2nd=   0.0 chi=    0.00
+  bus=NATIVE bw=0.1    V= 1054 comps=   1.0 largest_frac=1.0000 2nd=   0.0 chi=    0.00
+
+============================================================================================
+P1 CONFIRMED: largest_frac >= 0.85 at every bus (min 0.8725)
+   => the BUS does not form the giant component. L-PO5-5's framing of it as
+      'the percolation control parameter' is CORRECTED: it absorbs stragglers.
+
+   bus=0:
+     bw=0.002  largest_frac=0.4145 chi=   65.65  <-- FRAGMENTED (largest_frac<0.5)
+     bw=0.01   largest_frac=0.5079 chi=   54.75
+     bw=0.05   largest_frac=0.8663 chi=   26.52
+     bw=0.1    largest_frac=0.8945 chi=   23.63
+     chi peaks at bw=0.002
+
+   NATIVE:
+     bw=0.002  largest_frac=1.0000 chi=    0.00
+     bw=0.01   largest_frac=1.0000 chi=    0.00
+     bw=0.05   largest_frac=1.0000 chi=    0.00
+     bw=0.1    largest_frac=1.0000 chi=    0.00
+     chi peaks at bw=0.002
+
+   NATIVE bus distribution: mean 21.984 std 1.558 range [0.000, 22.095]
+
+LIMITS: single synapse, 1 s, 2 seeds/point.
