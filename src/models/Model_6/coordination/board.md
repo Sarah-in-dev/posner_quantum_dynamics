@@ -1510,3 +1510,70 @@ whole program.** PO-5 releases the slot in its lead file and gen-2 starts the ne
   that copy.** PO-7 has pre-registered it as ARM B with the verdict committed in advance both ways.
   **Gen-2's `MO-VERIFIED` tag on F-5 is therefore provisional until ARM B returns**, and that is
   recorded here rather than left for a reader to discover.
+
+---
+
+## 🔻 WRAP CYCLE — 2026-07-19 00:15Z · **PO-1 CLOSED · PO-3 CLOSED (archived) · PO-4 held on one question**
+
+Sarah opened the wrap. **Two seats are closed, one is a short answer away, three stay live.**
+
+### PO-1 / PO-6a — **WRAPPED IN GOOD STANDING** (`7d3ca82`)
+
+Acceptance **MO-verified at measurement level** with both positive controls firing (`9ebda0e`). It
+set the standard the other six seats were held to. **It caught the MO twice** (defects #13, #17).
+
+**Its closing heartbeat is the model for how to wrap on this board** — the deletion batch made
+executable by someone who was not here, and **nine items that exist nowhere else on disk**, the first
+of which is *its own defect*: the gen-2 handoff it wrote is **STALE after 17 commits**, having told
+gen-2 *"that handoff is the state."* **Limits and traps hold; the state section does not.** It flagged
+that rather than leaving a successor to follow its own stale pointer.
+
+**Also captured and otherwise lost:** `dead_parameter_audit` exits 1 **by design**; matplotlib is
+broken in this venv, which is why the `exp_sensitivity_analysis` edit was compile-verified and never
+run; a live unowned defect there silently drops one sensitivity spec; **on `index.lock`, WAIT — never
+`rm`**; and three deliberate choices a successor might "improve" and thereby break.
+
+### PO-3 — **CLOSED, but archived BEFORE its closing heartbeat. State the loss.**
+
+The wrap order (`mo-wrap-026`) was written and committed; **the session was already archived and
+never received it.** So PO-3 did **not** write the "what dies with the session" list PO-1 wrote.
+
+**What is lost is bounded, and gen-2 checked rather than assuming:** its measurements, criterion and
+traps are on disk — `PREREG_L_ETA_5_RATCHET.md`, `PROVENANCE_EINVASION_CONSTANTS.md`,
+`resting_leak_probe.py`, `einvasion_ratchet_probe.py`, `score_leta5.py`, its research-log rows, the
+Q5/Q6 criterion proposal in its queue, and the null-trap text now in `model6-actin-invasion-driver`
+§10. **What is gone is only whatever it knew and never wrote down.**
+
+**Lesson for the next wrap, and it is procedural: issue the wrap order and let the seat answer it
+BEFORE archiving.** The closing heartbeat is the one artifact that cannot be reconstructed.
+
+**PO-3's record stands:** `L·ETA-5` scored VOID rather than published; a second VOID stopped before
+~90 min was spent on it; **F-5 (`E_invasion` has no zero) MO-verified and strengthened by PO-7 across
+both trees**; one of the three legs that falsified §4.3; and two refusals — the L·ETA-6 goalpost move,
+and setting its own bar while disclosing its data would clear it.
+
+### PO-4 — **NOT wrapped. One question, and it is about the acceptance, not the fix.**
+
+Post-fix run: `S` **0.999993717 → 0.999901107**, stage-3 control PASSED. **The fix works and stays
+landed;** ruling 016's physics is settled independently of this probe.
+
+**But the registered post-fix target MOVED between gen-2's runs — 0.997704 → 0.999923** — because
+`gap_template_symmetry_probe.py:201-203` recomputes it at runtime from the live `singlet_excess` **of
+the code under test**. **Gen-2 cannot rule out from outside that part of the 2.23e-05 agreement is the
+check meeting itself.** `MO-VERIFIED` is **held**; `MEASURED-AND-REPORTED` stands. Three ways to
+settle it are offered; gen-2's lean is stated and explicitly is not evidence.
+
+### PROVENANCE NOTE — `mo-wrap-024.md` was committed by PO-1, not by the MO
+
+`7d3ca82` (PO-1's wrap commit) carries **the MO's own wrap order** alongside PO-1's lead. **No work
+lost; the attribution is wrong.** Recorded per the standing rule — **report provenance, never repair
+history.** This is the shared-index hazard in the one direction not yet logged: **a PO carrying the
+MO's file.**
+
+### STILL LIVE
+**PO-2** (ruling 021 units) · **PO-5** (**Q-B running — `po5_unit2_qb_selectivity.py` confirmed alive
+at 99% CPU, 32+ min**) · **PO-7** (holding for Sarah's seeding ruling).
+
+**⚠ ORCHESTRATION RISK, named so it is not discovered later: PO-5's session is STOPPED while its
+keystone run continues.** When it returns, **nothing is watching.** The MO must wake PO-5 to collect
+the verdict, or the run is spent for nothing.
