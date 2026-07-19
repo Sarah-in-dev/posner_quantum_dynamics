@@ -1,0 +1,109 @@
+[
+  {
+    "arm": "D",
+    "threshold": 0.0,
+    "edges_kept": 428596.5,
+    "edge_frac": 1.0,
+    "components": 1.0,
+    "largest_frac": 1.0,
+    "sheaf_H0": 3.0
+  },
+  {
+    "arm": "D",
+    "threshold": 0.02,
+    "edges_kept": 380956.0,
+    "edge_frac": 0.8888453358811843,
+    "components": 1.0,
+    "largest_frac": 1.0,
+    "sheaf_H0": 4.0
+  },
+  {
+    "arm": "D",
+    "threshold": 0.05,
+    "edges_kept": 288171.0,
+    "edge_frac": 0.6723596669594829,
+    "components": 2.0,
+    "largest_frac": 0.9990552584670231,
+    "sheaf_H0": 6.5
+  },
+  {
+    "arm": "D",
+    "threshold": 0.1,
+    "edges_kept": 202484.0,
+    "edge_frac": 0.47243502921745745,
+    "components": 2.0,
+    "largest_frac": 0.9990552584670231,
+    "sheaf_H0": 10.0
+  },
+  {
+    "arm": "D",
+    "threshold": 0.15,
+    "edges_kept": 161278.0,
+    "edge_frac": 0.37629332017410316,
+    "components": 4.5,
+    "largest_frac": 0.9967112299465241,
+    "sheaf_H0": 11.5
+  },
+  {
+    "arm": "D",
+    "threshold": 0.2,
+    "edges_kept": 138281.5,
+    "edge_frac": 0.32263795901273107,
+    "components": 5.0,
+    "largest_frac": 0.9957308377896613,
+    "sheaf_H0": 10.5
+  },
+  {
+    "arm": "D",
+    "threshold": 0.3,
+    "edges_kept": 112885.0,
+    "edge_frac": 0.26338292543219555,
+    "components": 7.0,
+    "largest_frac": 0.9943315508021391,
+    "sheaf_H0": 14.5
+  },
+  {
+    "arm": "D",
+    "threshold": 0.5,
+    "edges_kept": 88889.0,
+    "edge_frac": 0.20739553402792604,
+    "components": 11.0,
+    "largest_frac": 0.8313814616755794,
+    "sheaf_H0": 15.0
+  },
+  {
+    "arm": "E",
+    "k_base": 0.01,
+    "edges": 407909.5,
+    "components": 21.5,
+    "largest_frac": 0.9805169340463458
+  },
+  {
+    "arm": "E",
+    "k_base": 0.05,
+    "edges": 408963.0,
+    "components": 4.5,
+    "largest_frac": 0.9967112299465241
+  },
+  {
+    "arm": "E",
+    "k_base": 0.1,
+    "edges": 410236.0,
+    "components": 2.5,
+    "largest_frac": 0.9986007130124777
+  },
+  {
+    "arm": "E",
+    "k_base": 0.3,
+    "edges": 415022.0,
+    "components": 1.0,
+    "largest_frac": 1.0
+  },
+  {
+    "arm": "E",
+    "k_base": 1.0,
+    "edges": 428596.5,
+    "components": 1.0,
+    "largest_frac": 1.0
+  }
+]

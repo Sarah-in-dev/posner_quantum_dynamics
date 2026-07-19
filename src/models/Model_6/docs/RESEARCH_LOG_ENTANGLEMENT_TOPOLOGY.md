@@ -65,6 +65,7 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| PO5-11 | 2026-07-19 | **TOPOLOGY IS A FUNCTION OF DENSITY ALONE — §8's "scalar as computation", on a contrast that varies.** **Unit 13:** the fidelity cut (only lever that fragments) is **COSMETIC** — advisor's spatial covariate shows birth geometry identical between drive conditions (r_med d=0.00) and the partition follows (max d=0.54). Per-seed rows: SUSTAINED and PULSED are **BIT-IDENTICAL** in V/positions/topology — drive PATTERN never reaches the population (`peak_conc = np.max`, a peak not an integral, `:174`; write-once bonds never revisit). **Unit 14:** amplitude DOES vary V (per-seed [1101,1192]); fitting topology~V, every cut measure has residual scatter ≤ seed noise (comps_cut 1.26, lf_cut 1.23, H0_cut 1.00) ⇒ **the partition carries exactly what the scalar V carries.** **Correction owed:** Units 9/10/13 used the pattern contrast that Unit 13 shows doesn't reach the population, so their nulls were under-founded (Unit 9's sign-reversal now reads as a non-contrast); keystone conclusion unchanged, Unit 14 establishes it properly. **Convergence with L·PO5-10:** no input dimension reaches the topology as pair structure — the population is peak-saturated and write-once, the bond rules are input-blind proxies, because the model has no representation of the entangling origin. **Next step is the provenance build, not another test.** External + internal deep research commissioned. | [GROUNDED, measured — negative] | `L·PO5-11` below |
 | PO5-10 | 2026-07-19 | **THE EM PATHWAY IS NOT AN ENTANGLING MECHANISM; the clique is NOT what percolates; the fidelity cut is the only lever.** **(1) STRUCTURAL/LOCC:** `em_rate` is a classical scalar scaling a *local* formation rate — a local operation, which cannot create entanglement (theorem). Entangling needs a direct `H_ij` or a common quantised mode; `em_rate` has neither. The code's own docstring already concedes there is no microscopic Hamiltonian and a ~10¹⁵ Hz vs ~Hz gap. **Dichotomy:** bonds are genuine entanglement ⇒ the pathway cannot make them; or they are classical correlations ⇒ the partition claim loses quantum grounding. **Asymmetry:** P0 (83%) has a real entangling origin (shared pyrophosphate) implemented as an unphysical clique; **P2 (17%) has no mechanism at all and is what percolates.** **(2) Unit 11:** degree cap k=4 removes **65% of edges**, `largest_frac` stays **1.0000**; k=1 also 1.0000; J-compat null (−0.8%); all-three −74% → still 0.9821. **Density is not the problem**, and this refutes the round-1 prediction that fixing the clique would fragment. **Per-event matching is unimplementable** — dimers are born from a concentration field, no per-phosphate provenance; the clique is a proxy for a **missing representation**, which is the diagnosis: Fisher's mechanism is inheritance, and every available proxy is input-blind by construction. **(3) Unit 12:** intra bonds have NO fidelity threshold (bare existence); storing `F=P_S_i·P_S_j·g(r)` and sweeping gives largest_frac 1.0000→**0.8314** and sheaf H⁰ **3→15** — the only lever that moves. **⚠ Two conceded defects: the bimodality is MANUFACTURED by the uncited 5 nm plateau, and `F` is a CATEGORY ERROR built from a rate term — fidelity must come from state, `F(t)=¼+(F₀−¼)e^(−t/T₂)`. No threshold nominated.** **(4) The ℝ⁶ latent space is populated with INPUT-INDEPENDENT NOISE** — `j_couplings_intra` is an independent per-dimer `normal(0.15,0.15,6)` draw (std 0.1478, median ‖ΔJ‖₂ 0.4864), so bonding on it cannot carry input information whatever the metric. The latent-dimension *principle* survives; this instance dies. **(5) OPEN:** dipolar coupling is a genuine parameter-free option (19.58 Hz @1nm … 0.02 Hz @10nm verified) but the claimed 1–2 nm range needs a ~100 ms competing timescale nobody can name — against T₂=216 s it reaches 10 nm, *more* permissive than today. **Do not build on it yet.** | [GROUNDED, measured + structural] | `L·PO5-10` below |
 | PO5-9 | 2026-07-19 | **THE TRANSIENT HYPOTHESIS FAILS — and it falsifies a `PO5-7` claim written the same day.** Probe `sweep/po5_unit8_transient.py`, pre-registered, **no overrides** — only when we look. **P1 FALSIFIED: the field is `min = max = 22.095` at EVERY sample from t=0.01 s on.** Unit 7's `range [0.000, 22.095]` was one or two samples before the first physics step, **not a gradual rise**. **`PO5-7`'s "it starts at zero and climbs every run / transits the whole fragmented→blob range" is WITHDRAWN** — the field reaches operating value in ~2 timesteps and stays. Error shape: **reading a min/max range as a trajectory without checking the time series** — the same mistake as reading a mean without its spread, one level up. **P2 fired on the registered criterion (`components>1 AND largest_frac<0.99`) at t=0.01–0.02, but the criterion was TOO WEAK and PO-5 does not bank the pass:** those states are 10–14 components with `largest_frac` 0.962–0.983 — a giant component holding 96–98% plus crumbs, not a fragmented state. **Substantively this is P3: saturation precedes any structure.** A discriminating bar would have been `largest_frac < 0.5`, as Unit 7 used. **This CLOSES the most hopeful remaining possibility** — there is no early critical window; the graph is a blob from the first measurable instant at the native field. | [GROUNDED, measured — negative] | `L·PO5-9` below |
 | PO5-8 | 2026-07-19 | **THE 100 ms BIRTH WINDOW IS NOT DERIVED — flagged sweepable 2026-05-29, never swept, and it decides the architecture.** Documentary, no compute. `model6-research-findings-may29:66`: *"birth_window value: 100ms hardcoded. Within Fisher's 1s budget. Conservative but defensible. **Tunable parameter — candidate for TALON sweep, not arbitrary calibration.**"* So its only grounding is an **upper** bound (~1 s, Fisher). **Unit 7's structure-preserving regime (2–10 ms) is inside the same permitted band**, so sweeping it is sanctioned, not tuning — and it was nominated for a sweep seven weeks ago and never done. **A parameter recorded as "conservative but defensible" turns out to decide whether §8's keystone can work at all** (P0 threshold ~2–10 ms vs native 100 ms = 10–50× above). **Mechanism gap, also already known and STILL UNCORRECTED:** `:64`/`:141` record that the docstring *"Phosphates from same pyrophosphate hydrolysis are born entangled"* **OVERCLAIMS — actual gate is spatial proximity to template field**; verified 2026-07-19 the docstring at `dimer_particles.py:234-236` is unchanged. Fisher entangles TWO phosphates from ONE molecule (a pair); the code entangles ALL template-bound dimers in a 100 ms window (a clique) — and the clique reading is what generates the 60–90-dimer groups that percolate the graph. **No value change proposed.** | [GROUNDED, documentary] | `L·PO5-8` below |
@@ -97,6 +98,66 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·PO5-11 — the topology is a FUNCTION OF DENSITY ALONE; and the input→population channel is measured shut · 2026-07-19 `[GROUNDED, measured — negative]`
+
+**Units 13–14.** Together these establish §8's failure with a contrast that actually varies, and
+localise WHY one layer upstream of everything measured before.
+
+#### Unit 13 — the fidelity cut is COSMETIC (spatial covariate, 5 seeds)
+
+The only lever that fragments the graph (Unit 12) does not carry input. Advisor's covariate — spatial
+statistics of births, not density — showed **birth geometry is identical between drive conditions**
+(`r_med` d=0.00, `r_p10` d=0.00), and the partition after the cut follows (max d=0.54, bar 2.0).
+**VERDICT: COSMETIC** — the cut fragments the blob but the structure carries no input information.
+PO-5 had pre-named this as the single most likely way it was wrong; it landed.
+
+**And the per-seed rows exposed the deeper cause:** SUSTAINED and PULSED gave **BIT-IDENTICAL** V,
+positions and topology on seeds 72/73 — the drive PATTERN never reached the dimer population.
+`target_count` derives from `peak_conc = np.max(dimer_concentration)` (`:174-175`) — a PEAK, not an
+integral — so both protocols hit the same peak in their first burst; with write-once bonds the
+population never revisits it.
+
+#### Unit 14 — topology is a function of V alone
+
+Amplitude DOES vary the population (per-seed V range **[1101, 1192]**; P1 passed — note the
+per-amplitude *means* are a narrow 1125–1137, and PO-5 briefly misread those means as the full range
+mid-run, then corrected against the per-seed spread). Fitting topology ~ V and comparing fit-residual
+scatter to within-seed scatter:
+
+| measure | slope | resid SD | seed SD | ratio | verdict |
+|---|---|---|---|---|---|
+| comps_cut | −0.017 | 2.71 | 2.14 | **1.26** | DENSITY ALONE |
+| lf_cut | +0.00002 | 0.003 | 0.002 | **1.23** | DENSITY ALONE |
+| H0_cut | −0.031 | 4.41 | 4.40 | **1.00** | DENSITY ALONE |
+| comps_raw | +0.001 | 0.22 | 0.10 | 2.28 | inconclusive |
+
+**Every cut-topology measure has residual scatter no larger than seed noise: the partition carries
+exactly what the scalar V carries.** That is LITERALLY §8's *"scalar as computation"* — now
+established with a contrast that varies, unlike Units 9/10/13. P3 pattern arm reproduced Unit 13's
+null (SUSTAINED comps 9.7 vs PULSED 9.0 at matched amplitude).
+
+#### The correction PO-5 owes on Units 9/10/13
+
+Those three tested input-dependence with the SUSTAINED-vs-PULSED **pattern** contrast, which Unit 13
+now shows **does not reach the dimer population** (bit-identical V). So their nulls were under-founded
+— they tested input-dependence with an input that barely varied. Unit 9's effect reversing sign on
+fresh seeds reads, in hindsight, as exactly what a non-contrast produces. **The keystone conclusion
+is unchanged (not supported); the correction is that three of its tests were weaker than reported,
+and Unit 14 is the one that establishes it on a contrast that works.**
+
+#### The finding this converges on, with the advisor's diagnosis
+
+**No input dimension reaches the topology as pair structure.** Pattern doesn't reach the population at
+all; amplitude reaches it only through V, and topology is a function of V alone. This is the
+population-side arrival at the advisor's diagnosis (`L·PO5-10`): the model substitutes input-blind
+proxies at every layer because it has **no representation of the entangling origin**. `peak_conc`
+saturation + write-once dynamics = an input-insensitive population; the birth window and distance
+kernel = input-blind bond rules on top of it. **The next step is not another test — it is to build
+the provenance layer** (dimer↔hydrolysis-event↔dimer), the one edge rule with a live input→topology
+path. External + internal deep research commissioned to ground that build before committing to it.
+
+
 
 ### L·PO5-10 — the EM pathway is NOT AN ENTANGLING MECHANISM; the clique is not what percolates; and the fidelity cut is the only lever · 2026-07-19 `[GROUNDED, measured + structural]`
 

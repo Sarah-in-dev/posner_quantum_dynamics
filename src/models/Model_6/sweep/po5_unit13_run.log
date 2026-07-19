@@ -1,0 +1,43 @@
+====================================================================================================
+PO-5 UNIT 13 — is the fidelity cut real or cosmetic? (spatial covariate, 5 seeds)
+====================================================================================================
+  SUSTAINED  seed 71  V= 1170 r_med=  8.89nm  comps@0.5=  12 lf@0.5=0.9863
+  SUSTAINED  seed 72  V=  955 r_med= 12.17nm  comps@0.5=   7 lf@0.5=0.9937
+  SUSTAINED  seed 73  V= 1047 r_med= 12.04nm  comps@0.5=  11 lf@0.5=0.9904
+  SUSTAINED  seed 74  V= 1030 r_med= 12.25nm  comps@0.5=  10 lf@0.5=0.9903
+  SUSTAINED  seed 75  V= 1118 r_med= 10.74nm  comps@0.5=  15 lf@0.5=0.9857
+  PULSED     seed 71  V= 1167 r_med=  8.92nm  comps@0.5=  14 lf@0.5=0.9871
+  PULSED     seed 72  V=  955 r_med= 12.17nm  comps@0.5=   7 lf@0.5=0.9937
+  PULSED     seed 73  V= 1047 r_med= 12.04nm  comps@0.5=  11 lf@0.5=0.9904
+  PULSED     seed 74  V= 1050 r_med= 12.27nm  comps@0.5=   9 lf@0.5=0.9914
+  PULSED     seed 75  V= 1075 r_med= 10.68nm  comps@0.5=  11 lf@0.5=0.9888
+
+====================================================================================================
+P1 — SPATIAL COVARIATE (does birth geometry differ by input?)
+    r_med    SUS    11.219  PUL    11.218   d=  0.00
+    r_p10    SUS     3.840  PUL     3.840   d=  0.00
+    r_p90    SUS    17.888  PUL    17.894   d=  0.00
+    V        SUS  1064.000  PUL  1058.800   d=  0.07
+
+P2 — TOPOLOGY AFTER THE CUT
+  threshold 0.2:
+    comps@0.2    SUS     6.200  PUL     5.200   d=  0.50
+    lf@0.2       SUS     0.995  PUL     0.995   d=  0.18
+    H0@0.2       SUS    13.800  PUL    14.400   d=  0.11
+  threshold 0.3:
+    comps@0.3    SUS     8.800  PUL     7.800   d=  0.54
+    lf@0.3       SUS     0.992  PUL     0.993   d=  0.45
+    H0@0.3       SUS    13.800  PUL    16.200   d=  0.47
+  threshold 0.5:
+    comps@0.5    SUS    11.000  PUL    10.400   d=  0.22
+    lf@0.5       SUS     0.989  PUL     0.990   d=  0.35
+    H0@0.5       SUS    14.200  PUL    14.800   d=  0.10
+
+====================================================================================================
+max effect size — spatial 0.07 | topology 0.54
+VERDICT: COSMETIC. Birth geometry does not differ by input and neither does the
+  partition after the cut. The lever fragments the graph but carries no input
+  information. This is the outcome PO-5 flagged as most likely.
+
+LIMITS: 1 synapse, 1 s, 5 seeds. F is the rate-derived form and is a KNOWN category
+error (advisor round 2); this tests the LEVER, not the threshold.
