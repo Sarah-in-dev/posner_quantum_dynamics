@@ -525,11 +525,20 @@ class DimerParticleSystem:
         if n < 2:
             return
 
-        # PO-5 UNIT 16: provenance bonding REPLACES the phenomenological pathways. The EM
-        # path is not an entangling mechanism (LOCC, L·PO5-10) and percolates the graph on
-        # its own (L·PO5-7), so when provenance is the bond source, skip Pathways 1/2 and
-        # disentanglement entirely — the birth-time provenance edges are the whole graph.
+        # PO-5 UNIT 16: provenance bonding REPLACES the phenomenological FORMATION pathways
+        # (Pathways 1/2 — EM is LOCC-non-entangling, L·PO5-10, and percolates alone, L·PO5-7).
+        # BUT the coherence-death channel is legitimate physics and MUST be kept: a bond dies
+        # when either dimer's P_S decays below 0.5 (T_singlet ~216 s). Skipping it (the
+        # original blanket early-return) made provenance bonds permanently write-once, which
+        # is a BUG (advisor R3): edges must die at the decoherence rate so the graph has a
+        # lifetime. So: drop bonds whose endpoints are no longer both entangled, then return
+        # (no formation). No RNG consumed; off-path untouched.
         if self.provenance_bonding:
+            for (ka, kb) in list(self._bond_lookup.keys()):
+                da = next((d for d in self.dimers if d.id == ka), None)
+                db = next((d for d in self.dimers if d.id == kb), None)
+                if da is None or db is None or not (da.is_entangled and db.is_entangled):
+                    self._remove_bond(int(ka), int(kb))
             return
 
         # EM-mediated entanglement: rate scales with field strength
