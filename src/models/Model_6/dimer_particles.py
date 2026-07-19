@@ -127,6 +127,18 @@ class DimerParticleSystem:
         self.k_dissolution = 0.001    # 1/s, dissolution rate
         self.k_entangle = 0.5         # 1/s, entanglement attempt rate
         self.coupling_length = 5.0    # nm, characteristic coupling distance
+
+        # --- PO-5 UNIT 6: J-mismatch dissolution (OFF BY DEFAULT) --------------
+        # docs/PREREG_PO5_UNIT6_J_MISMATCH.md. With j_mismatch_dissolution False the
+        # dissolution path is byte-for-byte today's physics; nothing standing is affected.
+        # Claim under test (UNVERIFIED): two entangled dimers whose engaged J-coupling
+        # channels are detuned lose the bond faster. Shape is the resonance/detuning form
+        # (cf. Hartmann-Hahn matching); that intra-dimer J gates inter-dimer EM-mediated
+        # entanglement is an ASSUMPTION, not established physics.
+        self.j_mismatch_dissolution = False
+        self.j_mismatch_scramble = False    # control arm: same magnitudes, permuted pairing
+        self.j_mismatch_scale = 0.15        # Hz = std of the model's own Agarwal-DFT J
+                                            # distribution (:49). NOT tuned to an outcome.
         self.coherence_threshold = 0.3  # Minimum for entanglement
         self.j_coupling_threshold = 5.0  # Hz, minimum for protection
         
@@ -466,6 +478,21 @@ class DimerParticleSystem:
         # === DISENTANGLEMENT === (existing bonds only; weaker field = less protection)
         protection_factor = collective_field_kT / reference_kT
         k_disentangle = (0.01 * (1.0 - coh)) / (1.0 + protection_factor)
+
+        # --- PO-5 UNIT 6 (opt-in; no-op unless explicitly enabled) -------------
+        if self.j_mismatch_dissolution:
+            Jm = np.asarray([d.j_couplings_intra for d in self.dimers], dtype=float)
+            # channel = bond direction binned by dominant axis and sign; endpoint j sees
+            # the reversed direction, so the two restrictions differ (Unit 5's rule).
+            ax = np.argmax(np.abs(diff), axis=1)
+            sgn = diff[np.arange(diff.shape[0]), ax] >= 0
+            k_i = ax * 2 + np.where(sgn, 0, 1)
+            k_j = ax * 2 + np.where(sgn, 1, 0)
+            delta = np.abs(Jm[iu, k_i] - Jm[ju, k_j])
+            if self.j_mismatch_scramble:
+                delta = np.random.permutation(delta)
+            k_disentangle = k_disentangle * (1.0 + (delta / self.j_mismatch_scale) ** 2)
+
         held = p2 & has_bond
         diss = held & (R < (1.0 - np.exp(-k_disentangle * dt)))
         for p in np.nonzero(diss)[0]:
