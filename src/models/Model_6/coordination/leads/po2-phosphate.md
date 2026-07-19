@@ -5,10 +5,20 @@ hydrolysis → consumption → dissolution → recovery cycle to a **stated** to
 check **shown failing on current code first**; and J-coupling demonstrably tracking dimer
 consumption.
 
-**Status:** LIVE — grounding brief returned 2026-07-18 19:46Z.
-**Current unit:** pre-registration (§2.4), then the conservation probe committed FAILING first.
-**Last heartbeat:** 2026-07-19 00:46Z
-**Blocked on:** — (two open questions in `queue/po2-phosphate.md`, neither blocking; working on)
+**Status:** **CLOSED 2026-07-19.** Seat retired at MO gen-2's consolidation.
+**Acceptance:** item 1 (mass conservation) **MET**; item 2 **MET as replaced by ruling 001**
+(consumer trace). Self-limiting **UNEXERCISED, not demonstrated.**
+**Latest substantive work:** **PO2-10** — the heavy-slot depletion run, which **OVERTURNS my own
+PO2-9**: the one-way valve is **not closed at the grounded value, it is slowed ~144×.**
+**Last heartbeat:** 2026-07-19 (closing).
+**Blocked on:** nothing — everything remaining is a Sarah/MO decision, listed in the closing entry.
+
+> **STALE-HEADER CORRECTION (gen-2 caught this, and it was a real trap).** This block previously
+> read *"LIVE — grounding brief returned 19:46Z / Current unit: pre-registration"* — i.e. it
+> described my FIRST twenty minutes, through eleven research-log rows and a heavy-slot run. **A
+> successor reading only the header would have concluded PO-2 never got past pre-registration.**
+> The heartbeat log below is append-only and was current; **the header was not, and nothing forced
+> it to be.** If you inherit a lead file, distrust its header and read its last entry.
 
 ## HEARTBEAT LOG
 
@@ -343,3 +353,178 @@ evidence that it DOES. I recommend PO-6 proceed with that stated as a known-open
 **Registered verdicts, fixed pre-run:** `NO_DRAIN_TO_BOUND` (|t|<2 → report the 95% upper bound on |slope| and the implied MINIMUM time-to-depletion; **a bound, never a proof of zero**) · `DRAIN_DETECTED` (t≤−2 and monotonic → **overturns my own PO2-9** on a longer horizon, and I report it against myself) · `NONLINEAR` · `INVALID` (conservation drifts past ε — **the guard runs live, so a long run cannot produce a depletion number off a broken ledger**).
 
 **NEW STANDING RULE COMPLIED WITH, and it is the reason the scorer already exists.** Runner `sweep/phosphate_depletion_bound_probe.py` **computes no verdict** and persists the trace **every sample**. Scorer `sweep/score_phosphate_depletion.py` is **already written, committed and dry-run against the partial trace WHILE the run is still executing** — so a scoring bug costs **zero compute**, which is precisely the 58 min PO-5 lost. Composed from `score_leta5.py`'s shape as instructed, not rebuilt.
+
+---
+
+# CLOSING HEARTBEAT — PO-2 · the phosphate loop · 2026-07-19
+
+*Written at MO gen-2's consolidation request. Three parts, then I stop.*
+
+## PART 0 — PO2-10: THE HEAVY-SLOT RUN OVERTURNS MY OWN PO2-9. Read this first.
+
+**The run was killed mid-flight at 22,200 steps (110 s simulated, 24.3 min wall) when the seat
+was consolidated. The trace survived** — that is exactly what gen-2's persist-then-score rule is
+for — **and scoring it offline cost nothing and changed the answer.**
+
+```
+span 110 s (5.5x the 20 s window PO2-9 used), 111 samples, grounded fraction 1.0
+  conservation guard : max |dP|/P = 9.339e-15      (eps 1e-12)  -> ledger sound
+  slope              : -3.370667e-05 pool-units/s  (-0.000337 %/s)
+  slope SE           :  6.572596e-06
+  t                  : -5.13   (dof 109)           <-- SIGNIFICANT
+  curvature          : +6.634e-08, t = +0.29       <-- NOT significant: it is LINEAR
+```
+
+**PO2-9 measured t = +0.74 over 20 s and concluded the one-way valve was CLOSED at the grounded
+value. That conclusion is WRONG, and the error was insufficient statistical power, not a wrong
+sign.** Over 5.5× the span the drain resolves cleanly at **t = −5.13**.
+
+**The corrected finding: the valve is NOT closed at the grounded value — it is SLOWED ~144×.**
+Time-to-depletion **~82 h simulated**, against **34.4 min** at the retired `frac=0.02`. **A2.5's
+grounding bought two orders of magnitude, not closure.** PO2-9's own stated limit — *"a slow
+nonlinearity outside this window would not appear here"* — was the correct worry and it fired.
+
+**THE REGISTERED VERDICT FUNCTION RETURNED `NONLINEAR`, AND THAT LABEL IS WRONG. I am reporting
+that rather than silently re-scoring.** A2.6 gated `DRAIN_DETECTED` on *"t ≤ −2 **and**
+monotonic"*. This series is significantly negative but **noisy, so not strictly monotonic**, and
+it fell through to the `NONLINEAR` else-branch — while the *proper* curvature test says
+**t = +0.29, i.e. not nonlinear at all.** **Requiring strict monotonicity of a noisy trace was a
+mis-registered criterion**, and it is the same class of defect I already fixed once in this
+scorer. **The substantively correct reading is a significant, essentially linear, slow drain.**
+**A successor must RE-REGISTER the criterion (drop monotonicity, or apply it to a smoothed
+series) and re-score the persisted trace — NOT adopt my post-hoc reading.** The trace is at
+`src/models/Model_6/results/phosphate_depletion/depletion_grounded_seed1000.json`.
+
+**AND MY OWN CALIBRATION WAS WRONG BY 3×.** I registered run-to-binding as **22.3 h** off a
+5.1 steps/s point calibration. The long run actually sustained **15.2 steps/s**, so it is
+**~7.5 h** — still not one slot, but **I overstated the infeasibility of the run I was asked to
+do, in the direction that justified redirecting the slot.** The redirection was still right (the
+grounded value was the open question), but the number I argued it with was inflated and I am
+correcting it against myself.
+
+## PART 1 — STATUS
+
+- **Acceptance item 1 (mass conservation): MET.** `dP` +1.098435e-02 → +3.410605e-13
+  (9.7e-15 relative, ε=1e-12). Shown **failing first** (`305e096`), fixed stoichiometrically
+  (`11aec6f`). All three controls fired. Cheat-check passed: ATP recovered **bit-identical**
+  before/after, so conservation was not bought by damping the leaky term.
+- **Acceptance item 2: MET as REPLACED by ruling 001** (consumer trace). The original bar
+  ("J-coupling tracks dimer consumption") was **unmeetable** — `calculate_j_coupling` never reads
+  its `phosphate` argument.
+- **Self-limiting: UNEXERCISED.** Conservation is *necessary, not sufficient*, for SOC. The Pi
+  limit never bound in any regime tested.
+
+## PART 2 — STATE OF THE PHOSPHATE LOOP, for whoever inherits it
+
+**A2.4 — the structural-first reversal, and why literature forced it.** I pre-registered
+*metabolic-first* on a plausibility argument from the model's own docstring wording. **The
+literature contradicted my own registration.** F₁F₀-ATP synthase phosphorylates ADP using **free
+inorganic Pi** imported by PiC/SLC25A3; **protein-bound phosphate is not a substrate.**
+`phosphate_structural` **is** the model's free pool. So the grounded debit is structural-first,
+and **ATP resynthesis therefore competes with Posner formation for the same free pool** — a
+depletion feedback from stoichiometry rather than installed. Reversed as a disclosed amendment,
+not edited over. Conservation is invariant to the choice; only the chemically-active pool moves
+(0.116%).
+
+**A2.5 — Step E's "2% ATP replenish", grounded 0.02 → 1.0.** ATP hydrolysis releases *free*
+inorganic Pi; protein-bound phosphate comes from kinase phosphotransfer, a different reaction
+`update_hydrolysis` does not compute. **The old value's stated justification was tested and
+falsified:** at resting Ca the model's own gate gives **S = 0.0060 with the entire pool free,
+170× below threshold** — calcium prevents precipitation, the split never did.
+
+**Does the ~32 min depletion survive at the grounded value? NO — but it is not gone either.**
+See PART 0: slowed ~144× (34.4 min → ~82 h), not closed.
+
+**STILL OPEN — none of it mine to close:**
+1. **The 90/10 (really 98/2) split's successor question.** I set the *fraction* to 1.0 on
+   literature. **`phosphate_metabolic` is now structurally vestigial (stays exactly 0).** Whether
+   the compartment should be *deleted*, or given the acid-base return path
+   `quantum-system-canonical` §2.4 declares, is a **modelling/physics call**. I did not install
+   one — ruling 015 forbade it and I agree.
+2. **The Rosen 2026 discrepancy — stated, never resolved.** Activity **raises** free cytosolic Pi
+   by millimolar amounts within seconds. Any model routing most released Pi into a protein-bound
+   sink has activity doing the **opposite** of measured biology. At the pre-change value the free
+   pool *drained* during activity — wrong sign against the literature. **Unresolved.**
+3. **The residual slow drain (PO2-10).** ~82 h simulated. Harmless at trial timescales; **not
+   harmless for a long SOC protocol**, which is precisely PO-6's territory.
+4. **J-coupling's real gap.** Fisher locates the *protection* in cluster incorporation; the
+   model's J-coupling has **no dimer/cluster term**, so it computes the **birth-pathway proxy,
+   not the protection mechanism.** Bigger than this surface. **Explicitly NOT the same claim as
+   "J should read ambient phosphate" — it should not.**
+5. **The `model6-dimer-formation-chemistry` skill has no entry for
+   `metabolic_to_structural_fraction`.** Exact proposed text is in
+   `requests/model6-mo/po2-002-dimer-attribution.md` §5. **Skill writes are MO-only; never made.**
+
+**AS GEN-2 ASKS, RECORDED SO IT IS NOT INHERITED AS FOLKLORE:** *my A2.5 change remains the
+standing hypothesis for the ~5.9% dimer-count shift gen-2 measured in PO-4's probe. It is
+**UNVERIFIED** and should be **confirmed or dropped**, not carried forward.* **My evidence
+against it, so a successor has both sides:** `9ddf002` landed **22:32:39Z**, 27 min before the
+23:00–23:17Z window **opened**, so it was live at *both* endpoints; and I checked the window —
+six commits, **no model source file among them** (coordination docs, two probe scripts, one log
+line). Combined with gen-2's own bit-identical determinism measurement, a tree-caused shift is
+hard to construct. **I could not check gen-2's run provenance from my seat. Someone should.**
+
+## PART 3 — WHAT EXISTS NOWHERE ON DISK (the irreplaceable part)
+
+**Traps in the code I left behind:**
+
+- **`phosphate_total` is now a PROPERTY THAT REFUSES ASSIGNMENT.** Any legacy line doing
+  `x.phosphate_total = ...` raises `AttributeError`. **That is deliberate** — it is what makes
+  staleness structurally impossible — **but it will read as a bug** to whoever hits it first.
+- **`phosphate_metabolic` is permanently 0.0 now.** A reader will assume it is broken or dead
+  code. **It is neither: it is structurally empty by design** since the fraction went to 1.0.
+  Do not "fix" it by reintroducing a split.
+- **The ledger assumes ONE terminal phosphate per ATP and NO transport.** ATP diffusion is
+  commented out (`atp_system.py`, the `update_diffusion` call). **If anyone re-enables diffusion,
+  the grid-sum ledger stops being a conserved quantity and `phosphate_ledger_probe.py` will
+  report a FALSE LEAK.** This is the single most likely way to get a spurious failure from my
+  probe.
+- **Every phosphate/dimer number I report is a SUM OVER THE GRID, not a concentration.**
+  Comparing them to another PO's per-point values is wrong by ~10⁴.
+
+**Traps in my own artifacts — things a reader will misread without me here:**
+
+- **`PREREG_PO2_PHOSPHATE.md` A2.5 contains a STRUCK prediction and a MISLEADING S-table that I
+  deliberately LEFT IN PLACE with corrections underneath**, per the append-only convention. **The
+  table is visually prominent and the correction is below it.** A skimmer will take the struck
+  version as live. The corrected reading: **the fraction does NOT set the pool size** —
+  `phosphate_structural` initialises to 1 mM regardless; the fraction routes only *newly
+  hydrolysed* Pi.
+- **`predicted_dP_if_unfixed` in `phosphate_ledger_probe_results.json` means what it says.** On
+  fixed code the residual equals `−recovered` **by construction**. A reader comparing that
+  residual to zero will conclude the probe failed. It did not.
+- **`residual_vs_prediction` is NOT the C1 gate** (superseded by AMENDMENT A2.2). Using it as the
+  gate reproduces a bug I already fixed once.
+- **DECISION RECORD rows D8 and D14 still say the SOC loop is closed.** They are **superseded by
+  PO2-1** and left intact per append-only. Anyone grepping "SOC closed" hits the *retracted*
+  claim first. **D8/D14 measured the half of the loop that never leaked** — the A3 probe has zero
+  ATP references.
+- **PO2-9 is now WRONG and its row stays.** See PART 0. **PO2-10 supersedes it.** If you read
+  only PO2-9 you will believe the valve is closed. It is not.
+
+**The navigation trap that cost me real time:** **there are TWO `sweep/` trees** — `./sweep/`
+(repo root) and `./src/models/Model_6/sweep/` — and they are **not copies**. My probe and scorer
+are in **`./sweep/`**; `score_leta5.py`, which I composed from, is in **the other one**. A bare
+`sweep/...` path is ambiguous in this repo and `python sweep/score_leta5.py` from the root
+silently finds nothing.
+
+**Method notes worth more than any result here:**
+
+- **A conserving result is the DEFAULT outcome of a badly-scoped ledger.** That is how D8/D14
+  happened, and it is why my pre-registration made the discriminator *"does the drift equal a
+  number predicted in advance"* rather than *"is it conserved"*. **If you inherit one thing from
+  this seat, inherit that.**
+- **The scorer bug I found by scoring a partial trace mid-run cost zero compute to fix.** The
+  criterion bug I found *after* the run (PART 0) cost nothing either, because the trace was
+  persisted. **Gen-2's persist-then-score rule paid for itself twice on its first day.**
+- **Every substantive correction in this seat came from checking prose against code or against
+  arithmetic** — D14's scope, the J-coupling dead parameter, the live 0.02 vs documented 0.10,
+  the falsified precipitation justification, my own struck prediction, my own PO2-9, my own
+  calibration. **In this program, prose that has not been checked against code is a lead, not a
+  fact.**
+
+**Closing note on the seat itself.** I corrected the MO four times (D14 scope, J-coupling
+mechanism, the debit conclusion, the dimer attribution) and **three were upheld against rulings
+already issued**. I also had to be corrected — by Sarah's steer to the literature, which
+overturned my own pre-registration. **Neither direction of correction was avoidable by being more
+careful; both came from going back to the source.** That is the transferable part.
