@@ -306,12 +306,16 @@ the outcome.* We do not do that.
 
 **Consequence for how to read this brief.** The structural facts in §3 and the collapse-threshold
 argument in §4 are instantaneous graph properties or analytic (Erdős–Rényi), true in every draw
-and robust. The specific multi-synapse *values* (largest_frac trajectories, the ~98-bond
-percolation count, peak η) are single realisations and are being re-established as **distributions
-over an ensemble of free-running draws** — in particular P(ignition), which is itself a
-first-class result: the network-scale cross-synapse computation appears to be an intrinsically
-*probabilistic* event, which is what one would expect if it depends on rare coincident condensation
-across neighbouring spines. That ensemble is running; numbers will follow as distributions.
+and robust. The specific multi-synapse *values* were single realisations; they have now been
+re-established as **distributions over a 16-draw free-running (zero-seed) ensemble** (§6, Unit 17):
+largest_frac 0.936–0.992, peak η 0.334–0.494, P(ignition) = 16/16.
+
+*(Correction, recorded not patched: an earlier version of this section claimed P(ignition) < 1 —
+that "ignition is a coin-flip" reading was a **drive-path bug**, not physics. `_backbone_eta`, which
+gates the whole cross-synapse channel, is set only inside `net.step()`; a probe that drove synapses
+individually via `s.step()` left η ≡ 0 and never ignited by construction. On the correct path
+ignition is reliable at 20 s. The genuine stochasticity is in the degree and timing of ignition and
+in the partition statistics — not in whether the computation happens.)*
 
 *(A seeding capability was added to the code for narrow software-regression testing — confirming a
 newly-added opt-in flag, when disabled, executes the original code path — and is left dormant and
@@ -330,12 +334,19 @@ unused for any physics measurement. It never appears in a claim about what the s
 | The prior ℝ⁶ "sheaf" is a direct sum of 3 graph Laplacians, carrying no sheaf-specific information | **[MEASURED]**, identity verified exactly |
 | The cross-synapse graph percolates at mean degree ≈ 1 (Erdős–Rényi), while the monogamy bound is 4 — so monogamy **cannot** prevent percolation | **[MEASURED] + analytic**, high confidence |
 | Freeing the spin budget (dropping clique+EM) leaves the *fraction* of time structure exists unchanged (~20%); it only reduces severity | [MEASURED], single draw — being re-run as ensemble |
-| **Whether the condensate ignites at all is stochastic across free draws** (P(ignition) < 1) | **[MEASURED]** — ensemble in progress; this is a first-class finding, not a defect |
+| Ignition is **reliable** (P=16/16 at 20 s in a free ensemble); the stochasticity is in the *degree/timing* of ignition and in largest_frac, not in whether it occurs | **[MEASURED]** — corrects an earlier "coin-flip" claim that was a drive-path bug (η is set only inside `net.step()`) |
+| **The giant component is physically real, not an unweighted-π₀ artifact** — bridge fidelity median F≈0.67, ceiling 0.815, only 9.5% near the Werner floor; τ≈0.12 (~12% of maximal) | **[MEASURED]**, 16 free draws, 28,673 pooled cross edges / 1,557 bridges |
 
-**The one-line question for a reviewer:** connectivity (π₀) counts an F=0.5⁺ edge and an F=0.99
-edge identically, though the former carries ~10⁻⁴ of the entanglement. Is the giant component we
-observe held together by near-Werner-floor bridges — making it an artifact of an unweighted
-invariant that cannot sustain correlated collapse — and if so, what is the right entanglement-
-weighted notion of "one component, one commit bit" (a tangle/CKW-monotone cut, a spectral
-threshold, something else)? *(We are measuring the bridge-fidelity distribution now; the question
-stands regardless of which way it resolves.)*
+**Reviewer question — resolved, and a new one in its place.** We asked whether the giant component
+was held together by near-Werner-floor bridges (an artifact of unweighted π₀). **Measured answer:
+no.** Across 16 free-running draws (28,673 cross edges, 1,557 bridges), bridge fidelity is
+**median F ≈ 0.67**, with only 9.5% near the floor and a hard ceiling at **F = 0.815** — the
+bridges carry real correlation (tangle τ ≈ 0.12), so the percolation is physical. But the ceiling
+is the new puzzle: **no cross-synapse edge anywhere exceeds F ≈ 0.815.** So the network-scale
+partition is genuine but only *modestly* entangled — never in the strong-correlation regime the
+"correlated joint collapse" reading wants. **The question for a reviewer is now:** is a
+partition whose inter-synaptic bonds top out at F ≈ 0.8 (τ ≈ 0.4 maximum, τ ≈ 0.12 typical)
+sufficient to sustain a *jointly* collapsing component — i.e. does the (A)-model's "one shared coin
+per connected component" survive when the edges holding the component together are Werner states of
+intermediate fidelity, or does correlated collapse itself require a fidelity floor above what the
+condensate channel can deliver?
