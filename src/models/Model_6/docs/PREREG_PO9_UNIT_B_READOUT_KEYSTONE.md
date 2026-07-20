@@ -106,3 +106,50 @@ A–B bridge can form at all) AND λ_F long (so the 15 µm bridge clears the Wer
 is NOT distinguishable from STAGGER λ_F=214 (co-activity fails to bind the clusters even when the
 coherence length permits it). ≥8 free draws/cell; report cross_w distributions, SYNC−STAGGER at each
 λ_F, and whether the effect is λ_F-gated.
+
+---
+
+## AMENDMENT 2 — 2026-07-20 · the graded-overlap experiment (detector vs computation) — advisor point 4
+
+**Why (accepted from advisor review).** The SYNC-vs-STAGGER contrast has STAGGER's cross_w=0 arising
+from *material absence* (clusters never co-exist, so no A–B bond CAN form), not from the partition
+computing differently. That is the Round-4 density confound in a temporal costume: activation and
+material remain inseparable, now along the time axis. A system that binds when things co-exist and
+not when they don't is a **coincidence/presence detector** (an AND gate), not a computation over a
+continuous input property.
+
+**The design.** Cluster A driven [0, W]; cluster B driven [offset, offset+W]; W=20 s. Each cluster
+gets identical total drive; only the temporal offset varies. Overlap fraction φ = (W−offset)/W:
+- offset ∈ {0, 5, 10, 15, 20} s → φ ∈ {1.00, 0.75, 0.50, 0.25, 0.00}.
+- λ_F = 214 µm (the delocalized regime — the ONLY one with a cross-channel; per advisor point 1 the
+  short-λ regime has no cross-channel to grade). Readout at the delay where structure exists (≤40 s,
+  before the Werner-floor crossing at ~57 s). ≥6 free draws/cell, NO SEED.
+
+**Scored statistic:** cross_w (readout, delay=20 s) as a function of overlap fraction φ.
+
+### The step-function null (registered BEFORE scoring — the thing to beat)
+Input is a **PRESENCE DETECTOR** (not a computation) if cross_w(φ) is a STEP: ≈0 at φ=0 and
+≈saturated for ALL φ>0 (any overlap, however brief, produces full binding because bonds, once formed,
+persist). Operationally: cross_w(φ=0.25) is statistically indistinguishable from cross_w(φ=1.0).
+
+### The alternative (a computation over a continuous input quantity)
+The partition ENCODES a continuous property of the input if cross_w(φ) is **GRADED** — monotonically
+increasing in φ with a characteristic width set by the dimer/bond lifetime (more co-active time →
+more cross-bonds accumulate before decay). Operationally: cross_w(φ=0.25) < cross_w(φ=0.5) <
+cross_w(φ=1.0), a resolved monotone trend beyond draw-to-draw scatter.
+
+**Verdict rule:** fit cross_w vs φ; report (a) the φ=0 vs φ>0 step, and (b) the slope/monotonicity
+across φ>0 with per-φ scatter. Graded ⇒ the first result in this sub-programme that encodes a
+continuous input quantity in the readout partition (the §8 bar). Step ⇒ a presence detector, reported
+honestly as such. Either is a result; the step-function null is the pre-registered default.
+
+**Framing corrections also adopted (advisor points 1–3), to be applied to the packet + L·PO9-2:**
+- λ is not a two-value sweep; W=exp(−d/λ) is lossy-propagation form, wrong for a MEDIATED channel.
+  The honest object is flat-then-cutoff; the question is binary (mode delocalized vs Anderson-
+  localized), settled by a localization-length estimate, not a sweep. λ_F=214 cell = the delocalized
+  case; λ_F=5 cell = the localized limit where the cross-channel does NOT EXIST (analytic, not a datum).
+- The 2×2 is ONE measurement (SYNC, delocalized: clusters merge + persist to the Werner-floor crossing)
+  + THREE analytic predictions confirmed. Do not inflate to a 4-cell finding.
+- Clock reconciled: binding dies at the Werner-floor crossing F_cross=P_S²·W<½ at delay≈57 s, with
+  T_eff≈158 s (NOT T_singlet 216 s — analytical_gap applies spread_factor·template_factor) and the
+  decay origin at write-end (P_S=0.943 at delay 0). Measured crash 40→60 s matches.
