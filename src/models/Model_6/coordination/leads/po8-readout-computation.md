@@ -9,6 +9,29 @@ Python: `/Users/sarahdavidson/posner_quantum_dynamics/venv/bin/python`.
 
 ---
 
+## Heartbeat — 2026-07-20 16:4xZ · ⚠ TIMING CORRECTION — the trace TARGET is 60-100s, not 2-40s
+
+**I inverted the trace timescale and Sarah corrected it.** Our research is explicit:
+`coherence-gated-learning:63` — "**Classical eligibility traces (τ≈2s) die after seconds.** Our
+coherence window (~100-200s)... cause-effect separation is 30-90+ seconds"; `quantum-biology-primer:21`
+— "across **60-100 second windows**, when all known classical neural mechanisms degrade on much
+shorter timescales". **The 2s (BTSP) / 40s (CaMKII) are the CLASSICAL baseline being BEATEN, not the
+requirement.** The trace TARGET is 60-100+s (up to 200s) — that IS the quantum differentiator; a 40s
+trace would carry no advantage (CaMKII already does 40s). The advisor's Q4 (cross dies 74s, intra
+107s, from T2=216s, lambda=5) is EXACTLY the target and is correct.
+
+**Consequences, corrected:**
+- My external-review conclusion "200s over-provisions, drop to 40-60s" is WRONG (misread the classical
+  baseline as the requirement). Corrected in-place in `PO8_EXTERNAL_LIT_REVIEW_2026-07-20.md`.
+- **Unit A's PURPOSE, now clear:** the unmoored cross rate kills bridges at ~18s — INSIDE the classical
+  regime, useless. The derived rate makes bond death COHERENCE-LIMITED so the trace reaches 74-107s —
+  the quantum window. That is the enabling fix.
+- My continuous-drive Unit A test (bonds ~6-30s) measured the WRONG regime (turnover, not aging). The
+  `analytical_gap` measurement is the right one; ACCEPTANCE BAR = does the correlated domain survive
+  to ~74-107s with the derived rate (ON) and die there, vs collapse early (OFF).
+- lambda: the advisor's call, NOT mine to flip on a subagent lit-take. Recorded as tension, not a
+  recommendation.
+
 ## Heartbeat — 2026-07-20 16:xxZ · THE INVESTIGATION: what we have vs what we're missing for the trace
 
 Investigation (internal code map + external lit review running), synthesising the advisor's guidance

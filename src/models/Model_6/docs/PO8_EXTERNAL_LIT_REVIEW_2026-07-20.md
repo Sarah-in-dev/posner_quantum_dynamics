@@ -1,6 +1,23 @@
 # PO-8 external literature investigation — timescales & coherence length for the eligibility trace
 **2026-07-20. Fan-out web search + primary-source fetch, adversarially cross-checked. Confidence reflects how well MEASURED data (not theory) supports each claim.**
 
+> ## ⚠ AUTHOR CORRECTION 2026-07-20 — Q3's CONCLUSION WAS WRONG; the DATA stands, the INTERPRETATION does not.
+> I concluded from BTSP (~2 s) and CaMKII (~20–40 s) that the trace "only needs ~2–40 s" and the
+> model's ~200 s "over-provisions 5–100×." **That inverts the program's thesis.** Our own research is
+> explicit that τ≈2 s is the CLASSICAL trace that "dies after seconds" — the thing being BEATEN — not
+> the requirement (`coherence-gated-learning:63`; `quantum-biology-primer:17,21,49,51`). The quantum
+> trace's target IS the **60–100 s (up to 100–200 s) coherence window**; a trace that only reached
+> ~40 s would carry NO quantum advantage (CaMKII already does 40 s). So:
+> - **The behavioural numbers are the classical BASELINE, not the target.** The advisor's Q4 74 s/107 s
+>   (T₂=216 s, λ=5) is exactly matched to the 60–100 s window and is CORRECT.
+> - **Q1/Q2 (τ_dimer, T₂ theory-only/disputed) remain valid as caveats** — but the trace NEEDS the
+>   long timescale, so a disputed-low coherence is a RISK TO THE THESIS, not a reason to shorten the
+>   assumption.
+> - **Q4/λ:** the literature points I raised are real, but given Sarah's instruction to follow the
+>   advisor's direction, λ is the advisor's call; I overreached in treating a subagent lit-take as
+>   overriding it. Recorded as an open tension, NOT a recommendation to flip λ.
+> The rest of this doc is the raw investigation; read it through this correction.
+
 Commissioned to answer "what do we have vs what are we missing" for the eligibility trace, against
 the model's assumed timescales (τ_dimer≈200 s, T_singlet=216 s) and the λ=5 vs 214 µm question.
 

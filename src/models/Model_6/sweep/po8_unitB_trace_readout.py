@@ -126,7 +126,7 @@ def one_run(run_id, physical_rate, lam):
         snaps.append(rec)
     return dict(run_id=run_id, timestamp=datetime.now(timezone.utc).isoformat(),
                 physical_release_rate=bool(physical_rate), coupling_length_um=float(lam),
-                n_trav=N_TRAV, peak_eta=float(peak_eta), ignited=bool(peak_eta > 0.0),
+                write_s=WRITE_S, peak_eta=float(peak_eta), ignited=bool(peak_eta > 0.0),
                 write_domain=snaps[0]["mean_domain"], snapshots=snaps)
 
 
