@@ -39,7 +39,12 @@ from run_theta_burst_45s import analytical_gap   # PO-4 surface; CALLED, never e
 
 N_SYN = 8
 DT = 5e-3
-WRITE_S = 20.0                       # per-group write window
+WRITE_S = 40.0                       # per-group write window. Was 20 s; raised because condensate
+                                     # ignition latency is ~13-15 s, comparable to a 20 s window, so
+                                     # partial temporal offsets gave NO CO-IGNITION overlap (cross_w=0
+                                     # by artifact, a false "step"). At 40 s, ~25 s remains co-ignitable
+                                     # after latency, so the graded-overlap sweep can resolve cross_w
+                                     # vs actual co-ignition duration (advisor point 4).
 VOLT, ACT = -40e-3, 0.95
 REST = -70e-3
 WERNER = 0.5
@@ -116,24 +121,39 @@ def score_Qact(W, A, B, spacer, n_null=200):
                 z=float(z), edge_weight_total=float(W.sum()))
 
 
-def active_at(t, cond, A, B, spacer):
-    """Which synapses carry drive at time t. Density matched: every group synapse is driven for
-    exactly WRITE_S. SYNC: A,B both in [0,WRITE_S]. STAGGER: A in [0,WRITE_S], B in [WRITE_S,2W].
-    Spacer in [0,WRITE_S] in both. SYNC2 (failing-first control): identical to SYNC."""
+def active_at(t, cond, A, B, spacer, offset_s):
+    """Which synapses carry drive at time t. GRADED-OVERLAP design (advisor point 4): cluster A is
+    driven [0, WRITE_S]; cluster B is driven [offset_s, offset_s+WRITE_S]. Each cluster gets the SAME
+    total drive (WRITE_S) — only the temporal offset varies. Spacer (if any) in [0, WRITE_S].
+      offset_s = 0        -> full overlap   (== SYNC)
+      offset_s = WRITE_S  -> zero overlap   (== STAGGER)
+      0 < offset_s < W    -> partial overlap, fraction = (WRITE_S - offset_s)/WRITE_S
+    'sync'/'stagger'/'sync2' kept as named aliases (offset 0 / WRITE_S / 0)."""
+    if cond == "stagger":
+        offset_s = WRITE_S
+    elif cond in ("sync", "sync2"):
+        offset_s = 0.0
     act = set()
-    if cond in ("sync", "sync2"):
-        if t < WRITE_S: act |= set(A) | set(B) | set(spacer)
-    elif cond == "stagger":
-        if t < WRITE_S: act |= set(A) | set(spacer)
-        if WRITE_S <= t < 2 * WRITE_S: act |= set(B)
+    if t < WRITE_S:
+        act |= set(A) | set(spacer)
+    if offset_s <= t < offset_s + WRITE_S:
+        act |= set(B)
     return act
 
 
-def write_end(cond):
-    return 2 * WRITE_S if cond == "stagger" else WRITE_S
+def overlap_fraction(cond, offset_s):
+    if cond == "stagger": offset_s = WRITE_S
+    elif cond in ("sync", "sync2"): offset_s = 0.0
+    return max(0.0, (WRITE_S - offset_s) / WRITE_S)
 
 
-def one_run(run_id, lam_F, cond, grouping):
+def write_end(cond, offset_s):
+    if cond == "stagger": offset_s = WRITE_S
+    elif cond in ("sync", "sync2"): offset_s = 0.0
+    return offset_s + WRITE_S
+
+
+def one_run(run_id, lam_F, cond, grouping, offset_s=0.0):
     from model6_parameters import Model6Parameters
     from model6_core import Model6QuantumSynapse
     from multi_synapse_network import MultiSynapseNetwork
@@ -162,10 +182,15 @@ def one_run(run_id, lam_F, cond, grouping):
     rels = [PresynapticRelease(None) for _ in range(N_SYN)]   # independent free draws per synapse
     peak_eta = 0.0
     peak_eta_per = np.zeros(N_SYN)     # per-synapse peak η — diagnoses group-local vs branch-global ignition
+    Ai0, Bi0 = np.array(A), np.array(B)
+    # per-cluster co-IGNITION window: the real x-axis for the graded sweep. A cross-cluster bond needs
+    # BOTH clusters ignited (η>0) simultaneously; ignition lags drive by ~13-15 s, so co-drive time
+    # overstates the bindable window. Track the interval where BOTH cluster means have η>0.
+    coign_steps = 0
     t = 0.0
-    nsteps = int(round(write_end(cond) / DT))
+    nsteps = int(round(write_end(cond, offset_s) / DT))
     for _ in range(nsteps):
-        act = active_at(t, cond, A, B, spacer)
+        act = active_at(t, cond, A, B, spacer, offset_s)
         per_syn = []
         for i in range(N_SYN):
             if i in act:
@@ -177,7 +202,10 @@ def one_run(run_id, lam_F, cond, grouping):
         etas = np.array([float(getattr(s, "_backbone_eta", 0.0)) for s in net.synapses])
         peak_eta_per = np.maximum(peak_eta_per, etas)
         peak_eta = max(peak_eta, float(etas.max()) if etas.size else 0.0)
+        if etas[Ai0].mean() > 0.0 and etas[Bi0].mean() > 0.0:
+            coign_steps += 1
         t += DT
+    coignition_s = coign_steps * DT
 
     snaps, prev = [], 0.0
     for d in DELAYS:
@@ -199,14 +227,24 @@ def one_run(run_id, lam_F, cond, grouping):
         sc["within_w"] = within_w
         sc["cross_w"] = cross_w
         sc["cross_frac"] = cross_w / (within_w + cross_w) if (within_w + cross_w) > 0 else 0.0
+        # clock reconciliation (advisor point 3): record P_S so cross_w's fall can be checked against
+        # the Werner-floor crossing F_cross = P_S^2 * exp(-15/λ_F) < 1/2. NOTE analytical_gap decays
+        # at T_eff = T_base/(spread_factor*template_factor) ~ 140 s, NOT T_singlet=216 s.
+        ps = [float(dd["P_S"]) for dd in tr.all_dimers]
+        crossFs = [float(v) for k, v in tr.cross_synapse_bonds.items()
+                   if float(v) > WERNER and k[0][0] != k[1][0]]
+        sc["mean_PS"] = float(np.mean(ps)) if ps else 0.0
+        sc["crossF_med"] = float(np.median(crossFs)) if crossFs else 0.0
         sc["delay"] = d
         sc["n_cross_syn_edges"] = int((W > 0).sum() // 2)
         snaps.append(sc)
     return dict(run_id=run_id, timestamp=datetime.now(timezone.utc).isoformat(),
                 lam_F=float(lam_F), cond=cond, grouping=grouping,
+                offset_s=float(offset_s), overlap_frac=float(overlap_fraction(cond, offset_s)),
+                coignition_s=float(coignition_s),
                 peak_eta=float(peak_eta), ignited=bool(peak_eta > 0.0),
                 peak_eta_per=[round(float(x), 4) for x in peak_eta_per],
-                write_end_s=write_end(cond), snapshots=snaps)
+                write_end_s=write_end(cond, offset_s), snapshots=snaps)
 
 
 def main():
@@ -214,7 +252,10 @@ def main():
     ap.add_argument("--worker", type=int, required=True)
     ap.add_argument("--n", type=int, default=1)
     ap.add_argument("--lamF", type=float, required=True)
-    ap.add_argument("--cond", choices=["sync", "stagger", "sync2"], required=True)
+    ap.add_argument("--cond", choices=["sync", "stagger", "sync2", "graded"], required=True)
+    ap.add_argument("--offset", type=float, default=0.0,
+                    help="temporal offset of cluster B in seconds (0=full overlap .. WRITE_S=none); "
+                         "used only when --cond graded")
     ap.add_argument("--grouping", choices=list(GROUPINGS), default="twocluster")
     ap.add_argument("--tag", type=str, required=True)
     a = ap.parse_args()
@@ -224,13 +265,13 @@ def main():
     for j in range(a.n):
         rid = f"{a.tag}_w{a.worker}r{j}"
         sys.stderr.write(f"[unitB {a.tag} w{a.worker}] draw {j+1}/{a.n} "
-                         f"lamF={a.lamF} cond={a.cond} grp={a.grouping}\n"); sys.stderr.flush()
-        rec = one_run(rid, a.lamF, a.cond, a.grouping)
+                         f"lamF={a.lamF} cond={a.cond} offset={a.offset} grp={a.grouping}\n"); sys.stderr.flush()
+        rec = one_run(rid, a.lamF, a.cond, a.grouping, a.offset)
         with open(jsonl, "a") as f:
             f.write(json.dumps(rec) + "\n"); f.flush(); os.fsync(f.fileno())
-        zc = {s["delay"]: round(s["z"], 1) for s in rec["snapshots"]}
+        cw = {s["delay"]: round(s["cross_w"], 0) for s in rec["snapshots"]}
         sys.stderr.write(f"[unitB {a.tag} w{a.worker}] done {rid} ignited={rec['ignited']} "
-                         f"z_by_delay={zc}\n"); sys.stderr.flush()
+                         f"overlap={rec['overlap_frac']:.2f} cross_w_by_delay={cw}\n"); sys.stderr.flush()
     return 0
 
 
