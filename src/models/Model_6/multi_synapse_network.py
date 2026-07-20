@@ -93,10 +93,30 @@ class NetworkEntanglementTracker:
     K_DISENTANGLE_BASE: float = 0.1
     WERNER_ENTANGLEMENT_BOUND: float = 0.5  # Werner state entangled iff F > 1/2
 
-    def __init__(self, coupling_length_um: float = 5.0, 
+    # === PO-8 UNIT A: the DERIVED physical release rate (opt-in via physical_release_rate) ===
+    # Entanglement generation is not microscopically reversible, so this is a driven birth-death
+    # NESS, not detailed balance — which makes the release rate DERIVABLE rather than free
+    # (PO7_TECHNICAL_BRIEF_2026-07-20.md §5.1.2):
+    #     k_release = 1/T2 + 1/tau_dimer = 1/216 + 1/200 = 9.63e-3 /s   (tau = 103.8 s)
+    # Independent check: the model's own constants put P_S crossing the Werner floor at 107.0 s.
+    # WHY THIS MATTERS FOR THE ELIGIBILITY TRACE: the coded form
+    # `K_DISENTANGLE_BASE * (1 - eta_factor * P_product)` evaluates to ~0.05-0.09 /s at observed
+    # eta and P_S (tau ~ 11-20 s), so cross bridges are destroyed LONG BEFORE their Werner-floor
+    # crossing (~74 s at lambda=5um). That rate is "unmoored from physics"
+    # (model6-research-findings-may29:91, a locked framing). Replacing it with the derived rate
+    # lets bond death be COHERENCE-limited — i.e. lets the trace fall out of T2, which is the
+    # mechanism the eligibility trace is supposed to be.
+    T2_SINGLET_S: float = 216.0
+    TAU_DIMER_S: float = 200.0
+    K_RELEASE_PHYSICAL: float = 1.0 / 216.0 + 1.0 / 200.0   # 9.6296e-3 /s
+
+    def __init__(self, coupling_length_um: float = 5.0,
                  j_coupling_threshold: float = 5.0,
                  coherence_threshold: float = 0.3):
         self.coupling_length_um = coupling_length_um
+        # PO-8 Unit A opt-in. OFF => the `else` branch below is the untouched original
+        # expression, no RNG consumed differently => off-path bit-identical.
+        self.physical_release_rate: bool = False
         self.j_coupling_threshold = j_coupling_threshold
         self.coherence_threshold = coherence_threshold
         
@@ -485,7 +505,17 @@ class NetworkEntanglementTracker:
                 R = np.random.random((len(A), len(B)))
 
                 p_form = 1.0 - np.exp(-k_cross * dt)
-                k_diss = self.K_DISENTANGLE_BASE * (1.0 - eta_factor * P_product)
+                if getattr(self, 'physical_release_rate', False):
+                    # PO-8 Unit A: the DERIVED NESS release rate (see class constants). Constant
+                    # in F — the reviewer's Q4 is explicit that the trace falls out of T2 and that
+                    # you do NOT need the write rate graded or dopamine coupled to F. Fidelity
+                    # selection already emerges locally because k_cross ∝ P_S^a P_S^b W = F, so
+                    # high-F pairs are attempted more often (BRIEF §5.1.2). Bond death therefore
+                    # becomes COHERENCE-limited: an edge survives until P_S decay drops
+                    # F = P_S^a P_S^b W_ij through the Werner floor.
+                    k_diss = np.full_like(P_product, self.K_RELEASE_PHYSICAL)
+                else:
+                    k_diss = self.K_DISENTANGLE_BASE * (1.0 - eta_factor * P_product)
                 np.maximum(k_diss, 0.0, out=k_diss)
                 p_diss = 1.0 - np.exp(-k_diss * dt)
 
