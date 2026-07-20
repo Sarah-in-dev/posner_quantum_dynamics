@@ -65,6 +65,7 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| PO7-4 | 2026-07-20 | **ADVISOR R5 WORKED THROUGH (Units 13–16) + a FRAMING CORRECTION: the system is stochastic BY CONSTRUCTION and its output is a DISTRIBUTION. Percolation is a mean-degree-≈1 phenomenon the monogamy bound of 4 cannot touch; the "starvation" was a run-length artifact.** **Unit 14 (stoichiometry):** dropping the clique + phenomenological-EM pathway (both already unphysical) removes **97% of intra bonds** (mean degree 3.93 → 0.13); they, not the physics, manufactured the monogamy violation, and spin-resolution is a NO-OP once they are gone. **Release-rate arithmetic (advisor):** it is a driven birth–death **NESS**, not detailed balance, so `k_release = 1/T₂ + 1/τ_dimer = 1/216 + 1/200 = 9.63e-3/s` (τ≈104 s) is **derivable** — the model's ~1e-4/s is **96× too slow** (write-once graph). Independent check: the model's own constants put P_S crossing the Werner floor at 107.0 s; derived τ_release = 103.8 s. **Unit 15 (freed budget):** freeing the whole spin budget leaves the FRACTION of time cross-structure exists **unchanged (~20%)** — it only reduces severity. So the budget never gated structure. **Threshold:** structure collapses at mean cross-degree ≈ 1 (Erdős–Rényi), and the monogamy bound of 4 is **4× too permissive** to prevent it — cross-bonds are BRIDGES, which percolate at far lower density than the spatially-clustered intra bonds. **Unit 13 (order):** permuting WHICH SLOT a bond claims → bit-identical partition (slot allocation is order-free); pair-presentation order within bursts (mean 10.2 bonds/step, max 840) not yet isolated. **THREE FRAMING CORRECTIONS, all recorded not patched:** (1) **frustration is a MATCHING DEFICIENCY (Hall / CKW-LP infeasibility), NOT H¹** — the L·PO7-3 "H¹ obstruction" is RETRACTED; the genuine ℂ¹⁶ partial-trace sheaf answers a *different* question (spin-state consistency). (2) **binary occupancy is an UPPER bound, not lower** — under CKW τ=(2F-1)², weak bonds are nearly free, so the 491,566 refusals OVERCOUNT and the binary rule may OVER-fragment. (3) **the rig's run-to-run variation is the PHYSICS, not a reproducibility bug** — seeding it to obtain a clean or igniting run selects the outcome; **P(ignition) is a first-class finding.** **Unit 17 free-running ensemble (N=16, ZERO seeding) SETTLES the decisive question:** P(ignition) = **16/16 = 1.000**; largest_frac median **0.968** (giant component every draw); **bridge fidelity median F ≈ 0.672, ceiling 0.815, only 9.5% near the Werner floor** ⇒ **the giant component is REAL (bridges carry ~12% of maximal entanglement, not floor-level noise), but only MODESTLY entangled, not maximal.** ⚠ And a correction: **"P(ignition) is a coin-flip" was a DRIVE-PATH BUG** — `_backbone_eta` is set only inside `net.step()` (`:1286`), so probes driving via per-synapse `s.step()` leave η≡0; ignition is reliable (16/16) at 20 s on the correct path, and the real stochasticity is in the degree/timing and largest_frac, not in whether ignition occurs. Seeding capability (`57ccd75`) dormant, software-regression only. | [GROUNDED, measured + derived] | `L·PO7-4` below |
 | PO7-3 | 2026-07-19 | **THE MISSING REPRESENTATION WAS THE SPIN. Spin-resolved bonding built — and THE BLOB BREAKS: `largest_frac` 1.000 → 0.112, 1 component → 184, on a graph that is for the first time PHYSICALLY ADMISSIBLE.** The model bonded dimers as featureless nodes. A Ca₆(PO₄)₄ carries **four ³¹P spin-½ nuclei** (`quantum-system-canonical:43`), a singlet-strength bond consumes **one at each end**, and monogamy forbids a spin mediating two bonds. Nothing represented that. **Build** (opt-in `spin_resolved`, OFF ⇒ bit-identical `1034/369740/0.991922159684`): every dimer owns 4 slots; a bond must claim a FREE slot at both ends or it does not form; provenance bonds must claim their **NAMED inherited slot** (the which-spin tag), so two inheritances competing for one slot cannot both be satisfied; **degree ≤ 4 is DERIVED, never capped.** **Measured (fingerprint rig, 1 synapse, 200 steps, seed 31337):** edges **369,740 → 2,031** (0.55% retained); mean degree **715.16 → 3.93**; max degree **902 → 4**; dimers over bound **1034/1034 → 0**; components **1 → 184**; **`largest_frac` 1.000 → 0.112**; **491,566 bonds refused**. Refused bonds are **not lost edges — they are FRUSTRATION** (pairs individually satisfiable, jointly not), the H¹ obstruction the Unit-5 "sheaf" structurally could not express. **Also this cycle — ignition reproduced and characterised (Unit 8):** L·ETA-2's rig re-run with glutamate wired (the original `eta_probe.py` drives voltage-only — the ERR-2 defect); `E_invasion` **0.3508 vs 0.3518 (0.28%)**, peak r **2.53**, **7/7 synapses condensed**. **The pump is NOT dead** — the r≈0.077 figure repeated from the PO-7 kickoff was never measured and is superseded. **Pre-ignition the partition is 7 components / `largest_frac` 0.22** (one per synapse, exactly §5), collapsing to **`largest_frac` 1.000 on just 98 cross-bonds** — the percolation §3's Werner fix was meant to prevent, at F>0.5. **Ignition occurs at row-sums 4.14–5.05, well below L·ETA-1's stated requirement of >6.89** — that table was computed in the NMDAR-silent regime and its "unreachable at ≥2 µm at any N" claim needs re-deriving before it is cited again. | [GROUNDED, measured — build + positive] | `L·PO7-3` below |
 | PO7-2 | 2026-07-19 | **⚠ CORRECTION — `L·PO7-1`'s CROSS-SYNAPSE PREMISE IS UNPHYSICAL AND IS WITHDRAWN. Phosphate provenance is a LOCAL mechanism; it is not a cross-synapse channel.** Sarah's correction, verified against `model6-entanglement-partition-werner` §2: the model's cross-synapse mechanism is `k_cross = K_ENTANGLE_EM_BASE(0.5)·√(η_i·η_j)·w_spatial·P_product`, hard-gated on both spines `mt_invaded`, with `w_spatial = exp(−d/5 µm)` the **CONDENSATE coupling length** — cross-synapse entanglement is mediated by the Fröhlich backbone, **not** by a phosphate traversing between synapses. Direct entanglement is only ever local. **Grounding failure:** PO-7 read §1 (*where* the partition lives) and treated it as licensing a mechanism only §2 describes; §2 was never read. The kickoff's premise ("a dimer in ANY synapse claims events in absolute network coordinates") was inherited without checking it against the mechanism. **WITHDRAWN:** the network-shared event pool as a physical claim; `L·PO7-1`'s framing of the 2 µm structural zero as a "landmine" (**it is CORRECT PHYSICS — phosphate should not reach**; PO-7 inverted it); the Unit-2 keystone verdict (tested a mechanism that should not exist); the Unit-7 claim-radius derivation (moot — within one 400 nm nanodomain the 500 nm reach was never limiting); Unit 6 (killed mid-run); the R4 advisor packet's core framing. **The tell PO-7 missed:** cross edges required forcing spacing to 0.2 µm, and PO-7 recorded that this "excludes the upper half of the physiological range" as a *limitation* rather than as evidence the mechanism was wrong. **WHAT SURVIVES — all local, all unaffected:** (1) **monogamy violation** — mean degree 715 vs the hard 4-spin bound, max 902, 100% of dimers over, **99.44% of edges physically inadmissible**, max admissible E=2068 vs actual 369740; (2) **provenance is monogamy-CLEAN** — max 1 bond per spin, 0/434 mediators over bound, where the clique rule violates 179×; (3) the **WHICH-SPIN slot tag** (Fisher names the phosphate slot, not just the partner) — more useful now, since local is the only scale that matters; (4) **coincidence window ≤50 ms** ⇒ `provenance_net_age_s = 2.0` is NON-OPERATIVE and needs no justification; (5) two real inherited defects fixed (frozen fidelity; dropped coherence death); (6) the Unit-5 sheaf is a **direct sum of 3 graph Laplacians** (cross-block edges 0/369740, identity verified), so it is not irreducible sheaf structure. **THE REAL FINDING THIS EXPOSES:** the charter sought cross-synapse edges *without* η because the pump is dead (r≈0.077, η=0). If entanglement is only local, **there is no η-free route** — so **η being dead is a HARD BLOCKER on cross-synapse entanglement, not an obstacle to engineer around.** The provenance network was getting the desired answer by changing the physics. The dead pump is the target. | [CORRECTION — supersedes `L·PO7-1`'s cross-synapse claims] | `L·PO7-2` below |
 | PO7-1 | 2026-07-19 | **NETWORK-SHARED PROVENANCE BUILT AND VALIDATED (η-free cross-synapse edges are REAL) — but the multi-synapse §8 keystone is a PRE-REGISTERED NEGATIVE: decomposition null.** **Build:** lifted provenance events from per-synapse to a NETWORK pool (`multi_synapse_network._step_network_provenance`), opt-in, **off-path bit-identical `1034/369740/0.991922159684`** (re-gated after scoring). Repaired two defects in the inherited WIP: **frozen fidelity** (F stored at claim time, never refreshed, while `_find_all_clusters` tested it against the live Werner bound) and **dropped coherence death** (pruned on `is_entangled`, not `P_S<=0.5` — the U16 write-once shape again). **Unit 1 — the layer WORKS:** cross-synapse provenance edges form, η-free (`eta_cross = 0` in all 20 scored runs — the dead pump contributes nothing; every cross edge is Fisher-inherited). Registered geometric prediction held exactly: zero cross edges above 0.9 µm, nonzero below (grid span 400 nm vs reach 500 nm). **⚠ At the COMMITTED DEFAULT `spacing_um=2.0` cross edges are STRUCTURALLY IMPOSSIBLE** — the layer as inherited could never have produced one, and a run at defaults would have recorded a physical-looking null for a purely geometric reason. **Unit 1b — a hard CEILING:** cross edges appear once (t=0.25 s, 2 edges, 1/15 synapse pairs) then never again through t=2.0 s while `prov_total` grows 153→481 (+328 bonds, ZERO new cross edges). **Unit 2 (pre-registered, 5 seeds, 2 arms) — NEGATIVE, decomposition null:** `mean n_multi` = **0.60** (contiguous) / **0.50** (interleaved), both < 1 ⇒ the partition splits cleanly per-synapse. **Input-LOCATED, not input-COMPUTING.** Seed dominates the condition contrast (seed 7 high-yield in every arm; seeds flip direction between A and B) — the L·PO5-13 `d=0.02` shape by a different route. **⚠ THREE DESIGN DEFECTS FOUND IN MY OWN PREREG, all recorded not absorbed:** (1) dimer-level Q would have been ≈1.0 BY CONSTRUCTION (all ~370k intra-clique edges sit inside one activation label) — caught BEFORE scoring, moved to the synapse-level graph; (2) **"density matched by construction" is FALSE** — inactive synapses at −70 mV make no dimers, so cross edges can only form among active ones trivially; `Q_act = +0.0000` in **all 20 runs** (Newman's degenerate value when every edge lies in one community) and `d=1.61/1.33` is an artifact of the null going negative, NOT a signal — **a PASS on Q would have been a THIRD false positive**; (3) ARM 2 interleaving changes co-active spacing 0.2→0.4 µm, so criterion 3 conflates layout with distance. **What this does NOT close:** whether a density-matched, adequately-powered design would move the partition. §8 remains OPEN, not answered negative. | [GROUNDED, measured — mechanism YES, keystone NO] | `L·PO7-1` below |
@@ -103,6 +104,97 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·PO7-4 — advisor R5 worked through (Units 13–16); percolation is mean-degree-≈1, "starvation" was a run-length artifact; the stochasticity is the physics; ensemble settles the bridge question · 2026-07-20 `[GROUNDED, measured + derived]`
+
+Follows a reviewer round on `L·PO7-3` + `PO7_TECHNICAL_BRIEF_2026-07-20.md`. Authoritative current
+statement is that brief; this entry is the provenance record for how it was reached.
+
+#### 1. Unit 14 — the clique + EM pathway manufactured 97% of the graph
+`provenance_bonding` already replaces the 100 ms clique and skips the phenomenological EM pathway
+(both established unphysical: LOCC-non-entangling; no microscopic Hamiltonian). 2×2 over provenance
+× spin:
+
+| config | E | mean deg | free nuclei | components | largest_frac |
+|---|---|---|---|---|---|
+| clique+EM, spin OFF | 369,740 | 715.16 | 0.00 | 1 | 1.000 |
+| clique+EM, spin ON | 2,031 | 3.93 | 0.07 | 184 | 0.112 |
+| provenance, spin OFF | 66 | 0.13 | 3.87 | 23 | 0.017 |
+| provenance, spin ON | 66 | 0.13 | 3.87 | 23 | 0.017 |
+
+Clique+EM account for **3.80 of 3.93 bonds/dimer**. With them gone ~3.87 of 4 nuclei are free, and
+**spin-resolution becomes a no-op** (identical on/off) — the monogamy violation was entirely their
+artefact. (Provenance's own K=2 yields only 66 bonds among 1022 dimers: a dimer claims ≤2 events
+but a bond needs two dimers claiming the SAME event, and most events are claimed once and expire.)
+
+#### 2. The release rate — a NESS, and 96× too slow
+Entanglement generation is not microscopically reversible, so this is a driven birth–death NESS,
+not detailed balance. The decay rate is therefore not free:
+`k_release = 1/T₂ + 1/τ_dimer = 1/216 + 1/200 = 9.63e-3/s`, τ_release = 103.8 s. The model runs
+~1e-4/s (τ = 10,000 s) — **96× too slow**, which is what makes the graph write-once. Internal
+check: `model6_parameters.py:427` puts P_S crossing the Werner floor at 107.0 s for T_singlet=216 s;
+the independently derived τ_release is 103.8 s. (Correction recorded: I first used
+`get_effective_coherence_time('dimer')`=25 s, an orphaned code path; 216 s is the value the code
+runs, `dimer_particles.py:391`.)
+
+#### 3. Unit 15 + the threshold — monogamy cannot prevent percolation
+Freeing the budget (provenance, spin) vs the clique+EM+intra-spin run: the **fraction** of
+post-ignition samples showing cross-structure is **identical at 19.9%**; only severity improves
+(4.6× fewer cross-bonds, percolates half as often, no permanent latch). So the spin budget never
+determined whether structure exists. It collapses at **mean cross-degree ≈ 1** (structured window
+~0.15, percolated end ~1.4) — the Erdős–Rényi giant-component threshold — while the monogamy bound
+is 4. Cross-bonds are **bridges**; bridges percolate far below the density at which the spatially
+clustered intra bonds do (which is why Unit 9's single-synapse graph stayed fragmented at mean
+degree 3.93).
+
+#### 4. Unit 13 — slot order is provably irrelevant; pair order is not yet isolated
+Permuting which of the 4 slots a bond claims → **bit-identical** partition (E, components,
+largest_frac, frustration all unchanged). Bonds/step is bursty (mean 10.2, p90 1, max 840; 90% of
+bonds form in the 10% of steps that burst), so pair-presentation order *could* matter and is the one
+remaining order question.
+
+#### 5. Three framing corrections (all from the reviewer, recorded not patched)
+- **Frustration is a MATCHING DEFICIENCY, not H¹.** Hall's condition; under CKW, LP-infeasibility
+  over a capacity polytope. Neither is cohomology. **`L·PO7-3`'s "H¹ obstruction" is RETRACTED.**
+  The ℂ¹⁶ partial-trace sheaf is genuine but answers spin-state consistency — a different question.
+- **Binary occupancy is an UPPER bound, not lower.** CKW: cost = τ = (2F-1)². F=0.55 ⇒ τ=0.01
+  (~100 bonds/nucleus); weak bonds are nearly free. So the 491,566 refusals OVERCOUNT and the binary
+  rule may OVER-fragment. Sustaining even the degree-715 graph under CKW needs F≲0.537 throughout.
+- **The run-to-run variation is the PHYSICS.** The system is stochastic by construction; its output
+  is a distribution. Whether the condensate ignites at all varies across free draws. Seeding it to
+  get a clean/igniting run selects the outcome — not done. P(ignition) is a first-class finding. The
+  seeding capability (`57ccd75`) is dormant, software-regression only.
+
+#### 6. The ensemble (Unit 17, N=16, ZERO seeding) — the decisive measurement
+Free-running, `net.step` drive, 20 s/draw. **The bridges are ABOVE the Werner floor, so the giant
+component is REAL, not an artefact of unweighted connectivity.**
+
+- **P(ignition) = 16/16 = 1.000.** peak η distribution: min 0.334, median 0.439, max 0.494.
+- **largest_frac: min 0.936, median 0.968, max 0.992** — a giant component dominates every draw.
+  n_multi (clusters spanning ≥2 synapses) 1–7 per run.
+- **Bridge fidelity** (1,557 bridges, cross edges whose removal raises the component count):
+  **median F ≈ 0.672**, p10 0.552, max 0.815; τ median 0.119; only **9.5% below F=0.55.** Pooled over
+  all 28,673 cross edges: median F 0.679, ceiling 0.815, 8.5% near the floor.
+- **VERDICT — INTERMEDIATE.** The bridges are clearly off the Werner floor (only ~9.5% near it), so
+  π₀ is NOT counting negligible-entanglement edges as structure — the keystone is genuine. But they
+  are NOT the strong regime either: no edge across ~29k exceeds **F = 0.815**, so the correlation is
+  modest (τ ≈ 0.12, ~12% of maximal), not maximal.
+
+#### 7. ⚠ CORRECTION — "P(ignition) is a coin-flip" was WRONG, a drive-path artefact
+An earlier reading (Units 16, and the framing note in §5 above as first written) claimed ignition
+is marginal/seed-dependent. **That was two errors compounded:** (a) Unit 16 drove synapses via
+per-synapse `s.step()` + manual `tr.step()`, but **`_update_backbone_field()` — the ONLY setter of
+`_backbone_eta` — is called exclusively inside `net.step()` (`multi_synapse_network.py:1286`)**, so
+that path leaves η pinned at 0 by construction and "did not ignite" was a bug, not physics; (b)
+Unit 12 on the correct `net.step` path showed seed-dependence only because it measured at t=10 s,
+the ignition ONSET, where η is just crossing threshold. On the correct path at 20 s, ignition is
+**reliable (16/16)**. The stochasticity that IS real lives in the DEGREE and TIMING of ignition and
+in largest_frac / n_multi across free draws — not in whether ignition occurs. The
+stochasticity-is-the-physics principle stands; the specific "rare event" claim does not. Probes
+driving via per-synapse `s.step()` must call `net.step()` (or invoke `_update_backbone_field`) or
+the condensate is dead — a reusable gotcha for the next worker.
+
+
 
 ### L·PO7-3 — the missing representation was the SPIN; spin-resolved bonding breaks the blob · 2026-07-19 `[GROUNDED, measured — build + positive]`
 
