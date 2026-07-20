@@ -1,0 +1,39 @@
+{
+  "mode": "off",
+  "tag": "off_postchange_solo",
+  "config": {
+    "n_syn": 7,
+    "spacing_um": 1.0,
+    "dt": 0.005,
+    "t_sim": 12.0,
+    "volt_mV": -40.0,
+    "seed": 0,
+    "pattern": "linear",
+    "spin_resolved": false
+  },
+  "final": {
+    "n_dimers": 2045,
+    "n_intra_bonds": 205535,
+    "n_cross_bonds_all": 883,
+    "n_cross_bonds_werner": 692,
+    "max_total_degree": 353.0,
+    "mean_total_degree": 201.8757946210269,
+    "over_bound": 2045,
+    "n_components": 1,
+    "largest_comp": 2045,
+    "largest_frac": 1.0,
+    "n_multi": 1,
+    "intra_frustrated": 0,
+    "cross_frustrated": 0,
+    "t": 12.0
+  },
+  "peak": {
+    "max_total_degree": 353.0,
+    "over_bound": 2057,
+    "largest_frac": 1.0,
+    "n_multi": 1,
+    "n_cross_bonds_werner": 704
+  },
+  "n_samples": 240,
+  "trace": "po7_unit11_trace_off_postchange_solo.jsonl"
+}

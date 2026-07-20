@@ -1,0 +1,39 @@
+{
+  "mode": "off",
+  "tag": "off_baseline_prechange",
+  "config": {
+    "n_syn": 7,
+    "spacing_um": 1.0,
+    "dt": 0.005,
+    "t_sim": 12.0,
+    "volt_mV": -40.0,
+    "seed": 0,
+    "pattern": "linear",
+    "spin_resolved": false
+  },
+  "final": {
+    "n_dimers": 1863,
+    "n_intra_bonds": 187291,
+    "n_cross_bonds_all": 672,
+    "n_cross_bonds_werner": 504,
+    "max_total_degree": 311.0,
+    "mean_total_degree": 201.78529253891574,
+    "over_bound": 1859,
+    "n_components": 1,
+    "largest_comp": 1863,
+    "largest_frac": 1.0,
+    "n_multi": 1,
+    "intra_frustrated": 0,
+    "cross_frustrated": 0,
+    "t": 12.0
+  },
+  "peak": {
+    "max_total_degree": 311.0,
+    "over_bound": 1862,
+    "largest_frac": 1.0,
+    "n_multi": 1,
+    "n_cross_bonds_werner": 510
+  },
+  "n_samples": 240,
+  "trace": "po7_unit11_trace_off_baseline_prechange.jsonl"
+}

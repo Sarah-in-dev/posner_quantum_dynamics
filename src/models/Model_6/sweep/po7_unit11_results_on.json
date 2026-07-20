@@ -1,0 +1,39 @@
+{
+  "mode": "on",
+  "tag": "on",
+  "config": {
+    "n_syn": 7,
+    "spacing_um": 1.0,
+    "dt": 0.005,
+    "t_sim": 12.0,
+    "volt_mV": -40.0,
+    "seed": 0,
+    "pattern": "linear",
+    "spin_resolved": true
+  },
+  "final": {
+    "n_dimers": 1845,
+    "n_intra_bonds": 3402,
+    "n_cross_bonds_all": 1,
+    "n_cross_bonds_werner": 0,
+    "max_total_degree": 4.0,
+    "mean_total_degree": 3.688888888888889,
+    "over_bound": 0,
+    "n_components": 373,
+    "largest_comp": 22,
+    "largest_frac": 0.011924119241192412,
+    "n_multi": 0,
+    "intra_frustrated": 943088,
+    "cross_frustrated": 710,
+    "t": 12.0
+  },
+  "peak": {
+    "max_total_degree": 4.0,
+    "over_bound": 0,
+    "largest_frac": 0.049019607843137254,
+    "n_multi": 0,
+    "n_cross_bonds_werner": 0
+  },
+  "n_samples": 240,
+  "trace": "po7_unit11_trace_on.jsonl"
+}

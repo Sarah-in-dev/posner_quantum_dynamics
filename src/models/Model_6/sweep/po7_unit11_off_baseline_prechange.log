@@ -1,0 +1,51 @@
+========================================================================================================
+PO-7 UNIT 11 — shared per-dimer spin ledger (intra + cross)   MODE=OFF  tag=off_baseline_prechange
+========================================================================================================
+  N=7 spacing=1.0um pattern=linear  drive -40mV + glutamate  T=12.0s dt=0.005 seed=0
+  spin_resolved=False  (OFF => this is the regression gate for multi_synapse_network.py)
+
+     t(s)  dimers   intra    xall   xwern  maxdeg   over  comps  lgfrac nmulti    ifrust    xfrust  s/step
+    0.050       0       0       0       0       0      0      0   0.000      0         0         0   0.017
+[backbone diag] P_met=0.84fW  P_agg=0.84fW  P_c=21.51fW  r=0.039  eta=0.0000  invaded=True
+    1.000     486   24226       0       0     127    477      6   0.263      0         0         0   0.040
+[backbone diag] P_met=0.84fW  P_agg=0.84fW  P_c=21.51fW  r=0.039  eta=0.0000  invaded=True
+    2.000     858   45394       0       0     155    853      6   0.268      0         0         0   0.050
+[backbone diag] P_met=0.87fW  P_agg=1.17fW  P_c=21.51fW  r=0.054  eta=0.0000  invaded=True
+    3.000    1087   62946       0       0     187   1079      7   0.213      0         0         0   0.061
+[backbone diag] P_met=1.17fW  P_agg=2.10fW  P_c=21.51fW  r=0.098  eta=0.0000  invaded=True
+    4.000    1200   79480       0       0     205   1195      7   0.193      0         0         0   0.072
+[backbone diag] P_met=2.37fW  P_agg=5.36fW  P_c=21.51fW  r=0.249  eta=0.0000  invaded=True
+    5.000    1386  104200       0       0     234   1379      7   0.209      0         0         0   0.084
+[backbone diag] P_met=1.16fW  P_agg=2.46fW  P_c=21.51fW  r=0.114  eta=0.0000  invaded=True
+    6.000    1448  120744       0       0     250   1441      7   0.240      0         0         0   0.095
+[backbone diag] P_met=2.70fW  P_agg=6.74fW  P_c=21.51fW  r=0.313  eta=0.0000  invaded=True
+    7.000    1490  136884       0       0     283   1482      7   0.232      0         0         0   0.107
+[backbone diag] P_met=1.94fW  P_agg=4.89fW  P_c=21.51fW  r=0.227  eta=0.0000  invaded=True
+    8.000    1531  147700       0       0     297   1526      7   0.223      0         0         0   0.118
+[backbone diag] P_met=1.39fW  P_agg=3.59fW  P_c=21.51fW  r=0.167  eta=0.0000  invaded=True
+    9.000    1514  153904       0       0     300   1510      7   0.223      0         0         0   0.128
+[backbone diag] P_met=3.11fW  P_agg=10.99fW  P_c=21.51fW  r=0.511  eta=0.0000  invaded=True
+   10.000    1548  158606      86      72     307   1543      1   1.000      1         0         0   0.136
+[backbone diag] P_met=2.68fW  P_agg=6.35fW  P_c=21.51fW  r=0.295  eta=0.0000  invaded=True
+   11.000    1561  163564      81      68     310   1556      1   1.000      1         0         0   0.144
+[backbone diag] P_met=3.88fW  P_agg=11.64fW  P_c=21.51fW  r=0.541  eta=0.0000  invaded=True
+   12.000    1863  187291     672     504     311   1859      1   1.000      1         0         0   0.152
+
+========================================================================================================
+RESULT
+========================================================================================================
+  final t=12.0  dimers=1863
+    intra bonds            187291
+    cross bonds (all)      672
+    cross bonds (F>0.5)    504
+    max TOTAL degree       311.0   (bound 4)
+    dimers over bound      1859
+    components             1
+    largest_frac           1.0000
+    n_multi (>=2 synapses) 1
+    intra frustration      0
+    cross frustration      0
+
+  PEAK over run: max_total_degree=311 over_bound=1862 largest_frac=1.0000 n_multi=1 xwerner=510
+
+wrote po7_unit11_results_off_baseline_prechange.json (+ trace po7_unit11_trace_off_baseline_prechange.jsonl)

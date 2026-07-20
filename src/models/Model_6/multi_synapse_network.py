@@ -137,6 +137,19 @@ class NetworkEntanglementTracker:
         self._prov_slot_of: Dict = {}                          # global_id -> {event_id: spin idx}
         self._prov_bond_spins: Dict = {}                       # (gid_lo, gid_hi) -> (spin_lo, spin_hi)
 
+        # === PO-7 UNIT 11: SHARED PER-DIMER SPIN LEDGER (intra + cross) ===
+        # Unit 9 gave every dimer four 31P slots and made INTRA bonds claim them
+        # (dimer_particles._create_bond:709). Cross-synapse bonds are not created there, so
+        # they consumed NO spins: a dimer could hold 4 intra bonds AND unlimited cross bonds,
+        # and monogamy was enforced per-synapse while violated network-wide. Unit 10 measured
+        # the consequence (largest_frac 0.209 -> 0.959 as cross bonds accumulated unchecked).
+        # A dimer's ledger lives on ITS OWN synapse's DimerParticleSystem, so cross bonds now
+        # claim from the SAME four slots the intra bonds spend. Gated by the existing opt-in:
+        # inert unless that synapse's dimer_particles.spin_resolved is True.
+        self._synapses_ref = None                              # set by collect_dimers; who owns which ledger
+        self._cross_spin_frustrated: int = 0                   # cross bonds refused for want of a free spin
+        self._cross_bond_spins: Dict = {}                      # (gid_lo, gid_hi) -> (spin_lo, spin_hi)
+
     @property
     def entanglement_bonds(self):
         """Union of cross-synapse and intra-synapse bonds. Computed on demand.
@@ -174,6 +187,10 @@ class NetworkEntanglementTracker:
         """
         self.all_dimers = []
         self.intra_synapse_bonds_cache = {}  # rebuilt every call
+        # PO-7 Unit 11: remember who owns which spin ledger. collect_dimers runs first in
+        # step(), so every cross-bond path below can reach a dimer's own DimerParticleSystem
+        # without threading `synapses` through signatures that never had it.
+        self._synapses_ref = synapses
 
         for syn_idx, synapse in enumerate(synapses):
             if not hasattr(synapse, 'dimer_particles'):
@@ -263,6 +280,74 @@ class NetworkEntanglementTracker:
             'component_sizes': topo.component_sizes,
         }
     
+    # =========================================================================
+    # PO-7 UNIT 11 — the shared per-dimer spin ledger, reached from the network
+    # =========================================================================
+
+    def _ledger_for(self, gid):
+        """The spin ledger owning `gid` = (syn_idx, dimer_id), or None when that synapse is
+        not spin-resolved. A dimer's four 31P nuclei live on its OWN synapse's
+        DimerParticleSystem — that is the whole point: intra and cross bonds spend the same
+        four slots. Returns None (=> inert) whenever the opt-in flag is off, which is what
+        makes the flag-OFF path byte-identical."""
+        syns = self._synapses_ref
+        if syns is None:
+            return None
+        syn_idx = gid[0]
+        if not (0 <= syn_idx < len(syns)):
+            return None
+        ps = getattr(syns[syn_idx], 'dimer_particles', None)
+        if ps is None or not getattr(ps, 'spin_resolved', False):
+            return None
+        return ps
+
+    def _claim_cross_spins(self, key, required=None):
+        """Claim one 31P spin at EACH endpoint of cross/provenance bond `key`. Returns True
+        if the bond may form, False if it is refused for want of a free spin.
+
+        Mirrors dimer_particles._create_bond:709-719 exactly: claim i, claim j, roll back i
+        if j fails, count the refusal as frustration. `required` pins named slots — that is
+        how provenance-inherited bonds stay frustratable (the inherited nucleus sits in a
+        specific slot, so two inheritances competing for one slot cannot both be satisfied).
+
+        Returns True unconditionally when neither endpoint is spin-resolved, so this is a
+        no-op on the default path.
+        """
+        gi, gj = key
+        li, lj = self._ledger_for(gi), self._ledger_for(gj)
+        if li is None and lj is None:
+            return True
+        if key in self._cross_bond_spins:
+            return True                      # already holding its two nuclei
+        ri, rj = required if required else (None, None)
+        si = li._claim_spin(gi[1], key, ri) if li is not None else -1
+        if si is None:
+            self._cross_spin_frustrated += 1
+            return False
+        sj = lj._claim_spin(gj[1], key, rj) if lj is not None else -1
+        if sj is None:
+            if li is not None:
+                li._release_spin(gi[1], key)  # roll back i's claim
+            self._cross_spin_frustrated += 1
+            return False
+        self._cross_bond_spins[key] = (si, sj)
+        return True
+
+    def _release_cross_spins(self, key):
+        """Release both endpoints' nuclei for cross/provenance bond `key`.
+
+        MUST be called on every path that removes the bond. The prune at the top of
+        _update_entanglement rebuilds cross_synapse_bonds by dict comprehension, which
+        releases nothing — leaving that path unhandled leaks spins and makes the ledger
+        over-frustrate monotonically over a run.
+        """
+        if self._cross_bond_spins.pop(key, None) is None:
+            return
+        for gid in key:
+            led = self._ledger_for(gid)
+            if led is not None:
+                led._release_spin(gid[1], key)
+
     def _update_entanglement(self, dt: float, coupling_weights=None):
         """
         Cross-synapse bond dynamics.
@@ -302,6 +387,13 @@ class NetworkEntanglementTracker:
         """
         # Prune cross-synapse bonds for dimers that no longer exist
         current_ids = {d['global_id'] for d in self.all_dimers}
+        # PO-7 Unit 11: a rebuilt dict releases nothing. Hand back the nuclei of every bond
+        # this prune drops, or the ledger over-frustrates monotonically as dimers turn over.
+        # Guarded on the ledger being non-empty, so the flag-OFF path pays one dict test.
+        if self._cross_bond_spins:
+            for k in [k for k in self.cross_synapse_bonds
+                      if k[0] not in current_ids or k[1] not in current_ids]:
+                self._release_cross_spins(k)
         self.cross_synapse_bonds = {
             k: v for k, v in self.cross_synapse_bonds.items()
             if k[0] in current_ids and k[1] in current_ids
@@ -356,7 +448,8 @@ class NetworkEntanglementTracker:
                 # one representative dimer answers for the whole block.
                 if not (A[0]['mt_invaded'] and B[0]['mt_invaded']):
                     for key in existing_by_pair.get((a, b), ()):
-                        self.cross_synapse_bonds.pop(key, None)
+                        if self.cross_synapse_bonds.pop(key, None) is not None:
+                            self._release_cross_spins(key)   # PO-7 U11
                     continue
 
                 # Geometric mean of eta — both synapses must couple
@@ -401,10 +494,21 @@ class NetworkEntanglementTracker:
                 # Survivors refresh F (P_S drifts as coherence evolves).
                 write = form | (exists & ~diss)
 
+                # PO-7 Unit 11: a NEWLY forming bond must claim a free 31P spin at BOTH
+                # endpoints from the same per-dimer ledger the intra bonds spend, or it is
+                # refused (frustration). Refreshes of surviving bonds already hold their two
+                # nuclei and re-claim nothing. Spin claiming is inherently sequential, so the
+                # `form` mask is walked in np.nonzero (row-major) order — deterministic, and
+                # with no set/dict iteration anywhere in the loop.
                 for r, c in zip(*np.nonzero(write)):
-                    self.cross_synapse_bonds[(gid_A[r], gid_B[c])] = float(F_werner[r, c])
+                    key = (gid_A[r], gid_B[c])
+                    if form[r, c] and not self._claim_cross_spins(key):
+                        continue
+                    self.cross_synapse_bonds[key] = float(F_werner[r, c])
                 for r, c in zip(*np.nonzero(diss)):
-                    self.cross_synapse_bonds.pop((gid_A[r], gid_B[c]), None)
+                    key = (gid_A[r], gid_B[c])
+                    if self.cross_synapse_bonds.pop(key, None) is not None:
+                        self._release_cross_spins(key)
 
     def _step_network_provenance(self, dt: float, synapses: List, positions: np.ndarray):
         """PO-7: NETWORK-SHARED hydrolysis-event pool -> η-free cross-synapse edges.
@@ -456,11 +560,13 @@ class NetworkEntanglementTracker:
                     or not (ent_of.get(a, False) and ent_of.get(b, False))):
                 self._prov_bonds.pop(key, None)
                 self._prov_bond_spins.pop(key, None)
+                self._release_cross_spins(key)     # PO-7 U11: hand the nuclei back
                 continue
             f = float(P_of[a] * P_of[b])
             if P_of[a] <= 0.5 or P_of[b] <= 0.5:
                 self._prov_bonds.pop(key, None)   # coherence death
                 self._prov_bond_spins.pop(key, None)
+                self._release_cross_spins(key)     # PO-7 U11
             else:
                 self._prov_bonds[key] = f
         self._prov_seen &= current_ids
@@ -524,12 +630,17 @@ class NetworkEntanglementTracker:
                         partner = e['holders'][-2]
                         if partner != gid and partner in current_ids:
                             key = (min(gid, partner), max(gid, partner))
-                            self._prov_bonds[key] = float(P_of[gid] * P_of[partner])
                             # the mediating spin pair for this shared-origin edge
                             partner_spin = e['holder_spins'][-2]
-                            self._prov_bond_spins[key] = ((partner_spin, spin_here)
-                                                          if partner < gid
-                                                          else (spin_here, partner_spin))
+                            pair = ((partner_spin, spin_here) if partner < gid
+                                    else (spin_here, partner_spin))
+                            # PO-7 Unit 11: the inherited nucleus sits in a NAMED slot, so
+                            # this claims `required=pair` — matching the per-synapse
+                            # provenance path (dimer_particles.py:516-517). Two inheritances
+                            # competing for one slot cannot both be satisfied.
+                            if self._claim_cross_spins(key, required=pair):
+                                self._prov_bonds[key] = float(P_of[gid] * P_of[partner])
+                                self._prov_bond_spins[key] = pair
                     claimed += 1
                     if claimed >= self.provenance_net_k:
                         break
@@ -783,7 +894,8 @@ class NetworkEntanglementTracker:
 
     def _remove_bond(self, id_i, id_j):
         key = (min(id_i, id_j), max(id_i, id_j))
-        self.cross_synapse_bonds.pop(key, None)
+        if self.cross_synapse_bonds.pop(key, None) is not None:
+            self._release_cross_spins(key)        # PO-7 U11
 
 
     def perform_quantum_measurement(self, synapses: List) -> np.ndarray:
@@ -1703,7 +1815,8 @@ class MultiSynapseNetwork:
         
         # Remove discordant bonds
         for bond in bonds_to_remove:
-            tracker.cross_synapse_bonds.pop(bond, None)
+            if tracker.cross_synapse_bonds.pop(bond, None) is not None:
+                tracker._release_cross_spins(bond)   # PO-7 U11: hand the nuclei back
     
     
     def _evaluate_independent_gate(self, stimulus: dict):

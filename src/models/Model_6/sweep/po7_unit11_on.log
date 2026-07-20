@@ -1,0 +1,54 @@
+========================================================================================================
+PO-7 UNIT 11 — shared per-dimer spin ledger (intra + cross)   MODE=ON  tag=on
+========================================================================================================
+  N=7 spacing=1.0um pattern=linear  drive -40mV + glutamate  T=12.0s dt=0.005 seed=0
+  spin_resolved=True  (OFF => this is the regression gate for multi_synapse_network.py)
+
+     t(s)  dimers   intra    xall   xwern  maxdeg   over  comps  lgfrac nmulti    ifrust    xfrust  s/step
+    0.050       0       0       0       0       0      0      0   0.000      0         0         0   0.018
+[backbone diag] P_met=0.84fW  P_agg=0.84fW  P_c=21.51fW  r=0.039  eta=0.0000  invaded=True
+    1.000     486     934       0       0       4      0     97   0.010      0     30584         0   0.027
+[backbone diag] P_met=0.84fW  P_agg=0.84fW  P_c=21.51fW  r=0.039  eta=0.0000  invaded=True
+    2.000     858    1668       0       0       4      0    171   0.008      0     66110         0   0.031
+[backbone diag] P_met=0.87fW  P_agg=1.17fW  P_c=21.51fW  r=0.054  eta=0.0000  invaded=True
+    3.000    1087    2109       0       0       4      0    217   0.007      0    111195         0   0.034
+[backbone diag] P_met=1.17fW  P_agg=2.10fW  P_c=21.51fW  r=0.098  eta=0.0000  invaded=True
+    4.000    1200    2336       0       0       4      0    238   0.011      0    167326         0   0.037
+[backbone diag] P_met=2.37fW  P_agg=5.36fW  P_c=21.51fW  r=0.249  eta=0.0000  invaded=True
+    5.000    1386    2699       0       0       4      0    275   0.009      0    245933         0   0.039
+[backbone diag] P_met=1.16fW  P_agg=2.46fW  P_c=21.51fW  r=0.114  eta=0.0000  invaded=True
+    6.000    1448    2816       0       0       4      0    289   0.009      0    330600         0   0.042
+[backbone diag] P_met=2.70fW  P_agg=6.74fW  P_c=21.51fW  r=0.313  eta=0.0000  invaded=True
+    7.000    1490    2874       0       0       4      0    299   0.013      0    427260         0   0.044
+[backbone diag] P_met=1.94fW  P_agg=4.89fW  P_c=21.51fW  r=0.227  eta=0.0000  invaded=True
+    8.000    1531    2931       0       0       4      0    310   0.012      0    525812         0   0.045
+[backbone diag] P_met=1.39fW  P_agg=3.59fW  P_c=21.51fW  r=0.167  eta=0.0000  invaded=True
+    9.000    1514    2868       0       0       4      0    308   0.013      0    624820         0   0.047
+[backbone diag] P_met=3.32fW  P_agg=11.90fW  P_c=21.51fW  r=0.553  eta=0.0000  invaded=True
+   10.000    1499    2817       0       0       4      0    306   0.013      0    721024        89   0.048
+[backbone diag] P_met=1.76fW  P_agg=6.98fW  P_c=21.51fW  r=0.325  eta=0.0000  invaded=True
+   11.000    1619    3017       0       0       4      0    331   0.012      0    829047        89   0.049
+[backbone diag] P_met=3.12fW  P_agg=11.42fW  P_c=21.51fW  r=0.531  eta=0.0000  invaded=True
+   12.000    1845    3402       1       0       4      0    373   0.012      0    943088       710   0.050
+
+========================================================================================================
+RESULT
+========================================================================================================
+  final t=12.0  dimers=1845
+    intra bonds            3402
+    cross bonds (all)      1
+    cross bonds (F>0.5)    0
+    max TOTAL degree       4.0   (bound 4)
+    dimers over bound      0
+    components             373
+    largest_frac           0.0119
+    n_multi (>=2 synapses) 0
+    intra frustration      943088
+    cross frustration      710
+
+  PEAK over run: max_total_degree=4 over_bound=0 largest_frac=0.0490 n_multi=0 xwerner=0
+
+  MONOGAMY NETWORK-WIDE: SATISFIED (peak max total degree 4 vs bound 4)
+  Unit 10 reference on this rig (intra-only ledger): largest_frac 0.959 at t=12.05, n_multi=1
+
+wrote po7_unit11_results_on.json (+ trace po7_unit11_trace_on.jsonl)
