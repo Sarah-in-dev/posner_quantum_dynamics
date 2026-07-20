@@ -187,16 +187,19 @@ class CaMKIIModule:
         - get_experimental_metrics() returns measurable outputs
     """
     
-    def __init__(self, params: Optional[CaMKIIParameters] = None):
+    def __init__(self, params: Optional[CaMKIIParameters] = None, seed=None):
         """
         Initialize CaMKII module
-        
+
         Args:
             params: CaMKIIParameters (uses defaults if None)
+            seed: optional RNG seed (int / SeedSequence / Generator). None =
+                  today's behaviour, i.e. an unseeded generator drawing from OS
+                  entropy. Supply a seed to make this module reproducible.
         """
         self.params = params or CaMKIIParameters()
 
-        self.rng = np.random.default_rng()
+        self.rng = seed if isinstance(seed, np.random.Generator) else np.random.default_rng(seed)
         
         # State variables
         self._initialize_state()

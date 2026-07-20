@@ -1034,8 +1034,19 @@ class MultiSynapseNetwork:
                  coupling_length_um: float = 5.0,
                  field_threshold_kT: float = 20.0,
                  params=None,
-                 use_correlated_sampling: bool = True):  # ADD THIS
-    
+                 use_correlated_sampling: bool = True,  # ADD THIS
+                 seed=None):
+
+        # Reproducibility seed. None = today's behaviour (every downstream RNG
+        # unseeded, i.e. drawn from OS entropy). An int makes the per-synapse
+        # CaMKII / spine-plasticity streams and the correlated-eligibility
+        # sampler deterministic. Streams are SPAWNED, not shared, so no module's
+        # draws depend on another module's call ordering.
+        self.seed = seed
+        self._seed_seq = np.random.SeedSequence(seed) if seed is not None else None
+        self._elig_rng = (np.random.default_rng(self._seed_seq.spawn(1)[0])
+                          if self._seed_seq is not None else None)
+
         self.n_synapses = n_synapses
         self.spacing_um = spacing_um
         self.pattern = pattern
@@ -1175,7 +1186,19 @@ class MultiSynapseNetwork:
             # Store position info
             model._network_position = self.positions[i]
             model._network_index = i
-            
+
+            # Reproducibility: give each synapse's stochastic submodules their own
+            # deterministic stream derived from the network seed. Two children per
+            # synapse so CaMKII and spine plasticity stay independent of each
+            # other's draw order. Skipped entirely when no seed was supplied, so
+            # unseeded behaviour is byte-for-byte what it was before.
+            if self._seed_seq is not None:
+                child_camkii, child_spine = self._seed_seq.spawn(2)
+                if hasattr(model, 'camkii') and model.camkii is not None:
+                    model.camkii.rng = np.random.default_rng(child_camkii)
+                if hasattr(model, 'spine_plasticity') and model.spine_plasticity is not None:
+                    model.spine_plasticity.rng = np.random.default_rng(child_spine)
+
             self.synapses.append(model)
         
         self._initialized = True
@@ -1483,7 +1506,10 @@ class MultiSynapseNetwork:
         np.ndarray : Sampled eligibilities for each synapse
         """
         if rng is None:
-            rng = np.random.default_rng()
+            # Seeded network -> persistent derived stream; unseeded -> today's
+            # behaviour (a fresh OS-entropy generator per call).
+            rng = self._elig_rng if getattr(self, '_elig_rng', None) is not None \
+                else np.random.default_rng()
         
         # Get mean eligibilities from each synapse
         mean_elig = np.array([s.get_eligibility() for s in self.synapses])
