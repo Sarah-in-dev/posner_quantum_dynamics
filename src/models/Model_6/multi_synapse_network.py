@@ -1062,6 +1062,7 @@ class MultiSynapseNetwork:
                  spacing_um: float = 2.0,
                  pattern: str = 'linear',
                  coupling_length_um: float = 5.0,
+                 fidelity_length_um: float = None,
                  field_threshold_kT: float = 20.0,
                  params=None,
                  use_correlated_sampling: bool = True,  # ADD THIS
@@ -1081,6 +1082,21 @@ class MultiSynapseNetwork:
         self.spacing_um = spacing_um
         self.pattern = pattern
         self.coupling_length_um = coupling_length_um
+        # LAMBDA DECOUPLING (PO-9 2026-07-20). The condensate-coherence length that sets
+        # cross-synapse ENTANGLEMENT (rate + Werner fidelity) is a DIFFERENT physical
+        # quantity from the diffusive ~5 um metabolic-aggregation length. One constant was
+        # doing both jobs (self.coupling_weights fed BOTH p_met_agg AND w_spatial) -- the
+        # rate-vs-fidelity category error. Split: metabolic aggregation keeps λ_met
+        # (coupling_length_um); entanglement uses λ_F (fidelity_length_um). Physically:
+        # λ_met gates WHICH synapses co-ignite (metabolic power spreads over microns);
+        # λ_F sets how far an already-ignited bond stays correlated (the mediating mode's
+        # coherence length). λ_F is genuinely UNMEASURED -- bounded below ~1 um (disorder-
+        # localized, the optical-superradiance floor) and above ~214 um (ballistic vτ at
+        # Q=10); the pinning physics is the CONTESTED microtubule-Q / AMRIS bet. So the
+        # honest move is to SWEEP λ_F in Unit B, not assert an endpoint. Default None =>
+        # λ_F == λ_met => bit-identical to pre-decoupling behaviour.
+        self.fidelity_length_um = (fidelity_length_um if fidelity_length_um is not None
+                                   else coupling_length_um)
         self.field_threshold_kT = field_threshold_kT
         self.params = params
         self.use_correlated_sampling = use_correlated_sampling
@@ -1091,7 +1107,12 @@ class MultiSynapseNetwork:
         
         # Compute distance matrix and coupling weights
         self.distances = self._compute_distances()
-        self.coupling_weights = self._compute_coupling_weights()
+        self.coupling_weights = self._compute_coupling_weights()   # metabolic aggregation (λ_met)
+        # Entanglement rate+fidelity weights on the SEPARATE condensate length (λ_F).
+        # Fed to the entanglement tracker instead of coupling_weights; identical matrix
+        # when fidelity_length_um defaults to coupling_length_um.
+        self.fidelity_weights = np.exp(-self.distances / self.fidelity_length_um)
+        np.fill_diagonal(self.fidelity_weights, 1.0)
         
         # Create individual synapse models (lazy initialization)
         self.synapses: List = []  # Will hold Model6 instances
@@ -1324,7 +1345,12 @@ class MultiSynapseNetwork:
         if self._entanglement_step_counter % 10 == 0:
             self._network_entanglement = self.entanglement_tracker.step(
                 dt, self.synapses, self.positions,
-                coupling_weights=getattr(self, 'coupling_weights', None)
+                # LAMBDA DECOUPLING (PO-9): entanglement uses the condensate-coherence
+                # weights (λ_F); p_met_agg keeps the diffusive metabolic weights (λ_met).
+                # Default λ_F == λ_met => same matrix. _update_entanglement is UNTOUCHED,
+                # so the off-path regression digest (515772101786800) is unaffected.
+                coupling_weights=getattr(self, 'fidelity_weights',
+                                         getattr(self, 'coupling_weights', None))
             )
         
         # =========================================================================

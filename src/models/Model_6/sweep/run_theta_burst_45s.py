@@ -4,8 +4,8 @@ CA1 Theta Burst — 6 traversals, 45s gaps — ANALYTICAL GAP + VALIDATION
 ========================================================================
 Uses analytical fast-decay during inter-traversal gaps:
   - P_S decoherence decay (per-dimer T_eff)
-  - Coherence-dependent dissolution (k_classical = 0.005 s⁻¹, Turhan 2024,
-    times the template enhancement -- symmetric with formation per canonical:100)
+  - Coherence-dependent dissolution (k_classical = 0.005 s⁻¹, Turhan 2024;
+    NO bulk template factor -- confined-niche dissolution, see the k_diss note)
   - Particle removal for dissolved dimers
   - Bond cleanup for decoherent dimers (P_S < 0.5)
   - Stochastic disentanglement (no EM protection at rest)
@@ -60,9 +60,12 @@ def analytical_gap(network, gap_duration_s, dt_sub=1.0, diagnostics=False):
     ADVANCED during the gap (integrated at dt_sub, with the timescale that makes
     integration necessary):
       1. P_S decoherence  [PHASE 2]  per-dimer exponential decay toward 0.25, T_eff-scaled
-      2. Dissolution  [PHASE 3]  k_diss = K_CLASSICAL*(1-singlet_excess)*template_enhancement
-                              (template factor restored 2026-07-18, MO ruling 016 --
-                              canonical:100 LOCKS it as symmetric with formation)
+      2. Dissolution  [PHASE 3]  k_diss = K_CLASSICAL*(1 - singlet_excess)
+                              (NO bulk template factor: during silence formation is gated
+                              off, so the detailed-balance symmetry has no forward flux to
+                              balance. Confined-niche revert of ruling 016 for the gap,
+                              PO-9 2026-07-20; within-trial dissolution keeps it. See the
+                              k_diss note below.)
       3. Particle removal  [PHASE 3]   track concentration, remove lowest-coherence particles
       4. Bond cleanup  [PHASE 3]   remove bonds involving P_S < 0.5 dimers
       5. Stochastic disentanglement  [PHASE 3]   k_decohere = 0.01*(1 - P_Si*P_Sj)
@@ -106,12 +109,11 @@ def analytical_gap(network, gap_duration_s, dt_sub=1.0, diagnostics=False):
             (dimer_particles.py:205) to set dimer.template_bound. Formation is
             excluded in a gap, so the field has NO consumer here -- existing dimers
             keep the template_bound they were created with, and gap dissolution does
-            not use update_dimerization -- k_diss is computed inline. NOTE: as of
-            2026-07-18 that inline form DOES carry template_enhancement (ruling 016),
-            so the template field is now read during a gap. It is still not a
-            CONSUMER of set_n_templates, because the field is only re-read at dimer
-            creation and formation is excluded here -- which is what this exclusion
-            turns on.
+            not use update_dimerization -- k_diss is computed inline, and (as of the
+            confined-niche revert, PO-9 2026-07-20) does NOT carry template_enhancement,
+            so the template field is not read during a gap at all. It is not a CONSUMER
+            of set_n_templates for the same reason: the field is only re-read at dimer
+            creation and formation is excluded here.
             The pathway is also MEMORYLESS -- phase 12 recomputes n_templates from
             the CURRENT volume every step, with no latch -- so the tail step's single
             evaluation from the post-gap volume lands on exactly the value stepping
@@ -230,25 +232,33 @@ def analytical_gap(network, gap_duration_s, dt_sub=1.0, diagnostics=False):
 
             singlet_excess = max(0.0, (mean_ps - P_THERMAL) / 0.75)
 
-            # TEMPLATE SYMMETRY, restored 2026-07-18 (MO ruling 016).
-            # quantum-system-canonical:100 [LOCKED]: "Template 50x enhancement is a
-            # kinetic catalyst applied SYMMETRICALLY to formation AND dissolution
-            # (detailed balance)". This line previously omitted the factor, so the gap
-            # catalysed formation and not dissolution -- which is the SAME thermodynamic
-            # inconsistency model6-dimer-formation-chemistry Sec.1 already repaired in
-            # update_dimerization ("applied to formation only ... imposes a spurious
-            # ~50x equilibrium shift toward clusters"), recurring at a second site.
+            # NO bulk template factor on gap dissolution (confined-niche revert of
+            # 85d8915 / MO ruling 016, PO-9 2026-07-20).
             #
-            # It is a FIELD, not a scalar: 1.0 on bare voxels, 50.0 on template voxels.
-            # That matters because dimers are BORN at template sites (formation is itself
-            # catalysed, ca_triphosphate_complex.py:346), so the concentration-weighted
-            # factor is ~33x even though the grid-mean is 1.015 -- measuring the grid mean
-            # is the wrong denominator and understates this by ~33x.
+            # Ruling 016 applied the ~33x template enhancement to gap dissolution by a
+            # DETAILED-BALANCE argument: a kinetic catalyst (Tao 2010) must speed both
+            # directions. But detailed balance requires a live FORWARD reaction to be
+            # symmetric WITH, and during a silent gap formation is gated OFF (calcium at
+            # baseline, S<1 -- ca_triphosphate_complex.py:395 gates FORMATION only). So the
+            # template becomes a one-sided loss term, not a symmetric catalyst -- exactly
+            # the "no compensating formation during silence" gap PO-4 flagged (Q4-10).
             #
-            # Restoring a LOCKED symmetry, NOT tuning: no coefficient was chosen to reach
-            # an outcome; the factor is the one formation already uses, on the same field.
-            k_diss = (K_CLASSICAL * (1.0 - singlet_excess)
-                      * syn.ca_phosphate.template_enhancement)
+            # Two further grounds, both from this program's own record:
+            #   - The premise is superseded: aggregation/entanglement here is a driven
+            #     birth-death NESS, "not detailed balance, not microscopically reversible"
+            #     (PO7_TECHNICAL_BRIEF_2026-07-20 Sec.5.1.2; SUBSTRATE_AUDIT_JUL18:178 --
+            #     the (1-singlet_excess) factor already breaks detailed balance in THIS
+            #     same term, so the "symmetry is LOCKED" argument was never whole).
+            #   - The confined-niche dissolution was already measured WITHOUT template at
+            #     tau ~200s (A3 conservation/SOC probe, RESEARCH_LOG_CALCIUM_DIMER D8).
+            #     The ~33x makes effective tau ~25s, contradicting both our own A3 result
+            #     and the grounded Turhan tau=200s that k_classical was chosen to reproduce.
+            #
+            # Within-trial dissolution (ca_triphosphate_complex.py:418) KEEPS the template
+            # factor: there formation is active (S>1), so the symmetry is real. The error
+            # was specific to silence. Persistence here is coherence-selected: fresh dimers
+            # enter at singlet_excess~1 (k_diss suppressed) and only clear as P_S decays.
+            k_diss = K_CLASSICAL * (1.0 - singlet_excess)
 
             # Exponential decay of concentration (k_diss is a field ⇒ decay is a field)
             decay = np.exp(-k_diss * actual_dt)
