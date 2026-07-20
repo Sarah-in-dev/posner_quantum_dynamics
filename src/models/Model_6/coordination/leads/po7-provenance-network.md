@@ -104,3 +104,35 @@ direct sum of 3 graph Laplacians.
 
 **The finding that replaces the objective:** there is no η-free cross-synapse route, so **η being
 dead is a HARD BLOCKER, not something to engineer around.** Full record: `L·PO7-2`.
+
+### 2026-07-19 (late) — SPIN-RESOLVED BONDING: the blob breaks
+
+**The missing representation was the spin.** Dimers bonded as featureless nodes; a Ca₆(PO₄)₄
+has 4 ³¹P nuclei, a bond consumes one at each end, monogamy forbids reuse. Built as opt-in
+`spin_resolved` (OFF ⇒ bit-identical, gated twice).
+
+| | OFF | ON |
+|---|---|---|
+| edges | 369,740 | 2,031 |
+| mean degree | 715.16 | 3.93 |
+| max degree | 902 | 4 |
+| over bound | 1034/1034 | **0** |
+| components | 1 | **184** |
+| largest_frac | 1.000 | **0.112** |
+| frustrated | — | 491,566 |
+
+First physically admissible graph in the investigation, and it has structure. Refused bonds =
+**frustration** = the H¹ obstruction Unit 5's direct-sum sheaf couldn't express.
+
+**Also: the pump is NOT dead.** L·ETA-2 ignition reproduced (E_invasion 0.3508 vs 0.3518;
+7/7 condensed). The `r≈0.077` figure repeated from the kickoff was never measured; a direct
+measurement returns L·ETA-1's *rest floor* 0.0390. Ignition occurs at row-sums 4.14–5.05, far
+below L·ETA-1's stated >6.89 — that table was NMDAR-silent and needs re-deriving.
+
+**Percolation number:** 98 cross-bonds (already past Werner F>0.5) take largest_frac 0.22 → 1.000.
+Each synapse is a near-complete clique, so one cross-bond fuses two dense balls. That is why the
+spin bound is the lever.
+
+**NOT established:** spin resolution governs INTRA bonds only. Cross-synapse bonds
+(`multi_synapse_network._update_entanglement`) are not spin-accounted — a dimer's 4 nuclei must
+be shared across intra AND cross bonds. Until then, no §8 keystone claim. Full record: `L·PO7-3`.
