@@ -23,6 +23,13 @@ Read in full, in this order:
 3. `docs/PO7_TECHNICAL_BRIEF_2026-07-20.md` (the physics in equations) and
    `docs/PO7_ADVISOR_REVIEW_2026-07-20.md` (the open questions we put to the reviewer).
 
+**⚠ BEFORE CONSTRUCTING ANY PROTOCOL: grep the research logs (`RESEARCH_LOG_CALCIUM_DIMER.md`,
+`RESEARCH_LOG_ENTANGLEMENT_TOPOLOGY.md`) and `sweep/` for prior art on the exact thing you are
+about to build.** Four times in one day a worker on this program (PO-7 included) went and measured
+something that was already logged. A grep for `gap` surfaces `analytical_gap`,
+`gap_retention_probe.py`, `L·GAP-1` and `L·GAP-4` immediately. This is the single highest-yield
+habit here.
+
 Your grounding brief must include a **line-quoted read of `_step_network_provenance` and the
 cross-bond formation block in `multi_synapse_network._update_entanglement`** — you inherit both and
 must verify, not trust, them.
@@ -83,6 +90,25 @@ make it **fidelity-dependent** per the reviewer: a bond born at F₀ lives t_bon
 weak bonds die first and the graph self-cleans — verify that behaviour at the data level.
 
 ### Unit B — the READOUT experiment (the keystone, done right)
+
+**PROTOCOL: drive (write) → `analytical_gap(net, delay_s, dt_sub=1.0)` → dopamine (read).**
+Import as the existing consumer does (`sweep/gap_retention_probe.py`):
+`from run_theta_burst_45s import analytical_gap`.
+
+**⚠ Do NOT hand-roll a quiet period by dropping voltage/glutamate and stepping normally.**
+`step_population` slaves the dimer count to **instantaneous** calcium
+(`target_count = peak_conc × az_volume_L × N_A`, `dimer_particles.py:258`), so a collapsed calcium
+field **CULLS the population and deletes the graph with it** (`_remove_all_bonds_for_dimer`, `:336`).
+That is deletion, not decay — a trap PO-8 hit on its first attempt (`requests/po8-readout-computation/
+po7-001-use-analytical-gap.md`).
+
+**The graph DOES persist through a proper gap — already measured, do not re-measure.** PO-4's
+`L·GAP-4` (`docs/RESEARCH_LOG_CALCIUM_DIMER.md`; `docs/PREREG_PO4_GAP.md` AMENDMENT E) at the
+corrected `K_CLASSICAL = 0.005 s⁻¹`: **survival 0.9926 at 20 s, 0.9676 at 45 s.** Read that, plus
+`sweep/gap_retention_probe.py`, before designing. The decay that does occur is the **self-cleaning**
+the reframe predicts (`t_bond = T₂·ln(4F₀−1)`, weak bonds die ~4× faster), so the graph **at readout
+is ENRICHED in high-fidelity bonds** relative to write time — a feature, not a loss.
+
 Free-running ensemble (≥12 draws, no seed). Drive to a **dopamine event at a realistic delay**
 (tens of s; sweep the delay as an independent variable — it sets how much P_S decay has occurred).
 At the dopamine step, measure the **correlated-domain partition** (the d(u,v) metric, effective
@@ -107,9 +133,11 @@ CaMKII / downstream plasticity can consume. Scope this with Sarah before buildin
 - Every physics change: opt-in, off-path regression-gated (network path, not the synapse-only
   fingerprint). Demonstrate any verdict function FAILING before it passes. ≥5 free draws for any
   scored claim (the 3-seed scars).
-- Do NOT touch: `spine_plasticity_module.py`, `atp_system.py` phosphate path, `analytical_gap`,
-  `sweep_runner.py`. Do NOT move the Werner bound (0.5, LOCKED). Do NOT re-open cross-synapse
-  provenance.
+- Do NOT **MODIFY**: `spine_plasticity_module.py`, `atp_system.py` phosphate path, `analytical_gap`,
+  `sweep_runner.py`. **⚠ `analytical_gap` you MUST USE — see Unit B. "Do not touch" means do not
+  EDIT it; it is the documented mechanism for advancing through a silent delay, and using it is
+  required, not forbidden.** Do NOT move the Werner bound (0.5, LOCKED). Do NOT re-open
+  cross-synapse provenance.
 - **Use subagents** for the ensembles and the release-rate build — they parallelise and keep the
   main thread grounded. Cap concurrency at 4.
 - Heartbeat to `coordination/leads/po8-readout-computation.md` each cycle with a `date -u` stamp.
