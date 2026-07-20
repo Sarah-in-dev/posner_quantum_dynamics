@@ -65,6 +65,7 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| PO9-2 | 2026-07-20 | **THE READOUT PARTITION PERFORMS A GRADED COMPUTATION OVER TEMPORAL INPUT OVERLAP — conditional on a delocalized mediating mode.** With the substrate blocker fixed (`L·PO9-1`), the readout keystone is runnable. Two synapse clusters (4 each) 15 µm apart, igniting INDEPENDENTLY (driving A leaves B dark — the 15 µm gap beats branch-global co-ignition, L·ETA-4). Input = timing. **KEYSTONE MEASUREMENT (N=8, amended metric cross_w = A–B block weight of the synapse correlation matrix, Σ p_e over cross-cluster bridges >Werner):** synchronous co-active clusters BIND into one correlated domain in **8/8 free draws** (cross_w 848±316); staggered / short-λ_F clusters stay separate — **hard zeros across 21 draws.** Honest framing (advisor): this is **ONE measurement + THREE analytic predictions confirmed**, not a 4-cell finding — cross_w>0 requires (co-active) AND (bridge clears the Werner floor: F_cross=P_S²·exp(−15/λ_F)>½, true at λ_F=214/W=0.93, false at λ_F=5/W=0.05). **CLOCK RECONCILED:** binding dies at the Werner-floor crossing (delay ≈57 s), decay T_eff≈**158 s** NOT T_singlet 216 (`analytical_gap` applies spread_factor·template_factor), origin=write-end (P_S=0.943 at delay 0) — measured crash 40→60 s matches. **THE GRADED KEYSTONE (advisor point 4, pre-registered step-function null):** sweep the temporal offset continuously; measure cross_w vs **co-ignition duration** (the physical x-axis — ignition lags drive ~13–15 s, so W raised to 40 s). **cross_w is GRADED, not a step:** 0.4 s→26, 2.8 s→209, 6.5 s→600, 10 s→926 (n=5/offset, tight sd); **Spearman ρ=+0.936 (40 draws); step null REJECTED, Welch t=24.25.** So the partition encodes a CONTINUOUS property of the input (how long the populations were simultaneously active), width ~5–7 s set by bond kinetics — a **computation, not a presence detector** (the §8 bar). **THE LOAD-BEARING CAVEAT (advisor point 1):** all of this is conditional on the mediating mode being DELOCALIZED (λ_F long). The λ "sweep" is malformed — W=exp(−d/λ) is lossy-propagation form, wrong for a mediated channel; the honest object is flat-then-cutoff and the question is the BINARY delocalized-vs-Anderson-localized, settled by a localization estimate (ξ_loc vs L_coh; delocalized past 15 µm iff mechanical disorder ≲2%), NOT a sweep. If localized, no cross-channel exists and this collapses to the decomposition null. **Seeding dormant/regression-only.** Commits `b30c59c`(fixes)…`016d483`(data); packet `PO9_ADVISOR_PACKET_R2`; localization scoping `PO9_LOCALIZATION_ESTIMATE_SCOPING.md`. | [GROUNDED, measured — graded computation, conditional on delocalization] | `L·PO9-2` below |
 | PO9-1 | 2026-07-20 | **THE ~25 s SUBSTRATE-LIFETIME BLOCKER WAS A BULK-CHEMISTRY ARTIFACT IN A CONFINED NICHE, NOT PHYSICS — REMOVED; THE REAL READOUT LIMITER IS NOW COHERENCE-DRIVEN CROSS-BOND DEATH (~40 s at λ=5 µm), NOT POPULATION LOSS.** PO-8 closed that the correlated-domain graph dies ~25 s from POPULATION dissolution (mean P_S still 0.63 at 120 s). Traced to ONE term: gap dissolution `k_diss = K_CLASSICAL·(1−singlet_excess)·template_enhancement`, where the template **×33** (commit `85d8915`, MO ruling 016) applies a BULK detailed-balance catalyst during SILENCE — but formation is gated OFF in silence (`ca_triphosphate_complex.py:395` gates FORMATION only), so the template is a **one-sided loss term with no forward reaction to be symmetric with** (PO-4's Q4-10 "no compensating formation", resolved on a premise since superseded: PO-7 brief §5.1.2 driven-NESS; `SUBSTRATE_AUDIT_JUL18:178` — the `(1−singlet_excess)` factor already breaks detailed balance in THIS same term). External deep-lit (21 sources, 3-vote adversarial) confirms the DIRECTION — matrix templates STABILIZE the amorphous phase, never symmetrically catalyse dissolution, across 4 systems (OPN, fetuin-A, PILP, collagen) — but it measures crystallisation not dissolution and is bulk-scale, so it corroborates the sign, not a magnitude. The confined-niche dissolution was ALREADY measured WITHOUT template at **τ≈200 s** (A3/D8 conserved pool, signed-net `_po4_consumed`). **FIX 1:** drop template from the GAP dissolution only (within-trial KEEPS it — formation active there). **VALIDATED N=12 free draws** (`po8_unitB`, λ=5 µm, 12/12 ignited): dimers **2510→2028 at 120 s (19 % lost)** vs PO-8-before **2580→631 (76 %)**; substrate now ages at the confined rate. **With population loss gone, the multi-synapse partition dies at a sharp ~40 s cliff** (domain 316→14 between 30–40 s; n_cross 1674→451; crossF **0.68→0.53 AT the Werner floor**; largest_frac 0.97→0.46) — genuine coherence-limited CROSS-bond death (F=P_S²·W crosses 0.5), NOT chemistry; intra cores persist to 120 s+. **FIX 2 — λ DECOUPLING:** `coupling_length_um` was ONE constant feeding BOTH `p_met_agg` (metabolic aggregation) AND `w_spatial` (Werner fidelity) — the rate-vs-fidelity category error the advisor flagged, confirmed in code. Split: metabolic keeps λ_met=5 µm; entanglement uses λ_F (`fidelity_length_um`, new `fidelity_weights` matrix fed to the tracker). `_update_entanglement` UNTOUCHED (offpath digest `515772101786800` unchanged); default λ_F==λ_met bit-identical. λ_F is UNMEASURED (bounded ~1 µm localised … ~214 µm ballistic vτ; the MT-Q/AMRIS coherence bet is the pin) — so λ_F is **Unit B's SWEEP knob, NOT asserted at 214** (the ceiling-vanishing endpoint is the "makes it behave better" trap; the 0.815 ceiling is circular = exp(−1/5)). **NEXT:** build per-synapse stimuli on `net.step` (Q2, the scored-keystone blocker) → Unit B = λ_F × delay × (synchronous vs staggered, density-matched) scoring the synapse-level readout partition vs input, with the guard. | [GROUNDED, measured N=12 + 2 regression-clean physics fixes] | `L·PO9-1` below |
 | PO8-1 | 2026-07-20 | ⚠ **WITHDRAWN BY ITS AUTHOR — DO NOT CITE. Protocol artifact.** I never read `PO7_TECHNICAL_BRIEF_2026-07-20.md` (required by the kickoff), invented a drive-then-quiet protocol nobody uses, and reported a ~7 s eligibility trace that contradicts (a) the brief's `τ_dimer = 200 s` and its "slots recycle ~0.7× within the 100–200 s window", and (b) validated commit-rate decay over **0–120 s**. Own data show my protocol collapses `peak_conc` with **τ≈42 s** vs the assumed 200 s, and `target_count` tracks **`np.max` — a PEAK, not an integral** (`L·PO5-11`), so killing the drive culls the population far faster than real dimer chemistry. **Only surviving observation (narrow):** culled dimers take their bonds with them, so "write-once" does not protect a bond whose dimer is culled — relevant to protocol design, not to trace lifetime. **System verified intact:** offpath digest `515772101786800` reproduces exactly; **zero system `.py` modified.** Original text kept per append-only. | [WITHDRAWN — protocol artifact] | `L·PO8-1` below |
 | PO8-1-orig | 2026-07-20 | *(superseded by the withdrawal above)* **THE ELIGIBILITY TRACE HAS A ~7 s HALF-LIFE, SET BY FAST CHEMISTRY — NOT BY THE 216 s COHERENCE. At a realistic dopamine delay there is nothing left to read.** First-ever **drive-then-quiet** protocol (every prior PO-7 measurement was under SUSTAINED drive at end-of-run): drive 20 s past ignition, then quiet 60 s. **N=3 free draws, ZERO seeding, ignition 3/3** (η 0.451/0.404/0.443). **Half-lives after drive stops, per draw:** correlated **domain 7.0/7.0/7.0 s** (508→4 dimers by 30 s); cross bridges 11/12/12 s; intra bonds 16/17/20 s; dimers 24/25/33 s; **P_S NEVER halves — 0.943→0.768 at 60 s, nowhere near the 0.5 Werner floor (a fixed cohort would not cross it until 107 s).** **The computational object dies FIRST and FASTEST while the quantum coherence it rests on is barely touched — the slow quantum clock never gets to act.** **Three causes separated by measurement:** (a) **CULLING dominant** — `step_population` slaves `target_count` to `peak(dimer_concentration)` and culls dimers, **deleting their bonds** (`_remove_all_bonds_for_dimer`); births hit **0** the instant drive stops while deaths continue ~45–55/s. **"Write-once" protects a bond from DISSOLVING, not from having its dimer CULLED.** (b) **BOND DEATH faster than dimers** — bridges halve in 12 s vs dimers 27 s, i.e. the unmoored `K_DISENTANGLE_BASE=0.1` rate. (c) **COHERENCE ruled OUT.** Domain collapses faster than any constituent because it needs cross bridges to percolate *sparse* intra clusters (intra F=1.0000 but mean degree ~0.13 under provenance) — lose bridges, domain fragments superlinearly. **CONSEQUENCES:** the readout-time keystone **cannot be run at tens-of-seconds delays on the current model** — the object has been erased, which is not the same as a negative answer; the **100–200 s window is NOT the binding constraint** on the trace, though the whole temporal-credit-assignment thesis rests on it; and **Unit A is reframed — fixing the release rate (Q1) is NECESSARY BUT NOT SUFFICIENT**, since dimer culling alone caps the trace at ~27 s. **This is DESIGNED behaviour** (the fast-chemistry/slow-quantum split is explicit in the code docstring); the finding is that its consequence contradicts the thesis. **Limits:** N=3; current release rate; "quiet" is a full return to rest, so the honest scope is *"the trace does not survive quiescence,"* not *"the trace cannot exist."* **⚠ Supersedes two same-day PO-8 reports:** a continuous-drive sweep showing flat domains 20→120 s (steady state BY CONSTRUCTION — continuous rebirth, cannot test fragmentation) and a single-draw quiet table; both withdrawn as findings, the continuous run surviving only as a control. | [GROUNDED, measured — negative] | `L·PO8-1` below |
@@ -108,6 +109,79 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·PO9-2 — the readout partition performs a GRADED COMPUTATION over temporal input overlap (conditional on a delocalized mode); the keystone measurement, the reconciled clock, and the advisor reframe · 2026-07-20 `[GROUNDED, measured — graded computation, conditional on delocalization]`
+
+Builds on `L·PO9-1` (substrate fix + λ decoupling made the readout runnable). Incorporates a full
+external advisor review; the four accepted corrections are folded in below.
+
+#### 1. Design (Amendment 1 geometry)
+Two clusters of 4 synapses, 0.5 µm within-cluster, **15 µm between** — so they ignite INDEPENDENTLY
+(driving cluster A gives per-synapse peak η=[.19,.20,.19,.18 | 0,0,0,0]; B dark). This beats two
+failure modes: the ignition quorum (3–4 spread synapses don't ignite) and branch-global co-ignition
+(adjacent groups within λ_met=5 µm ignite together, L·ETA-4). Input = TIMING, density matched (both
+clusters driven, same total). Scored `cross_w` = A–B block weight of the synapse correlation matrix
+= do the clusters share a correlated domain. (Q_act/Newman modularity RETIRED — geometry-confounded;
+the failing-first control showed SYNC not null under it. Amendment 1.)
+
+#### 2. The keystone measurement — ONE measured cell + THREE analytic predictions (advisor point 2)
+F_cross = P_S²·exp(−15/λ_F); Werner floor F>½; p=(4F−1)/3.
+
+| condition | cross_w>0 | cross_w | status |
+|---|---|---|---|
+| SYNC, λ_F=214 (delocalized) | **8/8** | 848±316 | **MEASURED** |
+| STAGGER, λ_F=214 | 0/7 | 0 | analytic (never co-exist ⇒ no bond can form) |
+| SYNC, λ_F=5 (localized) | 0/8 | 0 | analytic (F=0.04 < ½) |
+| STAGGER, λ_F=5 | 0/6 | 0 | analytic (both fail) |
+
+21 draws of hard structural zeros. Honest statement: **one measurement** (SYNC+delocalized ⇒ the two
+clusters bind, 8/8) **plus three analytic predictions confirmed.** Not a 4-cell finding.
+
+#### 3. The clock, reconciled exactly (advisor point 3)
+| delay s | 0 | 10 | 20 | 30 | 40 | 60 |
+|---|---|---|---|---|---|---|
+| cross_w | 1180 | 1167 | 1152 | 1122 | 1103 | 311 |
+| P_S | 0.945 | 0.901 | 0.860 | 0.822 | 0.787 | 0.726 |
+| F_cross=P_S²·0.932 | 0.833 | 0.756 | 0.689 | 0.629 | 0.578 | **0.491** |
+
+Binding survives while F_cross>½ and crashes when it dips below (40→60 s). Fit gives **T_eff≈158 s**
+(NOT T_singlet 216 — `analytical_gap` applies spread_factor·template_factor), origin=write-end
+(P_S=0.943 at delay 0). Predicted death delay ≈**57 s**, matches. (The advisor's ~95 s used 216 s +
+stimulus-onset clock.)
+
+#### 4. THE GRADED KEYSTONE — computation, not detector (advisor point 4, pre-registered null)
+STAGGER's zero is material-absence (clusters never co-exist), a presence detector in a temporal
+costume. So sweep the temporal offset continuously and measure cross_w vs **co-ignition duration**
+(the real x-axis; ignition lags drive ~13–15 s, so W raised to 40 s to leave resolvable co-ignition).
+Pre-registered null (Amendment 2): STEP (saturate-then-cliff) = presence detector.
+
+| co-ignition s | 0.0 | 0.4 | 2.8 | 6.5 | 10.0 | 25.0 |
+|---|---|---|---|---|---|---|
+| cross_w (mean±sd) | 0 | 26±16 | 209±55 | 600±87 | 926±23 | 848±316 |
+| n | 12 | 5 | 5 | 5 | 5 | 8 |
+
+**GRADED. Spearman ρ=+0.936 (40 draws); step null REJECTED (Welch t=24.25, cross_w at 2.8 s co-ign
+=209 ≪ the 926 saturated).** cross_w is a smooth monotone function of co-ignition duration, width
+~5–7 s set by bond kinetics. **⇒ the readout partition encodes a CONTINUOUS property of the input
+(the temporal overlap of the two populations), not merely presence.** This is the first result in the
+sub-programme that clears the §8 bar as a computation rather than a precondition.
+
+#### 5. THE LOAD-BEARING CAVEAT — conditional on a delocalized mode (advisor point 1)
+Everything above is conditional on λ_F long. The λ "sweep" is **malformed**: W=exp(−d/λ) is
+lossy-propagation form, correct for metabolic aggregation but WRONG for a channel MEDIATED by a
+delocalized collective mode. The honest form is **flat-then-cutoff**, and the question is the
+**binary** delocalized-vs-Anderson-localized — settled by a localization estimate (ξ_loc vs
+L_coh≈214 µm; delocalized past 15 µm iff fractional mechanical disorder ≲2%; the optical ~1 µm number
+does NOT port — different mode/disorder), a calculation not a sweep. λ_F=214 cell = delocalized case;
+λ_F=5 cell = the localized limit where the cross-channel DOES NOT EXIST (analytic, not a datum). If
+localized, this collapses to the decomposition null with a mechanism. **This is the single open
+question that gates the whole claim.** Scoping: `PO9_LOCALIZATION_ESTIMATE_SCOPING.md`.
+
+#### 6. What is next
+The localization estimate (removes the conditional; needs the acoustic mode bandwidth + 310 K disorder
+— advisor's/literature's to pin). Then Unit C (if the graded result stands): expose the agreement
+pattern (which synapses collapse correlated) for CaMKII — scope with Sarah. Packet `PO9_ADVISOR_
+PACKET_R2` (→ R3 with this verdict). Seeding dormant/regression-only. Commits `b30c59c`…`016d483`.
 
 ### L·PO9-1 — the ~25 s substrate blocker was a bulk-chemistry artifact in a confined niche; removing it makes the substrate persist to 120 s+ and exposes the real limiter (coherence-driven cross-bond death); plus the λ decoupling · 2026-07-20 `[GROUNDED, measured N=12 + 2 regression-clean physics fixes]`
 
