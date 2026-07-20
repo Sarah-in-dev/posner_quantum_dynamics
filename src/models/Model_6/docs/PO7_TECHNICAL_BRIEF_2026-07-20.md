@@ -1,3 +1,10 @@
+> **UPDATE 2026-07-20 — read `L·PO7-5` and `PO7_ADVISOR_REVIEW_2026-07-20.md` alongside this.**
+> After this brief was written, the framing shifted: the computation is the **dopamine-triggered
+> measurement**, the graph is a **program**, and the computational unit is the **correlated domain**
+> (Werner p=(4F-1)/3, effective correlation e^{-d}), not the connected component. The §6 question in
+> this brief ("does F≈0.8 sustain joint collapse") is answered — collapse is graded, no threshold.
+> The equations and measurements below stand; their *interpretation* is updated by the reframe.
+
 # Technical brief: entanglement-graph structure in a Posner-dimer synaptic model
 ### Prepared for external review · 2026-07-20 · Model 6 / entanglement-topology sub-programme
 

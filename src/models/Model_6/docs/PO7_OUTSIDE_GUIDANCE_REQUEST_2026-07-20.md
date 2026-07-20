@@ -1,3 +1,13 @@
+> # ⚠ SUPERSEDED 2026-07-20 by the reframe — use `PO7_ADVISOR_REVIEW_2026-07-20.md`.
+>
+> This document's central question (§6: "does a cluster whose bonds top out at F≈0.8 sustain a
+> jointly correlated collapse?") is now **answered**: joint collapse is **graded, not thresholded**
+> — Werner correlation p=(4F-1)/3 multiplies along paths, so the computational unit is the
+> **correlated domain**, not the connected component, and there is no fidelity cliff. The premise
+> that we must "prevent percolation" (§7.3) is also superseded — connectivity and correlation are
+> different lengths. See `L·PO7-5` and the current advisor review. Kept for the record of how the
+> question was posed before it resolved.
+
 # Request for outside guidance
 ### A quantum-biological synaptic model that builds a real but weakly-entangled network — and the physics question that now gates it
 **2026-07-20 · self-contained; assumes no prior contact with this project**
