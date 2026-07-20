@@ -1,0 +1,25 @@
+================================================================================================
+PO-7 UNIT 13 — within-step order sensitivity (advisor R5 step 4)
+================================================================================================
+
+  ARM A — INSTRUMENT (natural claim order)
+    bonds FORMED per step: mean=10.18 p90=1 max=840
+    steps forming >1 bond: 20/200 (10.0%)
+    claim ATTEMPTS per step: mean=2468.0 max=88644
+    partition: E=2031 components=184 largest_frac=0.112 frustrated=491566
+
+    => bonds/step >>1: order is LOAD-BEARING — arm B decides how much
+
+  ARM B — SENSITIVITY (slot offer order randomly permuted, same seed)
+    partition: E=2031 components=184 largest_frac=0.112 frustrated=491566
+
+  DELTA natural vs permuted:  |dE|=0.00%  |dComponents|=0.00%  |dLargest_frac|=0.0000
+  => partition is INSENSITIVE to slot order
+     The greedy claim order is not determining the partition. §5.1's ordering
+     concern does not apply to WHICH SLOT is taken.
+
+wrote po7_unit13_results.json
+
+NOTE: this permutes WHICH SLOT a bond takes, not which PAIR is offered first.
+Pair order is set by the physics loop and is not separately permutable here; the
+bonds-per-step count in ARM A is the evidence bearing on that.

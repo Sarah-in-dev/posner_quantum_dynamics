@@ -1,0 +1,39 @@
+{
+  "arm_a_natural": {
+    "permute": false,
+    "V": 1034,
+    "E": 2031,
+    "n_components": 184,
+    "largest_frac": 0.11218568665377177,
+    "frustrated": 491566,
+    "attempts_per_step_mean": 2468.005,
+    "attempts_per_step_max": 88644.0,
+    "formed_per_step_mean": 10.175,
+    "formed_per_step_max": 840.0,
+    "formed_per_step_p90": 1.0999999999999943,
+    "steps_with_gt1_formed": 20,
+    "n_steps": 200
+  },
+  "arm_b_permuted": {
+    "permute": true,
+    "V": 1034,
+    "E": 2031,
+    "n_components": 184,
+    "largest_frac": 0.11218568665377177,
+    "frustrated": 491566,
+    "attempts_per_step_mean": 2468.005,
+    "attempts_per_step_max": 88644.0,
+    "formed_per_step_mean": 10.175,
+    "formed_per_step_max": 840.0,
+    "formed_per_step_p90": 1.0999999999999943,
+    "steps_with_gt1_formed": 20,
+    "n_steps": 200
+  },
+  "delta": {
+    "edges_frac": 0.0,
+    "components_frac": 0.0,
+    "largest_frac_abs": 0.0
+  },
+  "order_load_bearing": true,
+  "partition_insensitive_to_slot_order": true
+}
