@@ -111,3 +111,26 @@ in superposition" — this is the (A) model (`quantum-system-canonical` section 
 phrasing: *stored correlation structure read out by a common-cause collapse; the readout is
 classical, but MONOGAMY (degree<=4, no classical analogue) is what makes it informative.* I will
 write L-PO8-1 at that altitude.
+
+### UPDATE 2026-07-20 (external lit review) — Q3 has an answer, and it INVERTS the advisor.
+`docs/PO8_EXTERNAL_LIT_REVIEW_2026-07-20.md`. Adversarially-checked primary sources:
+- **KEEP the short falloff (lambda ~= 5um), do NOT move to 214um.** The advisor argued lambda=214um
+  (unity amplitude across the coherence domain, remote ~= local). The broader literature contradicts
+  that: the 214um is an ACOUSTIC-phonon length conflated with OPTICAL Trp superradiance (Babcock
+  2024, Celardo/Kurian 2019 — coherent scales are sub-um to ~1um); the delocalised superradiant
+  state LOCALISES at critical disorder ~10/cm while physiological disorder is ~200/cm (~20x above);
+  and Reimers 2009 rules out the coherent Frohlich condensate unity-across-domain needs. **Unity
+  remote entanglement is the model's WEAKEST assumption.** So the two-timescale trace (cross ~74s,
+  intra ~107s at lambda=5) is the more defensible reading — which is good, it is the richer
+  (scope-contracting) computation. My recommendation on Q3 flips: **keep lambda~5um**, and the
+  advisor's category-error critique, while correct that 5um was originally a metabolic length, points
+  to the WRONG replacement. This is exactly the internal+external cross-check catching a shaky push.
+- **The eligibility trace only needs to survive ~2-40s, NOT ~200s** (Bittner/Magee 2017 BTSP ~2s;
+  Jain 2024 CaMKII/DDSC 20-40s — the same Jain window the model's analytical_gap already cites). The
+  substrate's ~200s over-provisions 5-100x. **Consequence:** a domain that lives ~tens of seconds is
+  ON TARGET, not a failure. My retracted L-PO8-1's ~7-30s number was measured via a broken protocol,
+  but even a correctly-measured tens-of-seconds trace would be biologically RIGHT — the "contradicts
+  the 200s thesis" alarm was itself based on an over-provisioned assumption.
+- tau_dimer=200s and T_singlet=216s are theory-only / unobserved / disputed x10^3 (Player&Hore
+  ~seconds). Flagged, not actionable by this PO, but it means the trace target is the behavioural
+  ~2-40s window, which is what Unit B now measures against.

@@ -9,6 +9,44 @@ Python: `/Users/sarahdavidson/posner_quantum_dynamics/venv/bin/python`.
 
 ---
 
+## Heartbeat — 2026-07-20 16:xxZ · THE INVESTIGATION: what we have vs what we're missing for the trace
+
+Investigation (internal code map + external lit review running), synthesising the advisor's guidance
+rather than probing blindly. The advisor already gave the mechanism (trace falls out of T2 =
+coherence death at the Werner floor), the knob (lambda), and the capability (signed partition).
+
+### WHAT WE HAVE (internal, code-confirmed)
+- **The trace mechanism exists and is validated: `analytical_gap`** (`run_theta_burst_45s.py:45`).
+  During a readout delay it ages the population by the INTRINSIC dissolution
+  `k=K_CLASSICAL(0.005/s)*(1-singlet_excess)*template_enh` (tau~200s, Turhan 2024, GROUNDED), decays
+  P_S toward 0.25 (T_eff), removes bonds at P_S<0.5 (coherence death = the Werner-floor crossing),
+  and stochastic disentangle `0.01*(1-PSi PSj)`. THIS is "the trace falls out of T2."
+- **The canonical READOUT protocol already exists** (`:615-681`): theta-burst traversals (WRITE) ->
+  `analytical_gap(DOPAMINE_DELAY)` (AGE) -> `net.step(reward=True)` (READ, fires the measurement).
+- Domain metric (Unit-18), Werner bound, ignition on the net.step path — all in hand.
+- **Unit A** (`physical_release_rate`, derived 9.63e-3/s, gate-clean) — corrects the unmoored cross
+  rate so cross-bond death is coherence-limited during the gap.
+
+### WHAT WE'RE MISSING / THE REAL OBSTRUCTIONS (measured or flagged)
+- **My earlier tests used the WRONG regime.** Continuous drive = steady-state turnover (~30s), and my
+  improvised "quiet" collapsed the calcium peak (step_population np.max, L·PO5-11) culling in ~30s.
+  BOTH bypassed `analytical_gap`. Under the intrinsic-dissolution gap the population ages at ~200s,
+  not ~30s — so the trace CAN reach the coherence window. **Correct protocol = analytical_gap.**
+- **lambda = 5um vs 214um** (advisor Q3): sets whether the trace is two-timescale (cross dies 74s,
+  intra 107s) or one-timescale (both ~106s). The advisor argues 5um is a rate-vs-fidelity category
+  error vs the locked L_coh=214um. Being MEASURED as an arm here, not asked.
+- **External lit review RUNNING** (subagent): does the literature support tau_dimer~200s and
+  T2~216s, and does the required behavioural (BTSP) window match coherence or chemistry? This is the
+  "what are we missing" question the model's own numbers can't answer.
+
+### THE MEASUREMENT (running): `sweep/po8_unitB_trace_readout.py`
+Canonical protocol (imports `run_burst_traversal` + `analytical_gap`, does NOT edit them). WRITE 3
+theta-burst traversals -> snapshot correlated-domain partition across a swept gap [0..120s] ->
+2x2 arms {rate off/on} x {lambda 5/214}, free draws, NO seeding. Control first: confirm the
+theta-burst drive IGNITES (peak eta>0) and writes a live domain before any delay. Then: does the
+domain survive the gap, and does it die at the predicted Werner crossings (74s / 107s / 106s)? That
+curve IS the eligibility trace, and off-vs-on / lambda-5-vs-214 says what enables and shapes it.
+
 ## Heartbeat — 2026-07-20 15:xxZ · L·PO8-1 RETRACTED; Unit A (physical release rate) BUILT + gate-clean; acceptance running
 
 **L·PO8-1 WITHDRAWN by me (do not cite).** Root cause: I never read
