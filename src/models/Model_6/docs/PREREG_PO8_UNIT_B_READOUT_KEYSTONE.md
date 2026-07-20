@@ -56,9 +56,13 @@ real, reportable negative (`L·PO7-5` says either answer is a result).
 
 ## DESIGN (density matched BY CONSTRUCTION — the on/off confound is banned)
 
-- 7 synapses, `pattern="linear"`. Every condition activates the **same number** of synapses at the
-  **same drive strength** — conditions differ only in **which/when**, never in how many. This avoids
-  the on/off density confound that sank PO-7 Unit 2 (`notes.md` Q6).
+- 7 synapses, `pattern="linear"`. **ALL synapses are driven above dimer-forming threshold in every
+  condition; the contrast is HIGH-vs-LOW drive, never ON-vs-OFF.** This is PO-7's prescribed fix
+  (`notes.md` Q6), adopted verbatim: equal *counts* of active synapses is NOT matched density —
+  inactive synapses at -70 mV make almost no dimers, so edges can form only among active ones
+  *trivially, by density*. That produced `Q_act = +0.0000` (Newman's degenerate value when every
+  edge lies in one community) and would have been a THIRD false positive. Density is matched by
+  every node carrying comparable dimer density, not by counting active synapses.
 - **Primary contrast — synchronous vs staggered neighbour-group activation** (the kickoff's cleanest
   design): same synapses, same total drive, activation either simultaneous or time-staggered, so the
   provenance/coincidence structure differs while density is identical. ⟨GATED: requires per-synapse

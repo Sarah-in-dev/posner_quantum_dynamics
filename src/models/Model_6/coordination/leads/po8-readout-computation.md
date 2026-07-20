@@ -9,6 +9,59 @@ Python: `/Users/sarahdavidson/posner_quantum_dynamics/venv/bin/python`.
 
 ---
 
+## Heartbeat — 2026-07-20 14:5xZ · PROCESS CORRECTION + Unit B1 (graph persistence) running
+
+**Process correction (Sarah, via the README).** I was using chat as the coordination backbone —
+asking Sarah to ground me and to adjudicate questions that are MEASUREMENTS. The README is explicit:
+durable shared state, not messaging; do all non-gated work; escalate only what is gated, in
+`queue/` with ask+why+recommendation; acceptance is a MEASUREMENT. Corrected: state lives here from
+now on; the open "does the graph survive a quiescent delay" question is being MEASURED (Unit B1),
+not asked.
+
+**Grounding gap closed (was real).** I had read the research-log entries L-PO7-1..5 but NOT
+`docs/handoffs/PO7_HANDOFF_2026-07-19_EVENING.md` nor
+`coordination/requests/po7-provenance-network/notes.md`, both of which the kickoff points at. Now
+read in full. What they change:
+- The graph is **write-once** — bonds do not dissolve at the coded rate; the graph is not meant to
+  fade on its own. PO-7 always measured under SUSTAINED drive at end-of-run; **nobody has run a
+  drive-then-quiet readout**, so that protocol is untrodden ground (not prior art I ignored).
+- Unit 11: with the shared ledger and NON-provenance intra bonds, cross bonds are structurally
+  STARVED (intra locks all 4 nuclei first) — and §8's open question is whether that is physics or
+  UPDATE ORDER. Under `provenance_bonding=True` intra is sparse (~3.87 of 4 nuclei free,
+  L-PO7-4 §1), so my rig sits in the NON-starved regime and forms ~1900 cross bonds. Config-
+  dependent; worth stating whenever cross-bond counts are quoted.
+- notes.md **Q6**: ON-vs-OFF drive confounds identity with DENSITY (inactive synapses make no
+  dimers, so edges can only form among active ones — `Q_act=+0.0000`, Newman's degenerate value).
+  The prescribed fix is **HIGH-vs-LOW drive with ALL synapses above dimer-forming threshold**.
+  My Unit B prereg must adopt this; "same number of synapses active" is NOT density matching.
+- notes.md Q1: under `pattern="linear"` a contiguous split IS the spatial half — interleaved ARM 2
+  is the discriminator (already in my prereg skeleton).
+- Handoff §9: three unseeded RNGs make the 7-synapse rig non-reproducible run-to-run, so any single
+  run is ONE DRAW from a distribution. (Correct for physics — free draws — but it means n=1 tables
+  must never be reported as values.)
+
+**⚠ My B0 quiet-protocol result was NOT a finding — mechanism identified, and it is DESIGNED
+BEHAVIOUR.** I reported a table showing the graph collapsing ~253->7 domain size within 20 s of
+drive cessation. Cause, SHOWN in code: `dimer_particles.step()` separates
+"2. Population: birth/death to track concentration (FAST chemistry)" from
+"3. Coherence: T2 decay (SLOW quantum)", and `step_population` sets
+`target_count = peak(dimer_concentration)*az_volume*N_A`, culling dimers when count>target and
+**deleting their bonds** (`_remove_all_bonds_for_dimer`). Zeroing the drive collapses calcium ->
+concentration -> target -> the population is culled and the graph goes with it. **"Write-once"
+protects a bond from DISSOLVING; it does not protect a bond whose dimer is CULLED.** So the graph's
+lifetime may be capped by the FAST chemistry, not by T_singlet=216 s or the bond-release rate.
+That is a real and important possibility — but it needed measuring, not asserting, and n=1.
+
+**Unit B1 launched (3 free draws, no seeding, net.step drive):**
+`sweep/po8_unit_b1_graph_persistence.py` — drive 20 s, then 60 s quiet, sampling every 1 s:
+peak dimer_concentration, target_count, n_dimers, culled deaths/s, births, n_intra, n_cross,
+mean P_S, mean correlated-domain size. It separates the three candidate causes of graph loss:
+(a) CULLING (deaths track a collapsing target), (b) BOND DEATH (bonds fall while dimers persist),
+(c) COHERENCE (mean P_S falls toward the 0.5 floor). Whichever dominates **sets the true
+eligibility-trace lifetime** — which is the number Unit B's readout delay must be chosen against.
+Instrumentation is read-only (step_population wrapped, established probe pattern); no physics
+modified.
+
 ## Heartbeat — 2026-07-20 13:2xZ · advisor R6 answered; B0 probing; a self-correction; third decision (lambda) queued
 
 **Since 12:51Z:**
