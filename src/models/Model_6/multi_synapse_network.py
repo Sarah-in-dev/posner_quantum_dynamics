@@ -1304,11 +1304,25 @@ class MultiSynapseNetwork:
         
         # Step each synapse independently
         synapse_states = []
-        
+
+        # PER-SYNAPSE STIMULI (PO-9, the Q2 enabler for the scored keystone). If the
+        # stimulus carries a 'per_synapse' list (one stimulus dict per synapse), each
+        # synapse gets its own; otherwise all share the single stimulus (unchanged
+        # default). This is the ONLY correct way to drive synapses differently: it stays
+        # inside net.step(), so _update_backbone_field() below still runs and sets
+        # _backbone_eta -- per-synapse s.step() would leave eta=0 and nothing ignites
+        # (:1286 trap). Staggered/synchronous input conditions differ ONLY in which
+        # synapses carry drive at which step; density is matched because every synapse
+        # is driven in every condition, just at different times.
+        per_syn = stimulus.get('per_synapse') if isinstance(stimulus, dict) else None
+        if per_syn is not None and len(per_syn) != len(self.synapses):
+            raise ValueError(
+                f"per_synapse stimulus list length {len(per_syn)} != "
+                f"n_synapses {len(self.synapses)}")
+
         for i, synapse in enumerate(self.synapses):
-            # Each synapse gets the same stimulus
-            # (In future, could have synapse-specific stimuli)
-            synapse.step(dt, stimulus)
+            stim_i = per_syn[i] if per_syn is not None else stimulus
+            synapse.step(dt, stim_i)
             
             # Get dimer count directly from particle system (fast)
             if hasattr(synapse, 'dimer_particles'):
