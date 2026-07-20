@@ -79,3 +79,30 @@ REAL, reportable negative (`L·PO7-5`: either answer is a result). Input-*locate
   orthogonal to geometry ⇒ input structures the readout partition; report the λ_F/delay envelope.
 - **NULL:** the partition splits per-synapse / by geometry independent of input identity ⇒
   input-located but not input-computing. Report it, with the λ_F range over which it holds.
+
+---
+
+## AMENDMENT 1 — 2026-07-20 · primary statistic changed BEFORE scoring (the failing-first check caught the confound)
+
+**Geometry:** rebuilt as two SEPARATED clusters of 4 (15 µm apart), not a linear array — because (a) a
+tight cluster is the minimum that ignites, and (b) adjacent linear groups sit inside each other's
+~5 µm metabolic-aggregation range, so driving one ignites both (branch-global, L·ETA-4) and STAGGER
+could not create group-local structure. Verified: driving cluster A ignites A, leaves B dark. The
+15 µm gap makes λ_F decisive: cross-cluster w=exp(−15/λ_F) is 0.05 at λ_F=5, 0.93 at λ_F=214.
+
+**Why Q_act is retired as the scored statistic:** the failing-first control DID ITS JOB. First draws
+(N=8, all 4 cells) gave Q_act z≈3.5–4.9 in EVERY cell — **including SYNC, which must be null.** Two
+spatial clusters are trivially modular against a grouping that equals them, at every λ_F and both
+inputs. So Q_act measures geometry, not input (the spatial-half trap, L·PO5-13). It cannot be scored.
+
+**Amended primary statistic: `cross_w`** = total weight of the A–B block of the synapse correlation
+matrix (Σ p_e over cross-CLUSTER bridges). Physically = do the two clusters bind into one domain.
+`cross_frac = cross_w/(within_w+cross_w)`. Prediction, registered before scoring the amended metric:
+`cross_w` is **> 0 only for SYNC at λ_F=214** — clusters must be CO-ACTIVE (SYNC not STAGGER, so an
+A–B bridge can form at all) AND λ_F long (so the 15 µm bridge clears the Werner floor). STAGGER at any
+λ_F → cross_w≈0 (never co-active). SYNC at λ_F=5 → cross_w≈0 (bridge below floor).
+
+**Guard (the decomposition null):** input does NOT structure the readout if `cross_w` for SYNC λ_F=214
+is NOT distinguishable from STAGGER λ_F=214 (co-activity fails to bind the clusters even when the
+coherence length permits it). ≥8 free draws/cell; report cross_w distributions, SYNC−STAGGER at each
+λ_F, and whether the effect is λ_F-gated.

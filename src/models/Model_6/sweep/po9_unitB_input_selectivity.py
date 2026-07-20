@@ -37,7 +37,7 @@ import logging; logging.disable(logging.INFO)
 from presynaptic_release import PresynapticRelease
 from run_theta_burst_45s import analytical_gap   # PO-4 surface; CALLED, never edited
 
-N_SYN, SPACING = 7, 1.0
+N_SYN = 8
 DT = 5e-3
 WRITE_S = 20.0                       # per-group write window
 VOLT, ACT = -40e-3, 0.95
@@ -46,11 +46,19 @@ WERNER = 0.5
 DELAYS = [0.0, 10.0, 20.0, 30.0, 40.0, 60.0]
 OUT_DIR = os.path.join(PROJECT_ROOT, "results", "po9_unitB")
 
-# groupings: (A, B, spacer). contiguous => A is the spatial half (geometry-confounded);
-# interleaved => identity is ORTHOGONAL to space (the geometry control).
+# TWO SEPARATED CLUSTERS of 4 (PO-9). WHY this geometry, not a linear array:
+#   - Ignition needs a spatial QUORUM: a tight cluster of 4 ignites (peak η ~0.19); 3-4 spread on a
+#     linear array do NOT (metabolic aggregation P_agg < P_c=21.51). Verified.
+#   - Metabolic aggregation reaches ~λ_met=5 µm, so ADJACENT groups on a linear array sit inside each
+#     other's aggregation range -> driving one ignites both (branch-global, L·ETA-4) -> STAGGER
+#     could not create group-local structure. Verified fix: at 15 µm separation, driving cluster A
+#     ignites A and leaves B DARK (η=[.19,.20,.19,.18 | 0,0,0,0]). Group-local ignition is real.
+#   - The 15 µm gap also makes λ_F the DECISIVE variable: cross-cluster w = exp(-15/λ_F) is 0.05 at
+#     λ_F=5 (clusters can never bind -> always 2 domains, geometry wins) vs 0.93 at λ_F=214 (clusters
+#     CAN bind if co-active). So input can structure the readout only at long λ_F -- the thing to map.
+CLUSTER_X = [0.0, 0.5, 1.0, 1.5, 15.0, 15.5, 16.0, 16.5]   # A = first 4, B = last 4
 GROUPINGS = {
-    "contig": ([0, 1, 2], [4, 5, 6], [3]),
-    "interleave": ([0, 2, 4], [1, 3, 5], [6]),
+    "twocluster": ([0, 1, 2, 3], [4, 5, 6, 7], []),
 }
 
 
@@ -135,8 +143,14 @@ def one_run(run_id, lam_F, cond, grouping):
     p.em_coupling_enabled = True
     p.multi_synapse_enabled = True
     p.environment.fraction_P31 = 1.0
-    net = MultiSynapseNetwork(n_synapses=N_SYN, pattern="linear", spacing_um=SPACING,
+    net = MultiSynapseNetwork(n_synapses=N_SYN, pattern="linear", spacing_um=0.5,
                               coupling_length_um=5.0, fidelity_length_um=float(lam_F))  # NO seed
+    # Override to two separated clusters BEFORE initialize: metabolic weights on λ_met=5 µm,
+    # fidelity weights on λ_F. Same recompute the constructor does, on custom positions.
+    net.positions = np.array([[x, 0.0, 0.0] for x in CLUSTER_X])
+    net.distances = np.sqrt(((net.positions[:, None, :] - net.positions[None, :, :]) ** 2).sum(-1))
+    net.coupling_weights = np.exp(-net.distances / 5.0); np.fill_diagonal(net.coupling_weights, 1.0)
+    net.fidelity_weights = np.exp(-net.distances / float(lam_F)); np.fill_diagonal(net.fidelity_weights, 1.0)
     net.initialize(Model6QuantumSynapse, p)
     for s in net.synapses:
         s.set_microtubule_invasion(True)
@@ -147,6 +161,7 @@ def one_run(run_id, lam_F, cond, grouping):
 
     rels = [PresynapticRelease(None) for _ in range(N_SYN)]   # independent free draws per synapse
     peak_eta = 0.0
+    peak_eta_per = np.zeros(N_SYN)     # per-synapse peak η — diagnoses group-local vs branch-global ignition
     t = 0.0
     nsteps = int(round(write_end(cond) / DT))
     for _ in range(nsteps):
@@ -159,8 +174,9 @@ def one_run(run_id, lam_F, cond, grouping):
             else:
                 per_syn.append({"voltage": REST, "glutamate": 0.0})
         net.step(DT, {"per_synapse": per_syn, "reward": False})
-        peak_eta = max(peak_eta, max((float(getattr(s, "_backbone_eta", 0.0))
-                                      for s in net.synapses), default=0.0))
+        etas = np.array([float(getattr(s, "_backbone_eta", 0.0)) for s in net.synapses])
+        peak_eta_per = np.maximum(peak_eta_per, etas)
+        peak_eta = max(peak_eta, float(etas.max()) if etas.size else 0.0)
         t += DT
 
     snaps, prev = [], 0.0
@@ -170,13 +186,26 @@ def one_run(run_id, lam_F, cond, grouping):
             net.step(DT, {"voltage": REST, "reward": False})   # tail refresh (needs coupling_weights)
             prev = d
         W = synapse_corr_matrix(tr)
-        sc = score_Qact(W, A, B, spacer)
+        sc = score_Qact(W, A, B, spacer)   # kept, but geometry-confounded here (see prereg amendment 1)
+        # AMENDED PRIMARY STATISTIC (prereg amendment 1): cross-cluster BLOCK weight. Q_act is
+        # trivially high for two spatial clusters against a grouping that equals them (the failing-
+        # first control showed SYNC not null). What "the clusters merge into one domain" actually
+        # means is that the A-B block of the correlation matrix carries weight. That forms only when
+        # A and B are CO-ACTIVE (SYNC, not STAGGER) AND λ_F is long enough (w=exp(-15/λ_F) clears the
+        # Werner floor). So cross_w is the input×λ signal; within_w is the geometry baseline.
+        Ai, Bi = np.array(A), np.array(B)
+        within_w = float(W[np.ix_(Ai, Ai)].sum() + W[np.ix_(Bi, Bi)].sum())   # symmetric (double-counts)
+        cross_w = float(W[np.ix_(Ai, Bi)].sum() + W[np.ix_(Bi, Ai)].sum())    # A-B block, same convention
+        sc["within_w"] = within_w
+        sc["cross_w"] = cross_w
+        sc["cross_frac"] = cross_w / (within_w + cross_w) if (within_w + cross_w) > 0 else 0.0
         sc["delay"] = d
         sc["n_cross_syn_edges"] = int((W > 0).sum() // 2)
         snaps.append(sc)
     return dict(run_id=run_id, timestamp=datetime.now(timezone.utc).isoformat(),
                 lam_F=float(lam_F), cond=cond, grouping=grouping,
                 peak_eta=float(peak_eta), ignited=bool(peak_eta > 0.0),
+                peak_eta_per=[round(float(x), 4) for x in peak_eta_per],
                 write_end_s=write_end(cond), snapshots=snaps)
 
 
@@ -186,7 +215,7 @@ def main():
     ap.add_argument("--n", type=int, default=1)
     ap.add_argument("--lamF", type=float, required=True)
     ap.add_argument("--cond", choices=["sync", "stagger", "sync2"], required=True)
-    ap.add_argument("--grouping", choices=list(GROUPINGS), default="contig")
+    ap.add_argument("--grouping", choices=list(GROUPINGS), default="twocluster")
     ap.add_argument("--tag", type=str, required=True)
     a = ap.parse_args()
     os.makedirs(OUT_DIR, exist_ok=True)
