@@ -1,0 +1,54 @@
+{
+  "unit": "po8_unitA_bond_lifetime",
+  "generated": "2026-07-20T15:50:09.663590+00:00",
+  "regime": "CONTINUOUS DRIVE (steady-state turnover) \u2014 NOT a post-event delay; not the definitive trace test",
+  "n_per_arm": 2,
+  "no_seeding": true,
+  "arms": {
+    "off": {
+      "n": 2,
+      "ignited": [
+        true,
+        true
+      ],
+      "cross_lifetime": {
+        "median": 6.150000000000002,
+        "p90": 25.175,
+        "max": 61.949999999999996
+      },
+      "intra_lifetime": {
+        "median": 25.6,
+        "p90": 37.92750000000001,
+        "max": 71.57499999999999
+      },
+      "dimer_lifetime": {
+        "median": 30.672499999998095,
+        "p90": 47.93500000000027,
+        "max": 91.57000000000002
+      }
+    },
+    "on": {
+      "n": 2,
+      "ignited": [
+        true,
+        true
+      ],
+      "cross_lifetime": {
+        "median": 6.725000000000003,
+        "p90": 26.375,
+        "max": 60.275000000000006
+      },
+      "intra_lifetime": {
+        "median": 25.375000000000004,
+        "p90": 37.650000000000006,
+        "max": 67.725
+      },
+      "dimer_lifetime": {
+        "median": 30.521249999990978,
+        "p90": 48.51899999999975,
+        "max": 92.96250000000003
+      }
+    }
+  },
+  "verdict": "NULL: derived release rate does not extend bond/dimer lifetime under continuous drive. Cross ~6s (condensation strobing), intra ~25s / dimer ~30s (population turnover via step_population). Release rate is not the binding constraint on these timescales."
+}
