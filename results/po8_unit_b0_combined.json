@@ -1,0 +1,237 @@
+{
+  "unit": "po8_unit_b0_readout_time_sweep",
+  "generated": "2026-07-20T14:18:45.979159+00:00",
+  "note": "N=4 free draws per lambda arm; characterization (no input contrast, unscored).",
+  "arms": {
+    "lam5": {
+      "n_draws": 4,
+      "by_t": {
+        "2.0": {
+          "mean_domain_size": 8.229774193127255,
+          "mean_PS": 0.9907750502270545,
+          "intraF_median": 1.0,
+          "crossF_median": 0.0,
+          "max_cross_F": 0.0,
+          "n_cross_edges": 0.0,
+          "n_dimers": 679.0,
+          "largest_frac": 0.05611887499562186,
+          "eff_mean_age_s": 2.6732599051687473
+        },
+        "5.0": {
+          "mean_domain_size": 11.068645642837524,
+          "mean_PS": 0.9814463197391521,
+          "intraF_median": 1.0,
+          "crossF_median": 0.0,
+          "max_cross_F": 0.0,
+          "n_cross_edges": 0.0,
+          "n_dimers": 1235.0,
+          "largest_frac": 0.045414892874589996,
+          "eff_mean_age_s": 5.410664476878428
+        },
+        "10.0": {
+          "mean_domain_size": 13.051730984921353,
+          "mean_PS": 0.9646526241155591,
+          "intraF_median": 1.0,
+          "crossF_median": 0.34433495675553555,
+          "max_cross_F": 0.38607016487897183,
+          "n_cross_edges": 5.0,
+          "n_dimers": 1587.5,
+          "largest_frac": 0.041278888436530554,
+          "eff_mean_age_s": 10.427750415256469
+        },
+        "20.0": {
+          "mean_domain_size": 544.5240997019198,
+          "mean_PS": 0.9483889629544935,
+          "intraF_median": 1.0,
+          "crossF_median": 0.6752712200173658,
+          "max_cross_F": 0.808466731103979,
+          "n_cross_edges": 1857.5,
+          "n_dimers": 2654.0,
+          "largest_frac": 0.97756287602021,
+          "eff_mean_age_s": 15.400153179273742
+        },
+        "40.0": {
+          "mean_domain_size": 312.88989488629204,
+          "mean_PS": 0.9200761420254853,
+          "intraF_median": 1.0,
+          "crossF_median": 0.6317918937702738,
+          "max_cross_F": 0.805506003151604,
+          "n_cross_edges": 2084.0,
+          "n_dimers": 2954.5,
+          "largest_frac": 0.958880762013218,
+          "eff_mean_age_s": 24.33928085026632
+        },
+        "60.0": {
+          "mean_domain_size": 335.06982610768716,
+          "mean_PS": 0.9140700117710754,
+          "intraF_median": 1.0,
+          "crossF_median": 0.6225850697412811,
+          "max_cross_F": 0.8037857278242293,
+          "n_cross_edges": 1883.5,
+          "n_dimers": 2775.0,
+          "largest_frac": 0.948564488002251,
+          "eff_mean_age_s": 26.284094610767234
+        },
+        "80.0": {
+          "mean_domain_size": 380.8440561575252,
+          "mean_PS": 0.9188822959289183,
+          "intraF_median": 1.0,
+          "crossF_median": 0.6275255961386306,
+          "max_cross_F": 0.807232961858275,
+          "n_cross_edges": 1932.5,
+          "n_dimers": 2915.0,
+          "largest_frac": 0.9584033153793188,
+          "eff_mean_age_s": 24.724462074543094
+        },
+        "100.0": {
+          "mean_domain_size": 337.04878209102503,
+          "mean_PS": 0.9166763570697298,
+          "intraF_median": 1.0,
+          "crossF_median": 0.6227362135512968,
+          "max_cross_F": 0.8024116354100346,
+          "n_cross_edges": 1953.5,
+          "n_dimers": 2834.0,
+          "largest_frac": 0.9480728976903348,
+          "eff_mean_age_s": 25.43799603400478
+        },
+        "110.0": {
+          "mean_domain_size": 348.44761997466674,
+          "mean_PS": 0.9149168532319951,
+          "intraF_median": 1.0,
+          "crossF_median": 0.6209192734818871,
+          "max_cross_F": 0.802079428160968,
+          "n_cross_edges": 1986.0,
+          "n_dimers": 2891.0,
+          "largest_frac": 0.9486494708226516,
+          "eff_mean_age_s": 26.008820587926973
+        },
+        "120.0": {
+          "mean_domain_size": 358.7959684947896,
+          "mean_PS": 0.9155017511830618,
+          "intraF_median": 1.0,
+          "crossF_median": 0.6236904589851969,
+          "max_cross_F": 0.810181967499171,
+          "n_cross_edges": 1938.5,
+          "n_dimers": 2873.0,
+          "largest_frac": 0.9538588695343051,
+          "eff_mean_age_s": 25.81889846093533
+        }
+      }
+    },
+    "lam214": {
+      "n_draws": 4,
+      "by_t": {
+        "2.0": {
+          "mean_domain_size": 9.207952238228332,
+          "mean_PS": 0.9902113314199638,
+          "intraF_median": 1.0,
+          "crossF_median": 0.0,
+          "max_cross_F": 0.0,
+          "n_cross_edges": 0.0,
+          "n_dimers": 626.5,
+          "largest_frac": 0.06397880434500547,
+          "eff_mean_age_s": 2.8376952703025244
+        },
+        "5.0": {
+          "mean_domain_size": 10.054339275935469,
+          "mean_PS": 0.9801412876602782,
+          "intraF_median": 1.0,
+          "crossF_median": 0.0,
+          "max_cross_F": 0.0,
+          "n_cross_edges": 0.0,
+          "n_dimers": 1288.5,
+          "largest_frac": 0.03506144393241167,
+          "eff_mean_age_s": 5.796391617038677
+        },
+        "10.0": {
+          "mean_domain_size": 1415.5858960534833,
+          "mean_PS": 0.9660492817465232,
+          "intraF_median": 1.0,
+          "crossF_median": 0.9176771224526161,
+          "max_cross_F": 0.9879465066718638,
+          "n_cross_edges": 1503.0,
+          "n_dimers": 1868.5,
+          "largest_frac": 0.9775647313127249,
+          "eff_mean_age_s": 10.006029939617514
+        },
+        "20.0": {
+          "mean_domain_size": 1778.7368934853885,
+          "mean_PS": 0.9457095083070814,
+          "intraF_median": 1.0,
+          "crossF_median": 0.8743079735928168,
+          "max_cross_F": 0.9905149971097149,
+          "n_cross_edges": 2886.5,
+          "n_dimers": 2537.5,
+          "largest_frac": 0.9944092670998008,
+          "eff_mean_age_s": 16.23045739154771
+        },
+        "40.0": {
+          "mean_domain_size": 1611.0515883769303,
+          "mean_PS": 0.9218105790606808,
+          "intraF_median": 1.0,
+          "crossF_median": 0.8314865329922505,
+          "max_cross_F": 0.9851321622577227,
+          "n_cross_edges": 3121.5,
+          "n_dimers": 2766.0,
+          "largest_frac": 0.9974575899788172,
+          "eff_mean_age_s": 23.78090494215833
+        },
+        "60.0": {
+          "mean_domain_size": 1656.6313810949496,
+          "mean_PS": 0.9174214242927314,
+          "intraF_median": 1.0,
+          "crossF_median": 0.8229388585248947,
+          "max_cross_F": 0.9908800051308773,
+          "n_cross_edges": 3169.0,
+          "n_dimers": 2778.5,
+          "largest_frac": 1.0,
+          "eff_mean_age_s": 25.19673255369854
+        },
+        "80.0": {
+          "mean_domain_size": 1563.6098649002504,
+          "mean_PS": 0.9146468108314005,
+          "intraF_median": 1.0,
+          "crossF_median": 0.8199313330018856,
+          "max_cross_F": 0.9852275679032579,
+          "n_cross_edges": 3046.0,
+          "n_dimers": 2658.0,
+          "largest_frac": 0.9987391238750931,
+          "eff_mean_age_s": 26.0965623951184
+        },
+        "100.0": {
+          "mean_domain_size": 1599.8680653910556,
+          "mean_PS": 0.9173178445378996,
+          "intraF_median": 1.0,
+          "crossF_median": 0.8234149039404288,
+          "max_cross_F": 0.9924235752439988,
+          "n_cross_edges": 3080.5,
+          "n_dimers": 2667.5,
+          "largest_frac": 1.0,
+          "eff_mean_age_s": 25.230257044377833
+        },
+        "110.0": {
+          "mean_domain_size": 1713.8639389869932,
+          "mean_PS": 0.9192533842314607,
+          "intraF_median": 1.0,
+          "crossF_median": 0.8263957871404748,
+          "max_cross_F": 0.9882798521140725,
+          "n_cross_edges": 3169.5,
+          "n_dimers": 2773.0,
+          "largest_frac": 0.998742496282562,
+          "eff_mean_age_s": 24.60466095632717
+        },
+        "120.0": {
+          "mean_domain_size": 1617.837970830983,
+          "mean_PS": 0.9171873057863336,
+          "intraF_median": 1.0,
+          "crossF_median": 0.8244921763364389,
+          "max_cross_F": 0.9909804797899024,
+          "n_cross_edges": 3073.5,
+          "n_dimers": 2715.0,
+          "largest_frac": 0.998706985552874,
+          "eff_mean_age_s": 25.272514461550525
+        }
+      }
+    }
+  }
+}

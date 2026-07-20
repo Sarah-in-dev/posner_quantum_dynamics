@@ -65,6 +65,7 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 | # | Date | Decision / finding | Status | Entry |
 |---|------|--------------------|--------|-------|
+| PO8-1 | 2026-07-20 | **THE ELIGIBILITY TRACE HAS A ~7 s HALF-LIFE, SET BY FAST CHEMISTRY — NOT BY THE 216 s COHERENCE. At a realistic dopamine delay there is nothing left to read.** First-ever **drive-then-quiet** protocol (every prior PO-7 measurement was under SUSTAINED drive at end-of-run): drive 20 s past ignition, then quiet 60 s. **N=3 free draws, ZERO seeding, ignition 3/3** (η 0.451/0.404/0.443). **Half-lives after drive stops, per draw:** correlated **domain 7.0/7.0/7.0 s** (508→4 dimers by 30 s); cross bridges 11/12/12 s; intra bonds 16/17/20 s; dimers 24/25/33 s; **P_S NEVER halves — 0.943→0.768 at 60 s, nowhere near the 0.5 Werner floor (a fixed cohort would not cross it until 107 s).** **The computational object dies FIRST and FASTEST while the quantum coherence it rests on is barely touched — the slow quantum clock never gets to act.** **Three causes separated by measurement:** (a) **CULLING dominant** — `step_population` slaves `target_count` to `peak(dimer_concentration)` and culls dimers, **deleting their bonds** (`_remove_all_bonds_for_dimer`); births hit **0** the instant drive stops while deaths continue ~45–55/s. **"Write-once" protects a bond from DISSOLVING, not from having its dimer CULLED.** (b) **BOND DEATH faster than dimers** — bridges halve in 12 s vs dimers 27 s, i.e. the unmoored `K_DISENTANGLE_BASE=0.1` rate. (c) **COHERENCE ruled OUT.** Domain collapses faster than any constituent because it needs cross bridges to percolate *sparse* intra clusters (intra F=1.0000 but mean degree ~0.13 under provenance) — lose bridges, domain fragments superlinearly. **CONSEQUENCES:** the readout-time keystone **cannot be run at tens-of-seconds delays on the current model** — the object has been erased, which is not the same as a negative answer; the **100–200 s window is NOT the binding constraint** on the trace, though the whole temporal-credit-assignment thesis rests on it; and **Unit A is reframed — fixing the release rate (Q1) is NECESSARY BUT NOT SUFFICIENT**, since dimer culling alone caps the trace at ~27 s. **This is DESIGNED behaviour** (the fast-chemistry/slow-quantum split is explicit in the code docstring); the finding is that its consequence contradicts the thesis. **Limits:** N=3; current release rate; "quiet" is a full return to rest, so the honest scope is *"the trace does not survive quiescence,"* not *"the trace cannot exist."* **⚠ Supersedes two same-day PO-8 reports:** a continuous-drive sweep showing flat domains 20→120 s (steady state BY CONSTRUCTION — continuous rebirth, cannot test fragmentation) and a single-draw quiet table; both withdrawn as findings, the continuous run surviving only as a control. | [GROUNDED, measured — negative] | `L·PO8-1` below |
 | PO7-5 | 2026-07-20 | **THE REFRAME: the computation is the MEASUREMENT, not the graph. The graph is a PROGRAM written at birth, held in superposition, executed by dopamine-triggered decoherence.** Consequences: §8 keystone is about WRITING (does input pick the graph); the fidelity ceiling is about READING (how faithfully collapse expresses it); **they are separable and the ceiling cannot falsify the keystone.** "One shared coin per component" → an AGREEMENT PATTERN (which dimers collapse correlated). **§6 answered — joint collapse is GRADED, not thresholded:** for a Werner bond, correlation `p=(4F-1)/3` and it MULTIPLIES along paths, so connectivity and correlation are different lengths — no cliff, no threshold to nominate. **Ceiling is GEOMETRY (Unit 19):** F=P_S·P_S·W_ij, W=exp(-spacing/λ); at 1µm exp(-1/5)=0.8187, observed max 0.8151 — spacing (not η) sets the per-bridge correlation, so spine spacing is the biological knob on domain size. **Domains measured (Unit 18, 12 free draws) + verified (Unit 20):** intra bonds run at **F=1.0000 (p=1, lossless)** so a whole synapse is one correlated core; cross-bridges at **F≈0.70 (p≈0.6)** extend it; correlated domain ≈ **468 dimers ≈ 1.35 synapses**, NOT the ~2-5 the uniform-F=0.67 chain-picture predicted. **45 effective domains where connectivity is pinned at 1 giant component** — structure with headroom, connectivity overstates the unit ~5×. **⚠ THE RECONCILIATION IS THE TIME AXIS:** F_intra=1 only because P_S has not decayed at 12-20s (T_singlet=216s) — this is the WRITE-TIME graph; at READOUT (dopamine, tens-to-hundreds of s later) P_S decays, intra F→0.5, domains FRAGMENT. The advisor's small domains and our large domain are the SAME GRAPH AT DIFFERENT TIMES (the §7.1 fidelity-dependent-lifetime point made concrete: `t_bond=T₂·ln(4F₀-1)`, weak bonds die 4× faster, the graph SELF-CLEANS → temporal credit assignment falls out of T₂). **NEXT:** run to a dopamine event at realistic delay WITH the corrected release rate (`k=1/T₂+1/τ_dimer`, 96× faster than coded), measure domains AT READOUT — that post-decay graph is the real computational output and its domain structure is the §8 keystone. Seeding remains dormant/regression-only. | [GROUNDED, measured + derived + reframed] | `L·PO7-5` below |
 | PO7-4 | 2026-07-20 | **ADVISOR R5 WORKED THROUGH (Units 13–16) + a FRAMING CORRECTION: the system is stochastic BY CONSTRUCTION and its output is a DISTRIBUTION. Percolation is a mean-degree-≈1 phenomenon the monogamy bound of 4 cannot touch; the "starvation" was a run-length artifact.** **Unit 14 (stoichiometry):** dropping the clique + phenomenological-EM pathway (both already unphysical) removes **97% of intra bonds** (mean degree 3.93 → 0.13); they, not the physics, manufactured the monogamy violation, and spin-resolution is a NO-OP once they are gone. **Release-rate arithmetic (advisor):** it is a driven birth–death **NESS**, not detailed balance, so `k_release = 1/T₂ + 1/τ_dimer = 1/216 + 1/200 = 9.63e-3/s` (τ≈104 s) is **derivable** — the model's ~1e-4/s is **96× too slow** (write-once graph). Independent check: the model's own constants put P_S crossing the Werner floor at 107.0 s; derived τ_release = 103.8 s. **Unit 15 (freed budget):** freeing the whole spin budget leaves the FRACTION of time cross-structure exists **unchanged (~20%)** — it only reduces severity. So the budget never gated structure. **Threshold:** structure collapses at mean cross-degree ≈ 1 (Erdős–Rényi), and the monogamy bound of 4 is **4× too permissive** to prevent it — cross-bonds are BRIDGES, which percolate at far lower density than the spatially-clustered intra bonds. **Unit 13 (order):** permuting WHICH SLOT a bond claims → bit-identical partition (slot allocation is order-free); pair-presentation order within bursts (mean 10.2 bonds/step, max 840) not yet isolated. **THREE FRAMING CORRECTIONS, all recorded not patched:** (1) **frustration is a MATCHING DEFICIENCY (Hall / CKW-LP infeasibility), NOT H¹** — the L·PO7-3 "H¹ obstruction" is RETRACTED; the genuine ℂ¹⁶ partial-trace sheaf answers a *different* question (spin-state consistency). (2) **binary occupancy is an UPPER bound, not lower** — under CKW τ=(2F-1)², weak bonds are nearly free, so the 491,566 refusals OVERCOUNT and the binary rule may OVER-fragment. (3) **the rig's run-to-run variation is the PHYSICS, not a reproducibility bug** — seeding it to obtain a clean or igniting run selects the outcome; **P(ignition) is a first-class finding.** **Unit 17 free-running ensemble (N=16, ZERO seeding) SETTLES the decisive question:** P(ignition) = **16/16 = 1.000**; largest_frac median **0.968** (giant component every draw); **bridge fidelity median F ≈ 0.672, ceiling 0.815, only 9.5% near the Werner floor** ⇒ **the giant component is REAL (bridges carry ~12% of maximal entanglement, not floor-level noise), but only MODESTLY entangled, not maximal.** ⚠ And a correction: **"P(ignition) is a coin-flip" was a DRIVE-PATH BUG** — `_backbone_eta` is set only inside `net.step()` (`:1286`), so probes driving via per-synapse `s.step()` leave η≡0; ignition is reliable (16/16) at 20 s on the correct path, and the real stochasticity is in the degree/timing and largest_frac, not in whether ignition occurs. Seeding capability (`57ccd75`) dormant, software-regression only. | [GROUNDED, measured + derived] | `L·PO7-4` below |
 | PO7-3 | 2026-07-19 | **THE MISSING REPRESENTATION WAS THE SPIN. Spin-resolved bonding built — and THE BLOB BREAKS: `largest_frac` 1.000 → 0.112, 1 component → 184, on a graph that is for the first time PHYSICALLY ADMISSIBLE.** The model bonded dimers as featureless nodes. A Ca₆(PO₄)₄ carries **four ³¹P spin-½ nuclei** (`quantum-system-canonical:43`), a singlet-strength bond consumes **one at each end**, and monogamy forbids a spin mediating two bonds. Nothing represented that. **Build** (opt-in `spin_resolved`, OFF ⇒ bit-identical `1034/369740/0.991922159684`): every dimer owns 4 slots; a bond must claim a FREE slot at both ends or it does not form; provenance bonds must claim their **NAMED inherited slot** (the which-spin tag), so two inheritances competing for one slot cannot both be satisfied; **degree ≤ 4 is DERIVED, never capped.** **Measured (fingerprint rig, 1 synapse, 200 steps, seed 31337):** edges **369,740 → 2,031** (0.55% retained); mean degree **715.16 → 3.93**; max degree **902 → 4**; dimers over bound **1034/1034 → 0**; components **1 → 184**; **`largest_frac` 1.000 → 0.112**; **491,566 bonds refused**. Refused bonds are **not lost edges — they are FRUSTRATION** (pairs individually satisfiable, jointly not), the H¹ obstruction the Unit-5 "sheaf" structurally could not express. **Also this cycle — ignition reproduced and characterised (Unit 8):** L·ETA-2's rig re-run with glutamate wired (the original `eta_probe.py` drives voltage-only — the ERR-2 defect); `E_invasion` **0.3508 vs 0.3518 (0.28%)**, peak r **2.53**, **7/7 synapses condensed**. **The pump is NOT dead** — the r≈0.077 figure repeated from the PO-7 kickoff was never measured and is superseded. **Pre-ignition the partition is 7 components / `largest_frac` 0.22** (one per synapse, exactly §5), collapsing to **`largest_frac` 1.000 on just 98 cross-bonds** — the percolation §3's Werner fix was meant to prevent, at F>0.5. **Ignition occurs at row-sums 4.14–5.05, well below L·ETA-1's stated requirement of >6.89** — that table was computed in the NMDAR-silent regime and its "unreachable at ≥2 µm at any N" claim needs re-deriving before it is cited again. | [GROUNDED, measured — build + positive] | `L·PO7-3` below |
@@ -105,6 +106,88 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 ---
 
 ## THE LOG (newest first)
+
+### L·PO8-1 — the eligibility trace has a ~7 s half-life, set by FAST CHEMISTRY, not by the 216 s coherence: at a realistic dopamine delay there is nothing left to read · 2026-07-20 `[GROUNDED, measured — negative]`
+
+**Unit B1**, `sweep/po8_unit_b1_graph_persistence.py`. **N=3 free-running draws, ZERO seeding**,
+`net.step` drive, ignition confirmed on every draw (peak η = 0.451 / 0.404 / 0.443). Protocol: drive
+20 s (past the ~15 s ignition onset), then **go quiet** (glutamate 0, voltage to −70 mV rest) for
+60 s, sampling every 1 s. Read-only instrumentation of `step_population` (established probe pattern);
+no physics modified. Results: `results/po8_unit_b1_results.json`.
+
+#### 1. The question, and why it had to be measured
+The reframe (`L·PO7-5`) and this PO's charter both assume a dopamine readout at "a realistic delay
+(tens of s)" — and the whole temporal-credit-assignment thesis rests on the ~100–200 s coherence
+window. **Nobody had ever run a drive-then-quiet protocol**: every PO-7 measurement was taken under
+SUSTAINED drive at end-of-run (handoff §2, Units 8/10/17/18/20). So whether the graph survives a
+quiescent delay at all was unmeasured.
+
+#### 2. The cascade of timescales — the whole finding in one table
+Half-life after drive stops, per draw (the three draws agree to within a sample):
+
+| quantity | half-life (3 draws) | @0 s | @30 s | @60 s |
+|---|---|---|---|---|
+| **correlated domain** (the computational object) | **7.0, 7.0, 7.0 s** | 508 | 4 | 2 |
+| cross-synapse bridges | 11, 12, 12 s | 1940 | 162 | 9 |
+| intra-synapse bonds | 16, 17, 20 s | 1870 | 401 | 198 |
+| dimers themselves | 24, 25, 33 s | 2527 | 1062 | 626 |
+| **singlet coherence P_S** | **never halves** | 0.943 | 0.858 | **0.768** |
+
+**The computational object dies FIRST and FASTEST (7 s), and the quantum coherence it is built on is
+barely touched.** P_S is still 0.77 at a 60 s delay — nowhere near the 0.5 Werner floor, which a
+fixed cohort would not reach until 107 s. **The slow quantum clock never gets to act.**
+
+#### 3. Mechanism — three candidate causes separated, and it is not the one the reframe assumed
+- **(a) CULLING — dominant on the population.** `dimer_particles.step()` separates
+  *"2. Population: birth/death to track concentration (FAST chemistry)"* from *"3. Coherence: T2
+  decay (SLOW quantum)"*. `step_population` sets `target_count = peak(dimer_concentration)·V·N_A` and
+  culls dimers when count > target, **deleting their bonds** (`_remove_all_bonds_for_dimer`).
+  Measured: births drop to **0** the instant drive stops, deaths continue at ~45–55/s, and
+  `target_count` tracks the decaying concentration with actual count following it. **"Write-once"
+  protects a bond from DISSOLVING; it does not protect a bond whose dimer is CULLED.**
+- **(b) BOND DEATH — faster than the dimers.** Cross bridges halve in ~12 s while their dimers halve
+  in ~27 s, i.e. bridges die *faster than their endpoints disappear* — the unmoored
+  `K_DISENTANGLE_BASE = 0.1` cross rate (`multi_synapse_network.py:488`), already flagged as
+  "unmoored from physics" (`model6-research-findings-may29:91`).
+- **(c) COHERENCE — NOT the cause.** Ruled out by measurement: P_S 0.94 → 0.77 over the whole delay.
+
+The **domain** collapses faster than any of its constituents (7 s vs 12/18/27 s) because it depends
+on cross bridges percolating the *sparse* intra clusters — lose the bridges and the domain fragments
+superlinearly. This also corrects the intuition that intra cores are a lossless backbone: intra
+`F=1.0000` throughout, but intra bonds are sparse under provenance (`L·PO7-4` §1: ~0.13 mean degree),
+so they do not hold a domain together on their own.
+
+#### 4. What this means (and does not)
+- **At a realistic dopamine delay there is essentially nothing left to read.** At 20 s the domain is
+  ~18 dimers (from 508); at 30 s, ~4. **The readout-time keystone as posed cannot be run at
+  tens-of-seconds delays on the current model** — not because the answer is negative, but because
+  the object being read has been erased by chemistry.
+- **The 100–200 s coherence window is NOT the binding constraint on the eligibility trace.** The
+  program's central computational claim rests on that window; the model's own trace is ~an order of
+  magnitude shorter and is set by calcium clearance and an unmoored bond rate.
+- **This reframes Unit A.** Correcting the cross-bond release rate (queue Q1) is **necessary but not
+  sufficient**: even with perfect bonds, dimer culling (27 s half-life) caps the trace. The trace can
+  only reach the behavioural timescale if the dimer POPULATION persists through quiescence — and it
+  cannot, because population is slaved to instantaneous concentration by design.
+- **This is DESIGNED behaviour, not a bug** — the fast-chemistry/slow-quantum split is explicit in
+  the code's own docstring. The finding is that its *consequence* contradicts the thesis the model
+  exists to support.
+
+#### 5. Limits, stated
+N=3 (half-lives near-identical, 7/7/7, so the effect is enormous relative to spread, but it is 3
+draws). Measured at the **current** release rate (Q1 open). "Quiet" is a full return to rest
+(−70 mV, no glutamate); a real inter-trial interval retaining residual drive or residual calcium
+would extend the trace, and that is the natural follow-up — **the honest scope is "the trace does not
+survive quiescence," not "the trace cannot exist."** λ untouched here (queue Q3); this is the λ=5
+default.
+
+#### 6. ⚠ Retraction of my own earlier report, same day
+I earlier reported a continuous-drive sweep showing domains FLAT from 20→120 s and called the graph a
+turnover steady state. That protocol drove the network continuously for the entire run, so dimers
+were continuously reborn and the population never aged — a steady state **by construction**, which
+cannot test fragmentation-at-readout. I also reported a single-draw quiet table as though it were a
+finding. Both are withdrawn as findings; the continuous run survives only as a control (under
+sustained drive the structure is stable). This entry is the measured replacement.
 
 ### L·PO7-5 — the reframe: the computation is the MEASUREMENT; correlated domains, the geometry ceiling, and the time-axis reconciliation · 2026-07-20 `[GROUNDED, measured + derived + reframed]`
 
