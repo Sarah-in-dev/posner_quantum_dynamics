@@ -201,32 +201,77 @@ subgraph:
 
 $$\mathcal{G}^\ast = \text{greedy}_{\prec}\bigl\{\,e \in E : \deg_\sigma(u),\deg_\sigma(v) < 4\,\bigr\}$$
 
-where ≺ is arrival order. The physically meaningful object is presumably not this. Candidates:
+where ≺ is arrival order. **This question is now largely resolved — a reviewer's response plus
+follow-up arithmetic closed most of it, and we record the resolution rather than the open form.**
 
-1. **Fidelity-weighted matching** — admit edges in decreasing F, i.e. approximate
-   $\arg\max_{H \subseteq E,\ \Delta(H)\le 4} \sum_{e\in H} F_e$. A degree-constrained maximum-weight
-   subgraph (b-matching, b ≡ 4), solvable exactly in polynomial time.
-2. **Detailed balance** — bonds form *and* break with rates satisfying a stationarity condition, so
-   occupancy equilibrates rather than latching. Physically the most defensible; the current
-   dissolution rate may simply be far too slow relative to formation.
-3. **Timescale separation as physics** — if local bonds genuinely form and lock before the
-   condensate ignites, first-come-first-served *is* the physics, and starvation is the answer.
+1. **Global fidelity-weighted b-matching** ($\arg\max_{H:\ \Delta(H)\le 4}\sum F_e$) is **rejected
+   on physical grounds**: it requires knowing every candidate edge and solving a global
+   assignment — an oracle the modeller runs, which nothing local computes. (Same objection this
+   programme already accepted against "no molecule diagonalises a Laplacian.")
+2. **"Detailed balance" was the wrong name — it is a driven birth–death NESS.** Entanglement
+   generation is not microscopically reversible (the bath never spontaneously entangles two
+   nuclei), so this is a non-equilibrium steady state, not equilibrium. Crucially, that means the
+   **release rate is not a free parameter — it is derivable:**
 
-**We do not know which is right, and the three give qualitatively different partitions.** This is
-where we would most value outside judgement: *what is the correct variational or kinetic principle
-for allocating a conserved, discrete, per-node resource among competing entangling channels
-operating on different timescales?*
+   $$k_{\text{release}} = \frac{1}{T_2} + \frac{1}{\tau_{\text{dimer}}}
+     = \frac{1}{216\,\text{s}} + \frac{1}{200\,\text{s}} = 9.63\times10^{-3}\,\text{s}^{-1}
+     \quad(\tau_{\text{release}} = 103.8\,\text{s}).$$
 
-### 5.2 Is occupancy counting a faithful H¹, or only a lower bound? [OPEN]
+   The model currently dissolves bonds at ~$10^{-4}\,\text{s}^{-1}$ — **96× too slow**, which is
+   what makes the graph effectively write-once. (Independent check: the model's own constants put
+   $P_S$ crossing the Werner floor at 107.0 s; the derived $\tau_{\text{release}}$ is 103.8 s — two
+   routes, same number.) **And selection by fidelity then emerges locally for free:** the model's
+   formation rate is $k_{\text{cross}}\propto P_S^a P_S^b W_{ij}$, which *is* $F_{ab}$ — the rate
+   already equals the fidelity, so high-F pairs are attempted more often and win slots without any
+   global optimiser. The greedy walk was layered on top of an already-correct local kinetic scheme;
+   the fix is the decay rate, not the allocation rule.
+3. **Timescale separation** is real but our test could not see past it: at the corrected
+   $\tau_{\text{release}}\approx104$ s, slots recycle ~0.7× within the 100–200 s coherence window
+   but **do not recycle at all inside our 20 s runs** (~5 recycle-times short). So the "starvation"
+   we measured is an artifact of run length, not of the allocation principle.
 
-We treat a nucleus as a binary slot: free or spent. The full description is a state in
-(ℂ²)^⊗4 = ℂ¹⁶ per dimer, with the six intra-dimer J-couplings
+**Diagnostic performed (§ order-sensitivity):** bonds formed per step is bursty — mean 10.2, but 90%
+of steps form ≤1, with rare bursts up to 840. Permuting *which slot* a bond claims leaves the
+partition **bit-identical**, so slot allocation is provably order-free. *Which pair* is offered
+first within a burst is not yet isolated and is the one remaining order question.
+
+**What is left for a reviewer here is narrow:** confirm that $k_{\text{release}}=1/T_2+1/\tau_{\text{dimer}}$
+is the right composition for a singlet-carrying bond in a driven NESS (versus, e.g., a
+fidelity-dependent decay), since that rate now sets the entire recycling picture.
+
+### 5.2 Binary occupancy is an UPPER bound (not a lower one), and frustration is a matching deficiency (not H¹) [CORRECTED]
+
+**Two corrections to our earlier framing, both from reviewer input, both recorded rather than
+quietly patched.**
+
+**(a) The direction of the bound is inverted.** Binary occupancy — one nucleus, one bond — is the
+*maximally-entangled* limit. The continuous statement is the CKW monogamy inequality
+$\sum_j \tau_{aj} \le 1$ per nucleus, with tangle $\tau = C^2$ and, for a Werner state,
+concurrence $C = 2F-1$. So a bond's true cost is $(2F-1)^2$:
+
+$$F=0.75 \Rightarrow \tau=0.25 \ (\text{4 bonds/nucleus}); \qquad
+  F=0.55 \Rightarrow \tau=0.01 \ (\text{~100 bonds/nucleus}).$$
+
+Bonds near the Werner floor are **almost free**. Therefore our binary constraint is an **upper
+bound on cost** — it *over*-charges weak bonds — and our 491,566 refusals are an **overcount**, not
+a lower bound. The binary rule may be *over*-fragmenting. (To sustain even the original degree-715
+graph under CKW would require $F \lesssim 0.537$ throughout, which the model's bimodal $F$
+distribution does not obviously exclude — hence §6's decisive measurement.)
+
+**(b) It is not H¹.** Our earlier documents (and an earlier version of this brief) called the
+frustration an $H^1$ obstruction. **That was wrong and is retracted.** Resource contention among
+binary slots is a **matching deficiency**, certified by Hall's condition; under CKW it becomes **LP
+infeasibility over a capacity polytope**. Both are computable and neither is cohomology.
+
+The genuine sheaf lives elsewhere. The full per-dimer state is (ℂ²)^⊗4 = ℂ¹⁶, with the six
+intra-dimer J-couplings
 
 $$H = \sum_{k<l} J_{kl}\,\mathbf{I}_k\cdot\mathbf{I}_l$$
 
-acting on it. Under that description, restriction of a dimer's state to the nucleus mediating a
-given bond is a **partial trace over the other three** — which mixes coordinates, so the
-associated cellular sheaf does **not** decompose.
+acting on it; restriction of that state to the nucleus mediating a bond is a **partial trace over
+the other three**, which mixes coordinates, so *that* cellular sheaf does not decompose — and it
+answers a **different** question (consistency of the joint spin-state assignment), not resource
+contention. Keeping the two separate is what keeps the sheaf claim credible where we do make it.
 
 An earlier construction in this programme took the six J-couplings themselves as the stalk
 (ℝ⁶) with restriction maps given by coordinate projection ℝ⁶ → ℝ. We verified numerically that
@@ -236,26 +281,41 @@ projections are diagonal, so no cohomological information beyond per-channel cir
 available. (The stalk was additionally input-blind: initialised as i.i.d. `normal(0.15, 0.15, 6)`
 per dimer.)
 
-Our 491,566 frustration events are the **combinatorial shadow** of monogamy. The question:
-**is that count a faithful H¹, or a lower bound that ignores partial entanglement?** Whether
-nucleus *a* can still bond depends, in the full theory, on how it is entangled with the other
-three in its own dimer — a continuous quantity our binary occupancy cannot see. If the answer is
-"lower bound," the ℂ¹⁶ construction becomes necessary rather than optional, and we would want to
-know whether a tractable reduction (e.g. restriction to the singlet–triplet manifold) preserves
-the obstruction.
+So the ℝ⁶ construction was doubly wrong: diagonal restrictions (no sheaf), on an input-blind
+stalk. The ℂ¹⁶ construction with partial-trace restrictions is the genuine article, but per (a)/(b)
+above it is the tool for **spin-state consistency**, not for the monogamy/contention question —
+which is fully handled by Hall / CKW-LP and needs no cohomology. **The open item is narrow and
+quantitative:** does the binary-vs-CKW gap (weak bonds nearly free) materially change the partition?
+That is the measurement in §6, not a modelling-principle question.
 
-### 5.3 The rig is not reproducible [MEASURED — being fixed]
+### 5.3 The system is stochastic by construction — its output is a distribution, not a value [FRAMING]
 
-Two runs of identical code at a fixed seed diverge (three RNG instances are constructed without a
-seed argument and draw from OS entropy). Consequence: **all multi-synapse numbers in §4.3–§4.4 are
-single draws from a distribution, not reproducible values.** An independent record shows η_max
-across four nominally identical driven runs coming out 0.0, 0.0709, 0.0940, 0.1069 — i.e. *whether
-the condensate ignites at all* varies run to run.
+This model is a stochastic quantum-biological system: vesicle release, calcium-channel gating,
+dimer birth, and — through them — whether the microtubule condensate ignites are all random. **That
+randomness is the physics, not measurement noise.** The correct observable is therefore a
+*distribution* over free-running realisations, not a single number, and the correct experiment
+kicks the system off repeatedly from independent entropy and reports the ensemble.
 
-The single-synapse results in §3 and §4.2 are on a deterministic path and are reproducible.
+We flag this because our own single-synapse numbers in §3–§4.2 were taken on a path we had
+happened to run deterministically, and the multi-synapse numbers in §4.3–§4.4 are **single draws**.
+An early diagnostic recorded η_max across four nominally identical driven runs coming out
+0.0, 0.0709, 0.0940, 0.1069 — i.e. **whether the condensate ignites at all varies run to run.** We
+initially misread that as a reproducibility defect to be seeded away. It is not: it is a genuine
+property of the substrate, and *seeding it to obtain a clean or an igniting run would be selecting
+the outcome.* We do not do that.
 
-**Nothing in §4.3–§4.4 should be treated as a measurement until the seeding is fixed and the runs
-are repeated across seeds.** We state it rather than omit it.
+**Consequence for how to read this brief.** The structural facts in §3 and the collapse-threshold
+argument in §4 are instantaneous graph properties or analytic (Erdős–Rényi), true in every draw
+and robust. The specific multi-synapse *values* (largest_frac trajectories, the ~98-bond
+percolation count, peak η) are single realisations and are being re-established as **distributions
+over an ensemble of free-running draws** — in particular P(ignition), which is itself a
+first-class result: the network-scale cross-synapse computation appears to be an intrinsically
+*probabilistic* event, which is what one would expect if it depends on rare coincident condensation
+across neighbouring spines. That ensemble is running; numbers will follow as distributions.
+
+*(A seeding capability was added to the code for narrow software-regression testing — confirming a
+newly-added opt-in flag, when disabled, executes the original code path — and is left dormant and
+unused for any physics measurement. It never appears in a claim about what the system does.)*
 
 ---
 
@@ -263,15 +323,19 @@ are repeated across seeds.** We state it rather than omit it.
 
 | claim | status |
 |---|---|
-| The entanglement graph violated monogamy by ~179× (99.44% of edges inadmissible) | **[MEASURED], reproducible, high confidence** |
-| Enforcing four-nucleus occupancy fragments the graph: largest_frac 1.000 → 0.112, 184 components | **[MEASURED], reproducible, high confidence** |
-| Refused bonds constitute genuine frustration (pairwise satisfiable, jointly not) | [DERIVED] — but see §5.2 on whether it is the full obstruction |
+| The entanglement graph violated monogamy by ~179× (99.44% of edges inadmissible) | **[MEASURED], instantaneous graph fact, holds in every draw — high confidence** |
+| The clique + phenomenological-EM pathways manufacture ~97% of intra bonds (3.80 of 3.93/dimer); both are independently established as unphysical | **[MEASURED], high confidence** |
+| Enforcing four-nucleus occupancy fragments the single-synapse graph (largest_frac → 0.11, 184 components) | **[MEASURED]** — being re-established as an ensemble distribution |
+| Refused bonds are genuine frustration = **matching deficiency (Hall's condition), NOT H¹** | [DERIVED] — see §5.2; earlier "H¹" framing was wrong and is retracted |
 | The prior ℝ⁶ "sheaf" is a direct sum of 3 graph Laplacians, carrying no sheaf-specific information | **[MEASURED]**, identity verified exactly |
-| A handful (~98) of cross-bonds percolate the unconstrained graph completely | [MEASURED], single draw |
-| Cross-synapse structure does not survive network-wide occupancy accounting | [MEASURED], **single draw, and confounded by §5.1** |
-| Condensation is reachable (r up to ≈2.5, all 7 spines) and strobes rather than latches | [MEASURED], single draw |
+| The cross-synapse graph percolates at mean degree ≈ 1 (Erdős–Rényi), while the monogamy bound is 4 — so monogamy **cannot** prevent percolation | **[MEASURED] + analytic**, high confidence |
+| Freeing the spin budget (dropping clique+EM) leaves the *fraction* of time structure exists unchanged (~20%); it only reduces severity | [MEASURED], single draw — being re-run as ensemble |
+| **Whether the condensate ignites at all is stochastic across free draws** (P(ignition) < 1) | **[MEASURED]** — ensemble in progress; this is a first-class finding, not a defect |
 
-**The one-line question for a reviewer:** given a conserved discrete resource (four nuclei per
-node) contested by two entangling channels with a ~10 s timescale separation, is greedy
-first-come allocation defensible physics, or must the allocation be derived from a stationarity
-or optimality principle — and if the latter, which?
+**The one-line question for a reviewer:** connectivity (π₀) counts an F=0.5⁺ edge and an F=0.99
+edge identically, though the former carries ~10⁻⁴ of the entanglement. Is the giant component we
+observe held together by near-Werner-floor bridges — making it an artifact of an unweighted
+invariant that cannot sustain correlated collapse — and if so, what is the right entanglement-
+weighted notion of "one component, one commit bit" (a tangle/CKW-monotone cut, a spectral
+threshold, something else)? *(We are measuring the bridge-fidelity distribution now; the question
+stands regardless of which way it resolves.)*
