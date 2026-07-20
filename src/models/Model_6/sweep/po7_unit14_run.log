@@ -1,0 +1,22 @@
+====================================================================================================
+PO-7 UNIT 14 — stoichiometry: does dropping the clique + EM pathway free ~2 nuclei?
+====================================================================================================
+  PREDICTION (registered above, before running): provenance ON + spin ON
+  => mean intra degree ~2, mean free nuclei ~2
+
+  prov=OFF spin=OFF   V= 1034 E= 369740  deg mean= 715.16 med= 833.0 max=  902  free=0.00  comps=   1 lgfrac=1.000
+  prov=OFF spin=ON    V= 1034 E=   2031  deg mean=   3.93 med=   4.0 max=    4  free=0.07  comps= 184 lgfrac=0.112
+  prov=ON  spin=OFF   V= 1022 E=     66  deg mean=   0.13 med=   0.0 max=    2  free=3.87  comps=  23 lgfrac=0.017
+  prov=ON  spin=ON    V= 1022 E=     66  deg mean=   0.13 med=   0.0 max=    2  free=3.87  comps=  23 lgfrac=0.017
+
+====================================================================================================
+VERDICT ON THE PREDICTION
+====================================================================================================
+  provenance ON + spin ON: mean intra degree = 0.13, mean free nuclei = 3.87
+  => PREDICTION FAILS LOW. Provenance yields fewer bonds than its own K=2 allows;
+     something else is limiting formation.
+
+  for reference, clique+EM with spin ON: mean degree 3.93, free 0.07
+  excess attributable to clique+EM: 3.80 bonds/dimer
+
+wrote po7_unit14_results.json

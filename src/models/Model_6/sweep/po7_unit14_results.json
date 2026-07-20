@@ -1,0 +1,58 @@
+{
+  "prov=OFF spin=OFF": {
+    "provenance": false,
+    "spin_resolved": false,
+    "V": 1034,
+    "E": 369740,
+    "mean_deg": 715.1644100580271,
+    "max_deg": 902.0,
+    "median_deg": 833.0,
+    "mean_free_nuclei": 0.0,
+    "over_bound": 1034,
+    "n_components": 1,
+    "largest_frac": 1.0,
+    "frustrated": 0
+  },
+  "prov=OFF spin=ON ": {
+    "provenance": false,
+    "spin_resolved": true,
+    "V": 1034,
+    "E": 2031,
+    "mean_deg": 3.9284332688588006,
+    "max_deg": 4.0,
+    "median_deg": 4.0,
+    "mean_free_nuclei": 0.07156673114119923,
+    "over_bound": 0,
+    "n_components": 184,
+    "largest_frac": 0.11218568665377177,
+    "frustrated": 491566
+  },
+  "prov=ON  spin=OFF": {
+    "provenance": true,
+    "spin_resolved": false,
+    "V": 1022,
+    "E": 66,
+    "mean_deg": 0.12915851272015655,
+    "max_deg": 2.0,
+    "median_deg": 0.0,
+    "mean_free_nuclei": 3.8708414872798436,
+    "over_bound": 0,
+    "n_components": 23,
+    "largest_frac": 0.016634050880626222,
+    "frustrated": 0
+  },
+  "prov=ON  spin=ON ": {
+    "provenance": true,
+    "spin_resolved": true,
+    "V": 1022,
+    "E": 66,
+    "mean_deg": 0.12915851272015655,
+    "max_deg": 2.0,
+    "median_deg": 0.0,
+    "mean_free_nuclei": 3.8708414872798436,
+    "over_bound": 0,
+    "n_components": 23,
+    "largest_frac": 0.016634050880626222,
+    "frustrated": 0
+  }
+}
