@@ -81,6 +81,11 @@ class EntanglementBond:
 
 
 class DimerParticleSystem:
+    # Four 31P spin-1/2 nuclei per Ca6(PO4)4 dimer [quantum-system-canonical:43, LOCKED].
+    # A singlet-strength bond consumes one; monogamy forbids reuse. Hence max degree 4 —
+    # DERIVED from the molecule, not a fitted cap.
+    SPINS_PER_DIMER = 4
+
     """
     Particle-based tracking of dimers with emergent entanglement
     
@@ -194,6 +199,17 @@ class DimerParticleSystem:
         # so they cannot perturb dynamics on any path.
         self._prov_slot_of = {}             # dimer.id -> {event_id: spin index 0..3}
         self._prov_bond_spins = {}          # (id_lo, id_hi) -> (spin_lo, spin_hi) mediating pair
+
+        # === PO-7: SPIN-RESOLVED BONDING (opt-in; off => byte-identical) ===
+        # The missing birth/entanglement representation. Four 31P spins per Ca6(PO4)4
+        # (quantum-system-canonical:43); a bond consumes one spin at each end; monogamy
+        # forbids a spin mediating two bonds. Degree <= 4 falls out — it is derived, not
+        # capped. Rejected bonds are FRUSTRATION: the H^1 obstruction (edges pairwise
+        # satisfiable, jointly not) that a direct sum of graph Laplacians cannot express.
+        self.spin_resolved = False          # master opt-in flag
+        self._spin_occ = {}                 # dimer.id -> [bond_key | None] * 4
+        self._bond_spins = {}               # (id_lo, id_hi) -> (spin_lo, spin_hi)
+        self._spin_frustrated = 0           # bonds refused for want of a free spin
         self._calcium_field = None
         self._prov_dx_nm = self.dx_nm
         self.j_coupling_threshold = 5.0  # Hz, minimum for protection
@@ -487,13 +503,18 @@ class DimerParticleSystem:
                     other = next((x for x in self.dimers if x.id == partner), None)
                 if other is not None and other.id != dimer.id:
                     strength = other.singlet_probability * dimer.singlet_probability
-                    self._create_bond(dimer.id, other.id, strength=strength)
-                    # the mediating spin pair: partner's spin for this event, and ours
+                    # the mediating spin pair: partner's spin for this event, and ours.
+                    # Under spin_resolved these are REQUIRED slots — the inherited nucleus
+                    # sits in a named slot, so two inheritances competing for the same slot
+                    # cannot both be satisfied. That competition is the frustration.
                     partner_spin = e['holder_spins'][-2]
                     key = (min(dimer.id, partner), max(dimer.id, partner))
-                    self._prov_bond_spins[key] = ((partner_spin, spin_here)
-                                                  if partner < dimer.id
-                                                  else (spin_here, partner_spin))
+                    pair = ((partner_spin, spin_here) if partner < dimer.id
+                            else (spin_here, partner_spin))
+                    self._prov_bond_spins[key] = pair
+                    lo = min(dimer.id, partner)
+                    self._create_bond(dimer.id, other.id, strength=strength,
+                                      spins=(pair if dimer.id == lo else (pair[1], pair[0])))
             if len(claimed) >= self.provenance_k:
                 break
         dimer.event_ids = frozenset(claimed)
@@ -670,10 +691,33 @@ class DimerParticleSystem:
         key = (min(id_i, id_j), max(id_i, id_j))
         return self._bond_lookup.get(key)
         
-    def _create_bond(self, id_i: int, id_j: int, strength: float):
+    def _create_bond(self, id_i: int, id_j: int, strength: float,
+                     spins: tuple = None):
         key = (min(id_i, id_j), max(id_i, id_j))
         if key in self._bond_lookup:
             return  # Already exists
+
+        # === PO-7: SPIN-RESOLVED BONDING (opt-in; off => byte-identical) ===
+        # A Ca6(PO4)4 dimer carries FOUR 31P spin-1/2 nuclei. A singlet-strength bond
+        # consumes ONE spin at each endpoint, and MONOGAMY OF ENTANGLEMENT means a spin
+        # that is maximally entangled with a partner cannot also be entangled with
+        # anything else. So a bond is admissible only if a free spin exists at BOTH ends.
+        # This is a derivation from quantum-system-canonical:43 (4 spins per dimer), not a
+        # tunable cap: with it, degree <= 4 by construction. Rejected bonds are counted —
+        # they are the FRUSTRATION (edges individually satisfiable, jointly not), which is
+        # the H^1 obstruction the direct-sum sheaf of Unit 5 could not express.
+        if self.spin_resolved:
+            si = self._claim_spin(id_i, key, spins[0] if spins else None)
+            if si is None:
+                self._spin_frustrated += 1
+                return
+            sj = self._claim_spin(id_j, key, spins[1] if spins else None)
+            if sj is None:
+                self._release_spin(id_i, key)     # roll back i's claim
+                self._spin_frustrated += 1
+                return
+            self._bond_spins[key] = (si, sj)
+
         bond = EntanglementBond(
             dimer_i=id_i,
             dimer_j=id_j,
@@ -682,12 +726,41 @@ class DimerParticleSystem:
         )
         self.entanglement_bonds.add(bond)
         self._bond_lookup[key] = bond
-    
+
+    def _claim_spin(self, dimer_id: int, key: tuple, required: int = None):
+        """Occupy a 31P spin on `dimer_id` for bond `key`. Returns the spin index, or None
+        if no admissible spin is free. `required` pins a specific slot — that is what makes
+        provenance-inherited bonds frustratable: the inherited nucleus sits in a NAMED slot,
+        so two inheritances competing for the same slot cannot both be satisfied."""
+        occ = self._spin_occ.setdefault(dimer_id, [None] * self.SPINS_PER_DIMER)
+        if required is not None:
+            if 0 <= required < self.SPINS_PER_DIMER and occ[required] is None:
+                occ[required] = key
+                return required
+            return None
+        for s in range(self.SPINS_PER_DIMER):
+            if occ[s] is None:
+                occ[s] = key
+                return s
+        return None
+
+    def _release_spin(self, dimer_id: int, key: tuple):
+        occ = self._spin_occ.get(dimer_id)
+        if not occ:
+            return
+        for s, k in enumerate(occ):
+            if k == key:
+                occ[s] = None
+
     def _remove_bond(self, id_i: int, id_j: int):
         key = (min(id_i, id_j), max(id_i, id_j))
         bond = self._bond_lookup.pop(key, None)
         if bond:
             self.entanglement_bonds.discard(bond)
+        if self.spin_resolved:
+            self._release_spin(id_i, key)
+            self._release_spin(id_j, key)
+            self._bond_spins.pop(key, None)
 
     # =========================================================================
     # NETWORK ANALYSIS - FIND ENTANGLED CLUSTERS

@@ -1,0 +1,30 @@
+{
+  "OFF": {
+    "spin_resolved": false,
+    "V": 1034,
+    "E": 369740,
+    "mean_deg": 715.1644100580271,
+    "max_deg": 902.0,
+    "over_bound": 1034,
+    "frac_over": 1.0,
+    "inadmissible_edges": 367672.0,
+    "n_components": 1,
+    "largest_frac": 1.0,
+    "frustrated": 0,
+    "n_bond_spins": 0
+  },
+  "ON": {
+    "spin_resolved": true,
+    "V": 1034,
+    "E": 2031,
+    "mean_deg": 3.9284332688588006,
+    "max_deg": 4.0,
+    "over_bound": 0,
+    "frac_over": 0.0,
+    "inadmissible_edges": 0.0,
+    "n_components": 184,
+    "largest_frac": 0.11218568665377177,
+    "frustrated": 491566,
+    "n_bond_spins": 2035
+  }
+}

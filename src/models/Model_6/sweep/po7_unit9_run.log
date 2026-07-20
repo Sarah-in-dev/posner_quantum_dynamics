@@ -1,0 +1,34 @@
+================================================================================================
+PO-7 UNIT 9 — spin-resolved bonding (4x 31P per Ca6(PO4)4, monogamy derived)
+================================================================================================
+
+  spin_resolved=OFF  V=1034  E=369740
+     mean degree          715.16   (bound 4)
+     max degree              902
+     dimers over bound      1034  (100.0%)
+     inadmissible edges   367672
+     components                1
+     largest_frac          1.000
+     frustrated bonds          0
+
+  spin_resolved=ON   V=1034  E=2031
+     mean degree            3.93   (bound 4)
+     max degree                4
+     dimers over bound         0  (0.0%)
+     inadmissible edges        0
+     components              184
+     largest_frac          0.112
+     frustrated bonds     491566
+
+================================================================================================
+VERDICT
+================================================================================================
+  monogamy satisfied with spin resolution ON: YES (0 dimers over bound)
+  edges: 369740 -> 2031  (0.55% retained)
+  frustration (bonds refused for want of a free spin): 491566
+  largest_frac: 1.000 -> 0.112
+  components:   1 -> 184
+  => THE BLOB BREAKS. Enforcing the physical spin bound fragments the graph;
+     the partition is no longer trivial.
+
+wrote po7_unit9_results.json

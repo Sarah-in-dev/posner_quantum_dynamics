@@ -1,0 +1,26 @@
+{
+  "config": {
+    "n_syn": 7,
+    "spacing_um": 1.0,
+    "dt": 0.005,
+    "t_sim": 20.0,
+    "volt_mV": -40.0,
+    "seed": 0
+  },
+  "peak": {
+    "r": 2.532100453768064,
+    "eta": 0.43376468869496926,
+    "e": 0.35083036531776846,
+    "ca": 0.64,
+    "xbond": 8214,
+    "nmulti": 1,
+    "ncond": 7
+  },
+  "gate": {
+    "r_ok": false,
+    "eta_ok": false,
+    "eta2_r": 1.6234,
+    "eta2_eta": 0.2376
+  },
+  "trace": "po7_unit8_trace.jsonl"
+}
