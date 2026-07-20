@@ -1,7 +1,39 @@
 # PO-7 handoff — evening of 2026-07-19
 
 **Read this first in the morning.** Branch `claude/nervous-hertz-7ccff6`, worktree
-`.claude/worktrees/po5-keystone`. Working tree clean; 17 commits from `78c60cc`.
+`.claude/worktrees/po5-keystone`.
+
+> ## ⚠ LATE ADDENDUM (2026-07-20) — THREE THINGS BELOW ARE SUPERSEDED. Read this box first.
+>
+> The body of this handoff (§1–§12) was written before a reviewer round and a framing correction.
+> The findings still stand, but three of its framings are now wrong. The authoritative current
+> statement is `docs/PO7_TECHNICAL_BRIEF_2026-07-20.md` and research-log entries after `L·PO7-3`.
+>
+> 1. **"Frustration = the H¹ obstruction" (appears in §1, §5→R5, and `L·PO7-3`) is RETRACTED.**
+>    Resource contention among binary spin slots is a **matching deficiency** (Hall's condition;
+>    under CKW, LP-infeasibility over a capacity polytope) — **not cohomology.** The genuine ℂ¹⁶
+>    sheaf answers a *different* question (spin-state consistency).
+>
+> 2. **"The rig is not reproducible, being fixed" (§9) is the WRONG FRAME.** The system is
+>    stochastic by construction; its output is a *distribution*, not a value, and whether the
+>    condensate ignites at all varies across free draws. That is the physics, not a defect.
+>    Seeding it to get a clean or an igniting run would be **selecting the outcome** — we do not.
+>    A seeding capability was added (commit `57ccd75`) for narrow *software-regression* use only
+>    and is left dormant. **P(ignition) is now a first-class finding**; a free-running ensemble
+>    (no seeds) is measuring it.
+>
+> 3. **The starvation / update-order question (§8, §12) is largely RESOLVED, not open.** The
+>    monogamy bound (4) cannot prevent percolation because the graph percolates at **mean degree
+>    ≈ 1** (Erdős–Rényi). The measured "starvation" was a **run-length artifact**: the physical
+>    bond-release rate is `k = 1/T₂ + 1/τ_dimer = 1/216 + 1/200 = 9.63e-3/s` (τ ≈ 104 s), **96×
+>    faster** than the model's ~1e-4/s, and our 20 s runs are ~5× too short for slots to recycle.
+>    The decisive remaining question is **whether the percolating bridges sit near the Werner
+>    floor** (F≈0.5, negligible entanglement ⇒ connectivity is the wrong invariant and the blob is
+>    an artifact) — being measured now.
+>
+> Units 13–16 (order-sensitivity, stoichiometry, freed-budget, bridge-fidelity) and the reviewer
+> exchange all postdate the body below. The body is kept intact as the record of how the picture
+> was reached.
 
 ---
 
