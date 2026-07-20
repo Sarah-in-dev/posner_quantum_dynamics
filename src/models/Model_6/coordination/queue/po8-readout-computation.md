@@ -69,3 +69,45 @@ event triggers decoherence." Grounding shows dopamine does **not** decohere anyt
 Unit B is still well-posed with dopamine as the *clock*, but I want to write it up that way rather
 than implying a collapse mechanism the code does not have. Confirming you're content with that
 framing before I pre-register.
+
+---
+
+## Q3 — 2026-07-20 13:1xZ · lambda = 5 um vs 214 um. Raised by the advisor (R6 check-in); GROUNDED and load-bearing. NOT my call — it is LOCKED-adjacent.
+
+**The ask:** rule on the entanglement fidelity weight length lambda in `W_ij = exp(-d/lambda)`.
+
+**Why.** The advisor's check-in argues the cross-bond fidelity weight is a category error. The code
+uses `coupling_length_um = 5.0` directly as the fidelity weight (`multi_synapse_network.py:1147`),
+and L-PO7-5 section 3 derived the F=0.815 ceiling and the "spine spacing sets correlation reach"
+prediction from it. But our OWN **feasibility calc #1** (`model6-network-layer-feasibility-may30:73-78`,
+LOCKED, PASS) puts the condensate coherence length at **L_coh = v*tau = 214 um at Q=10** (robust
+floor ~20 um even at v=100 m/s), verdict verbatim *"internet, not local bus ... a collective mode
+has no distance falloff inside its coherence domain."* Reusing the 5 um metabolic/structural length
+(handoffs/MICROTUBULERESEARCH.md:210 calls it "MT bundle coherence length," range 1-20 um) as the
+entanglement fidelity weight contradicts that locked calc, at a length 43x too short. Verified both
+numbers against the skills/docs; the advisor's "feasibility calc #4" is our calc #1.
+
+**Impact — it flips Unit B qualitatively (the advisor's phrase, and I concur):**
+- lambda = 5 um: F ceiling 0.815; cross bonds die at ~74 s, intra at ~107 s => a **two-timescale,
+  scope-contracting** eligibility trace (multi-synapse binding decays before per-synapse binding).
+  Spine-spacing-sets-reach prediction stands.
+- lambda = 214 um: W ~ 0.995 at 1 um; ceiling gone; cross and intra die together ~106 s => **one
+  timescale, sharp cutoff**; the spine-spacing prediction evaporates.
+
+**My recommendation.** Two things, in order:
+1. **Decide lambda before I SCORE Unit B.** It changes the answer, so scoring first would bake in
+   whichever value happens to be coded. My physics read: the advisor is right that the fidelity
+   weight and the metabolic aggregation length are different constants and 5 um is the wrong one for
+   fidelity; the coherence-length floor (>=20 um, 214 um at pinned Q=10) is the defensible fidelity
+   scale. But this touches the LOCKED feasibility set, so it is your call, not mine.
+2. **I do NOT need it to start.** The readout-time domain sweep I am running now is INTRA-core
+   dominated, and the intra channel has no lambda (F = P_S_i*P_S_j, no spatial weight). So the
+   flat-then-cliff collapse at ~107 s is lambda-independent and measurable today. lambda only gates
+   the CROSS/two-timescale claim. I will measure the intra curve now and hold the cross
+   interpretation for your ruling.
+
+**One more framing item the advisor settled (no action needed, just adopting):** drop "program held
+in superposition" — this is the (A) model (`quantum-system-canonical` section 5, LOCKED). Correct
+phrasing: *stored correlation structure read out by a common-cause collapse; the readout is
+classical, but MONOGAMY (degree<=4, no classical analogue) is what makes it informative.* I will
+write L-PO8-1 at that altitude.

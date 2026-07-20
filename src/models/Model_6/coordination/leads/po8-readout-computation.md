@@ -9,6 +9,45 @@ Python: `/Users/sarahdavidson/posner_quantum_dynamics/venv/bin/python`.
 
 ---
 
+## Heartbeat — 2026-07-20 13:2xZ · advisor R6 answered; B0 probing; a self-correction; third decision (lambda) queued
+
+**Since 12:51Z:**
+- Answered the advisor's R6 check-in (relayed by Sarah) with a grounded physics read: domains stay
+  synapse-scale then collapse abruptly ~107 s (arithmetic independently reproduced); the abrupt
+  collapse is INTRA cores dissolving as a unit (common P_S(t)), not branching; the trace is a SCOPE
+  trace (multi-synapse binding decays before per-synapse). Adopted the (A)-safe framing (drop
+  "program in superposition"; monogamy is the load-bearing quantum constraint).
+- Queued **Q3 (lambda = 5 um vs 214 um)** — the advisor's biggest item, GROUNDED: `coupling_length_um
+  = 5.0` is used as the entanglement fidelity weight but our LOCKED feasibility calc #1
+  (`model6-network-layer-feasibility-may30:73-78`) puts the condensate coherence length at 214 um.
+  It flips Unit B from two-timescale to one-timescale. Not my call (LOCKED-adjacent); escalated.
+- Wrote `docs/PREREG_PO8_UNIT_B_READOUT_KEYSTONE.md` (SKELETON) — fixes the design invariants
+  (density-matched sync-vs-stagger, SYNAPSE-level scoring to avoid the dimer-level trap inherited
+  from the superseded Unit-2 prereg, the decomposition-null falsifier), with lambda/API/framing slots
+  marked GATED.
+- Built `sweep/po8_unit_b0_readout_time_sweep.py` (readout-time domain sweep, reuses Unit-18 metric
+  verbatim, no seeding, run/analyze CLI, per-draw fsync).
+
+**⚠ SELF-CORRECTION (SHOWN by data, `sweep/po8_smoke_timing.py` + `po8_probe_ignition_lambda.py`):**
+I earlier told Sarah the readout-time domain-size curve is lambda-INDEPENDENT ("intra F=P_S^2 carries
+no spatial weight"). That is wrong about DOMAIN SIZE. Data: pre-ignition (eta=0, no cross bonds) the
+intra-only provenance graph is SPARSE and domains are only ~7-14 dimers; the synapse-scale domains
+(Unit-18's 468) appear only AFTER ignition (~10-20 s) via CROSS bridges. So domain size is
+cross-bridge dominated => lambda-DEPENDENT (maxF measured 0.784 at lambda=5, consistent with the
+0.815 ceiling). Consequence: the collapse TIMING is lambda-dependent (cross dies ~74 s at lambda=5 vs
+~107 s at lambda=214), so B0 must run at BOTH lambda values. Correcting this makes the lambda ruling
+MORE central, and note lambda is a plain constructor kwarg (`multi_synapse_network.py:1034`), NOT an
+owned-file edit and NOT a locked default I am changing — so I can run both arms as an experiment
+variable with zero code changes and hand Sarah the evidence.
+
+**Facts SHOWN (net.step drive, no seed):** ignition onset ~9-10 s (peak_eta 0->0.05-0.08, n_cross
+0->28-38, crossF_med ~0.75); cost ~7-8 wall-s per sim-s at V~1600 and rising with dimer count. A
+25 s two-lambda probe is running to confirm dimer-count plateau (feasibility of a 120 s run) and the
+lambda=214 maxF (~0.99 expected) before I launch the full B0 sweep as parallel background workers.
+
+**Next:** confirm V plateaus -> launch B0 (both lambda, >=5 draws lambda=5 primary, T_MAX~115 s,
+4 workers) -> analyze collapse shape/timing. Unit A and scored Unit B remain gated on Q1/Q2/Q3.
+
 ## Heartbeat — 2026-07-20 12:51Z · GROUNDED, brief returned, two decisions queued
 
 **Status:** grounding complete; no code written yet (correct order). Unit A and Unit B both have
