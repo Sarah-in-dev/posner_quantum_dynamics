@@ -9,6 +9,34 @@ Python: `/Users/sarahdavidson/posner_quantum_dynamics/venv/bin/python`.
 
 ---
 
+## Heartbeat — 2026-07-20 15:xxZ · L·PO8-1 RETRACTED; Unit A (physical release rate) BUILT + gate-clean; acceptance running
+
+**L·PO8-1 WITHDRAWN by me (do not cite).** Root cause: I never read
+`docs/PO7_TECHNICAL_BRIEF_2026-07-20.md`, which the kickoff names as required. The ~7 s "trace" was a
+protocol artifact: I invented a drive-then-quiet protocol that collapses `peak_conc` with tau~42 s,
+and `step_population` targets `np.max` (a PEAK, `L·PO5-11`), so killing the drive culls the population
+far faster than real dimer chemistry. It also contradicted the brief's tau_dimer=200 s and validated
+commit-rate decay over 0-120 s — checks I skipped. Retraction committed; DECISION RECORD row flipped.
+
+**System verified intact after all my probes:** network regression digest `515772101786800`
+reproduces; **zero system .py modified by any probe** (all `sweep/po8_*` are new files).
+
+**Unit A BUILT (the eligibility-trace lever).** `multi_synapse_network.py`: opt-in
+`physical_release_rate` (default False). ON replaces the unmoored cross rate
+`K_DISENTANGLE_BASE*(1-eta*P_product)` (~0.056/s, tau~18 s — bridges die ~4x before their ~74 s
+Werner crossing) with the DERIVED driven-NESS rate `k=1/T2+1/tau_dimer=9.63e-3/s` (tau=103.8 s),
+constant in F (advisor Q4: trace falls out of T2; fidelity selection already emerges from
+k_cross prop F). **OFF-path network gate bit-identical: offpath digest 515772101786800 reproduces
+with flag off.** Committed.
+
+**Acceptance measurement RUNNING** (`sweep/po8_unitA_bond_lifetime.py`, standard rig, continuous
+`net.step` drive, NO seeding, 100 s, off-vs-on, 2 free draws/arm): cross/intra BOND lifetime AND
+DIMER lifetime (the hard cap — a bond dies with its dimer regardless of release rate), with
+right-censoring reported honestly. Predicts: ON should push cross-bond lifetime from ~18 s toward the
+~74 s Werner crossing IF dimer lifetime allows; the dimer-lifetime number tells us whether a SECOND
+fix (population persistence) is needed for the trace to reach the behavioural timescale. Acceptance is
+the measured lifetime distribution, not "it ran".
+
 ## Heartbeat — 2026-07-20 14:5xZ · PROCESS CORRECTION + Unit B1 (graph persistence) running
 
 **Process correction (Sarah, via the README).** I was using chat as the coordination backbone —

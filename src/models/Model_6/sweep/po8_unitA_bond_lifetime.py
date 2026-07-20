@@ -38,6 +38,7 @@ MODEL6_DIR = os.path.dirname(SWEEP_DIR)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(MODEL6_DIR)))
 sys.path.insert(0, MODEL6_DIR)
 sys.path.insert(0, SWEEP_DIR)
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "sweep"))   # presynaptic_release lives here
 import logging
 logging.disable(logging.INFO)
 
