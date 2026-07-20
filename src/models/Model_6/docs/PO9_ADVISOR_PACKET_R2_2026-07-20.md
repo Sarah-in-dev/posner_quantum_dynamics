@@ -130,9 +130,20 @@ so partial overlaps produce resolvable co-ignition).
   partition encodes a continuous property of the input — the first result in the sub-programme that
   would clear the §8 bar (computation, not detector).
 
-One early draw (offset=10 → 11 s co-ignition → cross_w ≈ 1050 ≈ full) smells STEP/fast-saturating, but
-the low-co-ignition end is not yet sampled and we will not conclude before it lands. Result to follow
-in R3.
+**RESULT (n=5/offset, readout delay 20 s) — GRADED, step null REJECTED:**
+
+| co-ignition (s) | 0.0 | 0.4 | 2.8 | 6.5 | 10.0 | 25.0 |
+|---|---|---|---|---|---|---|
+| cross_w (mean±sd) | 0 | 26±16 | 209±55 | 600±87 | 926±23 | 848±316 |
+
+Spearman ρ(co-ignition, cross_w) = **+0.936** (40 draws). Step-rejection: cross_w at 2.8 s co-ignition
+(209) vs the saturated 926, Welch **t = 24.25** — a presence detector is ruled out. cross_w is a smooth
+monotone function of co-ignition duration with a **width ~5–7 s** (set by bond kinetics, not by drive).
+
+**So the readout partition encodes a CONTINUOUS property of the input — the temporal overlap of the two
+populations — not merely their coincidence.** A computation, not a detector; the §8 bar, conditional on
+§3's delocalization. NB the early "smells STEP" read (offset=10, one draw) was wrong once the low
+co-ignition end was sampled: 0.4 s → 26 and 2.8 s → 209 are far below saturation.
 
 ---
 
