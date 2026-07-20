@@ -55,6 +55,11 @@ PATTERN = os.environ.get("PO7_U8_PATTERN", "linear")
 # asks the narrower question: does shattering the intra cliques alone stop ~98
 # cross-bonds from percolating the network?
 SPIN_RESOLVED = os.environ.get("PO7_U8_SPIN", "0") == "1"
+# PO-7 Unit 15 (advisor R5 step 5): drop the clique + EM pathway. Unit 14 measured
+# that they manufacture 97% of the intra graph (3.80 of 3.93 bonds/dimer); with them
+# gone ~3.87 of 4 nuclei are free, so the cross-synapse channel has the budget it was
+# starved of in Unit 11. provenance_bonding already replaces the clique and skips EM.
+PROVENANCE = os.environ.get("PO7_U8_PROV", "0") == "1"
 TRACKER_EVERY = 10
 ETA2_R, ETA2_ETA = 1.6234, 0.2376
 TOL = 0.10
@@ -81,9 +86,11 @@ def build(n, spacing, invaded=True, pattern=None):
         for s in net.synapses:
             s.set_microtubule_invasion(True)
     net.disable_auto_commitment = True
-    if SPIN_RESOLVED:
-        for s_ in net.synapses:
+    for s_ in net.synapses:
+        if SPIN_RESOLVED:
             s_.dimer_particles.spin_resolved = True
+        if PROVENANCE:
+            s_.dimer_particles.provenance_bonding = True
     return net
 
 
@@ -116,7 +123,7 @@ def main():
     print(f"  N={N_SYN} spacing={SPACING}um pattern={PATTERN}  P_c={P_c*1e15:.2f}fW  "
           f"row-sums min={rows.min():.3f} max={rows.max():.3f}")
     print(f"  drive {VOLT*1e3:.0f}mV sustained + glutamate, {T_SIM}s @ dt={DT}  "
-          f"spin_resolved(INTRA only)={SPIN_RESOLVED}")
+          f"spin={SPIN_RESOLVED} provenance(drops clique+EM)={PROVENANCE}")
     print(f"  GATE: r ~ {ETA2_R} and eta ~ {ETA2_ETA} (+-{TOL:.0%})\n")
     print(f"  {'t(s)':>7} {'ca_mx':>7} {'E_inv':>7} {'r_max':>8} {'eta_mx':>7} "
           f"{'n_cond':>6} {'dimers':>7} {'xbond':>6} {'comps':>6} {'nmulti':>6} {'lgfrac':>6} {'s/step':>7}")
