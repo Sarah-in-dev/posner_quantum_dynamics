@@ -106,6 +106,79 @@ makes the model falsifiable and worth believing by convergence rather than by fi
 
 ## THE LOG (newest first)
 
+### L·PO7-5 — the reframe: the computation is the MEASUREMENT; correlated domains, the geometry ceiling, and the time-axis reconciliation · 2026-07-20 `[GROUNDED, measured + derived + reframed]`
+
+Sarah's reframe, worked through with the reviewer's Werner-correlation math and verified on the
+free-running ensemble. This is the largest conceptual shift in the sub-programme.
+
+#### 1. The reframe
+The entanglement graph is **not** the computational output. It is a **program**: written at dimer
+birth by provenance, held in superposition, and **executed by dopamine-triggered decoherence** —
+the correlated collapse *is* the readout. Three consequences:
+- **§8 keystone = WRITING** (does input determine which graph gets built).
+- **Fidelity = READING** (how faithfully collapse expresses the graph).
+- These are **separable**, so the fidelity ceiling **cannot falsify the keystone** — they are
+  different tests. "One shared coin per component" restates as an **agreement pattern**: which
+  dimers collapse to correlated outcomes (what CaMKII downstream consumes).
+
+#### 2. §6 answered — joint collapse is GRADED, not thresholded
+For a Werner bond ρ = p|ψ⁻⟩⟨ψ⁻| + (1-p)I/4, the correlation coefficient is **p = (4F-1)/3**
+(F=0.5→p=0.33, 0.67→0.56, 0.815→0.75). Correlation **multiplies along paths** (p^k over k bonds),
+so connectivity and correlation are **different lengths** — there is no threshold to nominate and
+no cliff. The earlier four-round search for an F-cut that fragments the blob was solving the wrong
+problem: you never needed to prevent percolation, because connectivity ≠ correlation.
+
+#### 3. The fidelity ceiling is GEOMETRY (Unit 19)
+F = P_S^a·P_S^b·W_ij, W_ij = exp(-d_ij/λ), λ=5µm. Since P_S≤1, F is bounded by the spatial weight,
+largest for the nearest pair: at 1µm exp(-1/5)=**0.8187**; observed max across the 16-run ensemble
+(28,673 edges) **0.8151**, gap 0.0036 = P_S<1. **CONFIRMED.** η enters the formation RATE
+(k∝√(η_iη_j)·W·P_S²), not the fidelity — η sets how MANY bonds, not how strong. Corrects the
+reviewer's guess (η/metabolic budget). **Consequence:** per-bridge correlation p is capped by
+SYNAPSE SPACING (1µm→p≤0.76, 2µm→0.56, 3µm→0.40), so **spine spacing is the biological knob on
+inter-synaptic correlation length.**
+
+#### 4. Correlated domains measured (Unit 18, 12 free draws) and verified (Unit 20)
+| quantity | value |
+|---|---|
+| mean domain size S(u)=Σ_v e^{-d(u,v)} | median **468 dimers** (397–536) |
+| effective domain count Σ 1/S(u) | median **45** |
+| connected components (≥2) | median **17**; largest_frac **0.978** (one giant) |
+| max cross-edge F | 0.807 (= the 0.815 spacing ceiling) |
+
+**Verified linchpin (Unit 20, free run, 12s):** INTRA bonds **F=1.0000** (min 0.98, 100%>0.9 ⇒
+p=1, w=0, lossless); CROSS bonds **F median 0.70** (p≈0.6). So a whole synapse is one lossless
+correlated core, and cross-bridges extend the domain ~1.35 synapses. **NOT the ~2-5 the uniform-
+F=0.67 chain-picture predicted** — because intra correlation is near-perfect, not 0.67.
+**But the reframe's qualitative claim HOLDS:** 45 effective domains where connectivity is pinned at
+1 giant component — structure with headroom, connectivity overstates the unit ~5×. (Note the two
+domain estimators disagree — mean size 468 vs count-implied ~54 — because domains OVERLAP; the
+continuous correlation measure gives soft/fuzzy domains, not a hard partition.)
+
+#### 5. ⚠ The reconciliation is the TIME AXIS
+F_intra=1.0000 only because **P_S has not decayed at 12–20 s** (T_singlet=216 s). This is the
+**WRITE-TIME** graph. At **READOUT** (dopamine, tens-to-hundreds of s later) P_S decays, intra F
+falls toward 0.5, w rises, and **domains fragment.** The reviewer's small domains and this large
+one are **the same graph at different times** — their §7.1 point made concrete:
+**t_bond = T₂·ln(4F₀−1)** (a bond born at F₀=0.815 lives 176 s, at 0.67 lives 112 s, at 0.55 lives
+39 s), so **weak bonds die ~4× faster, the graph SELF-CLEANS, and temporal credit assignment falls
+out of T₂** — structure written long before reward decays; structure written just before it
+survives. The eligibility trace, derived rather than asserted.
+
+#### 6. What this defines as next
+Run to a **dopamine event at a realistic delay** with the **corrected release rate**
+(k=1/T₂+1/τ_dimer ≈ 9.6e-3/s, 96× faster than the coded ~1e-4/s), and measure domains **AT
+READOUT.** That post-decay, self-cleaned graph is the real computational output, and whether input
+determines which synapses share a correlated domain at collapse **is** the §8 keystone — now on the
+right object (correlated domains, not connected components), at the right time (readout, not birth),
+with the right measure (the correlation metric d(u,v)=Σ(-ln p_e), effective correlation e^{-d}).
+
+Still-open items carried forward: CKW (~8 bonds/spin at F=0.67, for correctness — extends
+connectivity not correlation, won't rescue anything); the pair-presentation order question (Unit 13
+left it unisolated); and implementing the corrected release rate (a physics change, opt-in +
+regression-gated). **Seeding remains dormant, software-regression only — never a physics claim.**
+
+
+
 ### L·PO7-4 — advisor R5 worked through (Units 13–16); percolation is mean-degree-≈1, "starvation" was a run-length artifact; the stochasticity is the physics; ensemble settles the bridge question · 2026-07-20 `[GROUNDED, measured + derived]`
 
 Follows a reviewer round on `L·PO7-3` + `PO7_TECHNICAL_BRIEF_2026-07-20.md`. Authoritative current
