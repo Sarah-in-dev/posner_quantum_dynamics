@@ -142,3 +142,43 @@ discipline.
 - **Does NOT:** establish one-shot LEARNING in the behavioral sense (no behavior, no policy, no task
   performance); does NOT close the attribution gap (canonical §6); does NOT resolve the Δw **sign** into a
   consistent direction (the open architectural question behind this one).
+
+---
+
+## AMENDMENT 1 — 2026-07-21 · counterbalance the pair ordering (batch 1 diagnosed the early-pair-decay confound BEFORE this re-run scored)
+
+**Batch 1 (base design, forward order only, n≈3/cell, delay 20 s) — reported, then amended.** The three
+controls behaved: `bindoff` decode 0.29, `scramble` 0.50, `lamshort` 0.14 — all at chance (null p95 ≥ 0.86,
+0.50, 0.86). **But `full` decoded at 0.667 = exactly the null p95 — AT CHANCE.** Not a keystone.
+
+**Diagnosis (from the per-draw agreement patterns, not from tuning).** The signal reached the weights but
+only through the LATE pair: in every pair1 draw `agree(CD)=+1`; in every pair2 draw `agree(BD)=+1`. The
+EARLY pair's agreement was noise (`agree(AB)`/`agree(AC)` scattered ±1) because the early pair's
+cross-bond had **decayed below the Werner floor by the 20 s readout** (early pair ~50–65 s old, past the
+~57 s Werner crossing, `L·PO9-2` clock), so its two synapses are no longer co-membered and their shared
+sign is lost. So only 2 of 6 agreement features carried reliable signal, and the registered decoder over
+all six (with the early-pair noise, small n, and forward-order-only positional structure) could not clear
+the null. This is the early/late asymmetry + positional fixity (A always early, D always late) flagged in
+the original §design notes, now confirmed material.
+
+**What is NOT done:** the registered decoder was NOT swapped for a late-pair-only variant to force a pass
+(the `L·PO5-13` goalpost-move the discipline forbids). Batch 1's null stands as recorded.
+
+**The fix — counterbalance the ordering (design change, registered here BEFORE the re-run scores).** Each
+PAIRING is now run in BOTH orderings (`--order fwd|rev`): the two co-active pairs swap early/late window.
+So across a class, each pair is late-position (hence reliably co-signed) in half its trials, and early
+(decayed) in the other half. Consequences:
+- Both of a pairing's pairs get a reliable agreement reading (each in half the trials) → all four
+  discriminative features are populated, not two.
+- "Which pair fired late" is now balanced across classes → the decode must ride the PAIRING (which pairs
+  co-sign), not absolute timing/position. This simultaneously fixes the decay asymmetry AND the positional
+  confound.
+- Readout delay kept at 20 s (the persistence claim is preserved); the fix is symmetry, not a shorter clock.
+
+**Re-run design (tags `ucB_<arm>_<mode><order>`; batch-1 `uc_` files superseded, not deleted).** Label =
+PAIRING (pair1={AB,CD} → 0, pair2={AC,BD} → 1), collapsing fwd/rev. Primary contrast **`full` vs
+`bindoff`** (arm 1 vs the load-bearing classical-collapse control) at **n=6 per (pairing × order) = 12 per
+class**, counterbalanced. `scramble`/`lamshort` at chance are already established (batch 1) and re-confirmed
+if the primary contrast passes. Decoder unchanged (sign-invariant pairwise agreement, LOO-CV vs 2000-shuffle
+null); relabelled by pairing. Verdict rule unchanged: POSITIVE iff `full` clears null p95 while `bindoff`
+does not; NULL otherwise (reported honestly).
