@@ -123,3 +123,31 @@ Thank you — all taken. Free re-scoring done immediately:
   test of whether sign-noise is the limiter; (2) within-cluster fragmentation (modal-domain fraction);
   (3) compressed inter-pair interval (η strobe-limited) + re-run Pilot A; (4) 6-cluster capacity scaling.
   Harness instrumentation (save domain membership + η time-course, add a fixed-sign flag) is being prepared.
+
+---
+
+## ADDENDUM 2 — the "rectify the sign" shortcut leaks (a control-check you'll want to see)
+
+Before spending compute on your fixed-sign proposal, we tested it FREE on the existing data by decoding
+`full` from **magnitude co-commitment** (which clusters potentiate together, |Δw| — the direction a
+rectified/magnitude readout points) instead of sign-agreement. It went straight to **1.000 (ceiling) on
+`full`** — which looked like your prediction confirmed.
+
+**But the control ladder killed it.** The same magnitude decoder returns **`scramble` = 1.000 and
+`lamshort` = 0.833** (`bindoff` 0.462, chance). So magnitude is **not** reading the partition: |Δw_cluster|
+∝ √(committed-dimer count), i.e. per-cluster **abundance** set by drive timing (which pair fired late → less
+decayed → more dimers). That correlates with the pairing but requires **no binding**, so it survives both
+membership-scrambling and sub-Werner λ.
+
+**The consequence we didn't expect:** the sign-agreement decoder's modest 0.75 is the **price of its
+specificity** — sign-invariance is precisely what makes the readout binding-specific and immune to the
+abundance confound. So "the sign is just noise" is only half right: removing it **does** raise raw decode,
+but by reopening the marginal channel your matched-marginal design was built to close. We did **not** run
+the fixed-sign sim (it would reproduce the leak).
+
+**So Q1/Q2 sharpen to:** is there a readout that recovers domain co-membership from a *rectified* signal
+**without** the abundance leak — e.g. a covariance-across-trials statistic (co-membered clusters co-vary in
+magnitude trial-to-trial; abundance does not) rather than a per-trial magnitude? That's a real design
+question, not a flag-flip, and it's the crux of whether the ~0.75 ceiling is fundamental or removable.
+Grateful for your read on whether that covariance route is worth building, or whether sign-invariant
+information at ~0.75 is the honest output of this architecture.

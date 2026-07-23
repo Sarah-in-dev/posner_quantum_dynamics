@@ -196,6 +196,22 @@ higher-capacity input structure.
 > interval (re-run Pilot A) → 6-cluster capacity. Harness instrumentation (save domain membership + η trace)
 > prepared; compute not yet launched.
 
+> **POST-REVIEW UPDATE 2 2026-07-22 — the "rectify the sign → ceiling" shortcut LEAKS; sign-invariance is
+> LOAD-BEARING.** Before spending compute on the fixed-sign sim, the hypothesis was tested FREE on the
+> existing data: decode `full` from **magnitude co-commitment** (|Δw_cluster| above/below the cluster
+> median) instead of sign-agreement. It hit **1.000 (ceiling) on `full`** — looked like the advisor's
+> prediction confirmed. **But the control check killed it:** the SAME magnitude decoder returns **scramble
+> 1.000 and lamshort 0.833** (bindoff 0.462, chance). So magnitude **FAILS the control ladder** — it is not
+> reading the partition. Cause: |Δw_cluster| ∝ √(committed-dimer count), i.e. per-cluster ABUNDANCE set by
+> drive TIMING (which pair fired late → less decayed → more dimers); a first-order/marginal channel that
+> correlates with the pairing but requires NO binding, so it survives scramble (membership shuffle) and
+> lamshort (no cross-bonds). **Conclusion:** the sign-agreement decoder's modest 0.75 is the PRICE of its
+> specificity — sign-invariance is exactly what makes the readout binding-specific (immune to the abundance
+> confound). The clean, binding-specific result **remains `full` 0.750 (detected)**. The **fixed-sign sim
+> was NOT run** (it would reproduce the leak). **Q1/Q2 sharpened for the advisor:** rectification trades
+> specificity for signal; the real open question is whether a *covariance-across-trials* readout of a
+> rectified signal can recover co-membership WITHOUT the abundance leak — a design question, not a flag-flip.
+
 ### L·PO9-2 — the readout partition performs a GRADED COMPUTATION over temporal input overlap (conditional on a delocalized mode); the keystone measurement, the reconciled clock, and the advisor reframe · 2026-07-20 `[GROUNDED, measured — graded computation, conditional on delocalization]`
 
 Builds on `L·PO9-1` (substrate fix + λ decoupling made the readout runnable). Incorporates a full
