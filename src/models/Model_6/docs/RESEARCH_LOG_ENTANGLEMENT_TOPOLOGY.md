@@ -175,6 +175,27 @@ deep-research verdict that a classical correlation reservoir computes the same c
 classical COMPUTES.** Next: advisor review (§7 of the update); the sign-origin question; optionally a
 higher-capacity input structure.
 
+> **POST-REVIEW UPDATE 2026-07-22 (advisor) — "robust" DOWNGRADED to "detected"; 0.75 is READOUT NOISE, not
+> capacity.** Free re-scoring (no new sims) corrected two things. **(1) Margin:** bootstrap 95% CI on `full`
+> (n=12/cell) = **[0.562, 0.896]** — lower bound BELOW the null p95 (0.674), only 85% of bootstraps above it.
+> So the honest word is **DETECTED, not robust** (corrected here and in the prereg RESULT + advisor update).
+> **(2) Decoder characterized:** on pure-noise features it returns 0.49 (unbiased — so `full` is NOT a
+> decoder artifact); on a clean 2-signal readout it returns **1.000 (ceiling)**. Therefore a perfect readout
+> of this partition SHOULD decode at ceiling, and **0.75 reflects readout noise, not mechanism capacity.**
+> `scramble = 0.000` is a LOO anti-prediction artifact on faint domain-SIZE structure (not degeneracy —
+> all-identical → 0.5), below its own null (per-arm label-shuffle explains the 0.583 vs 0.708 nulls); switch
+> to bootstrap CIs. **Three readout-noise sources + fixes (advisor):** counterbalancing halves the signal →
+> compress the inter-pair interval (limit = η STROBE width, not dimer lifetime) so both pairs are equally
+> young at readout, counterbalancing becomes free; within-cluster **fragmentation** (measure modal-domain
+> fraction/cluster); **random per-domain sign** → the sign is not architectural but an unbiased basis —
+> **dopamine/CaMKII rectifies the collapse** (LTP/LTD not mirror-image; one outcome fails to trigger) →
+> directional Δw, sign-noise leaves the channel, decode rises, and dopamine does computational work beyond
+> triggering (Q1 & Q2 collapse to one answer; honest cost = multi-trial consolidation despite one-shot
+> binding, = BTSP). **Decisive cheap test = a FIXED-SIGN arm.** Add capacity scaling (6 clusters, Q3) to
+> separate "real but low-capacity" from "real". Sequence: fixed-sign arm → fragmentation → compressed
+> interval (re-run Pilot A) → 6-cluster capacity. Harness instrumentation (save domain membership + η trace)
+> prepared; compute not yet launched.
+
 ### L·PO9-2 — the readout partition performs a GRADED COMPUTATION over temporal input overlap (conditional on a delocalized mode); the keystone measurement, the reconciled clock, and the advisor reframe · 2026-07-20 `[GROUNDED, measured — graded computation, conditional on delocalization]`
 
 Builds on `L·PO9-1` (substrate fix + λ decoupling made the readout runnable). Incorporates a full

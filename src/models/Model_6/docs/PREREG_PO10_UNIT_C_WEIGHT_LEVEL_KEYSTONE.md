@@ -216,3 +216,15 @@ learning and does NOT close the attribution gap.
 
 Data `results/po10_unitC/` (force-added); research log `L·PO10-2`; advisor writeup
 `PO10_ADVISOR_UPDATE_UNIT_C_2026-07-22.md`.
+
+### POST-REVIEW CORRECTION 2026-07-22 (advisor)
+- **"Robust" → "DETECTED."** Bootstrap 95% CI on `full` (n=12/cell) = **[0.562, 0.896]**; lower bound below
+  the null p95 (0.674); 85% of bootstraps above null. Positive detection, not a robust effect. Report CIs.
+- **0.75 is READOUT NOISE, not capacity.** Decoder returns 0.49 on pure noise (unbiased) and **1.000 on a
+  clean 2-signal readout** — a perfect partition readout decodes at ceiling. `scramble = 0.000` is an LOO
+  anti-prediction artifact on faint domain-size structure (below its own null); per-arm nulls are
+  label-shuffles (explains 0.583 vs 0.708).
+- **Path to ceiling (three noise sources):** compress the inter-pair interval (η strobe-limited, not dimer
+  lifetime) so counterbalancing becomes free; measure within-cluster fragmentation; **rectify the collapse
+  sign via dopamine/CaMKII** (Q1+Q2 joint answer; honest cost = multi-trial consolidation). Decisive cheap
+  test = a **fixed-sign arm**. Add **6-cluster capacity scaling** (Q3). Compute not yet launched.

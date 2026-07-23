@@ -84,15 +84,17 @@ def synapse_corr_matrix(tr):
     return W
 
 
-def signed_readout(tr, arm, rng):
-    """Signed Δw from the joint-collapse structure. Returns (dw[N_SYN], domain_sizes)."""
+def signed_readout(tr, arm, rng, fixed_sign=False):
+    """Signed Δw from the joint-collapse structure. Returns (dw[N_SYN], domain_sizes).
+    fixed_sign=True: every committed domain takes s=+1 (the RECTIFIED-collapse variant — advisor Q1/Q2:
+    dopamine/CaMKII biases the sign so it is not a random ±1). Tests whether sign-noise is the decode limiter."""
     dimers = tr.all_dimers
     id_to_dimer = {d['global_id']: d for d in dimers}
     dw = np.zeros(N_SYN)
     if arm == "bindoff":
         for d in dimers:                                  # independent collapse: no domains
             if rng.random() < float(d.get('P_S', 0.25)):
-                dw[d['synapse_idx']] += rng.choice([-1.0, 1.0])
+                dw[d['synapse_idx']] += 1.0 if fixed_sign else rng.choice([-1.0, 1.0])
         return dw, [1] * len(dimers)
     clusters = tr._find_all_clusters()                    # list of lists of global_ids (correlated domains)
     if arm == "scramble":                                 # keep domain sizes, permute membership
@@ -107,7 +109,7 @@ def signed_readout(tr, arm, rng):
         ps = np.mean([id_to_dimer[g]['P_S'] for g in cluster_ids if g in id_to_dimer])
         sizes.append(len(cluster_ids))
         if rng.random() < ps:                             # per-domain commit coin (perform_quantum_measurement)
-            s = rng.choice([-1.0, 1.0])                    # shared random ±1 collapse direction
+            s = 1.0 if fixed_sign else rng.choice([-1.0, 1.0])   # rectified (+1) vs random ±1 collapse direction
             for g in cluster_ids:
                 d = id_to_dimer.get(g)
                 if d is not None:
@@ -115,7 +117,23 @@ def signed_readout(tr, arm, rng):
     return dw, sizes
 
 
-def one_run(run_id, mode, arm, gap_um, gap2_s, delay_s, order):
+def cluster_fragmentation(tr):
+    """Advisor Loss-2 diagnostic: for each cluster, the fraction of its dimers in its MODAL (largest)
+    real correlated domain. 1.0 = the whole cluster shares one domain (clean shared sign); < 1 dilutes
+    the agreement signal toward zero. Uses the REAL (unscrambled) domains."""
+    from collections import Counter
+    clusters = tr._find_all_clusters()
+    dom_of = {g: di for di, cl in enumerate(clusters) for g in cl}
+    frac = {}
+    for c in range(N_CLUST):
+        syns = set(CLUSTERS[c])
+        doms = [dom_of[d['global_id']] for d in tr.all_dimers
+                if d['synapse_idx'] in syns and d['global_id'] in dom_of]
+        frac[CLUSTER_NAME[c]] = round(max(Counter(doms).values()) / len(doms), 3) if doms else 0.0
+    return frac
+
+
+def one_run(run_id, mode, arm, gap_um, gap2_s, delay_s, order, fixed_sign=False):
     from model6_parameters import Model6Parameters
     from model6_core import Model6QuantumSynapse
     from multi_synapse_network import MultiSynapseNetwork
@@ -158,7 +176,8 @@ def one_run(run_id, mode, arm, gap_um, gap2_s, delay_s, order):
         net.step(DT, {"voltage": REST, "reward": False})
 
     rng = np.random.default_rng()                          # free draw, NO seed
-    dw, dom_sizes = signed_readout(tr, arm, rng)
+    frag = cluster_fragmentation(tr)                        # advisor Loss-2 diagnostic (real domains)
+    dw, dom_sizes = signed_readout(tr, arm, rng, fixed_sign)
     dw_cluster = {CLUSTER_NAME[c]: float(dw[np.array(CLUSTERS[c])].sum()) for c in range(N_CLUST)}
     csign = {k: int(np.sign(v)) for k, v in dw_cluster.items()}
     agree = {PAIR_NAME[p]: int(csign[CLUSTER_NAME[p[0]]] * csign[CLUSTER_NAME[p[1]]]) for p in PAIRS}
@@ -166,7 +185,9 @@ def one_run(run_id, mode, arm, gap_um, gap2_s, delay_s, order):
     pair_w = {PAIR_NAME[p]: float(W[np.ix_(np.array(CLUSTERS[p[0]]), np.array(CLUSTERS[p[1]]))].sum() * 2)
               for p in PAIRS}
     return dict(run_id=run_id, timestamp=datetime.now(timezone.utc).isoformat(),
-                mode=mode, arm=arm, order=order, lam_F=lam_F, gap_um=float(gap_um), gap2_s=float(gap2_s),
+                mode=mode, arm=arm, order=order, fixed_sign=bool(fixed_sign),
+                lam_F=lam_F, gap_um=float(gap_um), gap2_s=float(gap2_s),
+                cluster_frag=frag,
                 delay_s=float(delay_s), ignited=bool(peak_eta_per.max() > 0.0),
                 dw=[round(float(x), 3) for x in dw], dw_cluster={k: round(v, 3) for k, v in dw_cluster.items()},
                 cluster_sign=csign, agree=agree, n_domains=len(dom_sizes),
@@ -181,6 +202,8 @@ def main():
     ap.add_argument("--mode", choices=["pair1", "pair2"], required=True)
     ap.add_argument("--arm", choices=["full", "bindoff", "scramble", "lamshort"], required=True)
     ap.add_argument("--order", choices=["fwd", "rev"], default="fwd")
+    ap.add_argument("--fixed_sign", action="store_true",
+                    help="rectified collapse: every committed domain takes +1 (advisor Q1/Q2 test)")
     ap.add_argument("--gap_um", type=float, default=10.0)
     ap.add_argument("--gap2_s", type=float, default=0.0)
     ap.add_argument("--delay_s", type=float, default=20.0)
@@ -192,7 +215,7 @@ def main():
     for j in range(a.n):
         rid = f"{a.tag}_w{a.worker}r{j}"
         sys.stderr.write(f"[unitC {a.tag} w{a.worker}] draw {j+1}/{a.n} mode={a.mode} arm={a.arm}\n"); sys.stderr.flush()
-        rec = one_run(rid, a.mode, a.arm, a.gap_um, a.gap2_s, a.delay_s, a.order)
+        rec = one_run(rid, a.mode, a.arm, a.gap_um, a.gap2_s, a.delay_s, a.order, a.fixed_sign)
         with open(jsonl, "a") as f:
             f.write(json.dumps(rec) + "\n"); f.flush(); os.fsync(f.fileno())
         sys.stderr.write(f"[unitC {a.tag} w{a.worker}] done {rid} ignited={rec['ignited']} "

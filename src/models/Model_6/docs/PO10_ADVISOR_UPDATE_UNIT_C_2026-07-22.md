@@ -105,3 +105,21 @@ closed by the control ladder.
 
 Data: `results/po10_unitC/` (force-added). Harness/decoder: `sweep/po10_unitC_*.py`. Pre-reg + Amendment 1:
 `docs/PREREG_PO10_UNIT_C_WEIGHT_LEVEL_KEYSTONE.md`. Research log: `L·PO10-2`.
+
+---
+
+## ADDENDUM — post-review (2026-07-22), corrections accepted
+
+Thank you — all taken. Free re-scoring done immediately:
+- **"Robust" → "detected."** Bootstrap 95% CI on `full` = **[0.562, 0.896]** (lower bound below the null
+  p95 0.674; 85% above). Corrected in the record.
+- **Decoder characterized:** unbiased on pure noise (0.49); **ceiling (1.000) on a clean 2-signal readout**
+  — so 0.75 is **readout noise, not capacity**, confirming your read. `scramble = 0.000` is an LOO
+  anti-prediction on faint domain-size structure (not degeneracy); per-arm nulls are label-shuffles.
+- **Q1+Q2 accepted as one answer:** the sign is an unbiased-basis artifact; **rectified collapse via
+  dopamine/CaMKII** makes Δw directional, removes the sign-noise (raising decode), and gives dopamine
+  computational work — honest cost = multi-trial consolidation despite one-shot binding (= BTSP).
+- **Planned sequence** (compute not yet launched, pending budget): (1) fixed-sign arm — the decisive cheap
+  test of whether sign-noise is the limiter; (2) within-cluster fragmentation (modal-domain fraction);
+  (3) compressed inter-pair interval (η strobe-limited) + re-run Pilot A; (4) 6-cluster capacity scaling.
+  Harness instrumentation (save domain membership + η time-course, add a fixed-sign flag) is being prepared.
