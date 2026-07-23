@@ -182,3 +182,37 @@ class**, counterbalanced. `scramble`/`lamshort` at chance are already establishe
 if the primary contrast passes. Decoder unchanged (sign-invariant pairwise agreement, LOO-CV vs 2000-shuffle
 null); relabelled by pairing. Verdict rule unchanged: POSITIVE iff `full` clears null p95 while `bindoff`
 does not; NULL otherwise (reported honestly).
+
+---
+
+## RESULT — 2026-07-22 (scored against the registered verdict rule)
+
+**Verdict: POSITIVE (modest but robust).** Per the registered rule (POSITIVE iff `full` clears null p95
+while `bindoff` does not), counterbalanced, delay 20:
+
+| arm | n/cell | decode | null p95 | verdict |
+|---|---|---|---|---|
+| full | 6 | 0.750 | 0.708 | DECODES |
+| **full** | **12** | **0.767** | **0.674** | **DECODES (robust)** |
+| bindoff | 6 | 0.458 | 0.708 | chance |
+| scramble | 6 | 0.000 | 0.583 | chance |
+| lamshort | 6 | 0.500 | 0.708 | chance |
+
+- **Pilots A & B passed** before scoring (partition tracks pairing with hard zeros; compartment calcium
+  scalar matched 1.2%, only cross-synapse channel is the entanglement partition).
+- **Batch 1 (forward-order) returned the registered NULL** (`full` 0.667); diagnosed as early-pair decay
+  past the Werner floor; **Amendment 1 (counterbalance)** registered before re-scoring fixed it. The
+  decoder was NOT tuned post-hoc.
+- **`full` decodes; all three controls at chance** — every alternative explanation (independent collapse,
+  any-grouping, sub-Werner binding) closed.
+- **Robustness confirmed:** n=12/cell held the decode (0.767) with a tighter null (p95 0.674) → wider
+  margin; not a marginal fluke. (`bindoff` n=12 completing for symmetry; chance at n=6.)
+
+**Honest limits (as pre-registered):** modest effect (~0.77, not the predicted near-ceiling); the delay-5
+"strengthening" was a registered NULL (0.667 — does not sharpen at shorter readout, consistent with
+decay-driven self-cleaning); the Δw **sign is unresolved** (informative, not yet consistently useful);
+still the (A) common-cause reading (no non-classicality claimed). Does NOT establish behavioral one-shot
+learning and does NOT close the attribution gap.
+
+Data `results/po10_unitC/` (force-added); research log `L·PO10-2`; advisor writeup
+`PO10_ADVISOR_UPDATE_UNIT_C_2026-07-22.md`.
