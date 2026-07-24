@@ -187,7 +187,7 @@ does not; NULL otherwise (reported honestly).
 
 ## RESULT — 2026-07-22 (scored against the registered verdict rule)
 
-**Verdict: POSITIVE (modest but robust).** Per the registered rule (POSITIVE iff `full` clears null p95
+**Verdict: POSITIVE (modest, DETECTED — 'robust' downgraded post-review, see POST-REVIEW CORRECTION).** Per the registered rule (POSITIVE iff `full` clears null p95
 while `bindoff` does not), counterbalanced, delay 20:
 
 | arm | n/cell | decode | null p95 | verdict |

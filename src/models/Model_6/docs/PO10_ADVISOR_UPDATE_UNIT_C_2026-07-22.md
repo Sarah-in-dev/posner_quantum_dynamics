@@ -1,8 +1,8 @@
 # PO-10 Advisor Update — Unit C: the first WEIGHT-LEVEL result
 
 **2026-07-22 · for external review.** Follows `PO9_ADVISOR_PACKET_R3` (localization discharged) and the
-Unit C pre-registration + Amendment 1. Honest headline: **a modest but robust weight-level keystone with a
-clean control ladder.** The write-up is deliberately front-loaded with what did NOT work, because two of
+Unit C pre-registration + Amendment 1. Honest headline: **a modest, DETECTED (not robust) weight-level keystone with a
+clean control ladder.** (Verdict downgraded 'robust' → 'detected' post-review; see POST-REVIEW CORRECTION below.) The write-up is deliberately front-loaded with what did NOT work, because two of
 the three informative moves here were negative.
 
 ---
