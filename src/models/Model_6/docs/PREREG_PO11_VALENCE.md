@@ -141,3 +141,30 @@ reward-directed credit is riding abundance, not binding, and the valence bridge 
 - **Compute:** Unit-C-class. Partial correlation is data-hungrier than raw covariance (it estimates a
   conditioned matrix), so budget **n ≥ ~20 per (pairing × order)**, above Unit C's 12. Smoke-test ONE draw
   before any batch; concurrency ≤ 4; results force-added under `results/po11_valence/`.
+
+---
+
+## AMENDMENT 1 + REAL-DATA VALIDATION — 2026-07-24 (registered)
+
+**(1) The off-path readout's `reward` is the SIGN MODE, not a commit gate.** In Unit C's readout the
+commitment is the per-domain P_S coin; `--fixed_sign` only sets the collapse *sign* (+1 = reward-directed
+vs random ±1). There is no separate reward-gates-commitment knob to switch off. So **arm 5 is reframed**:
+not "reward-off → chance," but the **random-sign reference** (`fixed_sign=False` = Unit C's un-rewarded
+collapse) — predicted to ALSO recover the partition, establishing that the reward-directed (fixed) sign adds
+*directionality* without costing recoverability. The ladder that must go to chance stays bindoff / scramble / λ-short.
+
+**(2) The registered readout is validated on REAL physics data (no new physics), `po11_valence_score.py`:**
+
+| arm (existing Unit C data, RANDOM sign) | within-cond partial-corr | magnitude (leak ref) |
+|---|---|---|
+| `full` (n=48)     | **RECOVERS** sep +0.965, null-p 0.000 | recovers +0.688, p 0.000 |
+| `scramble` (n=24) | **chance** sep −0.215, null-p 0.994    | **LEAKS** +0.625, p 0.000 |
+| `bindoff` (n=48)  | **chance** sep +0.090, null-p 0.423    | chance +0.010, p 0.273 |
+
+Reproduces P2 on real data: within-condition partial correlation is **partition-specific and leak-immune**
+(recovers `full`, chance on `scramble`/`bindoff`) where magnitude **leaks** (recovers `scramble`). **P3 (leak
+reproduction) is discharged on existing data**; the scorer is validated on real physics output. This is the
+RANDOM-sign data (the arm-5 reference — recovery via shared sign); the **fixed-sign arms are now in physics**
+to close the valence-specific claim: that a directional (reward-fixed) sign is *still* recoverable via
+within-condition partial correlation (recovery via shared *commit*, which may be a weaker signal — the reason
+new physics is warranted rather than a re-score).
