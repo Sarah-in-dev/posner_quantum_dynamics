@@ -168,3 +168,38 @@ RANDOM-sign data (the arm-5 reference — recovery via shared sign); the **fixed
 to close the valence-specific claim: that a directional (reward-fixed) sign is *still* recoverable via
 within-condition partial correlation (recovery via shared *commit*, which may be a weaker signal — the reason
 new physics is warranted rather than a re-score).
+
+---
+
+## RESULT — 2026-07-26 (scored against the registered verdict rule)
+
+**Verdict: POSITIVE (load-bearing pair); two completeness items open.** Under a reward-fixed (directional)
+sign, the registered within-condition partial-correlation readout **recovers the partition and is leak-immune**,
+while the magnitude reference **leaks** — the registered contrast holds.
+
+| arm (fixed-sign) | within-cond partial-corr (REGISTERED) | magnitude (leak ref) |
+|---|---|---|
+| `full` (n=13/cell)     | sep +0.645, decode ✓✓, null-p **0.001** → **RECOVERS** | +0.692, p 0.000 (recovers) |
+| `scramble` (n=20/cell) | sep +0.192, null-p **1.000** → **chance** | +0.600, p 0.000 → **LEAKS** |
+
+- **The valence bridge holds at the weight level.** With a *directional* (reward-fixed) sign — the kind a
+  learning rule needs — partition-specific credit is still recoverable (`full` p=0.001) and leak-immune
+  (`scramble` at chance under partial correlation), where the naive magnitude readout leaks (recovers
+  `scramble`). Reward can direct the plasticity **and** the credit lands on the right groups, provably not via
+  the abundance / drive-timing confound. Recovery here is via shared *commit* (sign-agreement is dead under a
+  fixed sign — `agree` is trivially all-+1).
+- **Weaker than random sign, as predicted.** Partial-corr separation is 0.645 (fixed sign, commit-sharing) vs
+  0.965 (random sign, sign-sharing) — commit-sharing is the weaker channel, which is why n≥20 was registered.
+
+**Completeness items (open — result is DETECTED, not yet robust):**
+1. `full` is at **n=13/cell** (the first batch was killed by a Claude teardown at 13/20; the relaunch was
+   daemonized and survived). It detects decisively (p=0.001) but is under the registered n=20 — top up to 20
+   and report a bootstrap 95% CI before upgrading "detected" → "robust" (the PO-10 discipline).
+2. **bindoff / λ-short** not yet run under fixed sign (near-certain chance — both were at chance on the
+   random-sign data and the physics is identical). Run for a complete ladder.
+
+**Scope (unchanged):** a weight-READOUT result — reward can direct partition-specific credit, leak-immune.
+NOT a claim the closed loop learns; the **D20 durable-state breakage (Option B)** remains the maze blocker.
+
+Data `results/po10_unitC/*val_full*` (n=13) + `*val_scramble*` (n=20), fixed-sign, force-added; scorer
+`sweep/po11_valence_score.py`; synthetic gate `sweep/po11_valence_synthetic_check.py`.
