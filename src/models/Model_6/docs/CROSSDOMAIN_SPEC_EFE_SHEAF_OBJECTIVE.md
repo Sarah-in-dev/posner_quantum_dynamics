@@ -134,6 +134,57 @@ The identity is exact, not analogy:
 - **(b) Takahashi selected-inverse recursion** against a sparse L_F+D_obs so Σ_vv is cheap at scale. **An
   efficiency step, needed only at scale — a small prototype can dense-invert.** Do after (a).
 
+## 8. β_ℓ calibration — the closed form (delivers step (a), 2026-07-27)
+
+**Target.** When a probe/outcome reveals a node's true value s_v*, the posterior's standardized residual is
+z_v = (s_v* − μ_v)/√Σ_vv. Calibrated ⟺ E[z]=0 and **Var[z]=1** (coverage form: |z_v| ≤ Φ⁻¹((1+α)/2) at rate α).
+Var[z]>1 ⇒ overconfident (Σ too small); <1 ⇒ underconfident.
+
+**Per-layer closed form (the reliability fit).** Fit each layer against its own observation error. Over the
+calibration nodes layer ℓ observed, its claimed-precision-weighted mean squared error (its *reduced χ²*) is
+
+  **χ̄²_ℓ = (1/N_ℓ) Σ_{v: ℓ observes v} T_v^ℓ (s_v* − y_v^ℓ)²**
+
+and the unit-z-variance constraint gives, in closed form,
+
+  **β_ℓ = 1 / χ̄²_ℓ.**
+
+Read it directly: calibrated layer ⇒ χ̄²_ℓ≈1 ⇒ β_ℓ≈1; overconfident (errors exceed claimed precision) ⇒
+χ̄²_ℓ>1 ⇒ β_ℓ<1 (down-weight); underconfident ⇒ β_ℓ>1. The §1 reliability rescaling made exact — no optimization.
+
+**Robust / coverage variant** (heavy-tailed discordance = real drift): match the *median* of the per-node terms
+to the χ²₁ median 0.4549 — **β_ℓ = 0.4549 / median_v[ T_v^ℓ (s_v* − y_v^ℓ)² ]**. Consistent with the MAD scale
+already in w_e; use when outlier discordances would inflate the mean.
+
+**Online form (plugs into the Layer-F loop).** One EWMA scalar per layer; on each revealed outcome s_v*, for
+each layer ℓ that observed v:
+
+  χ̄²_ℓ ← (1−ρ) χ̄²_ℓ + ρ · T_v^ℓ (s_v* − y_v^ℓ)²,   β_ℓ ← 1 / χ̄²_ℓ.
+
+One scalar per layer, updated per outcome — no batch refit. ρ = the loop's forgetting rate.
+
+**Guards.**
+- Non-negativity automatic (β_ℓ = 1/χ̄²_ℓ > 0).
+- **Small N_ℓ:** shrink toward calibrated — χ̄²_ℓ ← (N_ℓ χ̄²_ℓ + κ)/(N_ℓ + κ) ⇒ β_ℓ→1 until a layer earns
+  otherwise (κ = pseudo-count).
+- **Won't-calibrate:** if χ̄²_ℓ stays large and unstable, set β_ℓ→0 (drop the layer) — the §1 rule.
+- **Scale anchor:** w_e and the stat-layer T both come from the BaselinePass MAD → one shared scale; anchor
+  β_stat there and calibrate the other three relative to it (resolves β-vs-L_F identifiability).
+
+**Exact fused refinement (when the per-layer fit leaves the *fused* z-variance off 1).** The per-layer form
+calibrates each layer in isolation; it does not see the fusion + L_F prior interacting. Close it by maximizing
+the held-out fused predictive log-density Σ_v log 𝒩(s_v*; μ_v, Σ_vv) over β≥0. Derivatives are closed-form
+(∂Λ/∂β_ℓ = T^ℓ):
+
+  **∂μ/∂β_ℓ = Σ T^ℓ (y^ℓ − μ),   ∂Σ_vv/∂β_ℓ = −[ Σ T^ℓ Σ ]_vv**,
+
+so a few Newton steps warm-started at β_ℓ = 1/χ̄²_ℓ converge fast (reuse the §3 selected-inverse for the Σ
+blocks). Use held-out / LOO nodes so the posterior does not grade its own homework.
+
+**Model-6 port.** Same fit; the "layers" are the readout arms. PO-11's leak-immunity is the guarantee that what
+gets calibrated is the *coupling precision* (partial correlation = precision off-diagonal), not the magnitudes —
+so the β_ℓ fit rescales honest precisions, not the abundance channel that leaks.
+
 ## Boundary
 Math/framing is owned here (this doc). The TALON side builds and grounds Q(s) — the four T_v^ℓ and the β_ℓ fit —
 against the real substrate, which is not visible from the posner repo. **We meet at §1.**
