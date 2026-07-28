@@ -67,6 +67,20 @@ lock in, `:98`/`:106`/`:167`). "Commitment buys durability, not amplitude."
   - **Step-1 attempt 1 was INCONCLUSIVE** (`scratchpad/step1_partition_structure.py`): fresh networks + single
     trials that never reached the goal → dimers ~0 → no bonds. **Redesign to guarantee engagement**: accumulate
     across trials (like the b_diag run), or force goal-reaching, or a controlled co-active drive.
+  - **Step-1 RESOLVED 2026-07-28 → STRUCTURED / FIXABLE** (research-log `STEP1`; prereg
+    `docs/PREREG_STEP1_PARTITION_STRUCTURE.md`; `sweep/step1_partition_structure_probe.py`;
+    `results/step1_partition/step1_result.json`). Redesign chosen = **controlled co-active drive** with a
+    **controlled engagement IC** (`E_invasion` clamped — the diagnosis of why attempt-1 got 0 dimers was the
+    η-gate, not goal-reaching: the live drive never crosses `invasion_threshold`, GAP-2). n=8 interleaved
+    C/G at matched distances; only co-activation TIMING varies (SYNC vs STAGGER); 5 seeds. **At matched
+    dimer count (800–1600), SYNC blobs (cpef 0.57–0.73, largest 1.0) while STAGGER excludes off-phase
+    synapses (cpef 0.000, largest 0.25–0.50)** — the partition tracks input timing, not just geometry.
+    STAGGER structure SWAMPS to a blob at **~2200 dimers** (cpef 0.000→0.667). So the partition IS
+    input-dependent (refutes the "complete graph regardless of input" fear) but only below the swamp
+    threshold → **Step 2 (P31/P32) is worth the compute, conditioned on keeping loop dimers < ~2200
+    (read-early/decay-clean) and driving temporally-separated feature activation.** LIMIT: controlled probe,
+    not the live nav loop; and Step-1 clears only the PREREQUISITE — it does NOT show quantumness (a classical
+    coincidence trace behaves identically; that is exactly what Step 2's isotope test is for).
 - **Step 2 (discrimination — the non-circular isotope test):** P31 vs P32 (`fraction_P31`, live in the loop via
   `make_network`/`run_spatial_discovery.py:148`) on **selective consolidation** = cross-trial persistence of
   goal-directed spine volume, NOT transient growth. Non-circular because the arms separate: calcium-growth
