@@ -203,3 +203,31 @@ NOT a claim the closed loop learns; the **D20 durable-state breakage (Option B)*
 
 Data `results/po10_unitC/*val_full*` (n=13) + `*val_scramble*` (n=20), fixed-sign, force-added; scorer
 `sweep/po11_valence_score.py`; synthetic gate `sweep/po11_valence_synthetic_check.py`.
+
+---
+
+## RESULT — COMPLETENESS (2026-07-27): both open items closed
+
+The completeness batch (full top-up to n=20 + bindoff + λ-short under fixed sign) completed and was scored:
+
+| arm (fixed-sign) | within-cond partial-corr (REGISTERED) | magnitude (leak ref) |
+|---|---|---|
+| `full` (n=20/cell)     | sep **+0.707**, null-p **0.000** → **RECOVERS** | +0.675, p 0.000 |
+| `bindoff` (n=12/cell)  | sep +0.373, null-p **0.285** → **chance** | +1.000, p 0.000 → **LEAKS** |
+| `scramble` (n=20/cell) | sep +0.192, null-p **1.000** → **chance** | +0.600, p 0.000 → **LEAKS** |
+| `λ-short` (n=12/cell)  | sep +0.140, null-p **0.929** → **chance** | +0.531, p 0.000 → **LEAKS** |
+
+**Both open items closed.** (1) `full` at the registered **n=20** recovers decisively (sep +0.707, null-p 0.000),
+*stronger* than the n=13 partial (+0.645). (2) **Complete control ladder** — bindoff / scramble / λ-short **all at
+chance** under the registered readout.
+
+**The leak contrast is now maximal:** magnitude **recovers every arm** (all p=0.000; bindoff at +1.000) — it reads
+drive-timing abundance regardless of arm — while within-condition partial correlation recovers **only `full`**.
+Leak-immunity is the entire difference between the two readouts.
+
+**Verdict: POSITIVE — complete ladder, n=20.** Under a reward-fixed (directional) sign, partition-specific credit
+is recoverable and leak-immune, full ladder clean. The "detected (n=13, partial)" caveat is discharged; null-p=0.000
+is a decisive detection (a formal bootstrap 95% CI would stamp "robust" — not computed here). **Scope unchanged:** a
+weight-READOUT result, NOT a claim the closed loop learns — that is the B / loop-engagement thread.
+
+Data `results/po10_unitC/*val_{full,bindoff,lamshort}*` (fixed-sign, force-added); scorer `sweep/po11_valence_score.py`.
