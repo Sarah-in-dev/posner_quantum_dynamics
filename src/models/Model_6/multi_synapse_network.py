@@ -1379,9 +1379,9 @@ class MultiSynapseNetwork:
         # was never observed and the one-shot measurement latch could never re-arm.
         # That is what made the latch effectively once-per-experiment (D19).
         if self.use_correlated_sampling:
-            self._evaluate_coordinated_gate(stimulus)
+            self._evaluate_coordinated_gate(stimulus, dt)
         else:
-            self._evaluate_independent_gate(stimulus)
+            self._evaluate_independent_gate(stimulus, dt)
 
         if stimulus.get('reward', False):
             # Propagate synapse-level commitment to network flag
@@ -1700,10 +1700,10 @@ class MultiSynapseNetwork:
             coupling_weights=getattr(self, 'coupling_weights', None))
         self._network_entanglement = ent_metrics
         
-        # === COORDINATED THREE-FACTOR GATE ===
-        # Unconditional — the gate checks `reward` itself, and needs to SEE the
-        # non-reward steps in order to re-arm its one-shot latch (D19).
-        self._evaluate_coordinated_gate(stimulus)
+        # === COORDINATED COMMIT GATE ===
+        # Unconditional — the gate tests the spin-selective binding trigger itself (F2), and needs
+        # to SEE every step to re-arm its one-shot latch when the bindable pool is spent (D19).
+        self._evaluate_coordinated_gate(stimulus, dt)
         
         # Build network state for history and return
         synapse_states = []
@@ -1749,12 +1749,38 @@ class MultiSynapseNetwork:
         k = self.HILL_K_HALF
         return float(count ** n / (k ** n + count ** n))
 
-    def _evaluate_coordinated_gate(self, stimulus: dict):
-        """
-        Evaluate three-factor gate with QUANTUM MEASUREMENT.
+    def _binding_measurement_fires(self, dt: float) -> bool:
+        """F2 (Design B): is the measurement TRIGGERED this step by a spin-selective binding-melt?
 
-        Physics: When reward arrives, each connected component of the
-        entanglement bond graph is measured independently.
+        The projective measurement is a pair of spin-correlated Posners/dimers that BIND and then
+        MELT (Fisher 2015, arXiv 1508.05929) — NOT a reward signal. Quantum Dynamical Selection
+        (Fisher & Radzihovsky 2018, PNAS E4551) makes the total spin-0 (SINGLET) the reactive
+        channel, so the bind-melt rate rides on the singlet projection P_S the model already
+        carries. Each connected component binds-and-melts with probability
+        `posner_binding.p_bind_melt(P_S, P_S, n_local, dt)`; returns True if ANY component fires.
+        Carries NO reward/dopamine term (the F2 decoupling). Assumes collect_dimers just ran.
+        """
+        from posner_binding import p_bind_melt
+        tracker = self.entanglement_tracker
+        clusters = tracker._find_all_clusters()
+        if not clusters:
+            return False
+        id_to_dimer = {d['global_id']: d for d in tracker.all_dimers}
+        for cluster_ids in clusters:
+            ps = [id_to_dimer[g]['P_S'] for g in cluster_ids if g in id_to_dimer]
+            if not ps:
+                continue
+            cluster_ps = float(np.mean(ps))
+            if np.random.random() < p_bind_melt(cluster_ps, cluster_ps, len(ps), dt):
+                return True
+        return False
+
+    def _evaluate_coordinated_gate(self, stimulus: dict, dt: float = 1e-3):
+        """
+        Evaluate the commitment gate with QUANTUM MEASUREMENT.
+
+        Physics: When a spin-selective binding-melt event fires (F2 — NOT when reward arrives),
+        each connected component of the entanglement bond graph is measured independently.
         - Dimers within a component collapse TOGETHER (perfect correlation)
         - Different components get independent coin flips
         - Per-synapse committed_count = number of dimers that collapsed to singlet
@@ -1768,29 +1794,27 @@ class MultiSynapseNetwork:
           updated. Here the gate is a bare `count > 0`: a SINGLE committed dimer opens
           it, and `count` grades nothing.
 
-        The gate has three factors:
+        F2 (Design B): the collapse is TRIGGERED by the spin-selective binding-melt event, and
+        reward/dopamine is DECOUPLED from the measurement (it survives only as a SEPARATE learning
+        signal via apply_reward_correlated / DDSC). The commit gate factors are now:
         1. Quantum: committed_count > 0 (at least some committed dimers)
-        2. Dopamine: reward signal present (classical)
-        3. Calcium: postsynaptic activity (classical)
+        2. Calcium: postsynaptic activity (classical)
         """
-        dopamine_present = stimulus.get('reward', False)
-        if not dopamine_present:
-            # Reward episode over — RE-ARM. The latch below means "measure once per
-            # reward episode", NOT once per network lifetime. It was never re-armed,
-            # so across a multi-trial run the measurement fired on trial 0 and every
-            # later reward returned at the latch (research log D19: observed 1 call in
-            # trial 0, 0 in trials 1-2, while spine volume kept climbing off a stale
-            # gate flag). Re-arming on the falling edge fixes this for every driver,
-            # including ones that never think to reset it.
+        # Refresh the dimer registry, then test the spin-selective binding trigger (F2).
+        self.entanglement_tracker.collect_dimers(self.synapses, self.positions)
+        binding_fires = self._binding_measurement_fires(dt)
+        if not binding_fires:
+            # No coherent cluster bound this step — RE-ARM. The latch below means "measure once
+            # per binding episode": once a coherent singlet cluster exists it binds-melts (the
+            # measurement); when the bindable pool is spent/decohered (no cluster fires) we re-arm
+            # so the NEXT coherent engagement measures again. This is the physical replacement for
+            # the old reward falling-edge re-arm (research log D19), driven by the substrate itself.
             self._coordinated_measurement_performed = False
             return
 
         if self._coordinated_measurement_performed:
             return
         self._coordinated_measurement_performed = True
-
-        # Ensure dimer registry is current
-        self.entanglement_tracker.collect_dimers(self.synapses, self.positions)
 
         # === QUANTUM MEASUREMENT (per connected component) ===
         committed_counts = self.entanglement_tracker.perform_quantum_measurement(
@@ -1818,10 +1842,9 @@ class MultiSynapseNetwork:
             calcium_uM = getattr(syn, '_peak_calcium_uM', 0.0)
             calcium_elevated = calcium_uM > 0.5  # µM threshold
 
-            # Three-factor AND gate
+            # Commit gate (F2: binding event already fired as the trigger; reward is decoupled).
             gate_open = (
                 count > 0 and          # Quantum: at least some committed dimers
-                dopamine_present and    # Reward signal
                 calcium_elevated        # Postsynaptic activity
             )
 
@@ -1915,7 +1938,7 @@ class MultiSynapseNetwork:
                 tracker._release_cross_spins(bond)   # PO-7 U11: hand the nuclei back
     
     
-    def _evaluate_independent_gate(self, stimulus: dict):
+    def _evaluate_independent_gate(self, stimulus: dict, dt: float = 1e-3):
         """
         Control condition: Measure all dimers INDEPENDENTLY.
 
@@ -1933,23 +1956,21 @@ class MultiSynapseNetwork:
         - Coordinated: Connected components collapse together (correlation = 1)
         - Independent: All dimers collapse independently (correlation = 0)
         """
-        dopamine_present = stimulus.get('reward', False)
-        if not dopamine_present:
-            # Re-arm — see _evaluate_coordinated_gate. SEPARATE flag: this gate is the
-            # CONTROL condition, and it previously shared `_network_measurement_performed`
-            # with the coordinated gate, so whichever ran first locked the other out for
-            # the network's lifetime. That made the coordinated-vs-independent comparison
-            # — the control for whether the correlated partition matters at all — invalid
-            # by construction (research log D19).
+        # F2 (Design B): the control is triggered by the SAME spin-selective binding-melt event
+        # as the coordinated gate (reward decoupled) — only the measurement differs (independent
+        # vs joint), which is the point of the control. SEPARATE latch flag: this gate previously
+        # shared `_network_measurement_performed` with the coordinated gate, so whichever ran first
+        # locked the other out for the network's lifetime, invalidating the coordinated-vs-
+        # independent comparison by construction (research log D19).
+        self.entanglement_tracker.collect_dimers(self.synapses, self.positions)
+        binding_fires = self._binding_measurement_fires(dt)
+        if not binding_fires:
             self._independent_measurement_performed = False
             return
 
         if self._independent_measurement_performed:
             return
         self._independent_measurement_performed = True
-
-        # Ensure dimer registry is current
-        self.entanglement_tracker.collect_dimers(self.synapses, self.positions)
 
         # === INDEPENDENT MEASUREMENT ===
         # All dimers collapse independently (bonds ignored)
@@ -1974,10 +1995,9 @@ class MultiSynapseNetwork:
             calcium_uM = getattr(syn, '_peak_calcium_uM', 0.0)
             calcium_elevated = calcium_uM > 0.5
 
-            # Three-factor AND gate
+            # Commit gate (F2: binding event already fired as the trigger; reward is decoupled).
             gate_open = (
                 count > 0 and          # At least some committed dimers
-                dopamine_present and    # Reward signal
                 calcium_elevated        # Postsynaptic activity
             )
 

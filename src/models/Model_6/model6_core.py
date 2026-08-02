@@ -622,17 +622,24 @@ class Model6QuantumSynapse:
             # Q1 field modulates measurement fidelity (not a binary threshold).
             
             calcium_threshold_uM = 0.5
-            dopamine_read = self._dopamine_above_read_threshold()
             calcium_elevated = (calcium_uM > calcium_threshold_uM)
+            # F2 (Design B): the measurement is TRIGGERED by the spin-selective binding-melt event
+            # (Fisher 2015; QDS Fisher & Radzihovsky 2018 — singlet is the reactive channel), NOT by
+            # dopamine. The single-synapse dimer cloud is one coherent cluster; it binds-and-melts
+            # with posner_binding.p_bind_melt(mean_P_S, mean_P_S, n_dimers, dt). Reward is decoupled
+            # (it survives only as the separate learning signal). `dopamine.step` still runs upstream.
+            from posner_binding import p_bind_melt
+            binding_fires = (n_dimers > 0 and
+                             np.random.random() < p_bind_melt(mean_P_S, mean_P_S, n_dimers, dt))
 
             # Store diagnostics (always updated)
             self._current_eligibility = eligibility
             self._mean_singlet_prob = mean_P_S
             self._n_entangled_dimers = n_entangled
 
-            # Measurement happens ONCE when dopamine first arrives with calcium
-            # After measurement, quantum state is collapsed — no re-roll
-            if (dopamine_read and calcium_elevated
+            # Measurement happens ONCE when a coherent cluster first binds-melts with calcium
+            # present. After measurement, quantum state is collapsed — no re-roll.
+            if (binding_fires and calcium_elevated
                     and not self._camkii_committed
                     and not getattr(self, '_network_controlled', False)
                     and not self._measurement_performed):
