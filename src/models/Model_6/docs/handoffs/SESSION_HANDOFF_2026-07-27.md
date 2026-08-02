@@ -86,7 +86,24 @@ lock in, `:98`/`:106`/`:167`). "Commitment buys durability, not amplitude."
   goal-directed spine volume, NOT transient growth. Non-circular because the arms separate: calcium-growth
   survives P32 by construction; only partition-coordinated consolidation is at stake. Classical predicts
   P32≈P31; partition-driven predicts P31≫P32 on *selective* consolidation.
-- **Step 3 (payoff):** wire the PO-11 valence into the **consolidation arm** (which spines lock in together).
+- **Step 2 RESULT 2026-07-30 → leak-immune selective consolidation NOT demonstrated (real downstream washout)**
+  (research-log `STEP2`; prereg `docs/PREREG_STEP2_SELECTIVE_CONSOLIDATION.md`;
+  `sweep/step2_selective_consolidation_probe.py`; `results/step2_consolidation/` 48 draws). Positive control
+  held (P31 structured {AB}|{CD} + 6.9/8 commit; P32 killed + 2.1/8). But the registered leak-immune readout is
+  at CHANCE for P31 (sep +0.019, null-p 0.725); only the abundance LEAK separates P31/P32. Collapse-timing check
+  (`scratchpad/step2_collapse_timing.py`) FALSIFIED the "burst blobbed the partition" guess: the measurement fires
+  at reward step 0 on the CLEAN {AB}|{CD} partition and it stays structured through the burst (reward-phase η=0 →
+  no new cross-bonds). So the partition is measured correctly; the credit is lost DOWNSTREAM — commitment is
+  calcium-dominated (~7/8 fire regardless of the per-component coin), so durable consolidation tracks abundance,
+  not the partition. Dimer burst root-caused too: `plateau_potential`→−20 mV (correct 2026-07-18 physics, not a bug).
+- **Step 3 (NOW THE CONFIRMED NEXT BUILD — the payoff, precisely located by Step 2):** wire the PO-11 valence into
+  the **consolidation arm** so the (correctly-measured) partition's per-component credit actually gates *which*
+  spines durably lock in — i.e. close the measurement→commitment coupling that calcium currently overwhelms.
+  **DISCIPLINE FLAG:** this is where tuning-to-result lurks (`quantum-computation-and-attribution` §6.1) — any
+  coupling must be principled/literature-grounded (the candidate is the correlated calcium-return from
+  per-component dissolution, which EXISTS but is drowned by baseline calcium), NOT manufactured to force P31≫P32.
+  The honest alternative outcome — that the model's durable consolidation is genuinely calcium-dominated and the
+  partition does not drive learning — must remain on the table.
 
 **GOTCHA — the loop is compute-hostile:** the blob is the O(n²) entanglement-tracker explosion. The b_diag run
 (20 trials, 15 features) ran **8h+ and never finished**. Step 1's sparsification is a *prerequisite* for Step 2's
