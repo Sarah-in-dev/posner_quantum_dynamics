@@ -294,7 +294,8 @@ class Model6QuantumSynapse:
         
         # CHANGED: Use QuantumCoherenceSystem instead of PosnerSystem
         self.quantum = QuantumCoherenceSystem(
-            self.grid_shape, self.params.quantum, isotope_P31_fraction=self.params.environment.fraction_P31
+            self.grid_shape, self.params.quantum, isotope_P31_fraction=self.params.environment.fraction_P31,
+            dopant=getattr(self.params.environment, 'dopant', None)
         )
         logger.info("Quantum coherence system initialized")
         

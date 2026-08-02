@@ -391,18 +391,27 @@ class DimerParticleSystem:
         T_singlet_P31 = getattr(self.params.quantum, 'T_singlet_dimer', 216.0)
         T_singlet_P32 = getattr(self.params.quantum, 'T_singlet_dimer_P32', 0.4)
 
-        # Get isotope fraction from params
-        fraction_P31 = getattr(self.params.environment, 'fraction_P31', 1.0)
-        
+        # Base singlet lifetime — constant across dimers, computed ONCE.
+        # EMERGENT isotope lever (F1, docs/PREREG_F1_EMERGENT_ISOTOPE_LEVER.md): if a Li dopant is set,
+        # DERIVE T2(³¹P) from scalar relaxation of the 2nd kind (nuclear_relaxation.T2_observed) — ³¹P stays
+        # the qubit, Li is a Ca-site dopant. dopant=None is BIT-IDENTICAL to fraction_P31=1.0 (undoped =
+        # T_intrinsic). The fraction_P31/P32 blend is retained-but-DEPRECATED (circular; see research-log ISO-1).
+        dopant = getattr(self.params.environment, 'dopant', None)
+        if dopant is not None:
+            from nuclear_relaxation import T2_observed
+            T_singlet_base = T2_observed(dopant, t_intrinsic=T_singlet_P31)
+        else:
+            fraction_P31 = getattr(self.params.environment, 'fraction_P31', 1.0)
+            T_singlet_base = fraction_P31 * T_singlet_P31 + (1 - fraction_P31) * T_singlet_P32
+
         for dimer in self.dimers:
             grid_pos = self._position_to_grid(dimer.position)
             j_external = j_coupling_field[grid_pos]
             dimer.local_j_coupling = j_external
-            
+
             # === SINGLET PROBABILITY DECAY ===
-            # Isotope-weighted singlet lifetime
-            T_singlet_base = fraction_P31 * T_singlet_P31 + (1 - fraction_P31) * T_singlet_P32
-            
+            # T_singlet_base precomputed above (isotope-dependent, constant across dimers)
+
             # J-coupling spread determines decay rate
             j_spread = np.std(dimer.j_couplings_intra)
             j_mean = np.abs(np.mean(dimer.j_couplings_intra))

@@ -945,9 +945,14 @@ class EnvironmentalParameters:
     # EXPERIMENTAL CONTROL VARIABLE - Key thesis manipulation!
     # Natural abundance: 100% ³¹P
     # Experimental: Can substitute ³²P or ³³P
-    fraction_P31: float = 1.0  # Default (natural)
-    fraction_P32: float = 0.0  # Experimental (radioactive)
-    fraction_P33: float = 0.0  # Experimental (stable, rare)
+    fraction_P31: float = 1.0  # Default (natural). DEPRECATED as the isotope lever — the P31/P32 swap
+    fraction_P32: float = 0.0  # is CIRCULAR (hardcoded T_singlet); see research-log ISO-1. Kept for
+    fraction_P33: float = 0.0  # backward-compat with legacy experiments only.
+    # EMERGENT isotope lever (F1, PREREG_F1): the real, experimentally-grounded knob. ³¹P stays the qubit;
+    # a lithium isotope doped into the Ca site DERIVES ³¹P's coherence via scalar relaxation (⁷Li near-
+    # resonant → ~14 s; ⁶Li far → ~216 s). dopant ∈ {None, 'Li6', 'Li7'}; None = undoped (bit-identical to
+    # fraction_P31=1.0). Consumed in dimer_particles.py / quantum_coherence.py via nuclear_relaxation.T2_observed.
+    dopant: Optional[str] = None
     
     # Calcium isotopes (natural abundance)
     fraction_Ca40: float = 0.97  # ⁴⁰Ca most common

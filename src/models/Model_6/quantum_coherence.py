@@ -48,12 +48,15 @@ class QuantumCoherenceSystem:
     """
     
     def __init__(self, grid_shape: Tuple[int, int], params: QuantumParameters,  # FIX TYPE
-                isotope_P31_fraction: float = 1.0):
+                isotope_P31_fraction: float = 1.0, dopant: str = None):
         self.grid_shape = grid_shape
         self.params = params  # params is already QuantumParameters
-    
+
         # Isotope composition (EXPERIMENTAL VARIABLE)
         self.P31_fraction = isotope_P31_fraction
+        # EMERGENT isotope lever (F1): Li dopant (None|'Li6'|'Li7') → derived T2(³¹P). Takes precedence
+        # over P31_fraction when set. dopant=None reproduces the old P31_fraction behaviour.
+        self.dopant = dopant
     
         # Store NEW emergent baseline parameters
         self.T2_single_P31 = self.params.T2_single_P31  # NEW
@@ -112,9 +115,17 @@ class QuantumCoherenceSystem:
         T_singlet_P31 = getattr(self.params, 'T_singlet_dimer', 216.0)
         T_singlet_P32 = getattr(self.params, 'T_singlet_dimer_P32', 0.4)
 
-        P32_fraction = 1.0 - self.P31_fraction
-        T_singlet_base = (self.P31_fraction * T_singlet_P31 + 
-                        P32_fraction * T_singlet_P32)
+        # EMERGENT isotope lever (F1, docs/PREREG_F1_EMERGENT_ISOTOPE_LEVER.md): Li dopant → DERIVE T2(³¹P)
+        # via scalar relaxation (nuclear_relaxation.T2_observed). dopant=None is BIT-IDENTICAL to the old
+        # P31_fraction=1.0 blend. fraction_P31/P32 retained-but-DEPRECATED (circular; ISO-1).
+        dopant = getattr(self, 'dopant', None)
+        if dopant is not None:
+            from nuclear_relaxation import T2_observed
+            T_singlet_base = T2_observed(dopant, t_intrinsic=T_singlet_P31)
+        else:
+            P32_fraction = 1.0 - self.P31_fraction
+            T_singlet_base = (self.P31_fraction * T_singlet_P31 +
+                            P32_fraction * T_singlet_P32)
         
         # === MODULATING FACTORS ===
         
