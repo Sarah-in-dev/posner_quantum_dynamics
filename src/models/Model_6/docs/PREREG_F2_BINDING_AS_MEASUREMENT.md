@@ -88,6 +88,31 @@ each Model-6 validation draw is ~47 min of compute and wiring the wrong design i
 - **C3 shuffle control:** randomize which dimers carry high P_S — selectivity must vanish (guards against a
   magnitude/abundance leak, per STEP2's leak diagnosis).
 
+## SCORING — pinned BEFORE the control-ladder run (driver `sweep/f2_control_ladder.py`)
+Locked so the overnight results are graded by pre-committed criteria, not chosen post-hoc. Per-draw
+record carries `measured` / `measured_at_s` / `partition_at_measure` / `n_committed` / `partition_edges`
+/ `dw_cluster`. Verdicts (draws=8/cell, thread-capped):
+- **C0 (undoped, reward-present):** PASS = pipeline reproduces STEP2 — measurement fires, partition
+  structured ({AB}|{CD} = edges `[]` across clusters, i.e. no cross-cluster quotient edge), commitment
+  present. This is the "the harness still works" control, not a result.
+- **C1 (undoped, reward-ABSENT) — the load-bearing one:** PASS = `measured` True on ≥ 7/8 draws with
+  reward never present. Fisher-decoupling demonstrated at scale. (Smoke + a live 15-step run already
+  show this; the ladder confirms it under the full write/consolidation dynamics.)
+- **C2 (Li6 vs Li7, matched drive):** the isotope must move the MEASUREMENT via the coherence window.
+  Registered contrast = the ⁷Li vs ⁶Li difference in `measured_at_s` (later/absent under ⁷Li as P_S floors
+  faster) and in durable `dw_cluster`. PASS = ⁷Li shifts measurement later or reduces durable consolidation
+  vs ⁶Li at matched drive, null-p < 0.05 by the `po11_valence_score` permutation null. HONEST null allowed:
+  if the gentle ⁷Li kill (14 s) does not separate within a 3 s write, that is the F1-follow-on finding
+  (the contrast lives in delayed/cross-trial readout) — reported, not engineered.
+- **C3 (shuffle):** PASS = selectivity present in C0/C2 VANISHES under shuffle (separation ~0, null-p > 0.5) —
+  guards against the magnitude/abundance leak STEP2 flagged.
+- **acceptance-4 (partition clean at measurement):** across C0–C3, `partition_at_measure` must be the clean
+  cluster-quotient (no cross-cluster edge) on ≥ 7/8 draws — the F2 trigger fires earlier (write phase) than
+  the old reward-onset, so this is the check that the earlier fire still reads a structured partition.
+- **acceptance-3 (undoped fingerprint):** the trigger move changes WHEN the measurement fires, so bit-identity
+  is not expected; PASS = the undoped C0 commitment distribution is explained by the trigger move alone (no
+  silent physics change) — compared against the STEP2 P31 baseline (mean committed ~6.9/8).
+
 ## Verdict on the wiring itself
 PASS iff: acceptance-1 stays PASS; reward-absent still measures (acceptance-2); undoped fingerprint
 bit-identical or trigger-move-explained (acceptance-3); partition stays clean (acceptance-4); the model
