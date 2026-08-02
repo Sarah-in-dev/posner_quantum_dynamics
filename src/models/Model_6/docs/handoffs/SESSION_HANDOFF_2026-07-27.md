@@ -96,7 +96,15 @@ lock in, `:98`/`:106`/`:167`). "Commitment buys durability, not amplitude."
   no new cross-bonds). So the partition is measured correctly; the credit is lost DOWNSTREAM — commitment is
   calcium-dominated (~7/8 fire regardless of the per-component coin), so durable consolidation tracks abundance,
   not the partition. Dimer burst root-caused too: `plateau_potential`→−20 mV (correct 2026-07-18 physics, not a bug).
-- **Step 3 (NOW THE CONFIRMED NEXT BUILD — the payoff, precisely located by Step 2):** wire the PO-11 valence into
+- **REORDER 2026-07-30 (research-log `ISO-1`) — Step 3 is NO LONGER next; two FOUNDATIONS come first.** The
+  isotope/dopamine realism audit found the attribution lever and the measurement trigger are BOTH non-physical
+  as implemented: P31/P32 is a hardcoded `T_singlet` swap (216↔0.4, magnitude ASSUMED), ³²P is the wrong+radioactive
+  lever (real one = ⁶Li/⁷Li or Ca/O), and the collapse fires on a raw `reward` boolean (dopamine has zero role in
+  Fisher's Ca/glutamate readout). Step 3's "P31 recovers/P32 chance" verdict is meaningless while the isotope axis
+  is circular. **New order:** (F1) ground the isotope lever = ⁶Li/⁷Li dimer doping with T₂ DERIVED from ⁷Li–³¹P
+  scalar relaxation (Agarwal 2210.14812; arXiv 2310.13484) — task #8; (F2) ground the measurement trigger =
+  Ca/binding event, dopamine decoupled to a separate three-factor signal — task #9; THEN (F3) Step 3 valence.
+- **Step 3 (deferred behind F1/F2 — the payoff, precisely located by Step 2):** wire the PO-11 valence into
   the **consolidation arm** so the (correctly-measured) partition's per-component credit actually gates *which*
   spines durably lock in — i.e. close the measurement→commitment coupling that calcium currently overwhelms.
   **DISCIPLINE FLAG:** this is where tuning-to-result lurks (`quantum-computation-and-attribution` §6.1) — any

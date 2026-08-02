@@ -1,5 +1,13 @@
 # PRE-REGISTRATION — Step-2: P31/P32 selective-consolidation discrimination
 
+> **CORRECTION 2026-07-30 (research-log `ISO-1`):** this document's framing of P31/P32 as "the
+> non-circular isotope test" is **WRONG** and is retracted. The isotope difference is implemented as a
+> hardcoded coherence-time swap (`T_singlet` 216 s ↔ 0.4 s), so P32's decoherence is an *input, not a
+> derivation* — the "P32 kills it" arm is **circular**. ³²P is also the wrong lever (the real one is
+> ⁶Li/⁷Li or Ca/O) and physically un-doable (radioactive). **What survives:** Step 2's *core negative*
+> (leak-immune credit lost downstream) rests on the **P31 arm + collapse-timing** and is isotope-independent,
+> so it stands. The isotope AXIS of this prereg does not. See `ISO-1` and tasks #8/#9.
+
 **Written 2026-07-30, BEFORE the scored sweep.** Thread #2, Step 2: the non-circular isotope test.
 Step 1 (STRUCTURED/FIXABLE) established the partition CAN carry input structure; Step 2 asks whether
 that partition **drives selective, durable consolidation** — and whether swapping P31→P32 (which kills
