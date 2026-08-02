@@ -160,6 +160,14 @@ if __name__ == '__main__':
                           f"dw={ {k2:round(v,4) for k2,v in r['dw_cluster'].items()} }", flush=True)
         print(f"[{time.time()-t0:.0f}s] GROUP {mode}/{order} DONE", flush=True)
     else:
+        import time; t0=time.time()
         frac = 1.0 if a.arm=="P31" else 0.0
-        for _ in range(a.n):
-            print(json.dumps(one_draw(frac, a.mode or "pair1", a.order)), flush=True)
+        mode, order = a.mode or "pair1", a.order
+        fp = os.path.join(a.out, f"{a.arm}_{mode}_{order}.jsonl") if a.out else None
+        f = open(fp, "a", buffering=1) if fp else None   # APPEND (resume: don't clobber existing draws)
+        for k in range(a.n):
+            r = one_draw(frac, mode, order); line = json.dumps(r)
+            if f: f.write(line+"\n")
+            print(f"[{time.time()-t0:.0f}s] {a.arm} {mode} {order} #{k} edges={r['partition_edges']} "
+                  f"commit={r['n_committed']} dimers={r['peak_dimers']} dw={ {k2:round(v,4) for k2,v in r['dw_cluster'].items()} }", flush=True)
+        if f: f.close()
