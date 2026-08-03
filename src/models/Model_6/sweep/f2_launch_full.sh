@@ -1,43 +1,68 @@
 #!/bin/bash
-# Parallel daemonized launcher for the F2 FULL control-ladder run (consolidation / washout question).
-# Each cell = ONE thread-capped, daemonized process writing its OWN resume-append jsonl, so a crash/
-# reboot resumes (re-run this script; append mode continues each cell from its existing draws).
+# PHASED, self-orchestrating launcher for the F2 FULL control-ladder run.
+# Run it daemonized so it survives teardown and manages both phases itself:
+#   nohup setsid bash sweep/f2_launch_full.sh 6 results/f2_full >/dev/null 2>&1 &
 #
-# 10 cells (5 conds × 2 modes) → 10 cores. Safe on a 14-core Mac (4 free). The thread caps make each
-# worker exactly 1 core — the 2026-07-30 reboot was UNCAPPED workers fanning BLAS across all cores.
-#
-# Usage:  bash sweep/f2_launch_full.sh [DRAWS=6] [OUTDIR=results/f2_full]
-# Watch:  for f in results/f2_full/*.jsonl; do echo "$(wc -l <"$f") $(basename "$f")"; done
-set -euo pipefail
+# Safety design (answers "will this overwhelm the machine?"):
+#   - Every worker is thread-capped (OMP/OPENBLAS/MKL/VECLIB/NUMEXPR = 1) → exactly 1 core each
+#     (empirically 98-100% CPU/proc). The 2026-07-30 reboot was UNCAPPED workers fanning BLAS
+#     across all cores; that cause is eliminated.
+#   - PHASED so peak concurrency is bounded and the long overnight tail is light:
+#       Phase 1: 8 reward-absent cells (~4 min/draw) in parallel → 8 cores, ~24 min at DRAWS=6.
+#       Phase 2: 2 reward-present C0 cells (~48 min/draw, plateau-heavy) → only 2 cores, ~5 h.
+#     Never more than 8 cores / 8 processes at once; the 5-hour tail is just 2 processes.
+#   - Resume-append per cell: re-running continues each cell from its existing draws.
+set -uo pipefail
 cd "$(dirname "$0")/.."
 DRAWS="${1:-6}"
 OUT="${2:-results/f2_full}"
 mkdir -p "$OUT"
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1
+LOG="$OUT/orchestrator.log"; : >"$LOG"
+say(){ echo "[$(date +%H:%M:%S)] $*" >>"$LOG"; }
 
-# guard: refuse to overload — need <= (cores-2) free after the launch
 CORES=$(sysctl -n hw.ncpu 2>/dev/null || echo 8)
-BUSY=$(ps aux | grep -c '[f]2_control_ladder' || true)
-WANT=10
-if (( BUSY + WANT > CORES - 2 )); then
-  echo "REFUSING: ${BUSY} f2 workers already running + ${WANT} new > ${CORES}-2 cores. Wait or reduce." >&2
-  exit 1
-fi
 
-launch() {  # cond iso mode
+launch(){ # cond iso mode  → nohup child (NOT self-daemonized; this orchestrator is the parent)
   local cond="$1" iso="$2" mode="$3"
   local args=(--cond "$cond" --mode "$mode" --n "$DRAWS" --out "$OUT")
   [ "$iso" != "-" ] && args+=(--iso "$iso")
-  nohup python3 sweep/f2_control_ladder.py "${args[@]}" --daemonize "$OUT/${cond}_${iso}_${mode}.log" >/dev/null 2>&1 &
+  nohup python3 sweep/f2_control_ladder.py "${args[@]}" >>"$OUT/${cond}_${iso}_${mode}.log" 2>&1 &
 }
 
+wait_phase(){ # wait until every listed jsonl has >= DRAWS lines
+  local -n files=$1
+  while true; do
+    local done=1
+    for f in "${files[@]}"; do
+      local c; c=$(wc -l <"$OUT/$f" 2>/dev/null || echo 0)
+      (( c < DRAWS )) && { done=0; break; }
+    done
+    (( done )) && return 0
+    sleep 30
+  done
+}
+
+# guard
+BUSY=$(ps aux | grep -c '[f]2_control_ladder' || true)
+if (( BUSY > 0 )); then say "REFUSING: $BUSY f2 workers already running."; exit 1; fi
+
+# --- Phase 1: 8 reward-absent cells (8 cores, ~24 min) ---
+say "PHASE 1 (8 reward-absent cells, DRAWS=$DRAWS) on ${CORES}-core host"
+P1=()
 for mode in pair1 pair2; do
-  launch C1  -   "$mode"   # undoped, reward-absent  — does consolidation form WITHOUT reward?
-  launch C3  -   "$mode"   # shuffle control         — selectivity must vanish
-  launch C2  Li6 "$mode"   # isotope, coherent       — downstream consolidation contrast?
-  launch C2  Li7 "$mode"   # isotope, fast-decohere
-  launch C0  -   "$mode"   # undoped, reward-present — STEP2 baseline (~6.9/8 commit)
+  launch C1  -   "$mode"; P1+=("C1_-_${mode}.jsonl")
+  launch C3  -   "$mode"; P1+=("C3_-_${mode}.jsonl")
+  launch C2  Li6 "$mode"; P1+=("C2_Li6_${mode}.jsonl")
+  launch C2  Li7 "$mode"; P1+=("C2_Li7_${mode}.jsonl")
 done
-sleep 2
-echo "launched $(ps aux | grep -c '[f]2_control_ladder') f2 cells, draws=${DRAWS} -> ${OUT}"
-echo "score when done:  for c in C0 C1 C2_Li6 C2_Li7 C3; do python3 sweep/po11_valence_score.py --glob \"${OUT}/\${c}*_*.jsonl\" --label \$c; done"
+say "phase 1 launched: $(ps aux | grep -c '[f]2_control_ladder') workers"
+wait_phase P1
+say "PHASE 1 DONE"
+
+# --- Phase 2: 2 reward-present C0 cells only (2 cores, ~5 h) ---
+say "PHASE 2 (2 reward-present C0 cells) — long tail, only 2 cores"
+P2=()
+for mode in pair1 pair2; do launch C0 - "$mode"; P2+=("C0_-_${mode}.jsonl"); done
+wait_phase P2
+say "PHASE 2 DONE — F2 FULL LADDER COMPLETE"
