@@ -113,6 +113,24 @@ record carries `measured` / `measured_at_s` / `partition_at_measure` / `n_commit
   is not expected; PASS = the undoped C0 commitment distribution is explained by the trigger move alone (no
   silent physics change) — compared against the STEP2 P31 baseline (mean committed ~6.9/8).
 
+## SCORING SUPERSESSION 2026-08-06 (driven by F2-c mechanism, NOT by peeking at outcomes)
+The §SCORING above framed cross-synapse **partition selectivity** (po11 within-condition partial-corr) as
+the PRIMARY hypothesis. F2-c then showed the measurement fires locally/early, **before** the cross-synapse
+partition forms — so partition-selectivity is no longer the right primary object. This repivot is legitimate
+pre-registration: it is forced by a MECHANISM finding (when/where the trigger fires), and the consolidation
+OUTCOMES that decide the verdict are still unobserved (`commit=0` in the fast draws; the full run has not
+run). The old scoring is kept above (append-only); the full run is now graded PRIMARY-on:
+1. **Consolidation forms & quality (C0/C1):** distribution of `n_committed` and durable `dw_cluster` magnitude.
+   C1 (reward-absent) forming durable consolidation is the positive evidence that decoupling is viable.
+2. **Downstream isotope contrast (C2):** Li6 vs Li7 durable `dw_cluster` (and `n_committed`), the coherence-
+   window lever F2-d proved exists (ΔP_S=0.55). PASS = Li7 reduces durable consolidation vs Li6, null-p<0.05.
+   Honest null allowed: calcium may dominate (STEP2) and wash it out — reported, not engineered.
+3. **acceptance-3 (commitment vs STEP2):** does the early-local fire drop `n_committed` from STEP2's ~6.9/8?
+   The single C0 timing draw showed `commit=1`; the full C0 cells quantify whether that holds.
+SECONDARY / now a CONTROL (not the hypothesis): **partition-selectivity (po11 partial-corr, C3 shuffle)** —
+expected **null**, and a null now CONFIRMS the local-early finding rather than disappointing. The local-early
+architecture is the HYPOTHESIS under test; this run is its first positive-or-negative evidence.
+
 ## Verdict on the wiring itself
 PASS iff: acceptance-1 stays PASS; reward-absent still measures (acceptance-2); undoped fingerprint
 bit-identical or trigger-move-explained (acceptance-3); partition stays clean (acceptance-4); the model
