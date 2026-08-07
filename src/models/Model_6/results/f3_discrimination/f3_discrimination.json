@@ -1,0 +1,252 @@
+{
+ "IN": [
+  {
+   "d_stable": 0.00430190128889843,
+   "committed": true,
+   "P_S": 0.9957067767970419,
+   "t_commit": 1.9999999999999793
+  },
+  {
+   "d_stable": 0.004361700234029292,
+   "committed": true,
+   "P_S": 0.9896144537118374,
+   "t_commit": 1.9999999999999793
+  },
+  {
+   "d_stable": 0.0040002227234062215,
+   "committed": true,
+   "P_S": 0.9931250897845895,
+   "t_commit": 1.9999999999999793
+  },
+  {
+   "d_stable": 0.0039900555526003745,
+   "committed": true,
+   "P_S": 0.9909463607662282,
+   "t_commit": 1.9999999999999793
+  },
+  {
+   "d_stable": 0.004223039707304338,
+   "committed": true,
+   "P_S": 0.9869201096585382,
+   "t_commit": 1.9999999999999793
+  },
+  {
+   "d_stable": 0.004002380826628987,
+   "committed": true,
+   "P_S": 0.9912554654411015,
+   "t_commit": 1.9999999999999793
+  },
+  {
+   "d_stable": 0.004303607230699252,
+   "committed": true,
+   "P_S": 0.9930392477572578,
+   "t_commit": 1.9999999999999793
+  },
+  {
+   "d_stable": 0.0041983012698324496,
+   "committed": true,
+   "P_S": 0.9930447915777508,
+   "t_commit": 1.9999999999999793
+  }
+ ],
+ "OUT_LATE": [
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9957067767970419,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9896144537118374,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9931250897845895,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9909463607662282,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9869201096585382,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9912554654411015,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9930392477572578,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9930447915777508,
+   "t_commit": null
+  }
+ ],
+ "OUT_EARLY": [
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9957067767970419,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9896144537118374,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9931250897845895,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9909463607662282,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9869201096585382,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9912554654411015,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9930392477572578,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9930447915777508,
+   "t_commit": null
+  }
+ ],
+ "NODA": [
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9957067767970419,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9896144537118374,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9931250897845895,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9909463607662282,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9869201096585382,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9912554654411015,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9930392477572578,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9930447915777508,
+   "t_commit": null
+  }
+ ],
+ "DIP": [
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9957067767970419,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9896144537118374,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9931250897845895,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9909463607662282,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9869201096585382,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9912554654411015,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9930392477572578,
+   "t_commit": null
+  },
+  {
+   "d_stable": -0.0029642718644233845,
+   "committed": false,
+   "P_S": 0.9930447915777508,
+   "t_commit": null
+  }
+ ]
+}

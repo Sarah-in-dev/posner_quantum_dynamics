@@ -690,21 +690,48 @@ class Model6QuantumSynapse:
             # Measurement opens the gate, dissolved dimers return calcium,
             # CaMKII integrates Ca²⁺ through T286 autophosphorylation cascade.
             # Commitment fires when molecular_memory reaches threshold.
+            reward_gated = getattr(self, '_reward_gated_consolidation', False)
             if (not self._camkii_committed
-                    and getattr(self, '_measurement_gate_opened', False)
-                    and camkii_state['molecular_memory'] > 0.5):
-                self._camkii_committed = True
-                self._commitment_time = getattr(self, '_measurement_time', self.time)
-                self._committed_memory_level = camkii_state['molecular_memory']
-                # CONSUME the token. It marks "a measurement happened and has not yet
-                # produced a commitment" — the DDSC delay (Jain 2024, 10-100 s) is why
-                # it must outlive the reward episode, but it must NOT outlive the
-                # commitment it licensed. It was previously written True at one site and
-                # never cleared anywhere (not even by reset()), so once a synapse had
-                # measured, every later trial could re-commit off the stale token plus a
-                # purely classical CaMKII calcium integral, with no new measurement.
-                # That is the mechanism behind D19's retracted cross-trial accumulation.
-                self._measurement_gate_opened = False
+                    and getattr(self, '_measurement_gate_opened', False)):
+                if reward_gated:
+                    # --- F3 (Phase A): WINDOWED THREE-FACTOR GATE ---
+                    # Durable commit requires a dopamine transient in the 0.3-2 s window AFTER the
+                    # eligibility (binding) event, with SIGN from burst-vs-dip (reward_gating.py;
+                    # Yagishita 2014, VERIFIED-at-source). This REPLACES the calcium-only
+                    # `molecular_memory>0.5` commit that F2-e showed races ahead of reward and makes
+                    # reward inert. Eligibility magnitude = mean_P_S (the local trace = specificity).
+                    from reward_gating import conversion_drive, DA_WINDOW_HI
+                    t_since = self.time - getattr(self, '_measurement_time', self.time)
+                    da_tonic = (self.params.dopamine.dopamine_tonic
+                                if getattr(self.params, 'dopamine', None) is not None else 20e-9)
+                    da_override = getattr(self, '_da_signal', None)   # probe/network may inject DA(t)
+                    if da_override is not None:
+                        da_level = float(da_override)
+                    elif self.dopamine is not None:
+                        da_level = float(np.mean(self.dopamine.get_dopamine_concentration()))
+                    else:
+                        da_level = da_tonic
+                    drive = conversion_drive(self._mean_singlet_prob, da_level, da_tonic, t_since)
+                    if drive > 0:                    # in-window burst → potentiation
+                        self._camkii_committed = True
+                        self._commitment_time = getattr(self, '_measurement_time', self.time)
+                        self._committed_memory_level = float(drive)
+                        self._reward_sign = 1
+                        self._measurement_gate_opened = False
+                    elif drive < 0:                  # in-window dip → depression (no potentiation)
+                        self._reward_sign = -1
+                        self._committed_memory_level = 0.0
+                        self._measurement_gate_opened = False
+                    elif t_since > DA_WINDOW_HI:     # window closed with no qualifying DA → eligibility expires
+                        self._measurement_gate_opened = False
+                elif camkii_state['molecular_memory'] > 0.5:
+                    # DEFAULT (pre-F3) calcium/DDSC commit. CONSUME the token (D19): a measurement
+                    # happened and licensed one commitment; clearing the gate stops later trials
+                    # re-committing off a stale token + a purely classical CaMKII calcium integral.
+                    self._camkii_committed = True
+                    self._commitment_time = getattr(self, '_measurement_time', self.time)
+                    self._committed_memory_level = camkii_state['molecular_memory']
+                    self._measurement_gate_opened = False
 
             # --- PHASE 11: SPINE PLASTICITY ---
             if self._camkii_committed:
