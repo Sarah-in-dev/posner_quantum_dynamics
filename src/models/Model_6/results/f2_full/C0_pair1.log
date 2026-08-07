@@ -1,0 +1,6 @@
+[3415s] one C0 None pair1 fwd #0 measured=True@0.145 part@meas=[] edges=[(0, 1), (2, 3)] commit=1 dimers=777 dw={'A': -0.0064, 'B': 0.0027, 'C': -0.0064, 'D': -0.0064}
+[6573s] one C0 None pair1 fwd #1 measured=True@0.035 part@meas=[] edges=[(0, 1), (2, 3)] commit=1 dimers=1076 dw={'A': 0.0033, 'B': -0.0064, 'C': -0.0064, 'D': -0.0064}
+[9565s] one C0 None pair1 fwd #2 measured=True@0.205 part@meas=[] edges=[(0, 1), (2, 3)] commit=1 dimers=1270 dw={'A': 0.0027, 'B': -0.0064, 'C': -0.0064, 'D': -0.0064}
+[12461s] one C0 None pair1 fwd #3 measured=True@0.035 part@meas=[] edges=[(0, 1), (2, 3)] commit=1 dimers=1037 dw={'A': 0.0032, 'B': -0.0064, 'C': -0.0064, 'D': -0.0064}
+[16092s] one C0 None pair1 fwd #4 measured=True@0.035 part@meas=[] edges=[(0, 1), (2, 3)] commit=1 dimers=1749 dw={'A': -0.0064, 'B': 0.0035, 'C': -0.0064, 'D': -0.0064}
+[19468s] one C0 None pair1 fwd #5 measured=True@0.695 part@meas=[] edges=[(0, 1), (2, 3)] commit=1 dimers=1194 dw={'A': 0.0035, 'B': -0.0064, 'C': -0.0064, 'D': -0.0064}
