@@ -694,13 +694,14 @@ class Model6QuantumSynapse:
             if (not self._camkii_committed
                     and getattr(self, '_measurement_gate_opened', False)):
                 if reward_gated:
-                    # --- F3 (Phase A): WINDOWED THREE-FACTOR GATE ---
-                    # Durable commit requires a dopamine transient in the 0.3-2 s window AFTER the
-                    # eligibility (binding) event, with SIGN from burst-vs-dip (reward_gating.py;
-                    # Yagishita 2014, VERIFIED-at-source). This REPLACES the calcium-only
-                    # `molecular_memory>0.5` commit that F2-e showed races ahead of reward and makes
-                    # reward inert. Eligibility magnitude = mean_P_S (the local trace = specificity).
-                    from reward_gating import conversion_drive, DA_WINDOW_HI
+                    # --- F3: COHERENCE-WINDOW ELIGIBILITY TRACE + DOPAMINE-DECOHERENCE READOUT ---
+                    # The eligibility trace = the coherent P_S tag (lifetime = coherence, ~100 s). Dopamine
+                    # reads it out (decoherence) at reward time, at ANY delay, while the tag is still
+                    # COHERENT (P_S > Werner floor) — the window is the coherence lifetime, NOT a fixed
+                    # 0.3-2 s (that is biology's CLASSICAL short trace, kept only as the baseline mode).
+                    # Sign from burst/dip. reward_gating.py; grounding RESEARCH_TCA_MECHANISM_2026-08-08.
+                    from reward_gating import (quantum_credit, classical_credit, is_coherent,
+                                               CLASSICAL_WINDOW_HI)
                     t_since = self.time - getattr(self, '_measurement_time', self.time)
                     da_tonic = (self.params.dopamine.dopamine_tonic
                                 if getattr(self.params, 'dopamine', None) is not None else 20e-9)
@@ -711,18 +712,24 @@ class Model6QuantumSynapse:
                         da_level = float(np.mean(self.dopamine.get_dopamine_concentration()))
                     else:
                         da_level = da_tonic
-                    drive = conversion_drive(self._mean_singlet_prob, da_level, da_tonic, t_since)
-                    if drive > 0:                    # in-window burst → potentiation
+                    mode = getattr(self, '_reward_gating_mode', 'quantum')   # 'quantum' | 'classical' (baseline)
+                    if mode == 'classical':
+                        credit = classical_credit(self._mean_singlet_prob, da_level, da_tonic, t_since)
+                        expired = t_since > CLASSICAL_WINDOW_HI              # classical trace: fixed short window
+                    else:
+                        credit = quantum_credit(self._mean_singlet_prob, da_level, da_tonic)
+                        expired = not is_coherent(self._mean_singlet_prob)  # quantum trace: expires on decoherence
+                    if credit > 0:                   # dopamine reads out a still-coherent tag → potentiation
                         self._camkii_committed = True
-                        self._commitment_time = getattr(self, '_measurement_time', self.time)
-                        self._committed_memory_level = float(drive)
+                        self._commitment_time = self.time
+                        self._committed_memory_level = float(credit)
                         self._reward_sign = 1
-                        self._measurement_gate_opened = False
-                    elif drive < 0:                  # in-window dip → depression (no potentiation)
+                        self._measurement_gate_opened = False              # readout = decoherence: tag consumed
+                    elif credit < 0:                 # dip readout → depression (no potentiation)
                         self._reward_sign = -1
                         self._committed_memory_level = 0.0
                         self._measurement_gate_opened = False
-                    elif t_since > DA_WINDOW_HI:     # window closed with no qualifying DA → eligibility expires
+                    elif expired:                    # tag decohered (or classical window closed) with no readout
                         self._measurement_gate_opened = False
                 elif camkii_state['molecular_memory'] > 0.5:
                     # DEFAULT (pre-F3) calcium/DDSC commit. CONSUME the token (D19): a measurement

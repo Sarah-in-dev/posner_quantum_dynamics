@@ -12,7 +12,32 @@ every constant on the causal path cited/derived before the scored run; nothing d
 - **F2-e:** reward is inert because it is disconnected (`apply_reward_correlated` = dead stub) AND commitment is calcium-fast, consuming the trace before any reward read. Not a bug — the seam was never built.
 - **Dopamine grounding (cited, Yagishita window VERIFIED-at-source):** per-synapse SPECIFICITY = the local eligibility trace, not dopamine (volume-transmitted, near-global). Dopamine supplies **sign + timing + delayed-credit-via-a-train**, gating the trace in a **0.3–2 s window** after the eligibility event (Yagishita 2014 Science).
 
-## The mechanism (grounded three-factor rule)
+## REFRAME 2026-08-08 — coherence-window trace + dopamine-decoherence readout (SUPERSEDES the fixed-window mechanism below)
+The deep TCA-mechanism grounding (`docs/RESEARCH_TCA_MECHANISM_2026-08-08.md`, Yagishita + Shindou verified
+at source) reframes this. The established biology is the dopamine READOUT (D1/cAMP/PKA/PDE, the 0.3–2 s
+window); the UNKNOWN — and the field's hardest open problem — is the eligibility TRACE's molecular identity
+and lifetime: every measured trace is ~0.3–5 s, far too short for the seconds-to-minutes gap behaviour needs,
+and no single synapse is known to hold a mark across that gap. **Model-6's thesis is a candidate answer to
+exactly that gap:** the trace = the coherent P_S tag (lifetime ~100 s), read out by dopamine (decoherence)
+at ANY delay while still coherent. So the eligibility window is the **COHERENCE LIFETIME**, not a fixed
+0.3–2 s — that fixed window is biology's CLASSICAL short trace, retained only as the **baseline arm** the
+quantum tag must beat. **My earlier fixed-0.3–2 s implementation (F3-a) was the error the grounding
+corrects.** Reframed mechanism (`reward_gating.py`, `__main__` 7/7):
+- **quantum_credit** = `eligibility_weight(P_S_at_reward) · DA_sign`, gated on `P_S > Werner floor` (still
+  coherent) — no fixed time window; the P_S decay IS the window. Readout = decoherence (consumes the tag).
+- **classical_credit** = same, but gated on `t_since ∈ [0.3, 2.0] s` (biology; the baseline).
+- Coherence gate = Werner bound 1/√2 [Werner 1989]; sign = burst/dip [Reynolds&Wickens; Yagishita];
+  no tuned strength constant. Readable lifetime: undoped **107 s**, ⁷Li **6.8 s**, classical **1.0 s**.
+- **Experiment = delayed-credit sweep** (`sweep/f3_delayed_credit_probe.py`): reward at delay ∈ {1,2,5,10,30}
+  s × mode ∈ {quantum, classical}. Prediction: quantum commits up to ~the coherence lifetime; classical dies
+  past ~2 s; the quantum−classical gap at ≥5 s IS the result. Isotope (⁶Li≫⁷Li) is the physical lever on the
+  trace lifetime (Phase C). **Premise flagged: the ~100 s coherence is our hypothesis, not measured biology;
+  the readout (dopamine-decoherence) must COEXIST with — not replace — the classical D1/cAMP/PKA cascade. A
+  null (quantum also dies ~2 s) is a real result about our substrate, reported not engineered.**
+- **What survives from F3-a:** the seam (dopamine gates the P_S tag, sign-correct, writes the durable channel,
+  behind the flag) and the discrimination-probe evidence that the machinery works. What changed: the window.
+
+## The mechanism (grounded three-factor rule) — SUPERSEDED by the reframe above (kept for lineage)
     durable_Δ_i  =  eligibility_i(t)  ×  DA_sign·DA_gate(t; window)          per synapse i
 - **eligibility_i** = the synapse's local singlet trace P_S(t) (already emergent; ~100 s coherence window).
 - **DA_gate(t; window)** = 1 only when a dopamine transient falls in the **0.3–2 s window AFTER** the eligibility (binding) event [Yagishita 2014 — VERIFIED]; else 0. Fed from `dopamine_system.py`'s existing phasic/tonic DA(t).
