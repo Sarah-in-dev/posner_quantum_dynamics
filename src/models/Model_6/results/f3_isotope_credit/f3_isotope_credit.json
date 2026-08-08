@@ -1,0 +1,530 @@
+{
+ "None_2.0": [
+  {
+   "dopant": "None",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.002007204093982917,
+   "ps_at_reward": 0.981759414362683
+  },
+  {
+   "dopant": "None",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.002089673497993022,
+   "ps_at_reward": 0.9780683394215213
+  },
+  {
+   "dopant": "None",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0018648478636851817,
+   "ps_at_reward": 0.9827879426042365
+  },
+  {
+   "dopant": "None",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0018035676194025352,
+   "ps_at_reward": 0.9720851848420443
+  },
+  {
+   "dopant": "None",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0020120668418568133,
+   "ps_at_reward": 0.979035572045792
+  },
+  {
+   "dopant": "None",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0018341163625430756,
+   "ps_at_reward": 0.9762144544500376
+  }
+ ],
+ "None_5.0": [
+  {
+   "dopant": "None",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.0016975676455019961,
+   "ps_at_reward": 0.967700641340795
+  },
+  {
+   "dopant": "None",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.0017232506624905164,
+   "ps_at_reward": 0.9647807353302147
+  },
+  {
+   "dopant": "None",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.001481929256486575,
+   "ps_at_reward": 0.9691689535954969
+  },
+  {
+   "dopant": "None",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.0014244824754252317,
+   "ps_at_reward": 0.9549003626874581
+  },
+  {
+   "dopant": "None",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.001656676566057752,
+   "ps_at_reward": 0.96440189199013
+  },
+  {
+   "dopant": "None",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.0014230762159021526,
+   "ps_at_reward": 0.9555806953680039
+  }
+ ],
+ "None_10.0": [
+  {
+   "dopant": "None",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.0011652056842337277,
+   "ps_at_reward": 0.9463688026965192
+  },
+  {
+   "dopant": "None",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.0011147574751300127,
+   "ps_at_reward": 0.9473584269873382
+  },
+  {
+   "dopant": "None",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.0008753807888011444,
+   "ps_at_reward": 0.9482978211542202
+  },
+  {
+   "dopant": "None",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.0007606685764608989,
+   "ps_at_reward": 0.9275999716580409
+  },
+  {
+   "dopant": "None",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.0010620373306448327,
+   "ps_at_reward": 0.9452606404143856
+  },
+  {
+   "dopant": "None",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.0007630204908009863,
+   "ps_at_reward": 0.9210989691362514
+  }
+ ],
+ "None_30.0": [
+  {
+   "dopant": "None",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.0013189592822939744,
+   "ps_at_reward": 0.8743807885346648
+  },
+  {
+   "dopant": "None",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.001075229261211369,
+   "ps_at_reward": 0.8861383532217137
+  },
+  {
+   "dopant": "None",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.001420489515114809,
+   "ps_at_reward": 0.8807730969616043
+  },
+  {
+   "dopant": "None",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.0022689755364428132,
+   "ps_at_reward": 0.7924725872811931
+  },
+  {
+   "dopant": "None",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.0014478538230132676,
+   "ps_at_reward": 0.8910928711063132
+  },
+  {
+   "dopant": "None",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.0022078842299510515,
+   "ps_at_reward": 0.792768675847041
+  }
+ ],
+ "Li6_2.0": [
+  {
+   "dopant": "Li6",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0019439894090975407,
+   "ps_at_reward": 0.9817579320387586
+  },
+  {
+   "dopant": "Li6",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0020773224801342305,
+   "ps_at_reward": 0.9780664503184788
+  },
+  {
+   "dopant": "Li6",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0020279971726842316,
+   "ps_at_reward": 0.9827863042130649
+  },
+  {
+   "dopant": "Li6",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0018035559685328217,
+   "ps_at_reward": 0.9720830115391355
+  },
+  {
+   "dopant": "Li6",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.001997687523864866,
+   "ps_at_reward": 0.9790335268660775
+  },
+  {
+   "dopant": "Li6",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0018341023093404463,
+   "ps_at_reward": 0.9762118350841131
+  }
+ ],
+ "Li6_5.0": [
+  {
+   "dopant": "Li6",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.0016318961305676893,
+   "ps_at_reward": 0.9697977419808396
+  },
+  {
+   "dopant": "Li6",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.0017576752279828967,
+   "ps_at_reward": 0.9651291852867782
+  },
+  {
+   "dopant": "Li6",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.0016789089020361747,
+   "ps_at_reward": 0.9691654787397762
+  },
+  {
+   "dopant": "Li6",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.0014244520722161425,
+   "ps_at_reward": 0.9548949185151887
+  },
+  {
+   "dopant": "Li6",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.0016402149444485759,
+   "ps_at_reward": 0.9643980457254078
+  },
+  {
+   "dopant": "Li6",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.0014230438227371134,
+   "ps_at_reward": 0.9555748878945352
+  }
+ ],
+ "Li6_10.0": [
+  {
+   "dopant": "Li6",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.001072784098599927,
+   "ps_at_reward": 0.9493927110361836
+  },
+  {
+   "dopant": "Li6",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.001220758034401942,
+   "ps_at_reward": 0.9454959820880279
+  },
+  {
+   "dopant": "Li6",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.0010881716384407436,
+   "ps_at_reward": 0.9497608394751504
+  },
+  {
+   "dopant": "Li6",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.0007606059352759376,
+   "ps_at_reward": 0.9275894003035168
+  },
+  {
+   "dopant": "Li6",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.0010602481337307346,
+   "ps_at_reward": 0.945253847598788
+  },
+  {
+   "dopant": "Li6",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.0007629551074563035,
+   "ps_at_reward": 0.9210880542885764
+  }
+ ],
+ "Li6_30.0": [
+  {
+   "dopant": "Li6",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.001157183736232581,
+   "ps_at_reward": 0.8922895253969131
+  },
+  {
+   "dopant": "Li6",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.0011476324706585495,
+   "ps_at_reward": 0.885849762909271
+  },
+  {
+   "dopant": "Li6",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.0012938908364101276,
+   "ps_at_reward": 0.8805718882230259
+  },
+  {
+   "dopant": "Li6",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.002330161785633167,
+   "ps_at_reward": 0.7924470918916287
+  },
+  {
+   "dopant": "Li6",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.0012990619949339033,
+   "ps_at_reward": 0.8930252457468705
+  },
+  {
+   "dopant": "Li6",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.0022080772281406202,
+   "ps_at_reward": 0.7927426729268197
+  }
+ ],
+ "Li7_2.0": [
+  {
+   "dopant": "Li7",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0012105341338326525,
+   "ps_at_reward": 0.8332137549284832
+  },
+  {
+   "dopant": "Li7",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0009361179906242356,
+   "ps_at_reward": 0.7686310181419792
+  },
+  {
+   "dopant": "Li7",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0015004004324246922,
+   "ps_at_reward": 0.8322401910001267
+  },
+  {
+   "dopant": "Li7",
+   "delay": 2.0,
+   "committed": false,
+   "d_stable": -0.002523401706101547,
+   "ps_at_reward": 0.7016838856615858
+  },
+  {
+   "dopant": "Li7",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0008980423993669995,
+   "ps_at_reward": 0.7628284572448563
+  },
+  {
+   "dopant": "Li7",
+   "delay": 2.0,
+   "committed": false,
+   "d_stable": -0.002523401706101547,
+   "ps_at_reward": 0.6862457869110278
+  }
+ ],
+ "Li7_5.0": [
+  {
+   "dopant": "Li7",
+   "delay": 5.0,
+   "committed": false,
+   "d_stable": -0.0029642718644233845,
+   "ps_at_reward": 0.6967448026256485
+  },
+  {
+   "dopant": "Li7",
+   "delay": 5.0,
+   "committed": false,
+   "d_stable": -0.0029642718644233845,
+   "ps_at_reward": 0.6517675199704799
+  },
+  {
+   "dopant": "Li7",
+   "delay": 5.0,
+   "committed": false,
+   "d_stable": -0.0029642718644233845,
+   "ps_at_reward": 0.6951657032822703
+  },
+  {
+   "dopant": "Li7",
+   "delay": 5.0,
+   "committed": false,
+   "d_stable": -0.0029642718644233845,
+   "ps_at_reward": 0.5264900149610353
+  },
+  {
+   "dopant": "Li7",
+   "delay": 5.0,
+   "committed": false,
+   "d_stable": -0.0029642718644233845,
+   "ps_at_reward": 0.6508598705671256
+  },
+  {
+   "dopant": "Li7",
+   "delay": 5.0,
+   "committed": false,
+   "d_stable": -0.0029642718644233845,
+   "ps_at_reward": 0.5134423641253938
+  }
+ ],
+ "Li7_10.0": [
+  {
+   "dopant": "Li7",
+   "delay": 10.0,
+   "committed": false,
+   "d_stable": -0.0036961226782606937,
+   "ps_at_reward": 0.5546575088771342
+  },
+  {
+   "dopant": "Li7",
+   "delay": 10.0,
+   "committed": false,
+   "d_stable": -0.0036961226782606937,
+   "ps_at_reward": 0.5414538714203372
+  },
+  {
+   "dopant": "Li7",
+   "delay": 10.0,
+   "committed": false,
+   "d_stable": -0.0036961226782606937,
+   "ps_at_reward": 0.5600238503010384
+  },
+  {
+   "dopant": "Li7",
+   "delay": 10.0,
+   "committed": false,
+   "d_stable": -0.0036961226782606937,
+   "ps_at_reward": 0.3707288329519935
+  },
+  {
+   "dopant": "Li7",
+   "delay": 10.0,
+   "committed": false,
+   "d_stable": -0.0036961226782606937,
+   "ps_at_reward": 0.5358583656045656
+  },
+  {
+   "dopant": "Li7",
+   "delay": 10.0,
+   "committed": false,
+   "d_stable": -0.0036961226782606937,
+   "ps_at_reward": 0.36438801198396803
+  }
+ ],
+ "Li7_30.0": [
+  {
+   "dopant": "Li7",
+   "delay": 30.0,
+   "committed": false,
+   "d_stable": -0.00658720622888645,
+   "ps_at_reward": 0.32497804535948016
+  },
+  {
+   "dopant": "Li7",
+   "delay": 30.0,
+   "committed": false,
+   "d_stable": -0.00658720622888645,
+   "ps_at_reward": 0.32694968557336235
+  },
+  {
+   "dopant": "Li7",
+   "delay": 30.0,
+   "committed": false,
+   "d_stable": -0.00658720622888645,
+   "ps_at_reward": 0.35232313462241055
+  },
+  {
+   "dopant": "Li7",
+   "delay": 30.0,
+   "committed": false,
+   "d_stable": -0.00658720622888645,
+   "ps_at_reward": 0.2546413639282205
+  },
+  {
+   "dopant": "Li7",
+   "delay": 30.0,
+   "committed": false,
+   "d_stable": -0.00658720622888645,
+   "ps_at_reward": 0.3334302029673073
+  },
+  {
+   "dopant": "Li7",
+   "delay": 30.0,
+   "committed": false,
+   "d_stable": -0.00658720622888645,
+   "ps_at_reward": 0.2551681711909464
+  }
+ ]
+}
