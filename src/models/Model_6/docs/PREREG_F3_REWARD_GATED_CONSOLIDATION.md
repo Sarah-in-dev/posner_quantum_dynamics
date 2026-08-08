@@ -1,5 +1,15 @@
 # PRE-REGISTRATION — F3: reward-gated consolidation (windowed three-factor rule)
 
+> **READOUT CORRECTION 2026-08-08 (grounding `RESEARCH_DOPAMINE_READOUT_PHYSICS_2026-08-08.md`).** Wherever
+> this doc says the readout is "dopamine-triggered decoherence / dopamine reads out the tag by collapsing it,"
+> that framing is SUPERSEDED and was physically unsupported. Decoherence is PASSIVE (the tag leaks coherence on
+> its own clock); no mechanism exists for a neuromodulator collapsing a nuclear spin. The GROUNDED readout is
+> the opposite polarity: **dopamine never touches the spin — it GATES/TIMES Fisher's spin-selective Posner
+> BINDING-MELT** (the F2 readout, `posner_binding.py`; Ca²⁺/pH-enabled, so dopamine's D1/D2→cAMP/PKA→local
+> Ca²⁺/pH gates it). This UNIFIES F2 (binding-melt = readout) + F3 (dopamine = reward timing). The FUNCTIONAL
+> credit rule and results (F3-b delayed-credit, F3-c isotope) are UNCHANGED — they rest on the coherence gate +
+> reward timing, both preserved. Read every "decoherence readout" below as "dopamine-gated binding-melt readout."
+
 **Written 2026-08-06, BEFORE any model change. SUPERSEDES the mechanism of `PREREG_STEP3_VALENCE_INTO_
 CONSOLIDATION.md` (2026-07-30) — that doc's Task-0 grounding discipline and control-ladder spirit STAND;
 its cross-synapse-partition mechanism and P31/P32 lever are corrected by F1/F2-c/F2-e + the dopamine

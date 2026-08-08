@@ -694,12 +694,14 @@ class Model6QuantumSynapse:
             if (not self._camkii_committed
                     and getattr(self, '_measurement_gate_opened', False)):
                 if reward_gated:
-                    # --- F3: COHERENCE-WINDOW ELIGIBILITY TRACE + DOPAMINE-DECOHERENCE READOUT ---
-                    # The eligibility trace = the coherent P_S tag (lifetime = coherence, ~100 s). Dopamine
-                    # reads it out (decoherence) at reward time, at ANY delay, while the tag is still
-                    # COHERENT (P_S > Werner floor) — the window is the coherence lifetime, NOT a fixed
-                    # 0.3-2 s (that is biology's CLASSICAL short trace, kept only as the baseline mode).
-                    # Sign from burst/dip. reward_gating.py; grounding RESEARCH_TCA_MECHANISM_2026-08-08.
+                    # --- F3: COHERENCE-WINDOW TAG + DOPAMINE-GATED BINDING-MELT READOUT ---
+                    # The eligibility trace = the coherent P_S tag (lifetime = coherence, ~100 s), which
+                    # decoheres PASSIVELY on its own clock. At reward time dopamine GATES the spin-selective
+                    # binding-melt (F2 `posner_binding`; Ca²⁺/pH-enabled) that READS OUT whatever coherence
+                    # remains — at ANY delay while the tag is still COHERENT (P_S > Werner floor). Dopamine
+                    # sets the TIMING only; it does NOT touch the spin (corrected framing, grounding
+                    # RESEARCH_DOPAMINE_READOUT_PHYSICS_2026-08-08). Window = coherence lifetime, NOT a fixed
+                    # 0.3-2 s (biology's CLASSICAL short trace, kept only as the baseline mode). Sign burst/dip.
                     from reward_gating import (quantum_credit, classical_credit, is_coherent,
                                                CLASSICAL_WINDOW_HI)
                     t_since = self.time - getattr(self, '_measurement_time', self.time)
