@@ -1,0 +1,502 @@
+{
+ "quantum_1.0": [
+  {
+   "mode": "quantum",
+   "delay": 1.0,
+   "committed": true,
+   "d_stable": 0.002125305971289543,
+   "ps_at_tag": 0.9957067767970419,
+   "ps_at_reward": 0.9881999806220917
+  },
+  {
+   "mode": "quantum",
+   "delay": 1.0,
+   "committed": true,
+   "d_stable": 0.0022179180177196722,
+   "ps_at_tag": 0.9896144537118374,
+   "ps_at_reward": 0.9843484794633954
+  },
+  {
+   "mode": "quantum",
+   "delay": 1.0,
+   "committed": true,
+   "d_stable": 0.0020016468366285123,
+   "ps_at_tag": 0.9931250897845895,
+   "ps_at_reward": 0.9878367340858936
+  },
+  {
+   "mode": "quantum",
+   "delay": 1.0,
+   "committed": true,
+   "d_stable": 0.001970816168198969,
+   "ps_at_tag": 0.9909463607662282,
+   "ps_at_reward": 0.9853352510677849
+  },
+  {
+   "mode": "quantum",
+   "delay": 1.0,
+   "committed": true,
+   "d_stable": 0.0021135922797057005,
+   "ps_at_tag": 0.9869201096585382,
+   "ps_at_reward": 0.9824289672282167
+  },
+  {
+   "mode": "quantum",
+   "delay": 1.0,
+   "committed": true,
+   "d_stable": 0.001995499219442476,
+   "ps_at_tag": 0.9912554654411015,
+   "ps_at_reward": 0.9875767427516914
+  }
+ ],
+ "quantum_2.0": [
+  {
+   "mode": "quantum",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.002007204093982917,
+   "ps_at_tag": 0.9957067767970419,
+   "ps_at_reward": 0.981759414362683
+  },
+  {
+   "mode": "quantum",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.002089673497993022,
+   "ps_at_tag": 0.9896144537118374,
+   "ps_at_reward": 0.9780683394215213
+  },
+  {
+   "mode": "quantum",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0018648478636851817,
+   "ps_at_tag": 0.9931250897845895,
+   "ps_at_reward": 0.9827879426042365
+  },
+  {
+   "mode": "quantum",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0018035676194025352,
+   "ps_at_tag": 0.9909463607662282,
+   "ps_at_reward": 0.9720851848420443
+  },
+  {
+   "mode": "quantum",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0020120668418568133,
+   "ps_at_tag": 0.9869201096585382,
+   "ps_at_reward": 0.979035572045792
+  },
+  {
+   "mode": "quantum",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0018341163625430756,
+   "ps_at_tag": 0.9912554654411015,
+   "ps_at_reward": 0.9762144544500376
+  }
+ ],
+ "quantum_5.0": [
+  {
+   "mode": "quantum",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.0016975676455019961,
+   "ps_at_tag": 0.9957067767970419,
+   "ps_at_reward": 0.967700641340795
+  },
+  {
+   "mode": "quantum",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.0017232506624905164,
+   "ps_at_tag": 0.9896144537118374,
+   "ps_at_reward": 0.9647807353302147
+  },
+  {
+   "mode": "quantum",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.001481929256486575,
+   "ps_at_tag": 0.9931250897845895,
+   "ps_at_reward": 0.9691689535954969
+  },
+  {
+   "mode": "quantum",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.0014244824754252317,
+   "ps_at_tag": 0.9909463607662282,
+   "ps_at_reward": 0.9549003626874581
+  },
+  {
+   "mode": "quantum",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.001656676566057752,
+   "ps_at_tag": 0.9869201096585382,
+   "ps_at_reward": 0.96440189199013
+  },
+  {
+   "mode": "quantum",
+   "delay": 5.0,
+   "committed": true,
+   "d_stable": 0.0014230762159021526,
+   "ps_at_tag": 0.9912554654411015,
+   "ps_at_reward": 0.9555806953680039
+  }
+ ],
+ "quantum_10.0": [
+  {
+   "mode": "quantum",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.0011652056842337277,
+   "ps_at_tag": 0.9957067767970419,
+   "ps_at_reward": 0.9463688026965192
+  },
+  {
+   "mode": "quantum",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.0011147574751300127,
+   "ps_at_tag": 0.9896144537118374,
+   "ps_at_reward": 0.9473584269873382
+  },
+  {
+   "mode": "quantum",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.0008753807888011444,
+   "ps_at_tag": 0.9931250897845895,
+   "ps_at_reward": 0.9482978211542202
+  },
+  {
+   "mode": "quantum",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.0007606685764608989,
+   "ps_at_tag": 0.9909463607662282,
+   "ps_at_reward": 0.9275999716580409
+  },
+  {
+   "mode": "quantum",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.0010620373306448327,
+   "ps_at_tag": 0.9869201096585382,
+   "ps_at_reward": 0.9452606404143856
+  },
+  {
+   "mode": "quantum",
+   "delay": 10.0,
+   "committed": true,
+   "d_stable": 0.0007630204908009863,
+   "ps_at_tag": 0.9912554654411015,
+   "ps_at_reward": 0.9210989691362514
+  }
+ ],
+ "quantum_30.0": [
+  {
+   "mode": "quantum",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.0013189592822939744,
+   "ps_at_tag": 0.9957067767970419,
+   "ps_at_reward": 0.8743807885346648
+  },
+  {
+   "mode": "quantum",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.001075229261211369,
+   "ps_at_tag": 0.9896144537118374,
+   "ps_at_reward": 0.8861383532217137
+  },
+  {
+   "mode": "quantum",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.001420489515114809,
+   "ps_at_tag": 0.9931250897845895,
+   "ps_at_reward": 0.8807730969616043
+  },
+  {
+   "mode": "quantum",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.0022689755364428132,
+   "ps_at_tag": 0.9909463607662282,
+   "ps_at_reward": 0.7924725872811931
+  },
+  {
+   "mode": "quantum",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.0014478538230132676,
+   "ps_at_tag": 0.9869201096585382,
+   "ps_at_reward": 0.8910928711063132
+  },
+  {
+   "mode": "quantum",
+   "delay": 30.0,
+   "committed": true,
+   "d_stable": -0.0022078842299510515,
+   "ps_at_tag": 0.9912554654411015,
+   "ps_at_reward": 0.792768675847041
+  }
+ ],
+ "classical_1.0": [
+  {
+   "mode": "classical",
+   "delay": 1.0,
+   "committed": true,
+   "d_stable": 0.002125305971289543,
+   "ps_at_tag": 0.9957067767970419,
+   "ps_at_reward": 0.9881999806220917
+  },
+  {
+   "mode": "classical",
+   "delay": 1.0,
+   "committed": true,
+   "d_stable": 0.0022179180177196722,
+   "ps_at_tag": 0.9896144537118374,
+   "ps_at_reward": 0.9843484794633954
+  },
+  {
+   "mode": "classical",
+   "delay": 1.0,
+   "committed": true,
+   "d_stable": 0.0020016468366285123,
+   "ps_at_tag": 0.9931250897845895,
+   "ps_at_reward": 0.9878367340858936
+  },
+  {
+   "mode": "classical",
+   "delay": 1.0,
+   "committed": true,
+   "d_stable": 0.001970816168198969,
+   "ps_at_tag": 0.9909463607662282,
+   "ps_at_reward": 0.9853352510677849
+  },
+  {
+   "mode": "classical",
+   "delay": 1.0,
+   "committed": true,
+   "d_stable": 0.0021135922797057005,
+   "ps_at_tag": 0.9869201096585382,
+   "ps_at_reward": 0.9824289672282167
+  },
+  {
+   "mode": "classical",
+   "delay": 1.0,
+   "committed": true,
+   "d_stable": 0.001995499219442476,
+   "ps_at_tag": 0.9912554654411015,
+   "ps_at_reward": 0.9875767427516914
+  }
+ ],
+ "classical_2.0": [
+  {
+   "mode": "classical",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.002007204093982917,
+   "ps_at_tag": 0.9957067767970419,
+   "ps_at_reward": 0.981759414362683
+  },
+  {
+   "mode": "classical",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.002089673497993022,
+   "ps_at_tag": 0.9896144537118374,
+   "ps_at_reward": 0.9780683394215213
+  },
+  {
+   "mode": "classical",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0018648478636851817,
+   "ps_at_tag": 0.9931250897845895,
+   "ps_at_reward": 0.9827879426042365
+  },
+  {
+   "mode": "classical",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0018035676194025352,
+   "ps_at_tag": 0.9909463607662282,
+   "ps_at_reward": 0.9720851848420443
+  },
+  {
+   "mode": "classical",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0020120668418568133,
+   "ps_at_tag": 0.9869201096585382,
+   "ps_at_reward": 0.979035572045792
+  },
+  {
+   "mode": "classical",
+   "delay": 2.0,
+   "committed": true,
+   "d_stable": 0.0018341163625430756,
+   "ps_at_tag": 0.9912554654411015,
+   "ps_at_reward": 0.9762144544500376
+  }
+ ],
+ "classical_5.0": [
+  {
+   "mode": "classical",
+   "delay": 5.0,
+   "committed": false,
+   "d_stable": -0.0029642718644233845,
+   "ps_at_tag": 0.9957067767970419,
+   "ps_at_reward": 0.967700641340795
+  },
+  {
+   "mode": "classical",
+   "delay": 5.0,
+   "committed": false,
+   "d_stable": -0.0029642718644233845,
+   "ps_at_tag": 0.9896144537118374,
+   "ps_at_reward": 0.9647807353302147
+  },
+  {
+   "mode": "classical",
+   "delay": 5.0,
+   "committed": false,
+   "d_stable": -0.0029642718644233845,
+   "ps_at_tag": 0.9931250897845895,
+   "ps_at_reward": 0.9691689535954969
+  },
+  {
+   "mode": "classical",
+   "delay": 5.0,
+   "committed": false,
+   "d_stable": -0.0029642718644233845,
+   "ps_at_tag": 0.9909463607662282,
+   "ps_at_reward": 0.9549003626874581
+  },
+  {
+   "mode": "classical",
+   "delay": 5.0,
+   "committed": false,
+   "d_stable": -0.0029642718644233845,
+   "ps_at_tag": 0.9869201096585382,
+   "ps_at_reward": 0.96440189199013
+  },
+  {
+   "mode": "classical",
+   "delay": 5.0,
+   "committed": false,
+   "d_stable": -0.0029642718644233845,
+   "ps_at_tag": 0.9912554654411015,
+   "ps_at_reward": 0.9555806953680039
+  }
+ ],
+ "classical_10.0": [
+  {
+   "mode": "classical",
+   "delay": 10.0,
+   "committed": false,
+   "d_stable": -0.0036961226782606937,
+   "ps_at_tag": 0.9957067767970419,
+   "ps_at_reward": 0.9463688026965192
+  },
+  {
+   "mode": "classical",
+   "delay": 10.0,
+   "committed": false,
+   "d_stable": -0.0036961226782606937,
+   "ps_at_tag": 0.9896144537118374,
+   "ps_at_reward": 0.9473584269873382
+  },
+  {
+   "mode": "classical",
+   "delay": 10.0,
+   "committed": false,
+   "d_stable": -0.0036961226782606937,
+   "ps_at_tag": 0.9931250897845895,
+   "ps_at_reward": 0.9482978211542202
+  },
+  {
+   "mode": "classical",
+   "delay": 10.0,
+   "committed": false,
+   "d_stable": -0.0036961226782606937,
+   "ps_at_tag": 0.9909463607662282,
+   "ps_at_reward": 0.9275999716580409
+  },
+  {
+   "mode": "classical",
+   "delay": 10.0,
+   "committed": false,
+   "d_stable": -0.0036961226782606937,
+   "ps_at_tag": 0.9869201096585382,
+   "ps_at_reward": 0.9452606404143856
+  },
+  {
+   "mode": "classical",
+   "delay": 10.0,
+   "committed": false,
+   "d_stable": -0.0036961226782606937,
+   "ps_at_tag": 0.9912554654411015,
+   "ps_at_reward": 0.9210989691362514
+  }
+ ],
+ "classical_30.0": [
+  {
+   "mode": "classical",
+   "delay": 30.0,
+   "committed": false,
+   "d_stable": -0.00658720622888645,
+   "ps_at_tag": 0.9957067767970419,
+   "ps_at_reward": 0.8743807885346648
+  },
+  {
+   "mode": "classical",
+   "delay": 30.0,
+   "committed": false,
+   "d_stable": -0.00658720622888645,
+   "ps_at_tag": 0.9896144537118374,
+   "ps_at_reward": 0.8861383532217137
+  },
+  {
+   "mode": "classical",
+   "delay": 30.0,
+   "committed": false,
+   "d_stable": -0.00658720622888645,
+   "ps_at_tag": 0.9931250897845895,
+   "ps_at_reward": 0.8807730969616043
+  },
+  {
+   "mode": "classical",
+   "delay": 30.0,
+   "committed": false,
+   "d_stable": -0.00658720622888645,
+   "ps_at_tag": 0.9909463607662282,
+   "ps_at_reward": 0.7924725872811931
+  },
+  {
+   "mode": "classical",
+   "delay": 30.0,
+   "committed": false,
+   "d_stable": -0.00658720622888645,
+   "ps_at_tag": 0.9869201096585382,
+   "ps_at_reward": 0.8910928711063132
+  },
+  {
+   "mode": "classical",
+   "delay": 30.0,
+   "committed": false,
+   "d_stable": -0.00658720622888645,
+   "ps_at_tag": 0.9912554654411015,
+   "ps_at_reward": 0.792768675847041
+  }
+ ]
+}
