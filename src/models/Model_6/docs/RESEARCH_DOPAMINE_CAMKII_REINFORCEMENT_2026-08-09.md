@@ -156,6 +156,36 @@ required condition; together they define what a working reward-signed readout ne
 PSD-calcium into the reward path and re-validate F3 end-to-end; if no, the coupling is a deeper structural finding.
 This is a genuine multi-coupled dynamical calibration and should be built systematically, not by end-of-session sweeps.
 
+## PART 2 — FIRST EXPERIMENT RESULT (2026-08-09, Nakano-timed probe): a clean NEGATIVE + a structural finding
+`sweep/f3e_nakano_timed_probe.py` ran the Nakano-timed protocol (bistable CaMKII + DARPP-32; eligibility 4 s @ Ca=1 µM
++ tag field → delay 8 s @ basal Ca, field held → DELAYED burst/dip/none → settle; field swept 0–24 kT; positive
+control = saturating field commits, negative = no-drive; 8 seeds). **VERDICT: NOT DA-decisive at any drive** — burst
+barely shifts commit-rate vs dip/none; the switch's fate is set BEFORE the reward arrives. **Two coupled, GROUNDED,
+STRUCTURAL reasons (not tunable):**
+- **A — a bistable switch cannot "hold near-threshold" through the delay (constraint #4 fails by construction).** The
+  separatrix is an UNSTABLE fixed point; the switch physically cannot dwell at its knife-edge for 8 s. Measured: even
+  with NO field, a 4 s / 1 µM eligibility leaves pT286=0.19, already above the separatrix (0.069), and autocatalysis
+  carries it to UP DURING the delay, before any reward. Worse, the tag field as modeled (barrier reduction → boosts
+  k_phos) pushes pT286 toward latch (delay-end pT286 rises monotonically with field, 0.41→0.95). **The modeled "tag
+  hold" COMMITS the switch; it does not hold it poised sub-threshold.**
+- **B — dopamine's grip on PP1 has faded by the time it is allowed to vote.** At basal calcium (post-decay, when
+  Nakano says DA should decide), a burst moves `pp1_factor` only to 0.974 (2.6%) vs 0.12 with strong calcium present.
+  Grounded: the DARPP-32 gain (Cdk5→Thr75⊣PKA, cleared only by strong-Ca→PP2A) means **dopamine needs calcium
+  COINCIDENCE to grip PP1** — exactly what the DA-follows-Ca separation removes (Thr75 re-accumulates τ≈1.25 s). So
+  constraint #3 (DA follows Ca) and the DARPP-32 gain are in FUNDAMENTAL TENSION: the cascade needs Ca present for DA
+  to act; the timing needs Ca gone. And the DARPP-32 gain window (~1–2 s) ≪ the ~100 s coherent-tag delay F3 needs.
+
+**THE DEEP ITEM (structural, not a parameter):** the coherent P_S tag's role (constraint #4) is **unmodeled in a
+load-bearing way.** It currently acts as a barrier-reduction field that DRIVES/COMMITS the switch, whereas the F3
+delayed-credit story requires it to **hold eligibility sub-threshold across the gap WITHOUT committing** — and to keep
+dopamine able to act after the delay. Reconciling that (how the coherent tag holds a *primed-but-uncommitted* state
+that a delayed reward can still tip) is the real open architectural question — bigger than "calibrate the drive."
+Honest scope: this tested the MECHANISM at a near-threshold drive; it does NOT bear on constraint #1 (grounding the
+true PSD-distance calcium), which remains a separate step — but Finding B blocks a long-delay reward-signed readout
+even if #1 is resolved. Next moves (both structural): (1) ground constraint #1 (the actual diffuse calcium CaMKII
+integrates); (2) decide how the coherent tag holds eligibility sub-threshold rather than driving the barrier —
+possibly the tag should prime DARPP-32/PKA (keep dopamine's grip alive) rather than the CaMKII barrier.
+
 ## Emergent-physics discipline (LOCKED)
 The PP1 modulation and the DARPP-32 cascade rates are grounded from the cited kinetic literature; NONE is tuned to
 make the readout decode. Ca-amplitude directionality and the DA-follows-Ca timing window are cited, not fitted. If
