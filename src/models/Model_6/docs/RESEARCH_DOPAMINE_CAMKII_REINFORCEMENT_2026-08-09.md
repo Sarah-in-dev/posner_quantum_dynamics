@@ -65,6 +65,17 @@ inhibits PKA (dominant at weak Ca). Strong Ca → **PP2A** → dephosphorylates 
 4. **Re-validate** single-synapse F3 (delayed-credit, isotope) under the corrected mechanism, THEN extend to the
    multi-synapse network (the original Phase-C objective).
 
+## Build status — the DARPP-32/PP1 module is built + validated (2026-08-09)
+`darpp32_pp1_module.py` implements the cascade (Thr34, Thr75 phospho-states; PKA/PP2B/PP2A/Cdk5; PP1 activity),
+grounded-structure with `[MODELED]`-flagged rates. Its `__main__` acceptance PASSES 5/5: the LTP/LTD sign
+**emerges** (burst → `pp1_factor` 0.12 = LTP; dip → 1.07 = LTD; ordering burst < tonic < dip; the Ca-amplitude
+switch orders weak-Ca above strong-Ca). **FINDING (grounded, cited):** the LTP/LTD range is **ASYMMETRIC** — the
+resting striatal state is PKA-suppressed / PP1-ACTIVE (Thr75-P by Cdk5 holds PKA off until dopamine arrives;
+Svenningsson/Greengard, Nishi), so dopamine drives strong LTP from a resting point where PP1 is already active and
+the dip→LTD headroom is inherently small. This asymmetry is biology, not a bug, and was **confirmed by external
+search** rather than tuned away (an initial symmetric-magnitude check FAILED; grounding the resting operating point
+showed the check was wrong, not the model). `pp1_factor` is normalized to tonic = 1.0 ⇒ bit-identical when unwired.
+
 ## Emergent-physics discipline (LOCKED)
 The PP1 modulation and the DARPP-32 cascade rates are grounded from the cited kinetic literature; NONE is tuned to
 make the readout decode. Ca-amplitude directionality and the DA-follows-Ca timing window are cited, not fitted. If
