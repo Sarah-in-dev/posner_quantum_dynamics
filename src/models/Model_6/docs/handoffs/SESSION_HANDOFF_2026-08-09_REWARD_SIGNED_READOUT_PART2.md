@@ -58,11 +58,23 @@ hold** (grounded this session; details in the research doc §Part-2 constraint m
    (and PP2B) decays.
 4. **The bistable switch must hold near-threshold through the reward delay** — the coherent P_S tag's role.
 
-**FIRST EXPERIMENT (deliberate, defined):** the **Nakano-timed protocol** — feed the (bistable) CaMKII a
-PSD-distance near-threshold calcium during a brief eligibility window, hold, then deliver a **DELAYED** dopamine
-burst (after PP2B decays) vs a dip; test whether dopamine now decides (burst→UP, dip→DOWN). PASS ⇒ wire
-`bistable=True` + PSD-calcium into the reward-gated path and re-validate F3 end-to-end. FAIL ⇒ a deeper structural
-finding (report it, do not tune around it).
+**FIRST EXPERIMENT — DONE 2026-08-09 (Nakano-timed protocol, `sweep/f3e_nakano_timed_probe.py`): clean NEGATIVE +
+a structural finding.** NOT DA-decisive at any drive. Two coupled, grounded, STRUCTURAL (non-tunable) reasons — full
+detail in the research doc's "PART 2 — FIRST EXPERIMENT RESULT" section:
+- **A.** A bistable switch **cannot hold near-threshold through the delay** — the separatrix is an UNSTABLE fixed
+  point, so the eligibility latches UP during the delay *before* the reward; the tag-as-barrier-reduction COMMITS
+  the switch, it does not hold it poised sub-threshold.
+- **B.** **Dopamine needs calcium COINCIDENCE to grip PP1** (a burst moves `pp1_factor` only ~2.6% at basal Ca vs
+  ~10× with Ca present), so the DA-follows-Ca timing (#3) and the DARPP-32 gain are in fundamental tension; the gain
+  window (~1–2 s) ≪ the ~100 s coherent-tag delay F3 needs.
+
+**THE REAL OPEN QUESTION (structural, not a parameter):** the coherent P_S tag's role is unmodeled in a load-bearing
+way. It currently DRIVES the CaMKII barrier (→ commits); the F3 story needs it to **hold eligibility sub-threshold
+across the gap without committing**, and to keep dopamine able to act after the delay. **Next moves (both
+structural, NOT sweeps):** (1) ground **constraint #1** — the true diffuse PSD-distance calcium CaMKII integrates
+(replace `np.max(ca_conc)` at `model6_core.py:602,833`); (2) **reconceptualize the coherent tag** — likely it should
+prime DARPP-32/PKA (keep dopamine's grip alive across the delay) rather than reduce the CaMKII barrier. Decide the
+tag's mechanism BEFORE more experiments.
 
 ## 5. Discipline (LOCKED)
 - **Emergent physics only — GROUND, do not TUNE.** Every constant is cited or flagged `[MODELED]`; nothing is set to
