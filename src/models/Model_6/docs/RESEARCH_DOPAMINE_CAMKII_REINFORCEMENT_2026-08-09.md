@@ -250,6 +250,41 @@ Both are structural (architecture of eligibility-vs-commitment separation + the 
 parameter. Next: work these grounded (continuous DARPP-32 cascade; PP1↔autophos balance from Zhabotinsky; readout-Ca
 delivery at reward), one deliberate grounded step at a time — NOT a drive sweep to force a pass.
 
+## FINDING A CONFIRMED in the full model (2026-08-09): the bistable switch CANNOT hold a primed sub-threshold state
+Worked the grounded producing mechanism end-to-end. **In ISOLATION (bench: bistable CaMKII + continuous DARPP-32,
+`switch_regime_bench.py`) it PRODUCES**: at a physiological 1 µM eligibility and PP1 Vmax=0.30 (grounded — Zhabotinsky/
+Graupner band, PP1 dephos ~comparable to the autophosphorylation rate ~0.6), the switch stays DOWN under Hebbian Ca at
+tonic DA and is DA-DECISIVE (burst commits 1.0; dip/none 0.0). The mechanism is right: dopamine inhibits PP1 → lowers
+the commitment threshold → the reward's readout Ca tips the switch; without DA, PP1 holds it down.
+
+**But WIRED INTO THE FULL MODEL it does NOT produce** — three data-level findings, all grounded, none tunable:
+- **The eligibility DRIVE matters:** the F3 probes' 2 s −40 mV clamp gives ~3–16 µM *sustained* PSD calcium (via the
+  landed constraint #1 read) — an unphysiologically strong stimulus that latches the switch DURING the build. A brief
+  (physiological EPSP-scale) drive keeps pT286 low during the build (~0.001) — the Hebbian-safety works while Ca is up.
+- **The live dopamine module emits SPURIOUS bursts at reward=False** (measured: da spikes to ~6 µM ~2.6 s into the hold),
+  which the continuous cascade correctly reads as a burst → inhibits PP1 → helps the switch climb. This is F3-a's own
+  flagged artifact; F3-a's fix is to INJECT dopamine explicitly (tonic/hold, burst/dip at reward), not read the live
+  field. A baseline-robust deadband was added but cannot filter a genuine 6 µM spike — the artifact is upstream in the
+  dopamine module.
+- **DECISIVE — Finding A:** even with a brief build AND injected clean tonic DA, the switch does not hold. Over a 6 s
+  hold at basal Ca + tonic DA, pT286 diffuses from ~0.001 up to **0.26–0.38** (hovering at the separatrix ~0.069→basin
+  0.3) under the switch's own stochastic (Langevin) noise + weak autocat — it neither cleanly stays DOWN nor latches UP,
+  it CREEPS toward commitment. **The bistable autocat switch's DOWN basin is not stable enough to hold a poised
+  sub-threshold "primed" state across seconds, let alone the ~100 s coherence window.**
+
+**CONSEQUENCE (the frontier, unchanged):** the eligibility CANNOT be carried as a primed CaMKII pT286 state — the
+switch either latches or noise-diffuses to commitment. Eligibility must live in the **coherent tag** (P_S, which does
+hold ~100 s); CaMKII must reset to ~0 during the hold (PP1 fully strips the transient) and be driven to commit ONLY at
+reward, by the readout Ca²⁺ shower + dopamine's PP1-inhibition (the Ca/DA coincidence, Yagishita/Nakano). Making CaMKII
+reset-and-hold-at-zero (not carry a seed) is the architectural core — NOT a switch-parameter tune (raising the
+separatrix / killing the noise to force a hold would be exactly the emergent-physics violation this program forbids).
+
+**Landed + committed this session:** constraint #1 (PSD-averaged calcium to the plasticity cascade) + a fast exact
+PSD-average kernel (precomputed per-channel geometric weight → dot product; provably identical values, O(N_ch)/step).
+The reward-block wiring (continuous DARPP-32 + bistable Vmax=0.3 + baseline-robust DA) was exploratory and is REVERTED
+(it does not produce and would leave the F3 probes in a non-working bistable-by-default state); the grounded producing
+regime is captured in `sweep`/bench form and the finding above. The producing bench: `switch_regime_bench.py`.
+
 ## Sources (verified this session)
 - Yagishita et al. 2014, Science 345:1616 — dopamine window, PKA→CaMKII reinforcement.
 - Nakano et al. 2010, PLoS Comput Biol 6:e1000670 — the kinetic DA/Ca striatal plasticity model (scheme + thresholds).

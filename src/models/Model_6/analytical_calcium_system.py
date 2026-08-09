@@ -474,8 +474,9 @@ class AnalyticalCalciumSystem:
         return np.mean(self._local_ca)
 
     def _build_psd_region(self, psd_radius_nm: float):
-        """Grid points within the PSD disk (radius psd_radius_nm) around the channel-cluster centroid,
-        sampled every ~16 nm — the query set for the PSD area-average. Built once (fixed geometry)."""
+        """Precompute the PSD area-average kernel ONCE (fixed geometry). The nanodomain contribution is LINEAR
+        in channel current, so the disk-average over query points reduces to a per-channel geometric weight
+        W_i = mean_q [ 1/(z·F·4π·D·r_iq)·1e-3·exp(-r_iq/λ) ]; then the average is just (state·current) @ W."""
         ch = self.channels.positions
         cx, cy = float(np.mean(ch[:, 0])), float(np.mean(ch[:, 1]))
         r_grid = psd_radius_nm * 1e-9 / self.dx
@@ -488,7 +489,13 @@ class AnalyticalCalciumSystem:
                     x, y = int(round(cx)) + di, int(round(cy)) + dj
                     if 0 <= x < self.grid_shape[0] and 0 <= y < self.grid_shape[1]:
                         pts.append((x, y))
-        self._psd_query_points = np.array(pts)
+        q = np.array(pts, dtype=float)                                   # (N_q, 2)
+        nd = self.nanodomain
+        r_min = 5.5e-9
+        diff = ch[:, np.newaxis, :] - q[np.newaxis, :, :]               # (N_ch, N_q, 2)
+        r = np.maximum(np.sqrt(np.sum(diff ** 2, axis=2)) * self.dx, r_min)   # (N_ch, N_q) metres
+        G = 1.0 / (nd.z * nd.F * 4 * np.pi * nd.D_free * r) * 1e-3 * np.exp(-r / nd.decay_length)
+        self._psd_weights = G.mean(axis=1)                              # (N_ch,) per-channel disk-average weight
         self._psd_radius_nm = psd_radius_nm
 
     def get_psd_averaged_concentration(self, psd_radius_nm: float = 180.0) -> float:
@@ -501,15 +508,12 @@ class AnalyticalCalciumSystem:
         This lands the plasticity-cascade drive near CaMKII's K_calcium_half = 1 uM (vs the ~100s-uM nanodomain
         peak np.max returns), which is the construct-validity fix for the calcium-domination of commitment.
         [GROUNDED — PSD geometry from EM; value emergent from the model's own calcium profile.]"""
-        if getattr(self, '_psd_query_points', None) is None:
+        if getattr(self, '_psd_weights', None) is None:
             self._build_psd_region(psd_radius_nm)
-        vals = self.nanodomain.calculate_field_at_points(
-            channel_positions=self.channels.positions,
-            channel_states=self.channels.state,
-            channel_currents=self.channels.current * self.channel_gain,
-            query_points=self._psd_query_points, dx=self.dx)
+        open_current = self.channels.state.astype(float) * self.channels.current * self.channel_gain
+        nanodomain_avg = float(open_current @ self._psd_weights)         # (state·current) @ W — exact, O(N_ch)
         shower_excess = max(float(self._ca_field.min()) - self.params.ca_baseline, 0.0)
-        return float(np.mean(vals)) + shower_excess
+        return self.params.ca_baseline + nanodomain_avg + shower_excess
     
     def get_nanodomains(self, threshold: float = 10e-6) -> List[Tuple[int, int]]:
         """
