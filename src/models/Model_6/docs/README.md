@@ -155,6 +155,37 @@ answer today — this is on the cleanup list.
 
 ---
 
+## 8. Pre-registration & handoff status index
+
+Every `PREREG_*` is a pre-registration; most are already answered in the logs (ENT = `RESEARCH_LOG_ENTANGLEMENT_TOPOLOGY.md`,
+CAL = `RESEARCH_LOG_CALCIUM_DIMER.md`). This table is the routing; the log entry carries the verdict + limits.
+
+| Pre-registration | Status | Resolved in |
+|---|---|---|
+| `PREREG_F1_EMERGENT_ISOTOPE_LEVER` | RESOLVED (⁶Li/⁷Li lever derived, 4/4) | CAL F-series (F1) |
+| `PREREG_F2_BINDING_AS_MEASUREMENT` | RESOLVED (binding-melt trigger; reward decoupled) | CAL F2-a…F2-e |
+| `PREREG_F3_REWARD_GATED_CONSOLIDATION` | **RESOLVED — LIVE FRONTIER** (delayed-credit 3/3; isotope moves credit) | CAL F3-a…F3-d |
+| `PREREG_PO10_UNIT_C_WEIGHT_LEVEL_KEYSTONE` | RESOLVED (modest, DETECTED-not-robust; sign open) | ENT PO10-2 |
+| `PREREG_PO_COVARIANCE_MATCHED_DESIGN` | **SUPERSEDED / off-program — do not run** | — (see its header) |
+| `PREREG_PO9_UNIT_B_READOUT_KEYSTONE` | RESOLVED (graded computation, ρ=+0.936, conditional on delocalization) | ENT PO9-2 |
+| `PREREG_PO8_UNIT_B_READOUT_KEYSTONE` | WITHDRAWN (protocol artifact) | ENT PO8-1 |
+| `PREREG_PO7_UNIT2_MULTISYNAPSE_KEYSTONE` | RESOLVED (keystone NEGATIVE; cross-synapse premise later withdrawn) | ENT PO7-1 / PO7-2 |
+| `PREREG_PO7_UNIT6_SYNCHRONY` | RESOLVED (matched-density synchrony test) | ENT (PO7 synchrony) |
+| `PREREG_PO5_UNIT1/2/3/6/7/16_*` | RESOLVED across the PO5 selectivity sub-program (verdict: topology ≈ density; provenance built; keystone NOT closed) | ENT PO5-1…PO5-13 |
+| `PREREG_PO5_UNIT11_REPAIR_ARMS` | verify against log before use | ENT PO5-* |
+| `PREREG_PO11_VALENCE` | verify against log before use | ENT / `po11_valence_score.py` |
+| `PREREG_PO2_PHOSPHATE` | RESOLVED (loop conserves; SOC calcium-controlled at this drive) | CAL PO2-1…PO2-11 |
+| `PREREG_PO4_GAP` | RESOLVED (gap advances the plasticity clock; committed/uncommitted separate) | CAL GAP-1…GAP-4 |
+| `PREREG_STEP1_PARTITION_STRUCTURE` | RESOLVED (structured at low count; blobs above ~2200 dimers) | CAL STEP1 |
+| `PREREG_STEP2_SELECTIVE_CONSOLIDATION` | RESOLVED (negative — downstream calcium washout) | CAL STEP2 |
+| `PREREG_STEP3_VALENCE_INTO_CONSOLIDATION` | SUPERSEDED (ISO-1 reorder; isotope axis was circular) | CAL ISO-1 |
+
+**Handoffs (`handoffs/SESSION_HANDOFF_*`, `PO*_HANDOFF_*`):** all are prior-Claude-session, first-person notes — history,
+not canonical direction. Recent: `2026-08-08` (F-series/reground — see its header), `2026-07-30`, `2026-07-27`. The
+Mar/Apr/Jun handoffs are superseded (pre-F-series). Always verify a handoff against the logs + skills before acting.
+
+---
+
 *If anything in this map disagrees with a research-log entry or the code, the log/code wins and this map owes an
 update (say so and fix it). This file is a construct-validity instrument: it is only useful while it stays glued to
 the logs and the code.*
