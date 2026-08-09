@@ -5,6 +5,9 @@ shares the FULL skill library (symlinked) — the quantum work can draw on the d
 cross-domain skills, not just the quantum ones.
 
 ## Ground before you act
+**START with the documentation map — `src/models/Model_6/docs/README.md`.** It names the north-star, the exact
+read-order, what is canonical vs stale vs already-answered, and the current frontier (the directed quantum readout
+cascade). Read it first so you know *what* to read before you read it. Then:
 1. **Read `session-discipline` in full** (how to work here; the failure patterns). Always, first.
 2. **Read `agent-grounding-protocol`** — run its GROUND sequence: read the relevant skill(s) in full,
    check the most-recent conversation, SHOW what the code does, inspect the data/results.
@@ -31,5 +34,6 @@ scoped to the Murmur platform repo only. Experiments here run locally or on EC2 
 `model6-codebase-operations` and `experiment-design-patterns`.
 
 ## Pointers
+- **Documentation map / read-order / current frontier: `src/models/Model_6/docs/README.md` (START HERE).**
 - Quantum program map/primer: `quantum-biology-primer`, `model6-architecture`, `model6-codebase-operations`.
 - Cross-domain bridge: `cross-domain-integration`. The chat/Code/repo working model: `working-process`.
