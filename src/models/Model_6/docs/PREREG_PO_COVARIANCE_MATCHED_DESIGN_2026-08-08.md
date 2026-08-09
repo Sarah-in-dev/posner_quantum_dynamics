@@ -1,5 +1,11 @@
 # PRE-REGISTRATION / PO CHARTER — the covariance-matched design (does a DIRECTED readout beat the abundance leak?)
 
+> **⚠ STATUS: SUPERSEDED / OFF-PROGRAM — do not execute.** This charter (written by a prior Claude session, not
+> human-authored direction) chased a *directed readout out of the entanglement partition*, which relitigates the
+> LOCKED (A) framing. The directed, signed readout is the **reward-gated binding-melt cascade** (the reward supplies
+> the sign, classically) — see `docs/README.md` §3. Kept for provenance only; do not re-run a covariance-matched
+> partition experiment.
+
 **Written 2026-08-08, BEFORE the model change. Dispatched by the F-series session (see
 `handoffs/SESSION_HANDOFF_2026-08-08_F-SERIES_AND_THE_REGROUND.md`).** This PO continues the *real* problem —
 whether the entanglement partition is a genuine DIRECTED computation or "quantum constrains, classical computes."

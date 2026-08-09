@@ -1,5 +1,10 @@
 # Session Handoff — 2026-08-08 · the F-series, the reground, and the real frontier
 
+> **⚠ STATUS: prior-session handoff (Claude-authored, first-person), not canonical direction.** For the current
+> read-order and frontier see **`docs/README.md`**. The F-series findings it summarizes are real and live in
+> `RESEARCH_LOG_CALCIUM_DIMER.md`; the "covariance-matched design" it dispatches (Part 5) is SUPERSEDED / off-program
+> (see that prereg's header). Verify against the logs + skills before acting on anything here.
+
 **One line:** Built and grounded the F-series (F2 measurement, F3 reward-gated consolidation) with cited
 literature; then Sarah corrected a fundamental misframing — **coherence is PROVEN, not the problem** — and the
 session re-grounded onto the *real* open problem (the entanglement-topology sub-program: is the partition a

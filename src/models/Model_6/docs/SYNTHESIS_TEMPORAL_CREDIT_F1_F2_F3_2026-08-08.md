@@ -1,5 +1,10 @@
 # A coherence-gated eligibility trace for temporal credit assignment — F1→F2→F3 synthesis
 
+> **⚠ STATUS: read with the reground caveat.** This synthesis is partly OVERCLAIMED (it treated substrate coherence
+> as the falsifier). The F1/F2/F3 functional results (delayed-credit, isotope) STAND; the framing was corrected —
+> the readout is the reward-gated spin-selective binding-melt cascade, and the model is (A) "quantum constrains,
+> classical computes." See `docs/README.md` §3 and the F3-d entry in `RESEARCH_LOG_CALCIUM_DIMER.md`.
+
 **2026-08-08. Checkpoint write-up of the unified mechanism built across F1 (isotope lever), F2 (measurement),
 and F3 (reward-gated consolidation), grounded against the neuroscience/physics literature. Written so an
 outside physicist or neuroscientist can evaluate it: every load-bearing claim is tagged

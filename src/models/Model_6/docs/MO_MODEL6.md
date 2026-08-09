@@ -1,5 +1,10 @@
 # MO — Model 6 Master Orchestrator
 
+> **⚠ STATUS: 2026-07-18 SNAPSHOT — stale as a status board.** The six-PO board (§3: pump / phosphate /
+> E_invasion) is superseded and §8 "HOT SET" reads "Nothing dispatched yet." The **current** read-order,
+> frontier, and status live in **`docs/README.md`**. Read §2 (adaptations) and §7 (LOCKED) here — those still
+> hold — but do NOT treat §3/§8 as the live board.
+
 *Opened 2026-07-18, immediately after the substrate audit (`SUBSTRATE_AUDIT_JUL18.md`).
 Method adapted from `talon-orchestrator` + `consumer-acceptance-gate`; the adaptations are
 stated explicitly in §2 rather than assumed, because this repo differs from TALON in ways
