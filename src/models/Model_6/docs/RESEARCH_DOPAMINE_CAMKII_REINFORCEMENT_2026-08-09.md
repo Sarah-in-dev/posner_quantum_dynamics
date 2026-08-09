@@ -91,12 +91,29 @@ of CaMKII-pT286 is comparable to the autophosphorylation rate, which is what mak
 lets dopamine/PP1 decide). At the grounded balance, "potentiation does not occur to dopamine OR glutamate alone"
 (Fernandez 2006) is reproduced.
 
-**The fix (next step, grounded — NOT tuned to a decode):** ground `k_dephosphorylation` to the bistable-switch
-value (~0.1–0.3 s⁻¹) from Zhabotinsky/Graupner, then re-validate F3 (delayed-credit, isotope) — now with dopamine
-actually load-bearing — and extend to the network. **Open tension to handle:** strong PP1 vs memory persistence —
-a strong steady counterforce could strip pT286 once dopamine passes; the biology resolves this via CaMKII
-autophosphorylation BISTABILITY (once UP, self-sustaining). Verify the model's CaMKII holds the UP state after a
-transient burst, or add the bistability, before locking the value.
+**The fix direction (grounded — NOT tuned to a decode):** ground `k_dephosphorylation` toward the bistable-switch
+value (~0.1–0.3 s⁻¹) from Zhabotinsky/Graupner, with a persistence mechanism (CaMKII autophosphorylation
+bistability, or GluN2B-shielding of pT286 from PP1 — Mayadevi/Omkumar 2016).
+
+**REFINED FINDING (2026-08-09, tested — the naive fix is INSUFFICIENT, and it sharpens the problem):** a direct
+test (strong PP1 `k_dephos=0.1` + GluN2B protection=0.9, transient 2 s burst vs tonic vs dip) did NOT become
+DA-decisive — burst/tonic/dip all committed (~2/3). Two coupled reasons, both real:
+- **The two requirements trade off.** Strong PP1 gives DA-decisiveness but strips the memory once the burst passes;
+  GluN2B protection gives persistence but DESTROYS DA-decisiveness — pT286 rises from calcium+field in *every*
+  condition, GluN2B then binds and shields it from PP1, so tonic/dip latch just like burst. Persistence and
+  DA-decisiveness fight unless the switch has a SHARP threshold that only a burst crosses (true Zhabotinsky
+  autophosphorylation bistability, not the leaky GluN2B shield).
+- **The DA-decisive band is narrow and drive-sensitive** (decisive at field 12 kT, NOT at 18 kT — the drive alone
+  overwhelms PP1). And the ROOT: the real readout delivers **saturating** drive (~700 µM Ca, F3-e), so CaMKII sits
+  far ABOVE threshold, where dopamine can never tip it. For dopamine to decide, the readout drive must sit NEAR the
+  CaMKII threshold.
+
+**So the resolution requires BOTH, together:** (1) a true bistable CaMKII switch (autocatalytic autophosphorylation
+— sharp threshold + self-sustaining UP state), AND (2) the readout drive (the binding-melt Ca²⁺ shower + field)
+calibrated to sit NEAR that threshold, not saturating. **(2) IS the calcium-domination / calcium→dimer issue that
+`quantum-system-canonical` §2.3 already flags as in-flight** — so this reward-signed-readout goal is coupled to that
+upstream work and is not a self-contained one-parameter fix. This is the honest, well-characterized state; the next
+move is a deliberate two-part build (bistable CaMKII + near-threshold readout drive), not further parameter hunting.
 
 ## Emergent-physics discipline (LOCKED)
 The PP1 modulation and the DARPP-32 cascade rates are grounded from the cited kinetic literature; NONE is tuned to
