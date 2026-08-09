@@ -5,11 +5,15 @@
 > `docs/README.md`** (the map), then the two grounding docs named below. Verify every claim here against the
 > research log + code before acting. If this handoff disagrees with the log/code, the log/code wins.
 
-## 0. One line
-The reward-signed readout was made **biologically correct** (dopamine reinforces CaMKII via DARPP-32/PP1, it does
-NOT bypass it), a **bistable CaMKII switch** was built and validated (hysteresis), and the remaining work — **Part 2:
-making the full system DA-decisive** — was **fully mapped to four coupled conditions** but not closed. Part 2 is the
-task. It is a deliberate multi-coupled calibration, not a quick sweep.
+## 0. One line — and the GUARDRAIL that must survive
+**The model already COMPUTES.** The F-series proved temporal credit assignment (F3-b: credit at 30 s vs classical
+dead at 2 s; F3-c: isotope moves credit). **Do NOT re-derive whether it works or conclude it is "blocked."** (Two
+sessions made exactly that error — see README §3 guardrail and the F3-e correction note.) The open work is a
+**MECHANISTIC REFINEMENT of the decoherence signal → plasticity cascade**: grounding how the dopamine-gated
+binding-melt readout drives the CaMKII/plasticity cascade biologically correctly, WITHOUT breaking the working
+computation. This session refined the link (dopamine reinforces CaMKII via DARPP-32/PP1, not bypass) and built an
+opt-in bistable CaMKII switch (hysteresis validated). The mechanistic questions below (the calcium CaMKII
+integrates; how the coherent tag holds eligibility across the delay) are REFINEMENTS, not a verdict of failure.
 
 ## 1. Read-order (ground first — do not skip)
 1. `docs/README.md` — the documentation map: north-star, read-order, canonical vs stale, current frontier.
@@ -85,6 +89,12 @@ tag's mechanism BEFORE more experiments.
   rewrite.
 
 ## 6. FAILURE MODES from today — do NOT repeat
+- **Do NOT conclude the system is "broken," and do NOT re-derive whether it computes.** The F-series SETTLED the
+  computation (temporal credit assignment — F3-b credits at 30 s, F3-c isotope moves credit). When a mechanistic
+  experiment is negative (e.g. the Nakano-timed probe), that is an OPEN REFINEMENT question inside the
+  decoherence-signal→plasticity-cascade link — NOT evidence the system fundamentally fails. **TWO sessions made
+  exactly this error** — pathologizing a working system as a "calcium-domination blocker" / "delayed credit is
+  impossible here." Stay in the refinement frame: the computation works; you are refining a mechanism.
 - **Do NOT act on a handoff without grounding.** This session executed the previous handoff's COV charter as gospel,
   spent hours on an off-program covariance experiment that relitigated the locked (A), and had to revert it. Ground
   against the README + log + code FIRST; a handoff is a pointer, not an authority.

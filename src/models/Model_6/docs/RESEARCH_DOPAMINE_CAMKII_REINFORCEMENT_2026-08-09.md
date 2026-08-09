@@ -1,5 +1,13 @@
 # Dopamine reinforces CaMKII through DARPP-32/PP1 — it does NOT bypass it (readout grounding)
 
+> **⚠ FRAMING — read first.** This document refines a **WORKING system's mechanism**; it does NOT question whether
+> the system computes. The F-series already PROVED the computation (temporal credit assignment; `CAL F3-b` credits at
+> 30 s vs classical dead at 2 s; `CAL F3-c` isotope moves credit). Everything below is the **decoherence signal →
+> plasticity cascade REFINEMENT** — grounding how the dopamine-gated spin-selective binding-melt readout drives the
+> CaMKII/plasticity cascade biologically correctly, WITHOUT breaking the working computation. Where later sections
+> say "blocker," "not DA-decisive," or "calcium-dominated," read them as **OPEN MECHANISTIC QUESTIONS inside that
+> refinement, NOT as evidence the system fails.** Two sessions mis-read them as the latter — see the README §3 guardrail.
+
 **2026-08-09. Cited physics/biology assessment for the reward-signed readout at the network level (Phase C).
 BLUNT VERDICT: the F3 reward-gated consolidation as currently coded COMMITS by BYPASSING CaMKII
 (`model6_core.py:724`, commit on `credit` instead of `molecular_memory`), which is biologically UNSUPPORTED.

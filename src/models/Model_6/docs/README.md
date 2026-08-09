@@ -70,7 +70,18 @@ Follow `CLAUDE.md`'s discipline, in this order. Do not skip; the failure mode is
   **separate** three-factor learning signal.
 - **T1′ (far-pairs-first) is CLOSED** — 4/4 seeds, p≈3×10⁻⁶. Do not re-run/re-tune.
 
-### The live frontier — the directed quantum readout cascade
+### The computation WORKS — the open work is a mechanistic REFINEMENT (read this before concluding anything is "broken")
+
+> **⚠ GUARDRAIL — two sessions have violated this and wasted hours.** The F-series (F1→F2→F3) already realized the
+> model's computation — **temporal credit assignment, end-to-end and PROVEN**: `CAL F3-b` credits at 30 s where the
+> classical trace dies at 2 s; `CAL F3-c` shows the ⁶Li/⁷Li isotope MOVES the credit. The eligibility is the
+> coherent ³¹P tag; **passive decoherence (the ~100 s coherence lifetime, gated at the Werner floor) is the timer**;
+> the dopamine-gated spin-selective binding-melt is the readout. **DO NOT re-derive whether the system works, and
+> DO NOT conclude the reward-signed readout "fundamentally can't work" or is "blocked."** That is the repeated
+> failure mode. The open work is a **MECHANISTIC REFINEMENT of the decoherence signal → plasticity cascade** — how
+> the dopamine-gated binding-melt readout connects into the CaMKII/plasticity cascade biologically correctly — on a
+> system that ALREADY computes. Any conclusion of the form "delayed credit is impossible here" is off-scope and wrong.
+
 - **The cascade IS the mechanism (F-series).** The coherent singlet ³¹P tag is read out by Fisher's
   **spin-selective Posner binding-melt** (QDS — only the coherent/singlet channel binds and melts) →
   **Ca²⁺ shower → glutamate → plasticity**. Dopamine (reward) **gates/times** the melt via
@@ -85,17 +96,15 @@ Follow `CLAUDE.md`'s discipline, in this order. Do not skip; the failure mode is
   contrast p=0.012), but commitment is now **STOCHASTIC (DDSC)** so the pre-correction deterministic commit-rates
   (3/3) no longer hold — an honest change, not a regression. Grounding: `RESEARCH_DOPAMINE_CAMKII_REINFORCEMENT_2026-08-09.md`;
   research-log `CAL F3-e`.
-- **THE LIVE FRONTIER (Part 2): the reward signal is not yet DA-DECISIVE — blocked by calcium domination + the
-  coherent tag's unmodeled role.** Commitment is calcium-saturated (the readout Ca²⁺ shower overwhelms CaMKII, so
-  dopamine is inert — re-confirming F2-e/STEP2). **Part 1 built**: an opt-in **bistable CaMKII switch**
-  (`bistable=True`, Zhabotinsky; default off = bit-identical), hysteresis validated. The **Nakano-timed experiment**
-  (`sweep/f3e_nakano_timed_probe.py`) showed the mechanism is NOT DA-decisive for two STRUCTURAL reasons: (A) a
-  bistable switch cannot hold at its unstable threshold through the reward delay; (B) dopamine needs calcium
-  COINCIDENCE to grip PP1, at odds with the required DA-follows-Ca timing. **THE OPEN QUESTION:** the coherent P_S
-  tag's role is unmodeled in a load-bearing way — it should HOLD eligibility sub-threshold across the gap and keep
-  dopamine's grip alive, NOT drive the CaMKII barrier. See the LIVE handoff
-  `handoffs/SESSION_HANDOFF_2026-08-09_REWARD_SIGNED_READOUT_PART2.md` + the research doc (the 4-condition constraint
-  map + next moves: ground the PSD-distance calcium; reconceptualize the tag).
+- **The open refinement: the decoherence signal → plasticity cascade.** The task is to ground HOW the dopamine-gated
+  binding-melt readout (the decoherence signal that reads out the coherent tag) drives the CaMKII plasticity cascade
+  biologically correctly — while PRESERVING the working computation above. This session refined the link (dopamine
+  reinforces CaMKII via **DARPP-32/PP1**, commitment stays CaMKII-gated, not bypass) and explored mechanistic
+  details: the calcium CaMKII integrates, and whether an opt-in **bistable CaMKII switch** (`bistable=True`, built +
+  hysteresis-validated) holds eligibility across the delay. Those are **OPEN MECHANISTIC QUESTIONS inside the
+  refinement, NOT a verdict that the system can't compute.** ⚠ Earlier `F3-e` / Part-2 notes over-framed them as a
+  "calcium-domination blocker / not DA-decisive" — that pathologized a working system; see the superseding note in
+  `CAL F3-e`. Details + open questions: `RESEARCH_DOPAMINE_CAMKII_REINFORCEMENT_2026-08-09.md` + the LIVE handoff.
 - **Contested substrate premises** (carried, not settled): microtubule Q (~10, AMRIS-class), λ_F fidelity length
   (unmeasured), dimer coherence lifetime (Agarwal ~100–1000 s vs Fisher ~a day vs Player&Hore skeptical), lithium
   attribution (Posner vs radical-pair vs classical), the small-N (B) non-classicality witness (not built).
