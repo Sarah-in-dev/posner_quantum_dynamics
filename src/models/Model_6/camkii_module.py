@@ -229,6 +229,7 @@ class CaMKIIModule:
         self.CaMKII_active = 0.0        # Holoenzyme active fraction
         self.pT286 = 0.0                # Fraction with T286 phosphorylation
         self.GluN2B_bound = 0.0         # Fraction bound to GluN2B
+        self._pp1_factor = 1.0          # dopamine-controlled PP1 activity (1.0 = tonic; set in step())
         
         # Derived
         self.molecular_memory = 0.0     # pT286 × GluN2B_bound
@@ -238,21 +239,26 @@ class CaMKIIModule:
         self.rate_enhancement = 1.0
         
     def step(self, dt: float, calcium_uM: float, quantum_field_kT: float = 0.0,
-             calmodulin_nM: float = 1000.0) -> Dict:
+             calmodulin_nM: float = 1000.0, pp1_factor: float = 1.0) -> Dict:
         """
         Advance CaMKII state by one timestep
-        
+
         Args:
             dt: Timestep in seconds
             calcium_uM: Local calcium concentration in μM
             quantum_field_kT: Collective EM field from dimers (in kT units)
             calmodulin_nM: Available calmodulin (default 1000 nM)
-            
+            pp1_factor: dopamine-controlled PP1 activity multiplier on k_dephosphorylation
+                (from darpp32_pp1_module; default 1.0 = tonic = bit-identical to pre-wiring).
+                < 1 = PP1 inhibited via D1→PKA→DARPP-32-Thr34 → pT286 persists (LTP);
+                > 1 = PP1 disinhibited (dip / PP2B) → pT286 stripped (LTD).
+
         Returns:
             Dict with current state metrics
         """
         self.time += dt
-        
+        self._pp1_factor = float(pp1_factor)
+
         # 1. Calculate Ca2+/CaM activation
         self._update_CaCaM(dt, calcium_uM, calmodulin_nM, quantum_field_kT)
         
@@ -372,8 +378,13 @@ class CaMKIIModule:
         # Phosphorylation rate (barrier-dependent)
         k_phos = p.k_phosphorylation_max * self.CaMKII_active * self.rate_enhancement
         
-        # Dephosphorylation (PP1-mediated, constitutive)
-        k_dephos = p.k_dephosphorylation
+        # Dephosphorylation (PP1-mediated). PP1 activity is DOPAMINE-CONTROLLED via DARPP-32:
+        # phospho-Thr34-DARPP-32 (D1→PKA) INHIBITS PP1 → less dephos → pT286 accumulates (LTP);
+        # a dopamine dip / weak-Ca (PP2B) disinhibits PP1 → more dephos → pT286 stripped (LTD).
+        # pp1_factor (from darpp32_pp1_module, normalized tonic=1.0) is the reinforcement channel —
+        # this is HOW dopamine reinforces CaMKII rather than bypassing it. Default 1.0 = bit-identical.
+        # Grounding: docs/RESEARCH_DOPAMINE_CAMKII_REINFORCEMENT_2026-08-09.md (Yagishita 2014; Nakano 2010).
+        k_dephos = p.k_dephosphorylation * self._pp1_factor
         
         if p.stochastic:
             # Treat as discrete events on holoenzyme subunits
