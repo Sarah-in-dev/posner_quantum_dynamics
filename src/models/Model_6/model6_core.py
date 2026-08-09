@@ -683,28 +683,29 @@ class Model6QuantumSynapse:
             # This is the Q2 → Classical pathway (runs every step regardless of gate)
             dimer_field_kT = coupling_state['reverse']['energy_modulation_kT']
             
-            # CaMKII receives dimer field continuously (barrier modulation)
-            camkii_state = self.camkii.step(dt, calcium_uM, dimer_field_kT)
-
-            # CaMKII molecular_memory gates commitment (DDSC mechanism)
-            # Measurement opens the gate, dissolved dimers return calcium,
-            # CaMKII integrates Ca²⁺ through T286 autophosphorylation cascade.
-            # Commitment fires when molecular_memory reaches threshold.
+            # --- F3 (CORRECTED 2026-08-09): dopamine REINFORCES CaMKII via DARPP-32/PP1 — it does NOT
+            # bypass it. The eligibility trace = the coherent P_S tag (~100 s), decohering passively. At reward
+            # the spin-selective binding-melt reads out a STILL-COHERENT tag (delivering the Ca²⁺ shower);
+            # dopamine (D1→PKA→DARPP-32-Thr34) INHIBITS PP1 → CaMKII-pT286 persists (LTP); a dip / weak Ca
+            # (PP2B) disinhibits PP1 → pT286 stripped (LTD). The reinforcement channel is `pp1_factor` scaling
+            # CaMKII k_dephos; commitment STILL fires via CaMKII molecular_memory (the DDSC lock is HONORED,
+            # not bypassed), and the LTP/LTD sign is EMERGENT from PP1. Coherence (quantum) or the fixed 0.3-2 s
+            # window (classical baseline) gates whether dopamine can reinforce at all.
+            # Grounding: docs/RESEARCH_DOPAMINE_CAMKII_REINFORCEMENT_2026-08-09.md (Yagishita 2014; Nakano 2010).
+            pp1_factor = 1.0
             reward_gated = getattr(self, '_reward_gated_consolidation', False)
-            if (not self._camkii_committed
+            if (reward_gated and not self._camkii_committed
                     and getattr(self, '_measurement_gate_opened', False)):
-                if reward_gated:
-                    # --- F3: COHERENCE-WINDOW TAG + DOPAMINE-GATED BINDING-MELT READOUT ---
-                    # The eligibility trace = the coherent P_S tag (lifetime = coherence, ~100 s), which
-                    # decoheres PASSIVELY on its own clock. At reward time dopamine GATES the spin-selective
-                    # binding-melt (F2 `posner_binding`; Ca²⁺/pH-enabled) that READS OUT whatever coherence
-                    # remains — at ANY delay while the tag is still COHERENT (P_S > Werner floor). Dopamine
-                    # sets the TIMING only; it does NOT touch the spin (corrected framing, grounding
-                    # RESEARCH_DOPAMINE_READOUT_PHYSICS_2026-08-08). Window = coherence lifetime, NOT a fixed
-                    # 0.3-2 s (biology's CLASSICAL short trace, kept only as the baseline mode). Sign burst/dip.
-                    from reward_gating import (quantum_credit, classical_credit, is_coherent,
-                                               CLASSICAL_WINDOW_HI)
-                    t_since = self.time - getattr(self, '_measurement_time', self.time)
+                from reward_gating import is_coherent, CLASSICAL_WINDOW_LO, CLASSICAL_WINDOW_HI
+                mode = getattr(self, '_reward_gating_mode', 'quantum')   # 'quantum' | 'classical' (baseline)
+                t_since = self.time - getattr(self, '_measurement_time', self.time)
+                if mode == 'classical':
+                    readable = CLASSICAL_WINDOW_LO <= t_since <= CLASSICAL_WINDOW_HI   # fixed short window
+                    expired = t_since > CLASSICAL_WINDOW_HI
+                else:
+                    readable = is_coherent(self._mean_singlet_prob)                    # coherent tag readable
+                    expired = not readable
+                if readable:
                     da_tonic = (self.params.dopamine.dopamine_tonic
                                 if getattr(self.params, 'dopamine', None) is not None else 20e-9)
                     da_override = getattr(self, '_da_signal', None)   # probe/network may inject DA(t)
@@ -714,33 +715,28 @@ class Model6QuantumSynapse:
                         da_level = float(np.mean(self.dopamine.get_dopamine_concentration()))
                     else:
                         da_level = da_tonic
-                    mode = getattr(self, '_reward_gating_mode', 'quantum')   # 'quantum' | 'classical' (baseline)
-                    if mode == 'classical':
-                        credit = classical_credit(self._mean_singlet_prob, da_level, da_tonic, t_since)
-                        expired = t_since > CLASSICAL_WINDOW_HI              # classical trace: fixed short window
-                    else:
-                        credit = quantum_credit(self._mean_singlet_prob, da_level, da_tonic)
-                        expired = not is_coherent(self._mean_singlet_prob)  # quantum trace: expires on decoherence
-                    if credit > 0:                   # dopamine reads out a still-coherent tag → potentiation
-                        self._camkii_committed = True
-                        self._commitment_time = self.time
-                        self._committed_memory_level = float(credit)
-                        self._reward_sign = 1
-                        self._measurement_gate_opened = False              # readout = decoherence: tag consumed
-                    elif credit < 0:                 # dip readout → depression (no potentiation)
-                        self._reward_sign = -1
-                        self._committed_memory_level = 0.0
-                        self._measurement_gate_opened = False
-                    elif expired:                    # tag decohered (or classical window closed) with no readout
-                        self._measurement_gate_opened = False
-                elif camkii_state['molecular_memory'] > 0.5:
-                    # DEFAULT (pre-F3) calcium/DDSC commit. CONSUME the token (D19): a measurement
-                    # happened and licensed one commitment; clearing the gate stops later trials
-                    # re-committing off a stale token + a purely classical CaMKII calcium integral.
-                    self._camkii_committed = True
-                    self._commitment_time = getattr(self, '_measurement_time', self.time)
-                    self._committed_memory_level = camkii_state['molecular_memory']
-                    self._measurement_gate_opened = False
+                    KD_D1 = 1e-6                                       # D1 low-affinity Kd ~1 µM (grounded)
+                    da_occ = da_level / (da_level + KD_D1)            # D1 receptor occupancy
+                    if getattr(self, '_darpp32', None) is None:
+                        from darpp32_pp1_module import DARPP32PP1Module
+                        self._darpp32 = DARPP32PP1Module(
+                            da_tonic_occupancy=da_tonic / (da_tonic + KD_D1), ca_basal_uM=0.1)
+                    pp1_factor = self._darpp32.step(dt, da_occ, calcium_uM)['pp1_factor']
+                elif expired:
+                    self._measurement_gate_opened = False              # tag decohered / window closed
+
+            # CaMKII integrates Ca²⁺ (binding-melt Ca shower) with dopamine-reinforced PP1 (DDSC mechanism).
+            camkii_state = self.camkii.step(dt, calcium_uM, dimer_field_kT, pp1_factor=pp1_factor)
+
+            # Commitment fires via CaMKII molecular_memory (DDSC lock) — now dopamine-reinforced. CONSUME the
+            # token (D19): a measurement licensed one commitment; clearing the gate stops later re-commits.
+            if (not self._camkii_committed
+                    and getattr(self, '_measurement_gate_opened', False)
+                    and camkii_state['molecular_memory'] > 0.5):
+                self._camkii_committed = True
+                self._commitment_time = getattr(self, '_measurement_time', self.time)
+                self._committed_memory_level = camkii_state['molecular_memory']
+                self._measurement_gate_opened = False
 
             # --- PHASE 11: SPINE PLASTICITY ---
             if self._camkii_committed:
