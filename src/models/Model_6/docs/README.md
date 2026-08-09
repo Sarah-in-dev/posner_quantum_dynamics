@@ -78,15 +78,24 @@ Follow `CLAUDE.md`'s discipline, in this order. Do not skip; the failure mode is
   signed), it is a genuine *quantum readout* (it reads the ³¹P spin-coherence tag), and it is (A)-consistent: the
   quantum constrains WHICH channel reads out; the classical cascade amplifies and drives plasticity. Grounded in
   Fisher 2015 + QDS (Fisher & Radzihovsky 2018) + Agarwal 2022. Physics: `RESEARCH_DOPAMINE_READOUT_PHYSICS_2026-08-08.md`.
-- **Status: PROVEN at the single-synapse level.** F3 passes — delayed-credit 3/3 (the ~100 s coherent tag credits
-  where the classical ~2 s trace is dead), and the isotope arm moves temporal credit (⁶Li long / ⁷Li short).
-  `reward_gating.py` `da_sign` drives the update at `model6_core.py:693–743`, gated behind the Werner floor.
-- **The open, on-program next step (in progress, 2026-08-09):** the reward-signed readout must route **THROUGH
-  CaMKII, not bypass it** — dopamine reinforces/disinhibits CaMKII via the **D1→PKA→DARPP-32(Thr34)→PP1** cascade,
-  and the **LTP/LTD sign is EMERGENT from PP1 activity** (PP1 down→LTP, PP1 up→LTD), not an imposed ±1. Grounding:
-  `RESEARCH_DOPAMINE_CAMKII_REINFORCEMENT_2026-08-09.md`. The work: correct the F3 commit (it currently *bypasses*
-  CaMKII at `model6_core.py:724`) to reinforce-through-CaMKII, re-validate single-synapse F3, then extend to the
-  multi-synapse network. Commitment stays CaMKII-gated (the DDSC lock holds and is reinforced).
+- **DONE this session — the readout now routes THROUGH CaMKII (not bypass).** Dopamine reinforces CaMKII via the
+  **D1→PKA→DARPP-32(Thr34)→PP1** cascade (`darpp32_pp1_module.py`; `pp1_factor` wired into `camkii_module.py`);
+  commitment stays CaMKII-gated (DDSC lock honored); the **LTP/LTD sign is EMERGENT from PP1** (down→LTP, up→LTD),
+  not an imposed ±1. F3 discrimination signatures HOLD under the corrected mechanism (temporal-gap p=0.031, isotope
+  contrast p=0.012), but commitment is now **STOCHASTIC (DDSC)** so the pre-correction deterministic commit-rates
+  (3/3) no longer hold — an honest change, not a regression. Grounding: `RESEARCH_DOPAMINE_CAMKII_REINFORCEMENT_2026-08-09.md`;
+  research-log `CAL F3-e`.
+- **THE LIVE FRONTIER (Part 2): the reward signal is not yet DA-DECISIVE — blocked by calcium domination + the
+  coherent tag's unmodeled role.** Commitment is calcium-saturated (the readout Ca²⁺ shower overwhelms CaMKII, so
+  dopamine is inert — re-confirming F2-e/STEP2). **Part 1 built**: an opt-in **bistable CaMKII switch**
+  (`bistable=True`, Zhabotinsky; default off = bit-identical), hysteresis validated. The **Nakano-timed experiment**
+  (`sweep/f3e_nakano_timed_probe.py`) showed the mechanism is NOT DA-decisive for two STRUCTURAL reasons: (A) a
+  bistable switch cannot hold at its unstable threshold through the reward delay; (B) dopamine needs calcium
+  COINCIDENCE to grip PP1, at odds with the required DA-follows-Ca timing. **THE OPEN QUESTION:** the coherent P_S
+  tag's role is unmodeled in a load-bearing way — it should HOLD eligibility sub-threshold across the gap and keep
+  dopamine's grip alive, NOT drive the CaMKII barrier. See the LIVE handoff
+  `handoffs/SESSION_HANDOFF_2026-08-09_REWARD_SIGNED_READOUT_PART2.md` + the research doc (the 4-condition constraint
+  map + next moves: ground the PSD-distance calcium; reconceptualize the tag).
 - **Contested substrate premises** (carried, not settled): microtubule Q (~10, AMRIS-class), λ_F fidelity length
   (unmeasured), dimer coherence lifetime (Agarwal ~100–1000 s vs Fisher ~a day vs Player&Hore skeptical), lithium
   attribution (Posner vs radical-pair vs classical), the small-N (B) non-classicality witness (not built).
@@ -154,8 +163,11 @@ answer today — this is on the cleanup list.
   `_find_all_clusters`; derived cutoff `d* = λ·ln(P_S_i·P_S_j / 0.5)`.
 - **Readout / commit coin (unsigned count):** `multi_synapse_network.py` `perform_quantum_measurement`. NB: the
   live model has **no signed Δw** — any signed weight readout in a `sweep/` script is an experiment-side construct,
-  and the *sign* is meant to come from the reward signal (`reward_gating.da_sign`), not from the partition.
-- **Reward-gated update (single-synapse, wired):** `model6_core.py:693–743` uses `reward_gating.quantum_credit`.
+  and the *sign* comes from the reward signal via the DARPP-32/PP1 cascade (emergent from PP1), not from the partition.
+- **Reward-gated update (single-synapse):** corrected to route through CaMKII — `model6_core.py` (~L690–745) feeds a
+  DARPP-32/PP1 `pp1_factor` into `camkii.step`; commitment fires via CaMKII `molecular_memory` (DDSC). The old
+  `reward_gating.quantum_credit` bypass is removed; sign emerges from PP1 (`darpp32_pp1_module.py`), gated behind
+  the Werner floor.
 
 ---
 
