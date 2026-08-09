@@ -81,9 +81,12 @@ Follow `CLAUDE.md`'s discipline, in this order. Do not skip; the failure mode is
 - **Status: PROVEN at the single-synapse level.** F3 passes — delayed-credit 3/3 (the ~100 s coherent tag credits
   where the classical ~2 s trace is dead), and the isotope arm moves temporal credit (⁶Li long / ⁷Li short).
   `reward_gating.py` `da_sign` drives the update at `model6_core.py:693–743`, gated behind the Werner floor.
-- **The open, on-program next step:** carry the reward-signed cascade from the controlled single-synapse probe
-  toward the multi-synapse / living loop (Phase C), and supply PO10-2's unresolved weight **sign from the reward
-  signal** (`da_sign`) — the sign comes from reward, classically. F1→F2→F3 is the cascade; extending it is the work.
+- **The open, on-program next step (in progress, 2026-08-09):** the reward-signed readout must route **THROUGH
+  CaMKII, not bypass it** — dopamine reinforces/disinhibits CaMKII via the **D1→PKA→DARPP-32(Thr34)→PP1** cascade,
+  and the **LTP/LTD sign is EMERGENT from PP1 activity** (PP1 down→LTP, PP1 up→LTD), not an imposed ±1. Grounding:
+  `RESEARCH_DOPAMINE_CAMKII_REINFORCEMENT_2026-08-09.md`. The work: correct the F3 commit (it currently *bypasses*
+  CaMKII at `model6_core.py:724`) to reinforce-through-CaMKII, re-validate single-synapse F3, then extend to the
+  multi-synapse network. Commitment stays CaMKII-gated (the DDSC lock holds and is reinforced).
 - **Contested substrate premises** (carried, not settled): microtubule Q (~10, AMRIS-class), λ_F fidelity length
   (unmeasured), dimer coherence lifetime (Agarwal ~100–1000 s vs Fisher ~a day vs Player&Hore skeptical), lithium
   attribution (Posner vs radical-pair vs classical), the small-N (B) non-classicality witness (not built).
@@ -101,6 +104,7 @@ Follow `CLAUDE.md`'s discipline, in this order. Do not skip; the failure mode is
 | Commitment / measurement pathway | `model6-commitment-pathway` |
 | Coherence-gated learning / eligibility | `coherence-gated-learning` |
 | Isotope lever / reward readout physics | (F-series) `RESEARCH_LOG_CALCIUM_DIMER.md` + `RESEARCH_DOPAMINE_READOUT_PHYSICS_2026-08-08.md` |
+| Dopamine→CaMKII reinforcement (DARPP-32/PP1); the reward sign | `RESEARCH_DOPAMINE_CAMKII_REINFORCEMENT_2026-08-09.md`; `model6-commitment-pathway` |
 | Codebase ops / how to run | `model6-codebase-operations`, `experiment-design-patterns` |
 | Cross-domain bridge (to the PAUL/TALON work) | `cross-domain-integration`, `transition-framework` |
 
