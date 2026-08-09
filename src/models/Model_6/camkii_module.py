@@ -116,7 +116,26 @@ class T286PhosphorylationParameters:
     
     # Phosphorylation kinetics
     k_phosphorylation_max: float = 0.1  # s⁻¹, max rate when barrier reduced
-    k_dephosphorylation: float = 0.001  # s⁻¹, PP1-mediated (slow, for memory)
+    k_dephosphorylation: float = 0.001  # s⁻¹, PP1-mediated. In the DEFAULT (non-bistable) mode this is the
+                                        # first-order rate (0.001 "slow, for memory"). In BISTABLE mode it is
+                                        # the PP1 Vmax (saturating), grounded higher (~0.15) so PP1 is the real
+                                        # Ca–PP1 switch counterforce (Lisman & Zhabotinsky 2001).
+
+    # --- BISTABLE SWITCH (opt-in; Lisman & Zhabotinsky 2001, Neuron 31:191) ---
+    # bistable=False ⇒ default binomial dynamics, BIT-IDENTICAL. bistable=True ⇒ CaMKII becomes a true
+    # switch: autocatalytic autophosphorylation (a pT286 subunit is AUTONOMOUS — active without Ca/CaM,
+    # Coultrap & Bhalla 2012 — and phosphorylates neighbors, so the UP state SELF-SUSTAINS after the burst)
+    # vs SATURATING PP1 (zeroth-order when pT286≫Km_pp1 → sharp threshold). Dopamine sets the PP1 Vmax
+    # (pp1_factor), so at a NEAR-THRESHOLD drive a burst latches UP while dip/tonic stay DOWN — DA-decisive
+    # AND persistent. Parameters are in the bistable regime (robust over a wide range per the source);
+    # exact values [MODELED], flagged, NOT tuned to a downstream decode.
+    bistable: bool = False
+    autocat: float = 6.0                # autonomous autocatalysis strength (calcium-independent self-drive).
+                                        # Bistable band (DOWN stable AND an autonomous UP fixed point) requires
+                                        # 0.1·autocat·(1−p)(Km+p)=Vmax to have two roots ⇒ autocat∈(~4.2,~7.5)
+                                        # at Vmax=0.15,Km_pp1=0.2. 6.0 sits in-band (Zhabotinsky: bistability is
+                                        # robust over a wide range). [MODELED-exact, grounded-regime; not tuned]
+    Km_pp1: float = 0.2                 # PP1 Michaelis constant (fraction); pT286≫Km ⇒ PP1 saturates
     
     # Quantum coupling efficiency
     # DERIVATION: Geometric factors (orientation ⟨cos²θ⟩ ≈ 1/3) × selectivity (~0.3) ≈ 0.1
@@ -374,7 +393,10 @@ class CaMKIIModule:
             Uses binomial statistics for subunit population
         """
         p = self.params.t286
-        
+
+        if getattr(p, 'bistable', False):
+            return self._update_T286_bistable(dt)   # opt-in Zhabotinsky switch (default off = below)
+
         # Phosphorylation rate (barrier-dependent)
         k_phos = p.k_phosphorylation_max * self.CaMKII_active * self.rate_enhancement
         
@@ -414,6 +436,28 @@ class CaMKIIModule:
             d_pT286 = k_phos * (1.0 - self.pT286) - k_dephos * self.pT286
             self.pT286 = np.clip(self.pT286 + d_pT286 * dt, 0.0, 1.0)
         
+    def _update_T286_bistable(self, dt: float):
+        """Zhabotinsky/Lisman 2001 bistable switch (opt-in): AUTONOMOUS autocatalytic autophosphorylation vs
+        SATURATING PP1. The autocatalytic term (autocat × pT286) is calcium-INDEPENDENT (autophosphorylated
+        subunits are autonomously active — Coultrap & Bhalla 2012), so the UP state SELF-SUSTAINS after the
+        drive passes; PP1 is Michaelis-Menten (Vmax × pT286/(Km+pT286)), zeroth-order above Km → a SHARP
+        threshold. Dopamine sets the PP1 Vmax via pp1_factor, so at a near-threshold drive a burst latches UP
+        while dip/tonic stay DOWN — DA-decisive AND persistent. See RESEARCH_DOPAMINE_CAMKII_REINFORCEMENT."""
+        p = self.params.t286
+        # phosphorylation: Ca/CaM-driven initiation + AUTONOMOUS autocatalysis (self-sustaining, Ca-independent)
+        k_phos = p.k_phosphorylation_max * self.rate_enhancement * (self.CaMKII_active + p.autocat * self.pT286)
+        # PP1 dephosphorylation: dopamine-controlled Vmax, SATURATING (zeroth-order when pT286 ≫ Km_pp1)
+        Vmax = p.k_dephosphorylation * self._pp1_factor
+        dephos = Vmax * self.pT286 / (p.Km_pp1 + self.pT286)
+        d = k_phos * (1.0 - self.pT286) - dephos
+        self.pT286 = float(np.clip(self.pT286 + d * dt, 0.0, 1.0))
+        if p.stochastic:
+            # subunit shot noise (Langevin): σ ~ sqrt(total flux / n_subunits)
+            flux = k_phos * (1.0 - self.pT286) + dephos
+            self.pT286 = float(np.clip(
+                self.pT286 + np.sqrt(max(flux, 0.0) * dt / p.n_subunits) * self.rng.standard_normal(),
+                0.0, 1.0))
+
     def _update_GluN2B(self, dt: float):
         """
         Update CaMKII-GluN2B binding with Chemical Langevin noise

@@ -115,6 +115,24 @@ calibrated to sit NEAR that threshold, not saturating. **(2) IS the calcium-domi
 upstream work and is not a self-contained one-parameter fix. This is the honest, well-characterized state; the next
 move is a deliberate two-part build (bistable CaMKII + near-threshold readout drive), not further parameter hunting.
 
+## PART 1 BUILT (2026-08-09) — the bistable CaMKII switch; hysteresis validated, DA-decisiveness coupled to Part 2
+`camkii_module.py` gains an **opt-in** `bistable` mode (default False ⇒ bit-identical): AUTONOMOUS autocatalytic
+autophosphorylation (`autocat·pT286`, calcium-independent — Coultrap & Bhalla 2012) vs SATURATING PP1
+(`Vmax·pT286/(Km+pT286)`), Lisman & Zhabotinsky 2001. Bistable-band params derived analytically
+(`autocat∈(4.2,7.5)` at Vmax=0.15,Km=0.2), `autocat=6.0` [MODELED-in-band, not tuned]. **VALIDATED — true
+hysteresis:** a transient 8 s drive latches the UP state (pT286 0.97 → **0.72 held 30 s after drive-OFF** =
+autonomous self-sustaining memory), while rest stays DOWN (0.15). The default (non-bistable) path is unchanged
+(`__main__` still passes).
+
+**But standalone it is NOT DA-decisive** (dip vs burst both latch UP, ~0.65–0.71, at field 6–12): the drive
+overshoots the switch's threshold in *every* dopamine condition. This **confirms (now from inside the switch)
+that DA-decisiveness is inseparable from Part 2** — dopamine decides only when the drive sits JUST BELOW a
+threshold it shifts, i.e. the readout drive must be co-calibrated to the (dopamine-modulated) threshold. Part 1
+(the switch, with its persistent UP-state memory) is a necessary, grounded component; the reward-signed readout
+is GATED on Part 2 (the near-threshold drive = the in-flight calcium→dimer / calcium-domination work, canonical
+§2.3). Next: co-calibrate the readout drive to the switch threshold (Part 2), then wire `bistable=True` into the
+reward-gated path and re-validate F3 end-to-end.
+
 ## Emergent-physics discipline (LOCKED)
 The PP1 modulation and the DARPP-32 cascade rates are grounded from the cited kinetic literature; NONE is tuned to
 make the readout decode. Ca-amplitude directionality and the DA-follows-Ca timing window are cited, not fitted. If
