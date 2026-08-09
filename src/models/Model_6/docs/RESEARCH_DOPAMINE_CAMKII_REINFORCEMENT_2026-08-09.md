@@ -76,6 +76,28 @@ the dip→LTD headroom is inherently small. This asymmetry is biology, not a bug
 search** rather than tuned away (an initial symmetric-magnitude check FAILED; grounding the resting operating point
 showed the check was wrong, not the model). `pp1_factor` is normalized to tonic = 1.0 ⇒ bit-identical when unwired.
 
+## RESOLUTION of the calcium-domination blocker (2026-08-09) — the PP1 counterforce is too weak
+The F3-e diagnostic showed commitment is calcium-dominated (Ca shower saturates CaMKII, dopamine inert). The
+resolution experiment `sweep/f3e_calcium_pp1_regime_probe.py` (drive a CaMKII + DARPP-32/PP1 pair across
+field × PP1-strength × dopamine at physiological Ca=2 µM, pre-registered "DA-decisive" criterion:
+burst≥0.8 ∧ dip≤0.2 ∧ none≤0.2) **located a DA-DECISIVE regime**: at field 12–24 kT with **PP1 strength ≈
+100–300× the current `k_dephosphorylation`** (i.e. `k_dephos ≈ 0.1–0.3 s⁻¹`, comparable to `k_phos_max = 0.1`),
+a dopamine burst commits (1.00) while dip/none do NOT (0.00). Below that PP1 strength calcium+field saturate
+CaMKII regardless of dopamine (the F3-e blocker); the positive control fires (cells commit), so the result is valid.
+
+**Diagnosis:** the model's `k_dephosphorylation = 0.001 s⁻¹` ("slow, for memory") is ~100–300× too weak to be the
+Ca–PP1 bistable-switch counterforce the biology requires (Zhabotinsky 2000; Graupner 2007: PP1 dephosphorylation
+of CaMKII-pT286 is comparable to the autophosphorylation rate, which is what makes the switch bidirectional and
+lets dopamine/PP1 decide). At the grounded balance, "potentiation does not occur to dopamine OR glutamate alone"
+(Fernandez 2006) is reproduced.
+
+**The fix (next step, grounded — NOT tuned to a decode):** ground `k_dephosphorylation` to the bistable-switch
+value (~0.1–0.3 s⁻¹) from Zhabotinsky/Graupner, then re-validate F3 (delayed-credit, isotope) — now with dopamine
+actually load-bearing — and extend to the network. **Open tension to handle:** strong PP1 vs memory persistence —
+a strong steady counterforce could strip pT286 once dopamine passes; the biology resolves this via CaMKII
+autophosphorylation BISTABILITY (once UP, self-sustaining). Verify the model's CaMKII holds the UP state after a
+transient burst, or add the bistability, before locking the value.
+
 ## Emergent-physics discipline (LOCKED)
 The PP1 modulation and the DARPP-32 cascade rates are grounded from the cited kinetic literature; NONE is tuned to
 make the readout decode. Ca-amplitude directionality and the DA-follows-Ca timing window are cited, not fitted. If
