@@ -472,6 +472,44 @@ class AnalyticalCalciumSystem:
     def get_mean_concentration(self) -> float:
         """Get mean calcium concentration (M) - over local region"""
         return np.mean(self._local_ca)
+
+    def _build_psd_region(self, psd_radius_nm: float):
+        """Grid points within the PSD disk (radius psd_radius_nm) around the channel-cluster centroid,
+        sampled every ~16 nm — the query set for the PSD area-average. Built once (fixed geometry)."""
+        ch = self.channels.positions
+        cx, cy = float(np.mean(ch[:, 0])), float(np.mean(ch[:, 1]))
+        r_grid = psd_radius_nm * 1e-9 / self.dx
+        step = max(1, int(round(16e-9 / self.dx)))
+        rr = int(np.ceil(r_grid))
+        pts = []
+        for di in range(-rr, rr + 1, step):
+            for dj in range(-rr, rr + 1, step):
+                if di * di + dj * dj <= r_grid * r_grid:
+                    x, y = int(round(cx)) + di, int(round(cy)) + dj
+                    if 0 <= x < self.grid_shape[0] and 0 <= y < self.grid_shape[1]:
+                        pts.append((x, y))
+        self._psd_query_points = np.array(pts)
+        self._psd_radius_nm = psd_radius_nm
+
+    def get_psd_averaged_concentration(self, psd_radius_nm: float = 180.0) -> float:
+        """Free [Ca2+] (M) AREA-AVERAGED over the PSD disk — the diffuse calcium a PSD-distributed CaMKII /
+        DARPP-32 population integrates, as opposed to the channel-mouth nanodomain PEAK the dimers form in.
+
+        Grounded, not tuned: the PSD is a disk ~360 nm diameter (radius ~180 nm; EM range 200-800 nm), and we
+        area-average the model's OWN Naraghi-Neher nanodomain profile over that disk. The uniform
+        dissolution-return component (bulk Ca from melted dimers) is added — it is a genuine spine-bulk calcium.
+        This lands the plasticity-cascade drive near CaMKII's K_calcium_half = 1 uM (vs the ~100s-uM nanodomain
+        peak np.max returns), which is the construct-validity fix for the calcium-domination of commitment.
+        [GROUNDED — PSD geometry from EM; value emergent from the model's own calcium profile.]"""
+        if getattr(self, '_psd_query_points', None) is None:
+            self._build_psd_region(psd_radius_nm)
+        vals = self.nanodomain.calculate_field_at_points(
+            channel_positions=self.channels.positions,
+            channel_states=self.channels.state,
+            channel_currents=self.channels.current * self.channel_gain,
+            query_points=self._psd_query_points, dx=self.dx)
+        shower_excess = max(float(self._ca_field.min()) - self.params.ca_baseline, 0.0)
+        return float(np.mean(vals)) + shower_excess
     
     def get_nanodomains(self, threshold: float = 10e-6) -> List[Tuple[int, int]]:
         """

@@ -207,6 +207,49 @@ dopamine BURST reinforces PP1-inhibition → CaMKII commits (LTP) across delays 
 dead; (b) a dip (or decohered tag) → PP1 active / no readout → no potentiation; (c) ⁶Li (long coherence) credits at
 long delay, ⁷Li (short) does not. If any fails, report it — do not retune.
 
+## CONSTRAINT #1 — LANDED (2026-08-09): CaMKII now integrates the diffuse PSD-distance calcium (grounded)
+**The construct-validity fix is in.** `model6_core.py` fed CaMKII (and the DARPP-32/PP1 cascade) `calcium_uM =
+np.max(ca_conc)` — the channel-mouth **nanodomain peak** (~137–700 µM). But CaMKII/DARPP-32 sit at the PSD; they
+physiologically integrate the **diffuse PSD-distance calcium**. New method `AnalyticalCalciumSystem.
+get_psd_averaged_concentration(psd_radius_nm=180)` area-averages the model's OWN Naraghi-Neher nanodomain profile
+over the **EM-grounded PSD disk** (disk ~360 nm dia / ~180 nm radius; range 200–800 nm). The plasticity cascade
+(CaMKII + DARPP-32) is now fed this value at `model6_core.py:~608/724/729`; the nanodomain peak is RETAINED for
+dimer formation and the binding-melt measurement trigger (dimers form at the mouth; CaMKII reads the PSD average).
+Value is **emergent** (model's own profile × grounded PSD geometry), not tuned.
+
+**DATA-LEVEL VALIDATION (diagnostic probes, single synapse, reward-gated path):**
+- **Which quantity was the saturator — measured, decomposed:** at commit the field is decomposed into nanodomain
+  peak vs uniform dissolution-shower floor vs PSD-area-average. The saturator is the **formation nanodomain peak**
+  (~200–700 µM); the uniform shower floor **stays at baseline (0.1 µM)** in this path (no shower here — F3-e's
+  "~700 µM shower" was the nanodomain peak). So constraint #1's original framing is correct; shower/temporal are
+  NOT the cause here.
+- **The edit lands the drive in range:** CaMKII-fed calcium drops from ~200–700 µM (np.max) to **~3–16 µM**
+  (PSD-area-average) — near CaMKII's K_calcium_half = 1 µM, and consistent with measured spine calcium during LTP
+  (resting ~100 nM; single-EPSP ~0.5–1 µM; strong LTP a few µM). [GROUNDED — Sabatini/Higley; PSD geometry EM]
+
+**BUT NOT YET DA-DECISIVE — a clean structural finding (do NOT tune):** with the bistable CaMKII (Part 1) paired
+in and the corrected PSD calcium, a delayed DA burst/dip/none are **identical** (all commit ~0.75) and **all commit
+BEFORE the reward** (pT286 ≈ 0.73 at build-end = at the switch's UP attractor ~0.732; climbs during the delay). The
+**eligibility-phase (Hebbian) calcium drives the switch past its separatrix and it latches before dopamine votes.**
+This is exactly Yagishita's rule being VIOLATED by the model: *Hebbian Ca alone is not sufficient to commit — it
+requires PKA/DARPP-32/PP1 reinforcement* — yet the model commits on Hebbian activity alone. Constraint #1 (calcium
+MAGNITUDE) was necessary but not sufficient.
+
+**The two grounded requirements now precisely characterized (the real Part-2 core):**
+1. **Down-stable at Hebbian Ca:** the switch must NOT latch on eligibility-phase Ca under tonic dopamine — resting
+   PP1 (Cdk5/Thr75-suppressed PKA → PP1 active; + Ca→PP2B→PP1 active) must strip pT286 back. Requires the PP1↔auto-
+   phosphorylation balance grounded (Zhabotinsky/Graupner: PP1 dephos comparable to autophos), and the DARPP-32
+   cascade running CONTINUOUSLY (currently pp1_factor=1.0 during build — the cascade is only engaged in the reward
+   block, so the model omits the PP2B-driven PP1 activation that Hebbian Ca should cause).
+2. **Commitment delivered at reward:** at reward, dopamine (PP1-inhibited) + the coherent tag's readout Ca must
+   TOGETHER tip the (still-DOWN) switch — the Ca/dopamine coincidence Yagishita/Nakano require. In the reward-gated
+   path the binding-melt readout is skipped, so no readout Ca arrives at reward; dopamine alone (modulating PP1 at
+   basal Ca) cannot raise pT286.
+
+Both are structural (architecture of eligibility-vs-commitment separation + the PP1/autophos balance), not a single
+parameter. Next: work these grounded (continuous DARPP-32 cascade; PP1↔autophos balance from Zhabotinsky; readout-Ca
+delivery at reward), one deliberate grounded step at a time — NOT a drive sweep to force a pass.
+
 ## Sources (verified this session)
 - Yagishita et al. 2014, Science 345:1616 — dopamine window, PKA→CaMKII reinforcement.
 - Nakano et al. 2010, PLoS Comput Biol 6:e1000670 — the kinetic DA/Ca striatal plasticity model (scheme + thresholds).

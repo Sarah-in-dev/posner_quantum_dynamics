@@ -599,8 +599,14 @@ class Model6QuantumSynapse:
 
             # --- PHASE 9: ELIGIBILITY FROM PARTICLE SYSTEM (Agarwal 2023) ---
             ca_conc = self.calcium.get_concentration()  # Re-read after dissolution return
-            calcium_uM = float(np.max(ca_conc)) * 1e6
-            
+            calcium_uM = float(np.max(ca_conc)) * 1e6   # nanodomain PEAK — dimers form here; measurement trigger
+            # The plasticity cascade (CaMKII + DARPP-32/PP1) sits at the PSD and integrates the DIFFUSE
+            # PSD-distance calcium (area-averaged over the ~180 nm PSD disk), NOT the channel-mouth nanodomain
+            # peak. Feeding np.max saturated CaMKII (~100s of uM >> K_half 1 uM) so dopamine's PP1 reinforcement
+            # was inert (calcium-dominated commitment; F3-e). Grounded: PSD geometry (EM) + the model's own
+            # Naraghi-Neher profile. See analytical_calcium_system.get_psd_averaged_concentration.
+            camkii_calcium_uM = float(self.calcium.get_psd_averaged_concentration()) * 1e6
+
             # Eligibility IS the singlet state - no separate module needed
             if self.dimer_particles.dimers:
                 mean_P_S = np.mean([d.singlet_probability for d in self.dimer_particles.dimers])
@@ -721,12 +727,12 @@ class Model6QuantumSynapse:
                         from darpp32_pp1_module import DARPP32PP1Module
                         self._darpp32 = DARPP32PP1Module(
                             da_tonic_occupancy=da_tonic / (da_tonic + KD_D1), ca_basal_uM=0.1)
-                    pp1_factor = self._darpp32.step(dt, da_occ, calcium_uM)['pp1_factor']
+                    pp1_factor = self._darpp32.step(dt, da_occ, camkii_calcium_uM)['pp1_factor']
                 elif expired:
                     self._measurement_gate_opened = False              # tag decohered / window closed
 
-            # CaMKII integrates Ca²⁺ (binding-melt Ca shower) with dopamine-reinforced PP1 (DDSC mechanism).
-            camkii_state = self.camkii.step(dt, calcium_uM, dimer_field_kT, pp1_factor=pp1_factor)
+            # CaMKII integrates the DIFFUSE PSD calcium (not the nanodomain peak) with dopamine-reinforced PP1.
+            camkii_state = self.camkii.step(dt, camkii_calcium_uM, dimer_field_kT, pp1_factor=pp1_factor)
 
             # Commitment fires via CaMKII molecular_memory (DDSC lock) — now dopamine-reinforced. CONSUME the
             # token (D19): a measurement licensed one commitment; clearing the gate stops later re-commits.
