@@ -133,6 +133,29 @@ is GATED on Part 2 (the near-threshold drive = the in-flight calcium→dimer / c
 §2.3). Next: co-calibrate the readout drive to the switch threshold (Part 2), then wire `bistable=True` into the
 reward-gated path and re-validate F3 end-to-end.
 
+## PART 2 — CONSTRAINT MAP (2026-08-09, mapped not closed): the reward-signed readout needs FOUR coupled things
+Part 2 (make the full system DA-decisive) is not a one-parameter fix. Each experiment this session grounded another
+required condition; together they define what a working reward-signed readout needs:
+1. **CaMKII must integrate PSD-distance calcium, NOT the nanodomain peak.** `model6_core.py:602,833` feeds CaMKII
+   `calcium_uM = np.max(ca_conc)·1e6` — the channel-mouth peak (~137 µM + dimer-dissolution return ~1 µM/dimer×hundreds).
+   CaMKII is at the PSD; physiologically it integrates the diffuse spine calcium, "a few µM" (literature), near its
+   1 µM threshold. This is a construct-validity fix (spatial), and it is the calcium-domination root (canonical §2.3).
+2. **The drive (calcium+field) must sit NEAR the switch threshold**, not above it — else it commits regardless of DA
+   (Part-1 finding).
+3. **Dopamine must FOLLOW the calcium, not overlap it (Nakano 2010 timing).** At the ~1 µM calcium that drives CaMKII,
+   PP2B/calcineurin is ~90% active and strips DARPP-32-Thr34, keeping PP1 active and OVERWHELMING dopamine's PP1
+   inhibition — measured: with the burst overlapping the calcium, none/dip/burst are identical (dopamine has zero
+   vote). Dopamine can only decide once calcium (and PP2B) has decayed. So the protocol must be TEMPORAL:
+   calcium eligibility → (decay) → delayed dopamine reward.
+4. **The bistable switch must hold NEAR-THRESHOLD through the reward delay** so the later dopamine can tip it — this is
+   exactly the role of the coherent P_S tag (the ~100 s eligibility), tying Part 2 back to the F3 delayed-credit design.
+
+**The next concrete experiment (deliberate, not a quick sweep):** the Nakano-timed protocol — CaMKII fed PSD-distance
+(near-threshold) calcium during a brief eligibility window, the bistable switch holding, then a DELAYED dopamine burst
+(after PP2B decays) — and test whether dopamine now decides (burst→UP, dip→DOWN). If yes, wire `bistable=True` +
+PSD-calcium into the reward path and re-validate F3 end-to-end; if no, the coupling is a deeper structural finding.
+This is a genuine multi-coupled dynamical calibration and should be built systematically, not by end-of-session sweeps.
+
 ## Emergent-physics discipline (LOCKED)
 The PP1 modulation and the DARPP-32 cascade rates are grounded from the cited kinetic literature; NONE is tuned to
 make the readout decode. Ca-amplitude directionality and the DA-follows-Ca timing window are cited, not fitted. If
