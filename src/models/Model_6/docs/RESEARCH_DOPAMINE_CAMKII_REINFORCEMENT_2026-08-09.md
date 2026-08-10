@@ -285,6 +285,37 @@ The reward-block wiring (continuous DARPP-32 + bistable Vmax=0.3 + baseline-robu
 (it does not produce and would leave the F3 probes in a non-working bistable-by-default state); the grounded producing
 regime is captured in `sweep`/bench form and the finding above. The producing bench: `switch_regime_bench.py`.
 
+## THE PRODUCING MECHANISM (2026-08-10) — grounded in the REAL CaMKII biology; it works in isolation
+Researched how CaMKII actually works ([sources in the session]). Three facts overturn the bistable-switch approach:
+1. **CaMKII activation is TRANSIENT (~1 min; fast 1-6 s), NOT a stable bistable switch** — the Lisman/Zhabotinsky
+   autophosphorylation switch is contested / non-physiological (Frontiers Synaptic Neurosci 2025). So **Finding A
+   (the bistable switch can't hold a primed state) is CORRECT biology, not a bug** — we were fighting reality.
+2. **The persistent memory is the CaMKII–GluN2B STRUCTURAL complex, not a phospho-state** — needs an initial
+   Ca²⁺/CaM + pT286 stimulus to FORM, then persists autonomously, nanomolar-tight, PROTECTED from phosphatases,
+   a stable condensate (Cell Reports 2024; Molecular Brain 2013; PMC4965558).
+3. **The seconds-timescale commitment = DDSC** (Jain 2024, Nature): a **delayed (10-100 s), stochastic** CaMKII
+   activation driven by **IP3-dependent INTERNAL-STORE calcium** (~µM, near CaMKII's K_half — not the nanodomain).
+4. **DAPK1 makes CaMKII–GluN2B binding LTP-SPECIFIC** (DAPK1 paper; β-adrenergic switch): DAPK1 is active WITHOUT
+   the reward signal and BLOCKS the binding; dopamine→PKA (PP1 inhibited) SUPPRESSES DAPK1 → releases binding.
+
+**BUILT — `camkii_module.py` `glun2b_memory` mode (opt-in, default False = bit-identical; `__main__` still passes):**
+pT286 TRANSIENT (`k_dephos_transient≈0.05`, τ≈20 s, resets after the Ca event); the GluN2B complex is a persistent
+STRUCTURAL LATCH (forms above a cooperative pT286 threshold, protected off-rate ≈ LTP duration); **DAPK1 gates the
+BINDING on dopamine** (`dapk1_off_pp1`), so the reward burst is REQUIRED to commit. `molecular_memory` = the complex.
+
+**VALIDATED IN ISOLATION (`sweep/glun2b_latch_bench.py`, CaMKII + DARPP-32; n=4):** pT286 builds at the reward Ca
+then decays (transient); the complex forms at reward and PERSISTS to the end; **DA-DECISIVE across the WHOLE readout
+range 0.5-3 µM — burst commits 1.0, dip/none 0.0, eligibility does NOT pre-commit.** DA-decisiveness is **robust
+across calcium magnitude** (not a narrow band) precisely because DAPK1 gates the *binding*, not the calcium level —
+**this dissolves the calcium-domination that broke F3-e, Finding A, and the bistable switch.** It is the Yagishita
+behaviour (Hebbian Ca alone insufficient; dopamine reinforcement required), emergent from a grounded mechanism.
+`[MODELED]`-flagged constants (formation threshold, k_off, `dapk1_off_pp1`, k_dephos_transient) are set from the
+biology's timescales/thresholds, NOT to a decode — and the robustness across Ca is the evidence they are not fitted.
+
+**NEXT (the build continues):** wire `glun2b_memory` into the reward-gated path in `model6_core` (readout Ca as the
+DDSC-analog commitment event; the coherent tag as eligibility; DAPK1/dopamine gating), and re-validate F3 end-to-end
+in the full model. The isolation result is the green light.
+
 ## Sources (verified this session)
 - Yagishita et al. 2014, Science 345:1616 — dopamine window, PKA→CaMKII reinforcement.
 - Nakano et al. 2010, PLoS Comput Biol 6:e1000670 — the kinetic DA/Ca striatal plasticity model (scheme + thresholds).

@@ -120,6 +120,11 @@ class T286PhosphorylationParameters:
                                         # first-order rate (0.001 "slow, for memory"). In BISTABLE mode it is
                                         # the PP1 Vmax (saturating), grounded higher (~0.15) so PP1 is the real
                                         # Ca–PP1 switch counterforce (Lisman & Zhabotinsky 2001).
+    k_dephos_transient: float = 0.05    # s⁻¹, PP1-mediated in GLUN2B_MEMORY mode: pT286 is TRANSIENT and RESETS
+                                        # after the Ca event (τ≈20 s at tonic PP1; grounded to CaMKII deactivation
+                                        # ~5-9 s + the ~1 min transient, Chang 2017 / PLOS One 2015). At tonic DA
+                                        # pT286 resets fast; a burst (PP1 inhibited) lets it build to form the
+                                        # GluN2B latch — the persistent memory is the latch, not pT286.
 
     # --- BISTABLE SWITCH (opt-in; Lisman & Zhabotinsky 2001, Neuron 31:191) ---
     # bistable=False ⇒ default binomial dynamics, BIT-IDENTICAL. bistable=True ⇒ CaMKII becomes a true
@@ -170,6 +175,29 @@ class GluN2BBindingParameters:
 
     # Chemical Langevin noise for binding kinetics
     stochastic: bool = True
+
+    # --- GROUNDED STRUCTURAL-LATCH MODE (opt-in; default False = bit-identical) ---
+    # The REAL molecular memory is the CaMKII–GluN2B STRUCTURAL complex, not a bistable phospho-switch:
+    # the complex needs an initial Ca²⁺/CaM + pT286 stimulus to FORM, then PERSISTS after CaM/pT286 subside
+    # (autonomous, nanomolar-tight, PROTECTED from phosphatases; a stable condensate) — Cell Reports 2024
+    # (autonomous GluN2B-bound CaMKII); Molecular Brain 2013; PMC4965558. LTD-specific disruption is by
+    # phosphatases/DAPK1, which make the binding LTP-specific (DAPK1, escholarship qt0zc5v40w). So here:
+    #   FORM  when pT286 crosses a threshold (the commitment event: readout Ca with PP1 inhibited),
+    #   PERSIST once formed (protected — tiny off-rate, ~tens-of-min = "duration of LTP"),
+    #   DISRUPT only under active PP1 above tonic (dip/LTD). molecular_memory = the complex (GluN2B_bound).
+    # This replaces the (contested, non-physiological — Frontiers 2025) bistable pT286 switch. pT286 itself is
+    # TRANSIENT (~1 min; Chang 2017, PLOS One 2015): the latch, not pT286, is what persists.
+    glun2b_memory: bool = False
+    form_pT286_half: float = 0.5        # [MODELED] pT286 for half-max complex formation (Hill threshold)
+    form_hill: float = 4.0             # [MODELED] cooperativity — sharp commitment threshold
+    k_form: float = 1.0                # [MODELED] s⁻¹, complex formation rate above threshold
+    k_off_protected: float = 5e-4      # [MODELED] s⁻¹, protected off-rate once formed (τ≈33 min ≈ LTP duration)
+    k_dapk1: float = 0.5               # [MODELED] s⁻¹, DAPK1-driven disruption of the complex when DAPK1 active
+    # DAPK1 makes CaMKII–GluN2B binding LTP-SPECIFIC (DAPK1 paper, escholarship qt0zc5v40w; the β-adrenergic
+    # switch from depression→potentiation): DAPK1 is ACTIVE without the reward/LTP signal and BLOCKS binding;
+    # dopamine→PKA (which INHIBITS PP1, i.e. pp1_factor<1) SUPPRESSES DAPK1, releasing the binding. So a reward
+    # burst is REQUIRED for the complex to form — the grounded reason Hebbian Ca alone does not commit (Yagishita).
+    dapk1_off_pp1: float = 0.5          # [MODELED] pp1_factor below which DAPK1 is suppressed (a genuine burst)
 
 @dataclass
 class CaMKIIParameters:
@@ -288,10 +316,16 @@ class CaMKIIModule:
         self._update_T286(dt)
         
         # 4. Update GluN2B binding (pT286-dependent)
-        self._update_GluN2B(dt)
-        
+        if self.params.glun2b.glun2b_memory:
+            self._update_GluN2B_latch(dt)          # persistent STRUCTURAL complex = the memory (grounded)
+        else:
+            self._update_GluN2B(dt)
+
         # 5. Calculate molecular memory
-        self.molecular_memory = self.pT286 * self.GluN2B_bound
+        if self.params.glun2b.glun2b_memory:
+            self.molecular_memory = self.GluN2B_bound   # the persistent CaMKII–GluN2B complex IS the memory
+        else:
+            self.molecular_memory = self.pT286 * self.GluN2B_bound
         
         # 6. Record history
         self._record_history(calcium_uM, quantum_field_kT)
@@ -406,7 +440,10 @@ class CaMKIIModule:
         # pp1_factor (from darpp32_pp1_module, normalized tonic=1.0) is the reinforcement channel —
         # this is HOW dopamine reinforces CaMKII rather than bypassing it. Default 1.0 = bit-identical.
         # Grounding: docs/RESEARCH_DOPAMINE_CAMKII_REINFORCEMENT_2026-08-09.md (Yagishita 2014; Nakano 2010).
-        k_dephos = p.k_dephosphorylation * self._pp1_factor
+        # GLUN2B_MEMORY mode: pT286 is TRANSIENT (grounded ~1 min; the GluN2B latch is the persistent memory).
+        k_dephos_base = (p.k_dephos_transient if self.params.glun2b.glun2b_memory
+                         else p.k_dephosphorylation)
+        k_dephos = k_dephos_base * self._pp1_factor
         
         if p.stochastic:
             # Treat as discrete events on holoenzyme subunits
@@ -500,6 +537,29 @@ class CaMKIIModule:
         
         self.GluN2B_bound = np.clip(self.GluN2B_bound + d_bound, 0.0, 1.0)
         
+    def _update_GluN2B_latch(self, dt: float):
+        """GROUNDED structural-latch memory (Cell Reports 2024 autonomous GluN2B-bound CaMKII; Molecular Brain
+        2013; PMC4965558). The CaMKII–GluN2B complex FORMS when pT286 crosses a threshold WITH CaM/Ca present
+        (the commitment event — readout Ca with PP1 inhibited), then PERSISTS autonomously (protected from
+        phosphatases → tiny off-rate ≈ LTP duration). Active PP1 above tonic (a dopamine DIP / LTD) disrupts it
+        via DAPK1 (which makes the binding LTP-specific). molecular_memory = this complex; pT286 is transient."""
+        g = self.params.glun2b
+        # DAPK1 is ACTIVE without the reward signal and makes the binding LTP-specific; dopamine→PKA (PP1
+        # inhibited, pp1_factor<1) SUPPRESSES it. dapk1: 0 at a genuine burst, →1 at tonic/dip. This is WHY
+        # dopamine is decisive (Yagishita: Hebbian Ca alone does not commit) — it gates the BINDING, not pT286.
+        dapk1 = float(np.clip((self._pp1_factor - g.dapk1_off_pp1) / (1.0 - g.dapk1_off_pp1), 0.0, 1.0))
+        # sharp, cooperative pT286 threshold for formation; requires CaMKII active (the initial Ca/CaM stimulus)
+        p_h = self.pT286 ** g.form_hill
+        f_form = (p_h / (g.form_pT286_half ** g.form_hill + p_h)) * self.CaMKII_active
+        form_flux = g.k_form * f_form * (1.0 - dapk1) * (1.0 - self.GluN2B_bound)   # DAPK1 blocks binding
+        # protected once formed; DAPK1 (no reward / dip) disrupts the complex → LTD-specific
+        off_flux = (g.k_off_protected + g.k_dapk1 * dapk1) * self.GluN2B_bound
+        d = (form_flux - off_flux) * dt
+        if g.stochastic:
+            flux = form_flux + off_flux
+            d += np.sqrt(max(flux, 0.0) * dt) * self.rng.standard_normal() * 0.1
+        self.GluN2B_bound = float(np.clip(self.GluN2B_bound + d, 0.0, 1.0))
+
     def _record_history(self, calcium_uM: float, quantum_field_kT: float):
         """Record current state to history"""
         self.history['time'].append(self.time)
