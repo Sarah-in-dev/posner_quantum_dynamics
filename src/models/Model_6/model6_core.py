@@ -480,7 +480,21 @@ class Model6QuantumSynapse:
             # Calcium return from dissolved dimers (DDSC mechanism)
             n_dissolved = self.dimer_particles.get_dissolved_count()
             if n_dissolved > 0:
-                ca_per_dimer_M = 6.0 / (6.022e23 * 1e-17)  # 6 Ca per dimer, 0.01 µm³ AZ volume
+                # 6 Ca per dimer into the 0.01 µm³ AZ volume = ~1 µM of TOTAL calcium per dimer. Released
+                # calcium is not free: cytosolic buffers bind the great majority of it essentially instantly,
+                # so the FREE calcium the cascade actually sees is total/(1+κ_s). Using the model's own buffer
+                # capacity κ_s = 60 (`buffer_capacity_kappa_s`, the same buffering the Naraghi-Neher λ already
+                # encodes for channel influx) makes this return consistent with the rest of the calcium system.
+                # The DDSC dissolution → Ca-return → CaMKII mechanism (LOCKED, May 12) is unchanged; only the
+                # free/bound partition is corrected. [GROUNDED — Neher buffer-capacity formalism]
+                # HONEST SCOPE (measured, 2026-08-15): this correction is a near-NO-OP in practice and it does
+                # NOT explain the resting-CaMKII activity it was first introduced to fix. Dissolution events
+                # occur on only ~0.3% of steps and the returned calcium is overwritten by the field rebuild each
+                # step, so its contribution at rest was ~0.016 µM before this change. The resting spikes are
+                # instead caused by SPONTANEOUS CHANNEL OPENINGS (see the note in the CaMKII feed below).
+                # Applied because it is the more physically correct partition, not because it changed a result.
+                kappa_s = getattr(self.params.calcium, 'buffer_capacity_kappa_s', 60.0)
+                ca_per_dimer_M = 6.0 / (6.022e23 * 1e-17) / (1.0 + kappa_s)
                 ca_return = np.full_like(ca_conc, ca_per_dimer_M * n_dissolved)
                 self.calcium.apply_return(ca_return)
 
@@ -862,7 +876,21 @@ class Model6QuantumSynapse:
             # Calcium return from dissolved dimers (DDSC mechanism)
             n_dissolved = self.dimer_particles.get_dissolved_count()
             if n_dissolved > 0:
-                ca_per_dimer_M = 6.0 / (6.022e23 * 1e-17)  # 6 Ca per dimer, 0.01 µm³ AZ volume
+                # 6 Ca per dimer into the 0.01 µm³ AZ volume = ~1 µM of TOTAL calcium per dimer. Released
+                # calcium is not free: cytosolic buffers bind the great majority of it essentially instantly,
+                # so the FREE calcium the cascade actually sees is total/(1+κ_s). Using the model's own buffer
+                # capacity κ_s = 60 (`buffer_capacity_kappa_s`, the same buffering the Naraghi-Neher λ already
+                # encodes for channel influx) makes this return consistent with the rest of the calcium system.
+                # The DDSC dissolution → Ca-return → CaMKII mechanism (LOCKED, May 12) is unchanged; only the
+                # free/bound partition is corrected. [GROUNDED — Neher buffer-capacity formalism]
+                # HONEST SCOPE (measured, 2026-08-15): this correction is a near-NO-OP in practice and it does
+                # NOT explain the resting-CaMKII activity it was first introduced to fix. Dissolution events
+                # occur on only ~0.3% of steps and the returned calcium is overwritten by the field rebuild each
+                # step, so its contribution at rest was ~0.016 µM before this change. The resting spikes are
+                # instead caused by SPONTANEOUS CHANNEL OPENINGS (see the note in the CaMKII feed below).
+                # Applied because it is the more physically correct partition, not because it changed a result.
+                kappa_s = getattr(self.params.calcium, 'buffer_capacity_kappa_s', 60.0)
+                ca_per_dimer_M = 6.0 / (6.022e23 * 1e-17) / (1.0 + kappa_s)
                 ca_return = np.full_like(ca_conc, ca_per_dimer_M * n_dissolved)
                 self.calcium.apply_return(ca_return)
 

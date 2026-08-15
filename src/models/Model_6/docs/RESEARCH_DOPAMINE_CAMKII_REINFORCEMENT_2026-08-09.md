@@ -444,6 +444,10 @@ FULL activation, and with CaCaM decay τ≈2 s these spikes hold `CaCaM_bound �
 a prolonged DAPK1 suppression can then convert into complex formation with no valid readout. **So the tag substitutes
 for its own readout via CALCIUM, not via the field.**
 
+> **⚠ THIS DIAGNOSIS WAS ALSO WRONG — see "THE TWO DEBTS RESOLVED" below (2026-08-15).** The dissolution-return
+> calcium is NOT the cause of the resting CaMKII activity either. Measured: the resting calcium spikes correlate
+> with channel openings at **r = 1.000** and with dissolution events at **r = −0.010**. Kept here for the trail.
+
 **Proposed grounded fix — NOT applied, wants Sarah's nod:** the returned calcium should enter as **free** calcium,
 i.e. divided by the model's own buffer capacity `(1 + κ_s)` with κ_s = 60 (`params.calcium.buffer_capacity`, already
 used by `get_buffer_capacity`; standard Neher buffer-partition formalism, and the same buffering the nanodomain λ
@@ -459,3 +463,54 @@ surfaced with evidence rather than changed unilaterally. It must NOT be papered 
 - Svenningsson/Greengard — the DARPP-32/PP-1 cascade (Thr34⊣PP1; Thr75⊣PKA; PP2B/PP2A phosphatase roles).
 - Xiao et al. 2023, Sci Adv — CaMKII autophosphorylation required for BTSP.
 - Jain et al. 2024 (DDSC) — dendritic/delayed/stochastic CaMKII underlies BTSP (the LOCKED commitment pathway).
+
+## THE TWO DEBTS RESOLVED (2026-08-15) — one is a model gap, one had a mis-diagnosed cause (twice)
+
+### DEBT 1 — "a brief phasic burst does not commit": researched, and it is substantially a MODEL GAP, not a clean prediction
+The failure mode is real: the readout Ca²⁺ activates PP2B/calcineurin, which strips DARPP-32-Thr34 and re-engages
+DAPK1 before the CaMKII–GluN2B complex can form, so a sub-second dopamine burst commits nothing. I had framed that as
+a falsifiable *prediction* ("the DA/PKA signal must overlap the DDSC calcium event for seconds"). **The literature says
+biology has at least two mechanisms for exactly this problem, and our cascade models NEITHER:**
+1. **Ser130/CK1 PROTECTION of Thr34 (the direct answer).** Casein kinase 1 phosphorylates DARPP-32 at **Ser-130**
+   (Ser-137 in rat), and "**this phosphorylation decreases the dephosphorylation of Thr-34 by calcineurin, *in vitro*
+   and *in vivo***" (Frontiers Behav Neurosci 2011 review, verified at source; Desdouits 1995). So the very
+   Ca²⁺→PP2B→Thr34-stripping that kills our brief-burst case is **physiologically braked**, and `darpp32_pp1_module.py`
+   has no Ser130 state at all — it models only Thr34 and Thr75.
+2. **Thr34 PROLONGS its own PKA signal.** In DARPP-32 **T34A** mice, higher PP1 activity "**strongly reduced the
+   duration of the PKA response**" with no change in amplitude — i.e. phospho-Thr34 (by inhibiting PP1) *extends* how
+   long the reward signal stays effective. And PKA activity is reported to **persist after cAMP has decayed**. Our
+   cascade has no such signal-extension.
+**VERDICT: the brief-burst negative is substantially an artifact of an INCOMPLETE cascade, not a property of the
+mechanism.** It should NOT be reported as a prediction of the architecture. The grounded next step is to add the
+**Ser130/CK1 protection** node to the DARPP-32 module (structure is cited; the rate is not published quantitatively —
+the review says the CK1 mechanism "remains incompletely understood" — so it would carry a flagged `[MODELED]` rate),
+then re-run the brief-burst arm. Until then the working protocol requires a sustained reward signal, and that
+requirement is a **known model limitation, stated as such**.
+
+### DEBT 2 — the resting-CaMKII activity: cause found on the THIRD attempt; my first two diagnoses were WRONG
+Both earlier attributions in this document are **retracted**:
+- ✗ "field-driven pT286 floor" (the reverse-coupling barrier reduction) — wrong.
+- ✗ "the tag's own dissolving dimers return ~1 µM of free calcium" — **also wrong**, and the buffer-partition fix that
+  was applied on that premise is a near-no-op (dissolution occurs on ~0.3% of steps and contributes ~0.016 µM).
+**✓ THE ACTUAL CAUSE, measured decisively: SPONTANEOUS CALCIUM-CHANNEL OPENINGS, inflated by the timestep.**
+In a 10 s rest phase: calcium exceeds 1 µM on 3.2% of steps; the indicator variable correlates with "≥1 channel open"
+at **r = 1.000** and with "a dissolution occurred" at **r = −0.010**. With **zero** channels open the PSD calcium is a
+clean **0.1001 µM** (max 0.1163); with one open it is **3.23 µM**. The arithmetic closes exactly:
+| quantity | value |
+|---|---|
+| VGCC Boltzmann `P_open(−70 mV)` | 2.403×10⁻⁴ |
+| opening rate per channel (`α·P`) | 0.240 s⁻¹ |
+| 25 VGCCs ⇒ openings/s | 6.0 |
+| **predicted** fraction of 5 ms steps containing an opening | **0.030** |
+| **measured** in the full model | **0.032** |
+| mean OPEN duration (`1/β_eff`) | **0.5 ms** |
+| simulation `dt` | **5 ms** |
+⇒ **a channel that opens is held open for a full timestep — 10× its true open time.** So the resting calcium
+transients are ~10× too much charge per event, and with Hill n=4 CaM activation they keep CaMKII partly on at rest.
+This is a **dt-resolution construct-validity artifact in the channel layer**, not a plasticity-cascade problem.
+**Grounded fix (NOT applied — blast radius is the whole model, so it is Sarah's call):** scale a channel's delivered
+calcium by the expected fraction of the timestep it is actually open (sub-timestep occupancy, ≈0.5/5 = 0.1 at rest),
+or reduce `dt` toward the channel kinetics (10× the compute everywhere). Either changes EVERY result that runs through
+the calcium layer — the whole F-series and the topology work — which is precisely why it is surfaced, not changed.
+**What was applied:** only the Neher buffer partition on the dissolution return (`/(1+κ_s)`, κ_s=60) — correct physics,
+documented in-code as a near-no-op that does NOT explain the symptom. Headline results are unaffected by it.
