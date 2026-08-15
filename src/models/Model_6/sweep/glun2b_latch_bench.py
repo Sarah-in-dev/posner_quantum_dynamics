@@ -42,7 +42,7 @@ def run(ca_readout, cond, seed):
     def phase(dur, ca, da, tag):
         for _ in range(int(round(dur / DT))):
             s = dp.step(DT, da, ca)
-            ck.step(DT, ca, pp1_factor=s["pp1_factor"])
+            ck.step(DT, ca, pp1_factor=s["pp1_factor"], reward_thr34=s["thr34"])
         trace[tag] = (ck.pT286, ck.GluN2B_bound)
 
     phase(T_ELIG, CA_ELIG, occ(DA_TONIC), "elig")

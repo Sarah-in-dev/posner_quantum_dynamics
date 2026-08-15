@@ -363,6 +363,53 @@ behaviour broadly (reflecting-boundary or multiplicative noise instead of additi
 unilaterally changed** — Sarah's call. Fixing it should only SHARPEN the discrimination above (the commit flag is
 already correct; it would clean the memory variable in the non-credited arms too).
 
+## NOISE-RECTIFICATION DEFECT FIXED + DAPK1 GATE CORRECTED (2026-08-15) — approved; with honest mixed results
+### (a) The noise defect — FIXED, grounded, validated
+Two coupled errors in `camkii_module`, both numerical rather than physical:
+1. The conformational-activation noise was a **constant-amplitude** term (`0.02·√dt·randn`) that did not vanish as
+   the transition fluxes vanish. Replaced with the **Chemical Langevin** form (σ ∝ √flux) already used elsewhere in
+   the module, written via explicit activate/deactivate fluxes.
+2. The CLE noise was applied to **FRACTIONAL** variables without the **1/√N** molecule-number scaling — over-
+   amplifying it by ~√N (~50×). Added `n_holoenzymes = 2590` [GROUNDED — ~16 µM cytoplasmic CaMKII in a spine,
+   Feng & Kennedy 2011; the PSD sub-pool is ~80–240, so this is the low-noise end].
+**MEASURED (CaMKII alone, 60 s @ 0.1 µM resting, tonic PP1):** before `CaMKII_active 0.053 / pT286 0.333`;
+**after `0.0035 / 0.0000`** (deterministic reference `0.0020 / 0.0109`) — the spurious resting activity is gone.
+**Genuine activation IMPROVED** (30 s @ 5 µM: `CaMKII_active 0.337 → 0.933`) — the over-amplified noise had been
+corrupting real activation too. **Stochasticity retained** (pT286 across 8 seeds @1 µM: mean 0.562, sd 0.116) —
+important, because DDSC commitment is *biologically* stochastic. `__main__` still passes.
+
+### (b) The DAPK1 gate — CORRECTED to the right upstream signal
+The gate read `pp1_factor`, which **conflates** dopamine (PKA) with calcium (PP2B/PP2A). Measured: at tonic DA
+**with calcium present**, PP2A slightly disinhibits PKA → `pp1` dips to ~0.97 → the gate **leaked ~6% open**, letting
+Hebbian calcium alone slowly form the complex. "LTP-specific" means *requires the reward signal*, so the suppressor
+is now **phospho-DARPP-32-Thr34** (the canonical PKA/reward node), threaded through `camkii.step(reward_thr34=…)`.
+Thr34 separates the conditions ~50× (tonic+Ca ≈0.002–0.007 vs burst ≈0.25–0.4).
+**ROBUSTNESS MEASURED (and my first written claim CORRECTED):** the result is decisive for `dapk1_half_thr34 ≥ 0.05`
+and still decisive at 0.25 (≥5× plateau), but **FAILS at 0.035 and 0.02**. So it is a **one-sided bound, not a
+two-sided fit** — an earlier code comment claiming "verified across 0.02–0.15" was wrong and was corrected. Value set
+to 0.1 (an order of magnitude above tonic Thr34, well below burst) — inside the plateau, not at its edge.
+
+### (c) Results after the fixes — what PASSES and what does NOT
+- **F3 end-to-end, SUSTAINED reward (`sweep/f3_glun2b_fullmodel.py`, n=3): PASSES, and sharper than before.**
+  burst commit **1.00** (final_mem **0.984**) vs none/dip **0.00** (mem 0.136/0.114); nothing pre-commits.
+- **Coherence controls, SUSTAINED reward (n=8):** undoped **0.75**, ⁶Li **0.75**, ⁷Li **0.00**, classical **0.00**.
+  The **coherence gate and isotope lever HOLD**; but commitment is **STOCHASTIC (6/8)**, so the script's
+  deterministic `≥0.99` criterion reports FAIL. **The criterion is wrong, not the result** — DDSC is *dendritic,
+  delayed and STOCHASTIC* (Jain 2024); the correct acceptance is a **commit-PROBABILITY contrast** (0.75 vs 0.00),
+  which should be scored against a permutation null like the other keystones. Rewriting that criterion is owed.
+- **BRIEF (0.5 s) phasic burst: NOTHING commits (n=8, all arms 0.00) — a STRUCTURAL finding, not a tuning target.**
+  Mechanism, measured: the readout Ca²⁺ itself activates **PP2B, which strips Thr34 and re-engages DAPK1** before the
+  complex can form. So **the mechanism predicts the dopamine/PKA signal must OVERLAP the DDSC calcium event for
+  several seconds**, not merely trigger it. This is Nakano's Ca-vs-DA tension resurfacing at the binding step, and it
+  is a falsifiable prediction of the architecture. (A first wiring also tied the readout-Ca *duration* to the burst
+  duration; corrected — dopamine gates the ONSET, the melt then runs on the DDSC timescale, `READOUT_DURATION_S=20`
+  [GROUNDED-in-band 10–100 s]. That correction did not rescue the brief-burst case.)
+- **REMAINING WART (honest):** in the non-credited arms `molecular_memory` still rises (≈0.97) even though `commit`
+  is correctly 0.00 — the persistent **dimer field** keeps phosphorylating T286 at basal calcium (reverse coupling
+  runs every step), so a *prolonged* DAPK1 suppression can form the complex without a valid readout. Only the commit
+  flag discriminates. This edges against Fernandez 2006 ("potentiation does not occur to dopamine OR glutamate
+  alone") and is the next thing to resolve — the tag's field should not substitute for the readout.
+
 ## Sources (verified this session)
 - Yagishita et al. 2014, Science 345:1616 — dopamine window, PKA→CaMKII reinforcement.
 - Nakano et al. 2010, PLoS Comput Biol 6:e1000670 — the kinetic DA/Ca striatal plasticity model (scheme + thresholds).

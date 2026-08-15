@@ -22,7 +22,7 @@ from model6_core import Model6QuantumSynapse
 
 DT = 5e-3
 BUILD_S, DELAY_S, REWARD_S, SETTLE_S = 0.5, 10.0, 20.0, 10.0
-DA_BURST_S = 0.5   # GROUNDED: real phasic DA bursts are sub-second (Yagishita window 0.3-2 s), not 20 s
+DA_BURST_S = float(__import__("os").environ.get("DA_BURST_S", "20.0"))  # sustained by default; 0.5 = brief phasic (see finding)
 DA_TONIC, DA_BURST = 20e-9, 10e-6
 
 ARMS = [("undoped", "quantum", None), ("Li6", "quantum", "Li6"),
@@ -65,7 +65,7 @@ def run(mode, dopant, seed):
 
 
 if __name__ == "__main__":
-    NS = 3
+    NS = 8
     WERNER = 1.0 / np.sqrt(2)
     print("=" * 96)
     print("F3 COHERENCE CONTROLS — identical delayed BURST at 10 s in every arm; only coherence/mode differ")

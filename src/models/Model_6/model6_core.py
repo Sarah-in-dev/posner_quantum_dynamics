@@ -708,6 +708,7 @@ class Model6QuantumSynapse:
             # (PP1 inhibited) suppresses it — so a reward burst is REQUIRED to commit, at ANY calcium magnitude.
             # That is why Hebbian Ca alone does not commit (Yagishita), and it is what dissolves calcium-domination.
             pp1_factor = 1.0
+            reward_thr34 = 0.0
             reward_gated = getattr(self, '_reward_gated_consolidation', False)
             if reward_gated:
                 if not getattr(self, '_glun2b_memory_configured', False):
@@ -741,11 +742,19 @@ class Model6QuantumSynapse:
                         readable = is_coherent(self._mean_singlet_prob)                    # coherent tag readable
                         expired = not readable
                     phasic = abs(da_level - da_tonic) > 0.05 * da_tonic   # a genuine reward transient
-                    if readable and phasic:
+                    # Dopamine GATES THE ONSET of the melt; it does not set its duration. Once triggered, the
+                    # readout is a CHEMICAL CASCADE that runs on the DDSC timescale (delayed Ca²⁺ event, 10–100 s;
+                    # Jain 2024) — far longer than the sub-second phasic burst that timed it. Tying the Ca to the
+                    # burst duration (the first wiring) starved the commitment whenever the burst was brief.
+                    READOUT_DURATION_S = 20.0                          # [GROUNDED-in-band: DDSC 10–100 s]
+                    if readable and phasic and not getattr(self, '_readout_fired', False):
                         CA_READOUT_UM = 3.0                            # [MODELED-in-grounded-band] DDSC-scale Ca
+                        self._readout_fired = True                     # one-shot: the tag is read out once
+                        self._readout_until = self.time + READOUT_DURATION_S
                         self._readout_ca_uM = CA_READOUT_UM * eligibility_weight(self._mean_singlet_prob)
-                        camkii_calcium_uM += self._readout_ca_uM
-                    elif expired:
+                    if getattr(self, '_readout_fired', False) and self.time < getattr(self, '_readout_until', 0.0):
+                        camkii_calcium_uM += self._readout_ca_uM       # the DDSC-analog commitment calcium
+                    elif expired and not getattr(self, '_readout_fired', False):
                         self._measurement_gate_opened = False           # tag decohered / window closed
 
                 # CONTINUOUS DARPP-32/PP1 cascade — the physiological signalling runs EVERY step (not only in the
@@ -756,10 +765,13 @@ class Model6QuantumSynapse:
                     from darpp32_pp1_module import DARPP32PP1Module
                     self._darpp32 = DARPP32PP1Module(
                         da_tonic_occupancy=da_tonic / (da_tonic + KD_D1), ca_basal_uM=0.1)
-                pp1_factor = self._darpp32.step(dt, da_occ, camkii_calcium_uM)['pp1_factor']
+                _d32 = self._darpp32.step(dt, da_occ, camkii_calcium_uM)
+                pp1_factor = _d32['pp1_factor']
+                reward_thr34 = _d32['thr34']      # the PKA/reward signal that suppresses DAPK1
 
             # CaMKII integrates the DIFFUSE PSD calcium (not the nanodomain peak) with dopamine-reinforced PP1.
-            camkii_state = self.camkii.step(dt, camkii_calcium_uM, dimer_field_kT, pp1_factor=pp1_factor)
+            camkii_state = self.camkii.step(dt, camkii_calcium_uM, dimer_field_kT,
+                                            pp1_factor=pp1_factor, reward_thr34=reward_thr34)
 
             # Commitment fires via CaMKII molecular_memory (DDSC lock) — now dopamine-reinforced. CONSUME the
             # token (D19): a measurement licensed one commitment; clearing the gate stops later re-commits.

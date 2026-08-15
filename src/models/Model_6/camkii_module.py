@@ -69,6 +69,14 @@ class CaMKIIKineticsParameters:
     # Chemical Langevin noise for binding kinetics
     stochastic: bool = True
 
+    # Population size the FRACTIONAL state variables (CaCaM_bound, CaMKII_active) describe. The Chemical
+    # Langevin noise on a molecule COUNT is σ=√(flux); expressed as a FRACTION x=X/N it must be σ=√(flux/N).
+    # Omitting the 1/√N over-amplifies the noise by √N (~50×), and with the [0,1] clip that rectifies into a
+    # spurious resting activity. [GROUNDED] ~2590 holoenzymes per spine (16 µM cytoplasmic; Feng & Kennedy
+    # 2011, quantitative CaMKII pools in spines); the PSD sub-pool is ~80–240 holoenzymes, so this is the
+    # generous (low-noise) end — set it lower to model the PSD pool alone.
+    n_holoenzymes: int = 2590
+
 @dataclass
 class T286PhosphorylationParameters:
     """
@@ -197,7 +205,18 @@ class GluN2BBindingParameters:
     # switch from depression→potentiation): DAPK1 is ACTIVE without the reward/LTP signal and BLOCKS binding;
     # dopamine→PKA (which INHIBITS PP1, i.e. pp1_factor<1) SUPPRESSES DAPK1, releasing the binding. So a reward
     # burst is REQUIRED for the complex to form — the grounded reason Hebbian Ca alone does not commit (Yagishita).
-    dapk1_off_pp1: float = 0.5          # [MODELED] pp1_factor below which DAPK1 is suppressed (a genuine burst)
+    # DAPK1 is suppressed by the DOPAMINE/PKA arm specifically — "LTP-specific" means "requires the reward
+    # signal". The suppressor is therefore phospho-DARPP-32-Thr34 (the canonical PKA/reward node), NOT the
+    # downstream pp1_factor: pp1 CONFLATES dopamine (PKA) with calcium (PP2B/PP2A), so at tonic dopamine WITH
+    # calcium present PP2A slightly disinhibits PKA, pp1 dips to ~0.97, and a pp1-based gate leaks ~6% open —
+    # letting Hebbian calcium alone slowly form the complex. Thr34 separates the conditions ~50× (tonic+Ca
+    # ≈0.002-0.007 vs burst ≈0.25-0.4). REQUIREMENT (stated as a principle, not fitted): tonic ≪ half ≪ burst,
+    # so DAPK1 is suppressed ONLY by a genuine reward. MEASURED robustness of the DA-decisive result vs this
+    # constant: decisive for half ≥ 0.05 and still decisive at 0.25 (a ≥5× plateau); it FAILS at 0.035 and 0.02
+    # (too close to tonic Thr34 → the gate opens without reward). 0.1 is ~an order of magnitude above tonic and
+    # well below burst — inside the plateau rather than at its edge. Reported honestly: this is a one-sided
+    # bound, not a two-sided fit.
+    dapk1_half_thr34: float = 0.1       # [MODELED, robustness-measured] Thr34-P for half-max DAPK1 suppression
 
 @dataclass
 class CaMKIIParameters:
@@ -277,6 +296,7 @@ class CaMKIIModule:
         self.pT286 = 0.0                # Fraction with T286 phosphorylation
         self.GluN2B_bound = 0.0         # Fraction bound to GluN2B
         self._pp1_factor = 1.0          # dopamine-controlled PP1 activity (1.0 = tonic; set in step())
+        self._reward_thr34 = 0.0        # PKA/reward signal suppressing DAPK1 (0 = no reward; set in step())
         
         # Derived
         self.molecular_memory = 0.0     # pT286 × GluN2B_bound
@@ -286,7 +306,8 @@ class CaMKIIModule:
         self.rate_enhancement = 1.0
         
     def step(self, dt: float, calcium_uM: float, quantum_field_kT: float = 0.0,
-             calmodulin_nM: float = 1000.0, pp1_factor: float = 1.0) -> Dict:
+             calmodulin_nM: float = 1000.0, pp1_factor: float = 1.0,
+             reward_thr34: float = 0.0) -> Dict:
         """
         Advance CaMKII state by one timestep
 
@@ -305,6 +326,9 @@ class CaMKIIModule:
         """
         self.time += dt
         self._pp1_factor = float(pp1_factor)
+        # phospho-DARPP-32-Thr34 = the dopamine/PKA reward signal that suppresses DAPK1 (GLUN2B_MEMORY mode).
+        # Default 0.0 ⇒ DAPK1 fully active ⇒ no reward ⇒ the CaMKII–GluN2B complex cannot form.
+        self._reward_thr34 = float(reward_thr34)
 
         # 1. Calculate Ca2+/CaM activation
         self._update_CaCaM(dt, calcium_uM, calmodulin_nM, quantum_field_kT)
@@ -357,10 +381,12 @@ class CaMKIIModule:
         # Deterministic change
         d_bound = (flux_on - flux_off) * dt
         
-        # Chemical Langevin noise
+        # Chemical Langevin noise — on a FRACTION, σ = √(flux·dt / N) (see n_holoenzymes; the missing 1/√N
+        # over-amplified this by ~50× and the [0,1] clip rectified it into spurious resting binding).
         if p.stochastic:
-            noise_on = np.sqrt(abs(flux_on) * dt) * self.rng.standard_normal()
-            noise_off = np.sqrt(abs(flux_off) * dt) * self.rng.standard_normal()
+            inv_sqrtN = 1.0 / np.sqrt(p.n_holoenzymes)
+            noise_on = np.sqrt(abs(flux_on) * dt) * self.rng.standard_normal() * inv_sqrtN
+            noise_off = np.sqrt(abs(flux_off) * dt) * self.rng.standard_normal() * inv_sqrtN
             d_bound += noise_on - noise_off
         
         self.CaCaM_bound = np.clip(self.CaCaM_bound + d_bound, 0.0, 1.0)
@@ -371,15 +397,29 @@ class CaMKIIModule:
         barrier_reduction = min(quantum_field_kT * 0.1, activation_barrier_electrostatic)
         tau_effective = p.tau_fast / np.exp(barrier_reduction)
         
+        # Conformational activation as a two-state (inactive ⇌ active) process, relaxing toward the
+        # CaCaM-bound target with time constant tau_effective. Written as explicit fluxes so the noise can
+        # take the CHEMICAL LANGEVIN form used everywhere else in this module (σ ∝ √flux).
         target_active = self.CaCaM_bound
-        d_active = (target_active - self.CaMKII_active) / tau_effective * dt
-        
-        # Add fluctuations to activation dynamics
+        flux_activate = target_active / tau_effective                 # inactive → active
+        flux_deactivate = self.CaMKII_active / tau_effective          # active → inactive
+        d_active = (flux_activate - flux_deactivate) * dt
+
         if p.stochastic:
-            # Thermal fluctuations in conformational equilibrium
-            activation_noise = 0.02 * np.sqrt(dt) * self.rng.standard_normal()
-            d_active += activation_noise
-        
+            # DEFECT FIXED (2026-08-15): this was a CONSTANT-amplitude term, `0.02·√dt·randn`, which does not
+            # vanish as the fluxes vanish. At resting calcium the deterministic drive is ~0, so that constant
+            # kick random-walked CaMKII_active while the np.clip(...,0,1) floor RECTIFIED the negative half —
+            # a numerical positive bias that made CaMKII spontaneously ACTIVE at rest (measured, 60 s @ 0.1 µM:
+            # active 0.053 / pT286 0.333 stochastic, vs 0.002 / 0.011 deterministic), which in turn inflated
+            # pT286 and downstream memory in every arm. Constant-amplitude additive noise is not the fluctuation
+            # of any physical transition; the Chemical Langevin form (σ ∝ √flux, the convention already used for
+            # CaCaM binding above and GluN2B binding below) vanishes with the flux, so a resting synapse stays
+            # off and fluctuations remain where the chemistry actually is. Physics, not a tuned constant.
+            inv_sqrtN = 1.0 / np.sqrt(p.n_holoenzymes)     # fractional CLE: σ = √(flux·dt/N)
+            noise_act = np.sqrt(abs(flux_activate) * dt) * self.rng.standard_normal() * inv_sqrtN
+            noise_deact = np.sqrt(abs(flux_deactivate) * dt) * self.rng.standard_normal() * inv_sqrtN
+            d_active += noise_act - noise_deact
+
         self.CaMKII_active = np.clip(self.CaMKII_active + d_active, 0.0, 1.0)
         
     def _calculate_effective_barrier(self, quantum_field_kT: float):
@@ -547,7 +587,9 @@ class CaMKIIModule:
         # DAPK1 is ACTIVE without the reward signal and makes the binding LTP-specific; dopamine→PKA (PP1
         # inhibited, pp1_factor<1) SUPPRESSES it. dapk1: 0 at a genuine burst, →1 at tonic/dip. This is WHY
         # dopamine is decisive (Yagishita: Hebbian Ca alone does not commit) — it gates the BINDING, not pT286.
-        dapk1 = float(np.clip((self._pp1_factor - g.dapk1_off_pp1) / (1.0 - g.dapk1_off_pp1), 0.0, 1.0))
+        # DAPK1 activity: fully ON without a reward signal (blocks binding), suppressed by PKA/Thr34 (dopamine).
+        thr34 = self._reward_thr34
+        dapk1 = float(g.dapk1_half_thr34 / (g.dapk1_half_thr34 + max(thr34, 0.0)))
         # sharp, cooperative pT286 threshold for formation; requires CaMKII active (the initial Ca/CaM stimulus)
         p_h = self.pT286 ** g.form_hill
         f_form = (p_h / (g.form_pT286_half ** g.form_hill + p_h)) * self.CaMKII_active
