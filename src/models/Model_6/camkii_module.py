@@ -128,11 +128,15 @@ class T286PhosphorylationParameters:
                                         # first-order rate (0.001 "slow, for memory"). In BISTABLE mode it is
                                         # the PP1 Vmax (saturating), grounded higher (~0.15) so PP1 is the real
                                         # Ca–PP1 switch counterforce (Lisman & Zhabotinsky 2001).
-    k_dephos_transient: float = 0.05    # s⁻¹, PP1-mediated in GLUN2B_MEMORY mode: pT286 is TRANSIENT and RESETS
-                                        # after the Ca event (τ≈20 s at tonic PP1; grounded to CaMKII deactivation
-                                        # ~5-9 s + the ~1 min transient, Chang 2017 / PLOS One 2015). At tonic DA
-                                        # pT286 resets fast; a burst (PP1 inhibited) lets it build to form the
-                                        # GluN2B latch — the persistent memory is the latch, not pT286.
+    k_dephos_transient: float = 0.2     # s⁻¹ (τ≈5 s), PP1-mediated in GLUN2B_MEMORY mode: pT286 is TRANSIENT and
+                                        # RESETS after the Ca event. [GROUNDED] CaMKII stays active only ~1-6 s
+                                        # after a stimulus (Jain 2024) and T286 autophosphorylation prolongs the
+                                        # deactivation constant only to ~5-9 s (Chang 2017) — the whole transient
+                                        # is ~1 min (PLOS One 2015). An earlier τ≈20 s was too slow and had a real
+                                        # consequence: ~half the pT286 survived a 10 s delay, so the CLASSICAL
+                                        # residual trace rivalled the coherent tag as the eligibility carrier and
+                                        # a prolonged reward could commit with no readout at all. At τ≈5 s the tag
+                                        # is the only carrier across the gap, which is the model's actual claim.
 
     # --- BISTABLE SWITCH (opt-in; Lisman & Zhabotinsky 2001, Neuron 31:191) ---
     # bistable=False ⇒ default binomial dynamics, BIT-IDENTICAL. bistable=True ⇒ CaMKII becomes a true

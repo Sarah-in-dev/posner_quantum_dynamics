@@ -410,6 +410,34 @@ to 0.1 (an order of magnitude above tonic Thr34, well below burst) — inside th
   flag discriminates. This edges against Fernandez 2006 ("potentiation does not occur to dopamine OR glutamate
   alone") and is the next thing to resolve — the tag's field should not substitute for the readout.
 
+## BOTH OWED ITEMS CLOSED (2026-08-15): CaMKII trace grounded, acceptance made probabilistic
+### (d) The classical residual trace was rivalling the quantum tag — FIXED by grounding it
+`k_dephos_transient` was 0.05 s⁻¹ (τ≈20 s), so ~half of pT286 survived a 10 s delay: the model carried a
+**CLASSICAL ~20 s eligibility trace** that competed with the coherent tag as the carrier across the gap — and let a
+prolonged reward commit with no readout at all. **[GROUNDED]** CaMKII stays active only **1–6 s** after a stimulus
+(Jain 2024) and T286 prolongs the deactivation constant only to **~5–9 s** (Chang 2017). Set to **0.2 s⁻¹ (τ≈5 s)**.
+Consequence: the coherent tag is the ONLY carrier across the gap — which is the model's actual claim — and the
+memory separation sharpens. **F3 end-to-end (n=3): burst commit 1.00, final_mem 0.991; none/dip 0.00, mem
+0.031/0.044** (was 0.14/0.11) — the "dopamine alone / no readout" path is now essentially closed in that protocol.
+
+### (e) The acceptance criterion was a category error — REWRITTEN as a probability contrast
+DDSC commitment is *dendritic, delayed and* **STOCHASTIC** (Jain 2024), so the controls' deterministic `≥0.99`
+criterion was wrong and had mis-reported a working result as FAIL. `sweep/f3_coherence_controls.py` now scores the
+**commit PROBABILITY** of the coherent arms against the decohered/classical arms with a **two-sided permutation
+null** (the repo's standard decode-vs-null discipline), and takes the reward protocol from `DA_BURST_S`.
+**RESULT (n=8/arm, sustained reward):** coherent (undoped+⁶Li) **0.750** vs decohered (⁷Li+classical) **0.000**,
+contrast **+0.750**, **permutation p = 0.0000** ⇒ **COHERENCE-GATED READOUT SUPPORTED.** The isotope lever and the
+temporal-gap contrast are both carried by that statistic.
+
+### Residual, still open (narrower than before, stated plainly)
+In the CONTROLS every arm receives a 20 s burst, and there the decohered arms' `molecular_memory` still rises
+(≈0.84–0.89) while `commit` correctly stays 0.00. Cause: a **field-driven pT286 floor** — the persistent dimer field
+holds pT286 ≈ 0.42 at basal calcium (reverse coupling runs every step), which a prolonged DAPK1 suppression can
+convert into complex formation without any readout. So the **commit flag** (coherence-gated) is the discriminating
+variable, not the memory level. Fixing this means stopping the tag's *field* from substituting for the tag's
+*readout* — i.e. the reverse-coupling barrier reduction should not by itself sustain pT286 at rest. That is the next
+grounded item; it is NOT to be papered over by tuning the field or the formation threshold.
+
 ## Sources (verified this session)
 - Yagishita et al. 2014, Science 345:1616 — dopamine window, PKA→CaMKII reinforcement.
 - Nakano et al. 2010, PLoS Comput Biol 6:e1000670 — the kinetic DA/Ca striatal plasticity model (scheme + thresholds).
