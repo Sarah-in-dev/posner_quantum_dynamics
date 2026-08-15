@@ -552,8 +552,12 @@ class CaMKIIModule:
         p_h = self.pT286 ** g.form_hill
         f_form = (p_h / (g.form_pT286_half ** g.form_hill + p_h)) * self.CaMKII_active
         form_flux = g.k_form * f_form * (1.0 - dapk1) * (1.0 - self.GluN2B_bound)   # DAPK1 blocks binding
-        # protected once formed; DAPK1 (no reward / dip) disrupts the complex → LTD-specific
-        off_flux = (g.k_off_protected + g.k_dapk1 * dapk1) * self.GluN2B_bound
+        # ONCE FORMED THE COMPLEX IS PROTECTED and persists (nanomolar-tight, shielded from phosphatases; the
+        # condensate survives Ca removal — Cell Reports 2024; PMC4965558). So DAPK1 gates FORMATION (above), but
+        # DISRUPTION requires an actual LTD signal — PP1 disinhibited ABOVE tonic (a dopamine dip / weak-Ca PP2B),
+        # which is when DAPK1 strips CaMKII-GluN2B. At tonic dopamine an existing memory is NOT stripped.
+        ltd_drive = max(self._pp1_factor - 1.0, 0.0)
+        off_flux = (g.k_off_protected + g.k_dapk1 * ltd_drive) * self.GluN2B_bound
         d = (form_flux - off_flux) * dt
         if g.stochastic:
             flux = form_flux + off_flux

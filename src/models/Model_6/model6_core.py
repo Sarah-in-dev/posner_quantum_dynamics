@@ -698,38 +698,65 @@ class Model6QuantumSynapse:
             # not bypassed), and the LTP/LTD sign is EMERGENT from PP1. Coherence (quantum) or the fixed 0.3-2 s
             # window (classical baseline) gates whether dopamine can reinforce at all.
             # Grounding: docs/RESEARCH_DOPAMINE_CAMKII_REINFORCEMENT_2026-08-09.md (Yagishita 2014; Nakano 2010).
+            # --- GROUNDED MEMORY ARCHITECTURE (2026-08-10, from the real CaMKII biology) ---
+            # CaMKII activation is TRANSIENT (~1 min; Chang 2017) — NOT a bistable switch (that model is contested
+            # / non-physiological, Frontiers 2025). The PERSISTENT memory is the CaMKII–GluN2B STRUCTURAL complex
+            # (autonomous, protected from phosphatases; Cell Reports 2024). The seconds-scale commitment event is
+            # DDSC — a DELAYED (10–100 s) CaMKII activation driven by internal-store Ca²⁺ (Jain 2024, Nature); here
+            # that delayed Ca is delivered by the dopamine-gated spin-selective BINDING-MELT of the still-coherent
+            # tag (F3-d). And DAPK1 makes CaMKII–GluN2B binding LTP-SPECIFIC: it BLOCKS binding unless dopamine→PKA
+            # (PP1 inhibited) suppresses it — so a reward burst is REQUIRED to commit, at ANY calcium magnitude.
+            # That is why Hebbian Ca alone does not commit (Yagishita), and it is what dissolves calcium-domination.
             pp1_factor = 1.0
             reward_gated = getattr(self, '_reward_gated_consolidation', False)
-            if (reward_gated and not self._camkii_committed
-                    and getattr(self, '_measurement_gate_opened', False)):
-                from reward_gating import is_coherent, CLASSICAL_WINDOW_LO, CLASSICAL_WINDOW_HI
-                mode = getattr(self, '_reward_gating_mode', 'quantum')   # 'quantum' | 'classical' (baseline)
-                t_since = self.time - getattr(self, '_measurement_time', self.time)
-                if mode == 'classical':
-                    readable = CLASSICAL_WINDOW_LO <= t_since <= CLASSICAL_WINDOW_HI   # fixed short window
-                    expired = t_since > CLASSICAL_WINDOW_HI
+            if reward_gated:
+                if not getattr(self, '_glun2b_memory_configured', False):
+                    self.camkii.params.glun2b.glun2b_memory = True     # transient pT286 + persistent GluN2B latch
+                    self._glun2b_memory_configured = True
+                da_tonic = (self.params.dopamine.dopamine_tonic
+                            if getattr(self.params, 'dopamine', None) is not None else 20e-9)
+                da_override = getattr(self, '_da_signal', None)   # probe/network may inject DA(t)
+                if da_override is not None:
+                    da_level = float(da_override)
+                elif self.dopamine is not None:
+                    da_level = float(np.mean(self.dopamine.get_dopamine_concentration()))
                 else:
-                    readable = is_coherent(self._mean_singlet_prob)                    # coherent tag readable
-                    expired = not readable
-                if readable:
-                    da_tonic = (self.params.dopamine.dopamine_tonic
-                                if getattr(self.params, 'dopamine', None) is not None else 20e-9)
-                    da_override = getattr(self, '_da_signal', None)   # probe/network may inject DA(t)
-                    if da_override is not None:
-                        da_level = float(da_override)
-                    elif self.dopamine is not None:
-                        da_level = float(np.mean(self.dopamine.get_dopamine_concentration()))
+                    da_level = da_tonic
+                KD_D1 = 1e-6                                       # D1 low-affinity Kd ~1 µM (grounded)
+
+                # READOUT: a phasic dopamine transient GATES/TIMES the spin-selective binding-melt (F3-d) of a
+                # STILL-COHERENT tag, delivering the DDSC-analog commitment calcium. Magnitude rides on the tag's
+                # remaining coherence (eligibility_weight(P_S)) — so a decohered tag (⁷Li, or aged past the window)
+                # delivers less: the quantum lever is preserved. Scale is low-µM [GROUNDED — DDSC internal-store Ca
+                # is ~µM, near CaMKII K_half=1 µM]; the exact peak is [MODELED].
+                if not self._camkii_committed and getattr(self, '_measurement_gate_opened', False):
+                    from reward_gating import (is_coherent, eligibility_weight,
+                                               CLASSICAL_WINDOW_LO, CLASSICAL_WINDOW_HI)
+                    mode = getattr(self, '_reward_gating_mode', 'quantum')  # 'quantum' | 'classical' (baseline)
+                    t_since = self.time - getattr(self, '_measurement_time', self.time)
+                    if mode == 'classical':
+                        readable = CLASSICAL_WINDOW_LO <= t_since <= CLASSICAL_WINDOW_HI   # fixed short window
+                        expired = t_since > CLASSICAL_WINDOW_HI
                     else:
-                        da_level = da_tonic
-                    KD_D1 = 1e-6                                       # D1 low-affinity Kd ~1 µM (grounded)
-                    da_occ = da_level / (da_level + KD_D1)            # D1 receptor occupancy
-                    if getattr(self, '_darpp32', None) is None:
-                        from darpp32_pp1_module import DARPP32PP1Module
-                        self._darpp32 = DARPP32PP1Module(
-                            da_tonic_occupancy=da_tonic / (da_tonic + KD_D1), ca_basal_uM=0.1)
-                    pp1_factor = self._darpp32.step(dt, da_occ, camkii_calcium_uM)['pp1_factor']
-                elif expired:
-                    self._measurement_gate_opened = False              # tag decohered / window closed
+                        readable = is_coherent(self._mean_singlet_prob)                    # coherent tag readable
+                        expired = not readable
+                    phasic = abs(da_level - da_tonic) > 0.05 * da_tonic   # a genuine reward transient
+                    if readable and phasic:
+                        CA_READOUT_UM = 3.0                            # [MODELED-in-grounded-band] DDSC-scale Ca
+                        self._readout_ca_uM = CA_READOUT_UM * eligibility_weight(self._mean_singlet_prob)
+                        camkii_calcium_uM += self._readout_ca_uM
+                    elif expired:
+                        self._measurement_gate_opened = False           # tag decohered / window closed
+
+                # CONTINUOUS DARPP-32/PP1 cascade — the physiological signalling runs EVERY step (not only in the
+                # reward window), because the DAPK1 gate reads PP1 continuously: at tonic DA, PP1 is active ⇒ DAPK1
+                # active ⇒ binding blocked ⇒ Hebbian activity CANNOT commit. Grounding: Nakano 2010; Fernandez 2006.
+                da_occ = da_level / (da_level + KD_D1)             # D1 receptor occupancy
+                if getattr(self, '_darpp32', None) is None:
+                    from darpp32_pp1_module import DARPP32PP1Module
+                    self._darpp32 = DARPP32PP1Module(
+                        da_tonic_occupancy=da_tonic / (da_tonic + KD_D1), ca_basal_uM=0.1)
+                pp1_factor = self._darpp32.step(dt, da_occ, camkii_calcium_uM)['pp1_factor']
 
             # CaMKII integrates the DIFFUSE PSD calcium (not the nanodomain peak) with dopamine-reinforced PP1.
             camkii_state = self.camkii.step(dt, camkii_calcium_uM, dimer_field_kT, pp1_factor=pp1_factor)

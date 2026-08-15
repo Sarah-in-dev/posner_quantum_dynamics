@@ -316,6 +316,53 @@ biology's timescales/thresholds, NOT to a decode — and the robustness across C
 DDSC-analog commitment event; the coherent tag as eligibility; DAPK1/dopamine gating), and re-validate F3 end-to-end
 in the full model. The isolation result is the green light.
 
+## F3 END-TO-END IN THE FULL MODEL (2026-08-15) — the reward-signed readout PRODUCES, and it is COHERENCE-GATED
+`glun2b_memory` wired into the reward-gated path of `model6_core` (EM path): the coherent P_S tag is the eligibility
+carrier; a phasic dopamine transient GATES/TIMES the spin-selective binding-melt of a STILL-COHERENT tag (F3-d),
+delivering the **DDSC-analog commitment calcium** (`CA_READOUT_UM=3.0 × eligibility_weight(P_S)` — low-µM scale
+[GROUNDED — DDSC internal-store Ca, Jain 2024]; exact peak [MODELED]; magnitude rides on remaining coherence so the
+quantum lever is preserved); the DARPP-32/PP1 cascade runs CONTINUOUSLY so the DAPK1 gate sees PP1 every step.
+
+**RESULT (`sweep/f3_glun2b_fullmodel.py`, n=3; build 0.5 s → delay 10 s → reward → settle):**
+| cond | commit | pre-commit (delay end) | final_mem |
+|---|---|---|---|
+| none | **0.00** | 0.00 | 0.044 |
+| dip | **0.00** | 0.00 | 0.039 |
+| burst | **1.00** | 0.00 | 0.354 |
+⇒ **(1) HEBBIAN-SAFE** (nothing commits before the reward) and **(2) DA-DECISIVE** (only the burst commits). P_S at
+reward = 0.934 (above the Werner floor) — the coherent tag carried the eligibility across the 10 s gap.
+
+**CONTROLS — is it genuinely coherence-gated? (`sweep/f3_coherence_controls.py`, n=3; IDENTICAL delayed burst in
+every arm, only the tag's coherence / readout mode differ; physiological brief 0.5 s burst per Yagishita):**
+| arm | P_S@reward | readout Ca (µM) | commit | final_mem |
+|---|---|---|---|---|
+| undoped, quantum | 0.934 | 2.72 | **1.00** | 0.876 |
+| ⁶Li, quantum | 0.934 | 2.72 | **1.00** | 0.916 |
+| ⁷Li, quantum | **0.446** (decohered) | **0.00** | **0.00** | 0.763 |
+| undoped, CLASSICAL baseline | 0.934 | 0.00 | **0.00** | 0.577 |
+⇒ **ISOTOPE LEVER holds** (⁷Li's tag decoheres below the Werner floor → no readout → no credit; ⁶Li ≈ undoped) and
+⇒ **TEMPORAL GAP holds** (the classical 0.3–2 s trace is dead at 10 s where the coherent tag still credits).
+This is F1→F2→F3 closed end-to-end **under the corrected through-CaMKII mechanism** (the earlier F3-b/F3-c results
+were obtained on the now-removed bypass; this supersedes them with the grounded architecture).
+
+**CORRECTION MADE MID-BUILD (grounded, not tuned):** the first wiring let DAPK1 both block formation AND strip the
+already-formed complex, so the memory was destroyed the moment dopamine returned to tonic (final_mem 0.035). That
+contradicts the cited biology — **once formed the complex is PROTECTED from phosphatases and persists** (Cell Reports
+2024; PMC4965558); DAPK1 suppresses *binding* **during LTD**. Fixed: DAPK1 gates FORMATION; disruption requires an
+actual LTD signal (PP1 disinhibited above tonic, i.e. a dip). Memory then persists (final_mem 0.88–0.92).
+
+**HONEST CAVEAT + a REAL pre-existing defect found (NOT fixed — surfaced for a decision):** in the non-credited arms
+`molecular_memory` still drifts up (⁷Li 0.763, classical 0.577) even though `committed` is correctly 0.00 (the
+coherence/window gate closes the commitment token). Root cause, measured: **CaMKII is spontaneously active at RESTING
+calcium because of noise rectification.** `_update_CaCaM` adds `activation_noise = 0.02·√dt·randn` to `d_active` and
+then clips `CaMKII_active` to [0,1]; at rest the target is ~0, so clipping rectifies the noise upward. Measured
+(CaMKII alone, 60 s at 0.1 µM, tonic PP1): **stochastic → CaMKII_active 0.053, pT286 0.333; deterministic → 0.002,
+0.011.** So resting CaMKII activity (and hence pT286 and slow complex formation) is a numerical artifact, not physics.
+This is PRE-EXISTING (not introduced by this work) and prior F-series results carry it. Fixing it changes core model
+behaviour broadly (reflecting-boundary or multiplicative noise instead of additive+clip), so it is **surfaced, not
+unilaterally changed** — Sarah's call. Fixing it should only SHARPEN the discrimination above (the commit flag is
+already correct; it would clean the memory variable in the non-credited arms too).
+
 ## Sources (verified this session)
 - Yagishita et al. 2014, Science 345:1616 — dopamine window, PKA→CaMKII reinforcement.
 - Nakano et al. 2010, PLoS Comput Biol 6:e1000670 — the kinetic DA/Ca striatal plasticity model (scheme + thresholds).
