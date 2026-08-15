@@ -49,6 +49,25 @@ class DARPP32PP1Parameters:
     # --- PKA drive from dopamine (D1 occupancy → cAMP → PKA), gated by Thr75 inhibition ---
     da_pka_half: float = 0.5           # [MODELED] D1 occupancy for half-max PKA drive
     da_pka_hill: float = 2.0           # [MODELED] cooperative (AC5/cAMP threshold)
+    # --- Ser130 (Ser137 in rat): the CK1 site that PROTECTS Thr34 from calcineurin ---
+    # [GROUNDED — Desdouits et al. 1995, title result: "Phosphorylation of Ser-137 by casein kinase I inhibits
+    # dephosphorylation of Thr-34 by calcineurin"; confirmed in vitro AND in vivo (Frontiers Behav Neurosci 2011
+    # review). DARPP-32 is phosphorylated on this site by CK1 under BASAL conditions; it is dephosphorylated by
+    # PP2C, and PP2C-mediated loss of Ser-137 FACILITATES Thr-34 dephosphorylation by calcineurin.]
+    # [GROUNDED — the incoherent feedforward] PP2B (calcineurin) dephosphorylates CK1 and thereby ENHANCES Ser137
+    # phosphorylation, so Ca²⁺ simultaneously ACTIVATES (via PP2B→Thr34) and INHIBITS (via CK1→Ser137→protection)
+    # the removal of Thr34. This brake is why a BRIEF dopamine burst can still leave Thr34 standing while the
+    # commitment calcium is present — the tension that made the model's brief-burst arm fail with no Ser130 state.
+    # The RATES are not published quantitatively (the review states the CK1 mechanism "remains incompletely
+    # understood"), so they are [MODELED] from the biology's timescales and the qualitative constraints:
+    # basal Ser137 substantially phosphorylated, and calcium INCREASING it.
+    ser130_protection: bool = True     # opt-out flag; False reproduces the pre-Ser130 behaviour exactly
+    k_ck1_ser130: float = 0.5          # [MODELED] s⁻¹, CK1 phosphorylation of Ser130
+    k_pp2c_ser130: float = 0.3         # [MODELED] s⁻¹, PP2C dephosphorylation of Ser130
+    ck1_basal: float = 0.5             # [MODELED] fraction of CK1 active at basal Ca (basal phosphorylation)
+    ck1_ca_gain: float = 0.5           # [MODELED] additional CK1 activation as PP2B rises (the feedforward)
+    prot_frac_max: float = 0.8         # [MODELED] maximal fractional inhibition of PP2B→Thr34 by phospho-Ser130
+
     # --- PP1 inhibition by phospho-Thr34 (potent) ---
     K_inhib_thr34: float = 0.02        # [MODELED] effective D34 fraction for half PP1 inhibition. The raw
                                        #   Hemmings 1984 Ki≈1 nM with 50 µM DARPP-32 gives a MUCH steeper
@@ -65,11 +84,12 @@ class DARPP32PP1Module:
         self.p = params or DARPP32PP1Parameters()
         self.thr34 = 0.0
         self.thr75 = 0.0
+        self.ser130 = 0.0          # CK1 site protecting Thr34 from calcineurin (Desdouits 1995)
         self.time = 0.0
         # settle to the tonic steady state so pp1_factor is normalized to 1.0 at tonic DA / basal Ca
         self._relax_to_steady(da_tonic_occupancy, ca_basal_uM)
         self._pp1_ref = self._pp1_activity(self.thr34)
-        self.history = {'time': [], 'thr34': [], 'thr75': [], 'pka': [], 'pp1_factor': []}
+        self.history = {'time': [], 'thr34': [], 'thr75': [], 'ser130': [], 'pka': [], 'pp1_factor': []}
 
     # ---- calcium-gated phosphatase activities (Hill) ----
     def _pp2b(self, ca_uM):
@@ -95,17 +115,28 @@ class DARPP32PP1Module:
         pka = self._pka(da_occ)
         pp2b = self._pp2b(ca_uM)
         pp2a = self._pp2a(ca_uM)
+        # Ser130/CK1: PP2B dephosphorylates (activates) CK1, so calcium RAISES Ser130 — the incoherent
+        # feedforward. Phospho-Ser130 then PROTECTS Thr34 from calcineurin (Desdouits 1995).
+        if self.p.ser130_protection:
+            ck1_act = min(1.0, self.p.ck1_basal + self.p.ck1_ca_gain * pp2b)
+            d_ser130 = (self.p.k_ck1_ser130 * ck1_act * (1.0 - self.ser130)
+                        - self.p.k_pp2c_ser130 * self.ser130)
+            protection = 1.0 - self.p.prot_frac_max * self.ser130
+        else:
+            d_ser130 = 0.0
+            protection = 1.0
         d_thr34 = (self.p.k_pka_thr34 * pka * (1.0 - self.thr34)
-                   - (self.p.k_pp2b_thr34 * pp2b + self.p.k_basal_thr34) * self.thr34)
+                   - (self.p.k_pp2b_thr34 * pp2b * protection + self.p.k_basal_thr34) * self.thr34)
         d_thr75 = (self.p.k_cdk5_thr75 * (1.0 - self.thr75)
                    - self.p.k_pp2a_thr75 * pp2a * self.thr75)
-        return d_thr34, d_thr75, pka
+        return d_thr34, d_thr75, d_ser130, pka
 
     def _relax_to_steady(self, da_occ, ca_uM, dt=0.01, n=20000):
         for _ in range(n):
-            d34, d75, _ = self._derivs(da_occ, ca_uM)
+            d34, d75, d130, _ = self._derivs(da_occ, ca_uM)
             self.thr34 = float(np.clip(self.thr34 + d34 * dt, 0.0, 1.0))
             self.thr75 = float(np.clip(self.thr75 + d75 * dt, 0.0, 1.0))
+            self.ser130 = float(np.clip(self.ser130 + d130 * dt, 0.0, 1.0))
 
     def step(self, dt: float, da_occupancy: float, calcium_uM: float) -> Dict:
         """Advance the cascade; return PP1 factor (normalized to tonic=1.0) for CaMKII k_dephos scaling."""
@@ -114,15 +145,17 @@ class DARPP32PP1Module:
         nsub = max(1, int(np.ceil(dt / 0.005)))
         h = dt / nsub
         for _ in range(nsub):
-            d34, d75, pka = self._derivs(da_occupancy, calcium_uM)
+            d34, d75, d130, pka = self._derivs(da_occupancy, calcium_uM)
             self.thr34 = float(np.clip(self.thr34 + d34 * h, 0.0, 1.0))
             self.thr75 = float(np.clip(self.thr75 + d75 * h, 0.0, 1.0))
+            self.ser130 = float(np.clip(self.ser130 + d130 * h, 0.0, 1.0))
         pp1 = self._pp1_activity(self.thr34)
         pp1_factor = pp1 / self._pp1_ref if self._pp1_ref > 0 else 1.0
         self.history['time'].append(self.time); self.history['thr34'].append(self.thr34)
-        self.history['thr75'].append(self.thr75); self.history['pka'].append(pka)
+        self.history['thr75'].append(self.thr75); self.history['ser130'].append(self.ser130)
+        self.history['pka'].append(pka)
         self.history['pp1_factor'].append(pp1_factor)
-        return {'thr34': self.thr34, 'thr75': self.thr75, 'pka': pka,
+        return {'thr34': self.thr34, 'thr75': self.thr75, 'ser130': self.ser130, 'pka': pka,
                 'pp1_activity': pp1, 'pp1_factor': float(pp1_factor)}
 
     def get_pp1_factor(self) -> float:

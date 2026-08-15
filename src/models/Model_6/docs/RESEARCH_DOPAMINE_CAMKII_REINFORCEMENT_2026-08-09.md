@@ -514,3 +514,39 @@ or reduce `dt` toward the channel kinetics (10× the compute everywhere). Either
 the calcium layer — the whole F-series and the topology work — which is precisely why it is surfaced, not changed.
 **What was applied:** only the Neher buffer partition on the dissolution return (`/(1+κ_s)`, κ_s=60) — correct physics,
 documented in-code as a near-no-op that does NOT explain the symptom. Headline results are unaffected by it.
+
+## DEBT 1 CLOSED (2026-08-15) — the Ser130/CK1 protection node, and the brief-burst arm now works
+Built the missing node identified by the Debt-1 research, in `darpp32_pp1_module.py` (opt-out via
+`ser130_protection=False`, which reproduces the previous behaviour exactly):
+- **New state `ser130`** — the CK1 site (Ser-130 mouse / Ser-137 rat). [GROUNDED — Desdouits 1995, whose title
+  result is "Phosphorylation of Ser-137 by casein kinase I inhibits dephosphorylation of Thr-34 by calcineurin,"
+  confirmed in vitro AND in vivo; DARPP-32 carries this phosphorylation under BASAL conditions; PP2C removes it, and
+  loss of Ser-137 FACILITATES Thr-34 dephosphorylation.]
+- **The incoherent feedforward** [GROUNDED]: PP2B dephosphorylates (activates) CK1, so **calcium RAISES Ser130** —
+  Ca²⁺ therefore simultaneously *drives* Thr34 removal (via PP2B) and *brakes* it (via CK1→Ser130→protection). That
+  brake is exactly what the model lacked.
+- Rates are `[MODELED]` (the CK1 mechanism is "incompletely understood" in the literature), set from timescales and
+  the two qualitative constraints: basal Ser130 substantially phosphorylated, and calcium increasing it.
+
+**RESULT — the physiological brief burst now commits.** With an identical 0.5 s phasic burst (n=8/arm):
+| | before Ser130 | after Ser130 |
+|---|---|---|
+| coherent (undoped+⁶Li) commit | **0.000** | **0.375** |
+| decohered (⁷Li+classical) | 0.000 | **0.000** |
+| permutation p | — (vacuous) | **0.0168** |
+So a sub-second, physiologically realistic reward burst now produces **coherence-gated** credit, where before the
+model committed nothing at all. **Nothing else moved:** the sustained-reward controls are unchanged (coherent 0.750
+vs decohered 0.000, p=0.0000) and the F3 end-to-end suite still passes (burst 1.00 / mem 0.991; dip & none 0.00).
+`darpp32_pp1_module.__main__` still passes 5/5.
+
+**IS THE RESCUE FITTED TO THE `[MODELED]` CONSTANT? — swept, and no.** Commit rate vs `prot_frac_max` (0.5 s burst,
+undoped, n=6): **0.00 at 0.0** (which *is* the pre-Ser130 model, and it correctly reproduces the failure), 0.00 at
+0.3, 0.17 at 0.5 and 0.65, then a **plateau at 0.33 across 0.8 / 0.9 / 0.95**. A monotone rise to a broad plateau —
+i.e. the MECHANISM does the work, not a tuned value. As with `dapk1_half_thr34`, it is a **one-sided threshold with a
+wide plateau above it**, and that is how it is reported.
+
+**HONEST RESIDUAL:** the brief-burst commit probability (0.375) is about **half** the sustained-reward value (0.750),
+so the model still favours longer reward signals — the limitation is *reduced*, not eliminated. And the research
+surfaced a SECOND grounded extension mechanism that is still unmodelled: **phospho-Thr34 prolongs its own PKA signal**
+(in DARPP-32 T34A mice the PKA response has unchanged amplitude but "strongly reduced duration"), plus PKA persisting
+after cAMP decays. Adding that positive feedback is the next available grounded improvement to this arm.
