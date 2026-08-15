@@ -431,12 +431,26 @@ temporal-gap contrast are both carried by that statistic.
 
 ### Residual, still open (narrower than before, stated plainly)
 In the CONTROLS every arm receives a 20 s burst, and there the decohered arms' `molecular_memory` still rises
-(≈0.84–0.89) while `commit` correctly stays 0.00. Cause: a **field-driven pT286 floor** — the persistent dimer field
-holds pT286 ≈ 0.42 at basal calcium (reverse coupling runs every step), which a prolonged DAPK1 suppression can
-convert into complex formation without any readout. So the **commit flag** (coherence-gated) is the discriminating
-variable, not the memory level. Fixing this means stopping the tag's *field* from substituting for the tag's
-*readout* — i.e. the reverse-coupling barrier reduction should not by itself sustain pT286 at rest. That is the next
-grounded item; it is NOT to be papered over by tuning the field or the formation threshold.
+(≈0.84–0.89) while `commit` correctly stays 0.00. So the **commit flag** (coherence-gated) is the discriminating
+variable, not the memory level.
+
+**CAUSE DIAGNOSED — and an earlier attribution here was WRONG.** This was first written up as a *field*-driven pT286
+floor (the reverse-coupling barrier reduction). Measured, that is **not** it: the driver is **CALCIUM returned by the
+tag's own dissolving dimers.** Full-resolution trace of the calcium fed to CaMKII during a 10 s "rest" phase: median
+**0.100 µM** (basal) but **3.5% of steps exceed 1 µM, max 3.2 µM**. Each dissolving dimer returns 6 Ca²⁺ into the
+0.01 µm³ active-zone volume ≈ **1 µM**, added as **FREE** calcium with no buffer partitioning (`model6_core` →
+`calcium.apply_return`). Because CaM activation is Hill **n=4** with K_half=1 µM, a single 3 µM spike is essentially
+FULL activation, and with CaCaM decay τ≈2 s these spikes hold `CaCaM_bound ≈ 0.44` and pT286 ≈ 0.42 at "rest" — which
+a prolonged DAPK1 suppression can then convert into complex formation with no valid readout. **So the tag substitutes
+for its own readout via CALCIUM, not via the field.**
+
+**Proposed grounded fix — NOT applied, wants Sarah's nod:** the returned calcium should enter as **free** calcium,
+i.e. divided by the model's own buffer capacity `(1 + κ_s)` with κ_s = 60 (`params.calcium.buffer_capacity`, already
+used by `get_buffer_capacity`; standard Neher buffer-partition formalism, and the same buffering the nanodomain λ
+already encodes). That is ~61× smaller spikes (~0.016 µM) ⇒ CaMKII stays off at rest. It is a **physics correction to
+a magnitude**, and the DDSC dissolution→Ca-return→CaMKII *mechanism* (LOCKED, May 12) is preserved unchanged — but it
+does alter a locked pathway's quantitative behaviour and every F-series result carries the current magnitude, so it is
+surfaced with evidence rather than changed unilaterally. It must NOT be papered over by tuning the formation threshold.
 
 ## Sources (verified this session)
 - Yagishita et al. 2014, Science 345:1616 — dopamine window, PKA→CaMKII reinforcement.
