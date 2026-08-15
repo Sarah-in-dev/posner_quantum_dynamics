@@ -96,15 +96,34 @@ Follow `CLAUDE.md`'s discipline, in this order. Do not skip; the failure mode is
   contrast p=0.012), but commitment is now **STOCHASTIC (DDSC)** so the pre-correction deterministic commit-rates
   (3/3) no longer hold — an honest change, not a regression. Grounding: `RESEARCH_DOPAMINE_CAMKII_REINFORCEMENT_2026-08-09.md`;
   research-log `CAL F3-e`.
-- **The open refinement: the decoherence signal → plasticity cascade.** The task is to ground HOW the dopamine-gated
-  binding-melt readout (the decoherence signal that reads out the coherent tag) drives the CaMKII plasticity cascade
-  biologically correctly — while PRESERVING the working computation above. This session refined the link (dopamine
-  reinforces CaMKII via **DARPP-32/PP1**, commitment stays CaMKII-gated, not bypass) and explored mechanistic
-  details: the calcium CaMKII integrates, and whether an opt-in **bistable CaMKII switch** (`bistable=True`, built +
-  hysteresis-validated) holds eligibility across the delay. Those are **OPEN MECHANISTIC QUESTIONS inside the
-  refinement, NOT a verdict that the system can't compute.** ⚠ Earlier `F3-e` / Part-2 notes over-framed them as a
-  "calcium-domination blocker / not DA-decisive" — that pathologized a working system; see the superseding note in
-  `CAL F3-e`. Details + open questions: `RESEARCH_DOPAMINE_CAMKII_REINFORCEMENT_2026-08-09.md` + the LIVE handoff.
+- **The refinement is now LANDED (2026-08-15) — the plasticity cascade is grounded in the REAL CaMKII biology.**
+  Researching how CaMKII actually works settled the mechanistic questions above, and it required *retiring* the
+  bistable-switch framing rather than fixing it:
+  - **CaMKII activation is TRANSIENT (~1 min; fast component 1–6 s), NOT a stable bistable switch** — the
+    Lisman/Zhabotinsky autophosphorylation switch is contested and non-physiological at real spine concentrations
+    (Frontiers Synaptic Neurosci 2025). The earlier finding that the opt-in `bistable` switch "cannot hold a primed
+    sub-threshold state" was therefore **correct biology, not a blocker** — the model was fighting reality.
+  - **The persistent memory is the CaMKII–GluN2B STRUCTURAL complex**, which forms on a Ca²⁺/CaM + pT286 stimulus
+    and then persists autonomously, protected from phosphatases (Cell Reports 2024). pT286 itself is transient.
+  - **The seconds-scale commitment is DDSC** — delayed (10–100 s), stochastic CaMKII activation driven by
+    IP3-dependent **internal-store** calcium (Jain 2024, Nature); in the model the dopamine-gated binding-melt of
+    the still-coherent tag delivers that delayed calcium.
+  - **DAPK1 makes CaMKII–GluN2B binding LTP-SPECIFIC**: it blocks binding unless the dopamine/PKA reward signal
+    (DARPP-32-Thr34) suppresses it. **This is what dissolved the calcium-domination problem** — dopamine gates the
+    *binding*, not the calcium level, so commitment requires reward at ANY calcium magnitude (Yagishita's rule).
+  Built as opt-in `glun2b_memory` in `camkii_module.py` (default off = bit-identical) and wired into the
+  reward-gated path. **VALIDATED end-to-end, single synapse:** Hebbian-safe (nothing commits before reward) and
+  DA-decisive (burst commits 1.00 / mem 0.99; dip & none 0.00 / mem ≈0.03); and **coherence-gated with statistics** —
+  commit probability coherent (undoped+⁶Li) **0.750** vs decohered (⁷Li + classical-window) **0.000**, permutation
+  **p = 0.0000** (n=8/arm). Also landed: constraint #1 (CaMKII/DARPP-32 integrate **diffuse PSD-averaged** calcium,
+  not the nanodomain peak) and a CaMKII **noise-rectification defect fix** (CLE form + 1/√N; resting pT286
+  0.333→0.000). Grounding + the honest residuals: `RESEARCH_DOPAMINE_CAMKII_REINFORCEMENT_2026-08-09.md`.
+- **Open, carried honestly (not blockers):** (i) a *brief* (0.5 s) phasic burst does not commit — the readout Ca
+  drives PP2B, which strips Thr34 and re-engages DAPK1 before the complex forms, so the mechanism **predicts the
+  dopamine/PKA signal must overlap the DDSC calcium event for seconds** (a falsifiable prediction); (ii) a
+  field-driven pT286 floor lets a *prolonged* reward form the complex without a valid readout (the commit flag is
+  still correctly coherence-gated, but the memory level is not clean); (iii) the multi-synapse question — does the
+  RIGHT synapse get the credit — remains the next frontier and needs committed-synapse identity as the observable.
 - **Contested substrate premises** (carried, not settled): microtubule Q (~10, AMRIS-class), λ_F fidelity length
   (unmeasured), dimer coherence lifetime (Agarwal ~100–1000 s vs Fisher ~a day vs Player&Hore skeptical), lithium
   attribution (Posner vs radical-pair vs classical), the small-N (B) non-classicality witness (not built).
