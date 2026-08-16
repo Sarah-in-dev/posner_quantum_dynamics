@@ -464,6 +464,45 @@ surfaced with evidence rather than changed unilaterally. It must NOT be papered 
 - Xiao et al. 2023, Sci Adv — CaMKII autophosphorylation required for BTSP.
 - Jain et al. 2024 (DDSC) — dendritic/delayed/stochastic CaMKII underlies BTSP (the LOCKED commitment pathway).
 
+### Sources added 2026-08-10 → 2026-08-15 (the real-CaMKII-biology regrounding), by what each one grounds
+**CaMKII is TRANSIENT, not a bistable switch** — retiring the Lisman/Zhabotinsky switch framing:
+- Chang et al. 2017, Neuron — T286 prolongs the CaMKII deactivation constant only to ~5–9 s (from ~2 s).
+- PLOS One 2015 (Camui FRET) — single-spine CaMKII activation is transient, ~1 min.
+- Jain et al. 2024, Nature (also above) — CaMKII stays active only **1–6 s** after a stimulus; DDSC is **delayed
+  10–100 s** and driven by **IP3-dependent INTERNAL-STORE** Ca²⁺, and is explicitly **stochastic**.
+- Frontiers Synaptic Neurosci 2025 — the CaMKII/PP1 bistable switch is **not realizable at physiological spine
+  concentrations**; autophosphorylation "does not constitute a bistable switch under biologically realistic
+  conditions." (This is why our bistable-switch "Finding A" was correct biology, not a blocker.)
+
+**The persistent memory is the CaMKII–GluN2B STRUCTURAL complex** (what actually latches):
+- Cell Reports 2024 — LTP expression via **autonomous activity of GluN2B-bound CaMKII**; structural rather than
+  enzymatic requirement.
+- Molecular Brain 2013; PMC4965558 — the CaMKII/NMDAR complex as a molecular memory; binding needs an initial
+  Ca²⁺/CaM stimulus then **persists after CaM dissociates**, is nanomolar-tight and **protected from phosphatases**.
+
+**DAPK1 makes the binding LTP-SPECIFIC** — the gate that dissolved calcium-domination:
+- DAPK1 / CaMKII–GluN2B (escholarship qt0zc5v40w) — DAPK1 suppresses CaMKII synaptic accumulation and GluN2B
+  binding during LTD, making these mechanisms LTP-specific; the β-adrenergic "depression→potentiation" switch.
+
+**Ser130/CK1 protection of Thr34** — the missing node that fixed the brief-burst arm (Debt 1):
+- **Desdouits et al. 1995** — *"Phosphorylation of Ser-137 by casein kinase I inhibits dephosphorylation of Thr-34
+  by calcineurin"* (the title result), in vitro **and** in vivo.
+- Frontiers Behav Neurosci 2011 (DARPP-32 review, verified at source) — CK1 phosphorylates Ser-130 (Ser-137 rat)
+  under **basal** conditions; **PP2C** removes it and that **facilitates** Thr-34 dephosphorylation; **PP2B
+  dephosphorylates CK1**, so Ca²⁺ raises Ser-137 — the **incoherent feedforward** (Ca both drives and brakes Thr34
+  removal). States the CK1 mechanism "remains incompletely understood" ⇒ our rates are `[MODELED]`.
+- DARPP-32 **T34A** phospho-mutant work — higher PP1 activity left PKA-response **amplitude unchanged but
+  "strongly reduced the DURATION"** ⇒ phospho-Thr34 *extends* the reward signal (a second extension mechanism,
+  **still unmodelled**); PKA activity also persists after cAMP decays.
+
+**Quantitative anchors used in fixes:**
+- Feng & Kennedy 2011 (PMC3221876) — CaMKII pools in spines: ~16 µM cytoplasmic ≈ **2590 holoenzymes/spine**
+  (PSD sub-pool ~80–240) ⇒ the `n_holoenzymes` used for the 1/√N Chemical-Langevin noise correction.
+- EM postsynaptic-density morphometry — PSD is a disk ~**360 nm diameter** (range 200–800) ⇒ the ~180 nm radius
+  used for the PSD-averaged calcium (constraint #1).
+- Sabatini/Higley — spine calcium: resting ~100 nM; low-µM transients ⇒ the band the PSD-average must land in.
+- Neher buffer-capacity formalism (κ_s ≈ 60) ⇒ the free/bound partition on the dissolution Ca-return.
+
 ## THE TWO DEBTS RESOLVED (2026-08-15) — one is a model gap, one had a mis-diagnosed cause (twice)
 
 ### DEBT 1 — "a brief phasic burst does not commit": researched, and it is substantially a MODEL GAP, not a clean prediction
