@@ -79,7 +79,7 @@ def build_network(n_syn, seed):
     return net
 
 
-def run_one(n_syn, driven, rewarded, seed, elig_s, delay_s, reward_s, settle_s, burst_s):
+def run_one(n_syn, driven, rewarded, seed, elig_s, delay_s, reward_s, settle_s, burst_s, drive_v=DRIVE_V):
     """One network draw. `driven` = indices driven during the eligibility window. Returns per-synapse state."""
     import numpy as np
     net = build_network(n_syn, seed)
@@ -87,7 +87,7 @@ def run_one(n_syn, driven, rewarded, seed, elig_s, delay_s, reward_s, settle_s, 
     def phase(duration, drive_idx, da):
         n = int(round(duration / DT))
         for _ in range(n):
-            per_syn = [{"voltage": (DRIVE_V if i in drive_idx else REST_V)} for i in range(n_syn)]
+            per_syn = [{"voltage": (drive_v if i in drive_idx else REST_V)} for i in range(n_syn)]
             for s in net.synapses:
                 s._da_signal = da
             net.step(DT, {"per_synapse": per_syn, "reward": False})
@@ -96,6 +96,13 @@ def run_one(n_syn, driven, rewarded, seed, elig_s, delay_s, reward_s, settle_s, 
     phase(elig_s, set(driven), DA_TONIC)
     tags = [len(s.dimer_particles.dimers) for s in net.synapses]
     ps_tag = [float(getattr(s, "_mean_singlet_prob", float("nan"))) for s in net.synapses]
+    # DID THE FULL SYSTEM ENGAGE? eta>0 means the tryptophan/MT backbone condensed (Frohlich) and
+    # cross-synapse bonds are possible at all; F4-a ran with eta==0 (backbone inert, local tags only).
+    eta = [float(getattr(s, "_backbone_eta", getattr(s, "_condensation_eta", 0.0))) for s in net.synapses]
+    tr = net.entanglement_tracker
+    n_cross = sum(1 for F in tr.cross_synapse_bonds.values() if F > 0.5)
+    n_cross_any = len(tr.cross_synapse_bonds)
+    e_inv = [float(getattr(s.spine_plasticity, "E_invasion", 0.0)) for s in net.synapses]
 
     # 2. delay — everything at rest, tonic dopamine; tags decohere passively
     phase(delay_s, set(), DA_TONIC)
@@ -116,6 +123,7 @@ def run_one(n_syn, driven, rewarded, seed, elig_s, delay_s, reward_s, settle_s, 
     return dict(
         seed=seed, rewarded=bool(rewarded), driven=sorted(list(driven)),
         n_syn=n_syn, tags=tags, ps_tag=ps_tag, pre_commit=pre_commit,
+        eta=eta, e_invasion=e_inv, n_cross_bonds_werner=n_cross, n_cross_bonds_any=n_cross_any,
         committed=[bool(getattr(s, "_camkii_committed", False)) for s in net.synapses],
         mem=[float(s.camkii.molecular_memory) for s in net.synapses],
     )
@@ -126,6 +134,11 @@ def main():
     ap.add_argument("--n", type=int, default=4, help="seeds per arm")
     ap.add_argument("--n-syn", type=int, default=8)
     ap.add_argument("--n-driven", type=int, default=3)
+    ap.add_argument("--elig-s", type=float, default=None,
+                    help="eligibility drive seconds; >=~15 s is needed for E_invasion to cross its "
+                         "threshold so the tryptophan backbone can condense (eta>0 => cross-synapse bonds)")
+    ap.add_argument("--drive-mv", type=float, default=-40.0, help="eligibility drive voltage in mV")
+    ap.add_argument("--tag", type=str, default="runs", help="results file tag")
     ap.add_argument("--smoke", action="store_true", help="tiny fast config to verify the machinery")
     ap.add_argument("--fg", action="store_true")
     a = ap.parse_args()
@@ -143,10 +156,12 @@ def main():
         # exists in the favourable regime (commit prob 0.75) before re-testing it with the harder,
         # physiological brief burst (0.375), where the per-run sample would be thin.
         elig_s, delay_s, reward_s, settle_s, burst_s = 2.0, 10.0, 20.0, 10.0, 20.0
+        if a.elig_s is not None:
+            elig_s = a.elig_s
         seeds, arms = list(range(a.n)), [True, False]
 
     os.makedirs(RESULTS_DIR, exist_ok=True)
-    tag = "smoke" if a.smoke else "runs"
+    tag = "smoke" if a.smoke else a.tag
     jsonl = os.path.join(RESULTS_DIR, f"{tag}.jsonl")
     if not (a.fg or a.smoke):
         daemonize(os.path.join(RESULTS_DIR, "sweep.log"))
@@ -175,13 +190,15 @@ def main():
                 continue
             t0 = time.time()
             rec = run_one(n_syn, driven, rewarded, seed,
-                          elig_s, delay_s, reward_s, settle_s, burst_s)
+                          elig_s, delay_s, reward_s, settle_s, burst_s, a.drive_mv * 1e-3)
             with open(jsonl, "a") as f:
                 f.write(json.dumps(rec) + "\n")
             dset = set(rec["driven"])
             cd = sum(1 for i in range(n_syn) if i in dset and rec["committed"][i])
             cu = sum(1 for i in range(n_syn) if i not in dset and rec["committed"][i])
             print(f"[{time.strftime('%H:%M:%S')}] seed={seed} reward={rewarded} driven={rec['driven']} "
+                  f"eta_max={max(rec['eta']):.3f} E_inv_max={max(rec['e_invasion']):.3f} "
+                  f"xbonds(F>0.5)={rec['n_cross_bonds_werner']}/{rec['n_cross_bonds_any']} "
                   f"tags={rec['tags']} committed_driven={cd}/{len(dset)} "
                   f"committed_undriven={cu}/{n_syn-len(dset)} ({time.time()-t0:.0f}s)", flush=True)
 

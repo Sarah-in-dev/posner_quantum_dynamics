@@ -589,3 +589,46 @@ so the model still favours longer reward signals — the limitation is *reduced*
 surfaced a SECOND grounded extension mechanism that is still unmodelled: **phospho-Thr34 prolongs its own PKA signal**
 (in DARPP-32 T34A mice the PKA response has unchanged amplitude but "strongly reduced duration"), plus PKA persisting
 after cAMP decays. Adding that positive feedback is the next available grounded improvement to this arm.
+
+## F4-b BLOCKED ON COMPUTE — and the bottleneck is NOT what I predicted (2026-08-15)
+Sarah asked the right question about F4-a: *cross-synapse coupling only works through the tryptophan network — was
+it actually on?* **It was not.** Measured in the F4-a regime: `eta = 0.0000`, aggregate metabolic power pinned at
+the basal **0.84 fW** against the Fröhlich critical **P_c = 21.51 fW** ⇒ **zero cross-synapse bonds**. F4-a is a
+LOCAL-TAG result only (as its log entry scoped it, but the scoping was luck, not design).
+
+**ROOT CAUSE, exact:** `P_met = P_basal + E_invasion·ca_open·P_active_max`, and `E_invasion` is gated on actin
+enlargement crossing **0.1**. Measured buildup at plateau drive: 1 s → 0.055; **2 s → 0.099**; 5 s → 0.220. The F4-a
+eligibility drive was **2 s**, ending at 0.099 — *one thousandth below the threshold* — so `E_invasion` was
+identically 0 and the active power term vanished regardless of voltage (verified at −40 mV, −20 mV, and with the
+plateau flag: all `E_invasion = 0`).
+
+**THE BACKBONE *CAN* CONDENSE — crossing located (single-synapse curve, aggregated analytically over 8 co-active
+spines, row-sum ≈ 6.5):** 10 s → E_inv 0.170, r_agg 0.66 (below); **15 s → E_inv 0.261, r_agg 1.456 ⇒ eta > 0**;
+20 s → 0.338, r_agg 2.12. So ~15–25 s of sustained drive engages the full system. The design is sound.
+
+**BUT IT IS COMPUTATIONALLY INFEASIBLE AS DESIGNED — measured, not estimated:** 4 synapses at plateau drive,
+**1 simulated second = 651 s wall**, producing 3,966 dimers, and worsening as dimers accumulate. The protocol needs
+~65 simulated seconds ⇒ **>11 h per run at 4 synapses**, superlinearly worse at 8, × 8 runs ⇒ days–weeks. This is
+the same wall F2 hit (~47 min/draw; it truncated phases to survive).
+
+**MY PROPOSED FIX WAS WRONG, AND PROFILING KILLED IT.** I predicted the bottleneck was the O(n²) cross-dimer pair
+matrix and proposed an exact Werner/distance prune (`F ≤ w_spatial`, so pairs with `w ≤ 0.5` can never count).
+`cProfile` over 20 network steps at 3,554 dimers (115.5 s total, 5.8 s/step) says otherwise:
+| hotspot | cumulative | note |
+|---|---|---|
+| `_find_all_clusters` | 33.7 s | **134M `find`, 33M `union` calls** (Python union-find) |
+| `dimer_particles.step_entanglement` | 22.4 s | |
+| `collect_dimers` | 21.4 s | rebuilds per-dimer dicts every call |
+| `find_entangled_clusters` (2nd union-find) | 19.1 s | 30M unions |
+| `compute_betti` | 6.7 s | |
+The cost is **Python union-find over a near-complete INTRA-synapse bond graph (~1.65M edges) executed twice per
+step** — not the cross-synapse pair algebra. The proposed prune would have bought almost nothing. *(Recorded because
+the wrong optimization, confidently argued, is exactly the failure this program's discipline exists to catch.)*
+
+**THE CORRECTED FIX (not yet applied — it rewrites graph code every network result depends on, so it wants
+Sarah's nod):** replace both Python union-finds with a **vectorized connected-components** pass (label propagation /
+pointer-jumping in numpy), which is EXACT — identical partitions, C-speed inner loops. `scipy.sparse.csgraph` would
+be the one-line version but **scipy is broken in this venv** (`ModuleNotFoundError: scipy.sparse.linalg._isolve._gcrotmk`,
+a partial install) — flagged, not unilaterally reinstalled. Note `find_entangled_clusters` is **load-bearing, not
+diagnostics**: `largest_cluster` feeds `n_entangled_network` at `model6_core.py:506`, so it cannot simply be
+throttled. Acceptance for the change: identical partitions on saved states before/after, then re-time.
