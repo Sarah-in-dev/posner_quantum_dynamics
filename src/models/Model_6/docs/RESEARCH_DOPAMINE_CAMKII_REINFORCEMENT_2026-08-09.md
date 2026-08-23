@@ -632,3 +632,26 @@ be the one-line version but **scipy is broken in this venv** (`ModuleNotFoundErr
 a partial install) — flagged, not unilaterally reinstalled. Note `find_entangled_clusters` is **load-bearing, not
 diagnostics**: `largest_cluster` feeds `n_entangled_network` at `model6_core.py:506`, so it cannot simply be
 throttled. Acceptance for the change: identical partitions on saved states before/after, then re-time.
+
+### The vectorised fix is BUILT and VERIFIED EXACT — but it buys only 1.4x, and that corrects my estimate
+`connected_components.py` implements hook-and-compress label propagation and is **verified to return exactly the
+same partition as the union-find it replaces**: 300 randomised graphs (including edges referencing unknown ids)
+plus chain / star / complete / disjoint-blocks / empty / self-loop cases — **all PASS**, partitions identical.
+Connected components are unique, so this is exactness by construction, not a tolerance.
+
+**MEASURED SPEEDUP ON A REALISTIC GRAPH (2,000 nodes / 718,200 edges): 1.4x — not the 5–10x I estimated.**
+Reason, now measured rather than assumed: the remaining cost is the **Python-level loop that extracts edges from
+the bond collections**, which the algorithmic fix does not touch. Bonds live as a `Set[EntanglementBond]` of
+dataclass objects (`dimer_particles.py:128`) and a `Dict[Tuple, float]` keyed by id-pairs
+(`multi_synapse_network.py:128`); iterating ~1.65M of those per step costs the same order as the union-find did.
+**So the bottleneck is the DATA STRUCTURE, not the algorithm** — my "5–10x from optimising three routines"
+estimate was wrong and is retracted here.
+
+**WHAT WOULD ACTUALLY WORK (a real refactor, not a patch):** maintain the bond graph as **numpy edge arrays kept
+incrementally** as bonds form/dissolve, so per-step cost scales with the NUMBER OF CHANGED BONDS rather than the
+total bond count. That removes the Python per-edge loop entirely and lets the vectorised CC above do its work.
+It touches every bond add/discard site in `dimer_particles` (`:347`, `:355`, `:358`, `:736`, `:768`) and the cache
+rebuild in `collect_dimers`, with desync between the array and the set as the main risk — so it needs its own
+equivalence harness (identical partitions, identical `largest_cluster`, identical bond counts on saved states).
+`connected_components.py` is committed as tested groundwork for that refactor; it is **not yet wired into the
+model** (wiring it alone would buy 1.4x and change a code path for no unblocking benefit).
