@@ -131,7 +131,10 @@ def run_one(n_syn, driven, rewarded, seed, elig_s, delay_s, reward_s, settle_s, 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--n", type=int, default=4, help="seeds per arm")
+    ap.add_argument("--n", type=int, default=4, help="number of seeds this process runs")
+    ap.add_argument("--seed-start", type=int, default=0,
+                    help="first seed index. Shard across cores by giving each process a distinct "
+                         "--seed-start/--n and its own --tag, so parallel workers never redo the same cell.")
     ap.add_argument("--n-syn", type=int, default=8)
     ap.add_argument("--n-driven", type=int, default=3)
     ap.add_argument("--elig-s", type=float, default=None,
@@ -158,7 +161,7 @@ def main():
         elig_s, delay_s, reward_s, settle_s, burst_s = 2.0, 10.0, 20.0, 10.0, 20.0
         if a.elig_s is not None:
             elig_s = a.elig_s
-        seeds, arms = list(range(a.n)), [True, False]
+        seeds, arms = list(range(a.seed_start, a.seed_start + a.n)), [True, False]
 
     os.makedirs(RESULTS_DIR, exist_ok=True)
     tag = "smoke" if a.smoke else a.tag
