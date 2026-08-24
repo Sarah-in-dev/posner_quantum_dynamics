@@ -33,11 +33,18 @@ import sys
 import time
 
 RESULTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                           "results", "f3_delay_sweep")
+                           "results", os.environ.get("F3_SWEEP_DIR", "f3_delay_sweep"))
 DELAYS = [1.0, 2.0, 5.0, 10.0, 30.0, 60.0]
 ARMS = [("quantum-undoped", "quantum", None),
         ("classical-base", "classical", None),
-        ("quantum-Li7", "quantum", "Li7")]
+        ("quantum-Li7", "quantum", "Li7"),
+        # SUBSTRATE-NECESSITY CONTROL (2026-08-24): identical to quantum-undoped except the eligibility is a
+        # DETERMINISTIC exponential with the same time constant instead of the emergent dimer-population P_S.
+        # If this arm reproduces quantum-undoped, the computational primitive needs only a float and a decay
+        # constant -- i.e. it is implementable on ordinary silicon and the substrate is required for the
+        # BIOLOGY, not for the computation. A separation would be the first evidence the substrate does
+        # irreducible computational work. This is the cheap discriminator for the (A)-vs-(B) question.
+        ("classical-slow", "classical_slow", None)]
 
 DT = 5e-3
 BUILD_S, REWARD_S, SETTLE_S = 0.5, 20.0, 10.0

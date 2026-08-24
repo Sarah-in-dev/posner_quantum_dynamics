@@ -747,13 +747,33 @@ class Model6QuantumSynapse:
                 if not self._camkii_committed and getattr(self, '_measurement_gate_opened', False):
                     from reward_gating import (is_coherent, eligibility_weight,
                                                CLASSICAL_WINDOW_LO, CLASSICAL_WINDOW_HI)
-                    mode = getattr(self, '_reward_gating_mode', 'quantum')  # 'quantum' | 'classical' (baseline)
+                    # 'quantum'        : eligibility = the EMERGENT mean P_S of the live dimer population
+                    # 'classical'      : biology's measured fixed 0.3-2 s window (the short-trace baseline)
+                    # 'classical_slow' : THE SUBSTRATE-NECESSITY CONTROL. Identical to 'quantum' in every
+                    #   respect except that P_S is replaced by a DETERMINISTIC exponential with the same time
+                    #   constant: P_S(t) = floor + (1-floor)*exp(-t/T_singlet). Same Werner gate, same
+                    #   eligibility_weight, same readout calcium, same commitment path. It therefore isolates
+                    #   ONE question: does the emergent, population-coupled, stochastic coherence trajectory do
+                    #   anything a plain decay constant cannot? Under the LOCKED (A) reading ("quantum
+                    #   constrains, classical computes") the two arms should be indistinguishable — and if they
+                    #   are, the computational primitive is reproducible on ordinary silicon with a float and a
+                    #   decay constant, and the substrate is needed for the BIOLOGY, not for the computation.
+                    #   A separation would be the first evidence the substrate is doing irreducible work.
+                    mode = getattr(self, '_reward_gating_mode', 'quantum')
                     t_since = self.time - getattr(self, '_measurement_time', self.time)
                     if mode == 'classical':
                         readable = CLASSICAL_WINDOW_LO <= t_since <= CLASSICAL_WINDOW_HI   # fixed short window
                         expired = t_since > CLASSICAL_WINDOW_HI
+                        ps_eff = self._mean_singlet_prob
+                    elif mode == 'classical_slow':
+                        from reward_gating import P_S_FLOOR
+                        T_sing = float(getattr(self.params.quantum, 'T_singlet_dimer', 216.0))
+                        ps_eff = P_S_FLOOR + (1.0 - P_S_FLOOR) * np.exp(-t_since / T_sing)
+                        readable = is_coherent(ps_eff)
+                        expired = not readable
                     else:
-                        readable = is_coherent(self._mean_singlet_prob)                    # coherent tag readable
+                        ps_eff = self._mean_singlet_prob
+                        readable = is_coherent(ps_eff)                                     # coherent tag readable
                         expired = not readable
                     phasic = abs(da_level - da_tonic) > 0.05 * da_tonic   # a genuine reward transient
                     # Dopamine GATES THE ONSET of the melt; it does not set its duration. Once triggered, the
@@ -765,7 +785,7 @@ class Model6QuantumSynapse:
                         CA_READOUT_UM = 3.0                            # [MODELED-in-grounded-band] DDSC-scale Ca
                         self._readout_fired = True                     # one-shot: the tag is read out once
                         self._readout_until = self.time + READOUT_DURATION_S
-                        self._readout_ca_uM = CA_READOUT_UM * eligibility_weight(self._mean_singlet_prob)
+                        self._readout_ca_uM = CA_READOUT_UM * eligibility_weight(ps_eff)
                     if getattr(self, '_readout_fired', False) and self.time < getattr(self, '_readout_until', 0.0):
                         camkii_calcium_uM += self._readout_ca_uM       # the DDSC-analog commitment calcium
                     elif expired and not getattr(self, '_readout_fired', False):
