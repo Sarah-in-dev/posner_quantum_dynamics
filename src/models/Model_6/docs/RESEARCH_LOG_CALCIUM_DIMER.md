@@ -110,6 +110,47 @@ made, not just what it was.
 
 ## THE LOG (newest first)
 
+### F4-b — 2026-08-24 · HARD BLOCKER: Frohlich condensation is 25x short of threshold under physiological drive
+
+**Status: run KILLED and instance STOPPED after 24.4 h with ZERO completed runs. Not a null — a structural
+blocker that no amount of runtime can clear.**
+
+The F4-b batch (8 shards, c5.9xlarge, `--n-syn 6 --n-driven 4 --elig-s 25 --drive-mv -20`) was launched to fix
+F4-a's inert backbone by driving longer/harder so `E_invasion` clears its 0.1 threshold. Half of that worked;
+the other half revealed a deeper problem.
+
+**The diagnostic, stable across all 308 samples and all 8 shards:**
+```
+P_met=0.84 fW   P_agg=0.84 fW   P_c=21.51 fW   r=0.039   eta=0.0000   invaded=True
+```
+
+- `invaded=True` — **the invasion gate now OPENS.** The longer 25 s / -20 mV drive fixed F4-a's specific bug.
+- **But Frohlich condensation requires `r = P_agg/P_c > 1`, and `r` sits at 0.039–0.078.** Metabolic power
+  available is **0.84 fW against a 21.51 fW threshold — a ~25x deficit.**
+- `eta = (r-1)/(r+1)` is therefore clamped at 0; max ever observed across the whole batch was **0.0394**.
+- With `eta = 0` the cross-synapse formation rate `k_cross = 0.5 * sqrt(eta_i*eta_j) * w_spatial * P_S_i*P_S_j`
+  is identically zero, so **no cross-synapse bond can form at all** and `xbonds = 0/0`.
+
+**Why waiting does not help:** `r` is a ratio of POWERS, not a quantity that accumulates over time. It was
+pinned at ~0.04 from the first sample to the last, 24.4 h apart. The network observable F4-b exists to measure
+is unreachable in this configuration, so continuing to pay for it would have been the expensive form of a null.
+
+**What this does NOT overturn:** the per-synapse F4-a results stand (reward necessity held — zero commitments
+across the entire no-reward arm; seed 2 committed exactly the driven set [2,3,6]). Those were always
+single-synapse findings; we now know they were single-synapse *by force*, since eta was 0 there too.
+
+**Consequence for the program.** Every multi-synapse result obtained to date has run with the backbone inert
+and cross-synapse entanglement identically absent. **"Distributed / network-level entanglement" is therefore
+UNDEMONSTRATED in this codebase — not refuted, never yet reachable.** The next step is not another batch: it
+is to re-derive `P_c` and `P_met` and establish whether a 25x gap is a parameterisation error, a genuine
+physical verdict on Frohlich condensation at physiological power, or a missing power source in the model.
+Until that is settled, network runs cannot produce network behaviour.
+
+**Cost note:** ~24.4 h on c5.9xlarge (~$37) produced zero completed runs; a full batch would have been days
+and several hundred dollars for an unreachable observable. Salvaged evidence:
+`results/f4_specificity_ec2/sweep_f4b_2026-08-24.log`.
+
+
 ### E2 — 2026-07-18 · Forward-learning loop audit — D17's cross-trial reading RETRACTED
 
 **Session shape.** Three parallel diagnostic agents, read-only against the code, each
