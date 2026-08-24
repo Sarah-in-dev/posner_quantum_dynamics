@@ -160,6 +160,30 @@ class CoherenceGatedPrimitive:
             return None
         return float(s) if self.p.update == "leaky" else s[0] / (s[1] + self.p.prior_k)
 
+    def value_evidence(self, units: Iterable[int]) -> tuple:
+        """(value, has_evidence). `has_evidence` is False when NOTHING is stored for this component and no
+        stored component overlaps it -- i.e. the learner is not ignorant-but-guessing-zero, it is genuinely
+        ignorant. Callers need that distinction to apply a novelty/optimism bonus only where it is warranted;
+        without it a greedy selector cannot tell "known to be worth 0" from "never tried", and deadlocks on
+        any action whose true value is 0 (measured, Benchmark 10)."""
+        key = frozenset(units)
+        if not key:
+            return 0.0, False
+        exact = self._raw(key)
+        if exact is not None:
+            return exact, True
+        if not self.p.overlap_generalization:
+            return 0.0, False
+        cand: Set[frozenset] = set()
+        for u in key:
+            cand |= self.index.get(u, set())
+        num = den = 0.0
+        for k in cand:
+            sim = len(key & k) / len(key | k)
+            w = sim ** self.p.overlap_sharpness
+            num += w * self._raw(k); den += w
+        return (float(num / den), True) if den > 0 else (0.0, False)
+
     def value(self, units: Iterable[int]) -> float:
         key = frozenset(units)
         if not key:
