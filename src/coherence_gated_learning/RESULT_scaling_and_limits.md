@@ -62,3 +62,38 @@ That is the next real question for this workstream, and it is a design question,
 
 All four benchmarks use cleanly time-separated inputs. Overlapping/continuous input streams — where the
 binding window has to do real work — remain untested, and are the other obvious way this could fail.
+
+---
+
+# UPDATE (2026-08-24): partial reactivation closes the generalization gap at no cost
+
+The boundary above ("components are atomic keys, so nothing transfers") was addressed with the mechanism the
+diagnosis pointed to: **an unfamiliar component is answered by the stored components it OVERLAPS**, weighted
+by Jaccard similarity, with an EXACT match always taking priority. A partial input partially reactivates the
+patterns it resembles — the attractor / pattern-completion behaviour the program's framing invokes.
+
+| benchmark | before | after |
+|---|---|---|
+| B2 structured credit (conjunction) | 100.0% | **100.0%** (unchanged) |
+| B3 capacity at K=64 overlapping rules | 100.0% | **100.0%** (unchanged) |
+| B4 generalization to unseen, balanced | **50.0% (chance)** | **61.9%** |
+
+**Full picture now:**
+
+| | conjunctions | capacity (K=64) | unseen combinations |
+|---|---|---|---|
+| graph + per-component collapse + partial reactivation | **100%** | **100%** | **61.9%** |
+| scalar eligibility trace | chance | 68% | 61.9% |
+
+The graph now **matches** the scalar learner exactly where the scalar learner used to be better, while
+remaining far ahead everywhere else. It no longer has to trade structure for generalization.
+
+## Honest accounting of what this is
+
+- Mechanically, partial reactivation is **similarity-weighted retrieval over stored components**. It is
+  motivated by the attractor framing and by the measured failure it fixes — it is NOT something Model 6
+  measured, and it should not be described as biologically validated.
+- Generalization at 61.9% is **parity with the baseline, not a win**. The result is that the graph gets
+  generalization without giving up structure — not that it generalises better.
+- All four benchmarks still use cleanly time-separated inputs. Overlapping/continuous streams, where the
+  binding window must do real work, remain the main untested failure mode.

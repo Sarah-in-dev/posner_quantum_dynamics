@@ -66,7 +66,7 @@ def run(is_graph, n_seeds=15, epochs=60, train_frac=0.6):
 
         def pred(pr):
             if is_graph:
-                v = L.group_w.get(frozenset(pr), 0.0)
+                v = L.predict_group(pr)
                 return float(np.sign(v)) if v != 0 else -1.0
             return L.predict(pr)
         def balanced(ps):

@@ -75,10 +75,8 @@ def evaluate(learner, a, b, rng, is_graph, n_test=200):
         case, r = CASES[rng.integers(4)]
         present = {"a": [a], "b": [b], "ab": [a, b], "none": []}[case]
         if is_graph:
-            key = frozenset(present)
-            pred = np.sign(learner.group_w.get(key, 0.0)) if present else -1.0
-            if pred == 0.0:
-                pred = -1.0
+            v = learner.predict_group(present) if present else -1.0
+            pred = np.sign(v) if v != 0 else -1.0
         else:
             pred = learner.predict(present)
         ok += int(pred == r)

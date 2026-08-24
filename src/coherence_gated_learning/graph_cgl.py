@@ -52,6 +52,18 @@ class GraphCGLParams:
                                    # training run; the first version declared this parameter and ignored it.)
     commit_gain: float = 3.0
     lr: float = 1.0
+    # --- PARTIAL REACTIVATION (pattern completion) ---
+    # Without this, stored components are ATOMIC KEYS: {a,b} and {a,c} are as unrelated as {a,b} and {x,y},
+    # so a combination never observed has no entry and the readout is at exactly chance (measured, B4).
+    # With it, an unfamiliar component is answered by the stored components it OVERLAPS, weighted by
+    # similarity -- i.e. a partial input partially reactivates the patterns it resembles. This is the
+    # attractor/pattern-completion behaviour the program's framing invokes ("the entanglement topology
+    # settling into a stable graph structure ... = attractor in graph space"). An EXACT match always wins,
+    # so the conjunction and capacity results are preserved unchanged.
+    # HONEST NAMING: mechanically this is similarity-weighted retrieval over stored components. It is a
+    # design choice motivated by the attractor framing, not something Model 6 measured.
+    overlap_generalization: bool = True
+    overlap_sharpness: float = 4.0   # exponent on Jaccard similarity; higher = more nearly exact-match only
     seed: Optional[int] = None
 
 
@@ -140,6 +152,26 @@ class GraphCoherenceGatedLearner:
                 for m in members:                      # the readout consumes the trace
                     self.trace[m] = self.p.trace_floor
         return fired
+
+    def predict_group(self, members) -> float:
+        """Value for a component. Exact memory if we have it; otherwise partial reactivation of overlapping
+        memories (weighted by Jaccard similarity), which is what lets a never-seen combination be answered."""
+        key = frozenset(int(m) for m in members)
+        if not key:
+            return 0.0
+        if key in self.group_w:
+            return float(self.group_w[key])
+        if not self.p.overlap_generalization:
+            return 0.0
+        num = den = 0.0
+        for k, v in self.group_w.items():
+            inter = len(key & k)
+            if inter == 0:
+                continue
+            sim = inter / len(key | k)
+            wgt = sim ** self.p.overlap_sharpness
+            num += wgt * v; den += wgt
+        return float(num / den) if den > 0 else 0.0
 
     def best_group(self) -> Optional[frozenset]:
         if not self.group_w:

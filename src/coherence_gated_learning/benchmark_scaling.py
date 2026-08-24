@@ -78,7 +78,7 @@ def run(K, is_graph, n_seeds=15, n_train_per_rule=80):
         ok = 0
         for i, pair in enumerate(rules):
             if is_graph:
-                v = L.group_w.get(frozenset(pair), 0.0)
+                v = L.predict_group(pair)
                 pred = float(np.sign(v)) if v != 0 else -1.0
             else:
                 pred = L.predict(pair)
