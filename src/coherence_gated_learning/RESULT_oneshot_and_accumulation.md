@@ -67,3 +67,46 @@ Two further accumulation mechanisms the biology has and this abstraction still d
 
 Either could plausibly restore "more data helps". They are the next concrete step, and they come straight
 from the biology rather than from tuning.
+
+---
+
+## Both accumulation mechanisms implemented and measured (2026-08-24)
+
+| variant | AUC | bal-acc | components | trend/chunk |
+|---|---|---|---|---|
+| baseline: mean readout (original) | 0.6886 | 0.5962 | 5,815 | +0.0014 |
+| **+ evidence accumulation (k=2)** | **0.7054** | 0.5911 | 5,815 | +0.0004 |
+| + tag mass, ungraded | 0.7039 | 0.5898 | 5,829 | +0.0003 |
+| + tag mass + GRADED tokens (both) | 0.7010 | 0.5916 | **9,541** | +0.0010 |
+
+**Mechanism (2), evidence accumulation, is a real win and is kept** (+0.017 AUC, last -> level with the best
+one-shot learner).
+
+**Mechanism (1), tag magnitude growing with repeated activation, did NOT help here** — it slightly hurt, and
+it fragmented the component space from 5,815 to 9,541, diluting the evidence behind each component.
+
+### But this dataset CANNOT TEST mechanism (1), and that is the honest reading
+
+Repeated evidence barely exists in a 6-week appointment window:
+
+| test appointments with... | share |
+|---|---|
+| >= 1 prior visit | 59.2% |
+| >= 2 prior visits | 34.2% |
+| **>= 1 prior NO-SHOW** | **20.5%** |
+| **>= 2 prior NO-SHOWS** | **6.3%** |
+| >= 3 prior NO-SHOWS | 2.3% |
+
+Grading "one prior no-show" against "several" applies to ~6% of cases. It cannot move an aggregate AUC, while
+the extra tokens fragment components across 100% of cases. So the result is **NOT a falsification of the
+mechanism — it is an untestable question on this data**, and it is recorded that way.
+
+Where it WOULD be testable: any dataset with long per-subject histories. PAUL's scheduling data spans far more
+than six weeks, so patients accumulate real history there — which makes this one of the specific things worth
+checking if that data is ever examined, rather than something to conclude from here.
+
+### Standing summary of the abstraction's state
+
+- **Fixed:** over-confidence from single observations (evidence accumulation). Real, measured, kept.
+- **Untested:** tag-magnitude accumulation — needs long per-subject histories.
+- **Still open:** saturation. Neither mechanism restored "gets better with more data"; the trend stays flat.
