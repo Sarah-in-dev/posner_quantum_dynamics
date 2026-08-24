@@ -57,3 +57,41 @@ wound, and it is superseded by this entry rather than deleted.
 The gate proposed after Benchmark 5 still holds but must be run **with temporal features included**:
 fit GBM and logistic regression on PAUL's features *plus* patient history, and compare AUC. Running that
 diagnostic on a time-flattened table would have produced a false negative here, and would do the same there.
+
+---
+
+## Does it improve on repeat exposure, or with more data? Measured — NO to both.
+
+**Repeating the SAME data (multiple passes over the training period, evaluated on the untouched later period):**
+
+| passes | AUC | bal-acc | components stored |
+|---|---|---|---|
+| **1** | **0.6886** | 0.5962 | 5,815 |
+| 2 | 0.6869 | 0.5898 | 5,815 |
+| 3 | 0.6854 | 0.5887 | 5,815 |
+| 5 | 0.6833 | 0.5884 | 5,815 |
+| 8 | 0.6815 | 0.5881 | 5,815 |
+
+Monotonically WORSE, and the component count is **identical to the last unit** — re-reading discovers nothing
+new, it only re-observes the same (component -> outcome) pairs, sharpening on training-period noise which then
+transfers worse across the time shift. Mild overfitting by repetition.
+
+**More NEW data (online learning continued through the test period, AUC per successive chunk):**
+0.6816, 0.6943, 0.6773, 0.7082, 0.6818 — no trend; that is noise. Components grew only 5,207 -> 5,815 (+12%)
+across the whole test period, i.e. it was already near saturation.
+
+## What that means, stated plainly
+
+The primitive is a **one-shot learner that saturates fast**, not a gradual optimiser:
+
+- **Strength:** it reaches its performance almost immediately, from a single pass, with no training cycle and
+  no retraining. It is useful after very little data.
+- **Limitation:** it does NOT keep improving. You cannot close the 0.045 AUC gap to gradient boosting by
+  giving it more epochs or more data — that lever does not exist for this architecture.
+
+This matches the biology it came from (commitment is a one-shot structural latch — once committed, re-exposure
+adds nothing) and is a genuine architectural difference from gradient methods, which improve steadily with
+more passes and more data.
+
+**Caveat:** the dataset's appointment window is only ~6 weeks, so the "more data" question is answered only
+over a short horizon. A longer series could still show slow growth as genuinely new components appear.
