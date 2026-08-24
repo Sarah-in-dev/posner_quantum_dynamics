@@ -73,6 +73,39 @@ class CGLForager:
         s = self.store.setdefault(frozenset(feats), [0.0, 0]); s[0] += r; s[1] += 1
 
 
+class DepressForager(CGLForager):
+    """Adds the ACTIVE DEPRESSION arm Model 6 has and the abstraction had dropped.
+
+    The lock-in above is not a novelty deficit -- a novelty-by-count bonus was tried and FAILED (post-switch
+    coverage stayed at 2.0, because once every patch is familiar nothing is novel however wrong the beliefs
+    are). The real cause is that accumulated evidence could not be REVISED: sum=+50 over count=50 scores ~0.96
+    and needs ~50 contradictions to flip. Model 6 does not wait for decay -- PP1 strips CaMKII-pThr286 and
+    DAPK1 disrupts the GluN2B complex, actively taking a memory apart when reward turns against it.
+
+    Implemented as a leaky (recency-weighted) accumulator, optionally asymmetric so contradiction bites harder:
+        value <- value + rate * (r - value),   rate scaled by `ltd` when the outcome contradicts the estimate.
+    HONEST NAMING: this value update is the standard incremental/exponentially-weighted rule. What remains
+    distinctive here is the per-component conjunctive representation and exploration arising from commit
+    probability -- NOT this update."""
+    def __init__(self, seed=0, rate=0.1, ltd=1.0, **kw):
+        super().__init__(seed=seed, **kw); self.rate, self.ltd = rate, ltd
+        self.val = {}
+    def _val(self, feats):
+        k = frozenset(feats)
+        if k in self.val: return self.val[k]
+        num = den = 0.0
+        for kk, v in self.val.items():
+            inter = len(k & kk)
+            if not inter: continue
+            w = (inter / len(k | kk)) ** 4
+            num += w * v; den += w
+        return num / den if den else 0.0
+    def learn(self, feats, r):
+        k = frozenset(feats); v = self.val.get(k, 0.0)
+        rate = self.rate * (self.ltd if r < v else 1.0)
+        self.val[k] = v + rate * (r - v)
+
+
 class EpsForager:
     def __init__(self, seed=0, eps=0.1, decay=None):
         self.rng = np.random.default_rng(seed); self.q = {}; self.n = {}
@@ -148,7 +181,8 @@ if __name__ == "__main__":
     print("=" * 100)
     print(f"  {'agent':>32} {'pre':>8} {'post':>9} {'failed':>9} {'patches pre':>10} {'patches post':>11}")
     print("  " + "-" * 88)
-    run(lambda s: CGLForager(seed=s), "coherence-gated (no expl. param)")
+    run(lambda s: CGLForager(seed=s), "coherence-gated, sticky sum")
+    run(lambda s: DepressForager(seed=s, rate=0.1), "  + active depression (LTD arm)")
     for e in (0.05, 0.15):
         run(lambda s, e=e: EpsForager(seed=s, eps=e), f"eps-greedy fixed {e}")
     run(lambda s: EpsForager(seed=s, eps=1.0, decay=600), "eps-greedy decaying")

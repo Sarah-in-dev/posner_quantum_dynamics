@@ -48,3 +48,53 @@ it is simply never revisited, so the evidence that would overturn the belief is 
 That is the next mechanism, and like the accumulation fix it comes from the biology rather than from tuning.
 Until it exists, the honest statement is: **the primitive steers its own sampling efficiently, and is
 vulnerable to lock-in when the world changes underneath it.**
+
+---
+
+# UPDATE: the lock-in is fixed by the ACTIVE DEPRESSION arm (2026-08-24)
+
+## First attempt — a novelty drive — FAILED, and the failure was informative
+
+Added an unfamiliarity bonus (`drive = gain*value + nov/sqrt(count+1)`), motivated by the brain's
+novelty/familiarity response. Result:
+
+| novelty weight | pre | post | patches pre | patches post |
+|---|---|---|---|---|
+| 0 (none) | 1.000 | 0.695 | 8.1 | 2.2 |
+| 0.2 | 1.000 | 0.699 | 8.6 | 2.0 |
+| 0.5 | 1.000 | 0.693 | 9.5 | 2.0 |
+| 0.8 | 1.000 | 0.690 | 11.8 | 1.8 |
+
+It broadened EARLY sampling (8.1 -> 11.8 patches) but post-switch coverage stayed at ~2.0 and recovery did not
+move. **Novelty-by-count decays permanently: once every patch is familiar nothing is novel again, however
+wrong the beliefs have become.** Reported as a failed mechanism, not quietly dropped.
+
+## The actual cause: accumulated evidence could not be REVISED
+
+A component with `sum=+50, count=50` scores ~0.96 and needs ~50 contradicting observations to flip. **The
+evidence accumulation that cured over-confidence is precisely what caused the lock-in.** Model 6 does not wait
+for decay — it has an ACTIVE DEPRESSION arm (PP1 strips CaMKII-pThr286; DAPK1 disrupts the GluN2B complex),
+so a memory is actively taken apart when the reward signal turns against it. The abstraction had kept the
+potentiation arm and dropped the depression arm.
+
+## Result with active depression
+
+| agent | pre | post | never recovered | patches pre | patches post |
+|---|---|---|---|---|---|
+| coherence-gated, sticky sum | 1.000 | 0.695 | 0% | 8.1 | 2.2 |
+| **+ active depression (LTD arm)** | **1.000** | **1.000** | **0%** | 9.7 | 10.8 |
+| softmax T=0.25 (best baseline) | 0.998 | 0.888 | 0% | 11.8 | 4.3 |
+| eps-greedy fixed 0.05 | 0.955 | 0.361 | 50% | 12.0 | 10.7 |
+| eps-greedy decaying | 0.951 | 0.034 | 97% | 12.0 | 8.3 |
+
+**Perfect before AND after the unsignalled change**, beating the best tuned baseline (0.888), with no
+exploration parameter. Robust across recency rates 0.05–0.4 (an 8x range, all 1.000) and unchanged by adding
+the asymmetric-LTD variant, so it is not knife-edge. At the fastest rate it also KEEPS the focused sampling
+that made the fourth primitive visible (8.1 patches pre, 7.3 post) while still recovering fully.
+
+## Honest naming
+
+The value update is now `value <- value + rate*(r - value)` — the standard incremental / exponentially-weighted
+rule. It is NOT novel and is not claimed as such. What remains distinctive is the **per-component conjunctive
+representation** and **exploration arising from commit probability rather than a temperature**; the fix here
+restores revisability, which the sticky sum had removed.
