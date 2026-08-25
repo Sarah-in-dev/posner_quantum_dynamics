@@ -225,7 +225,11 @@ CAL = `RESEARCH_LOG_CALCIUM_DIMER.md`). This table is the routing; the log entry
 | `PREREG_STEP3_VALENCE_INTO_CONSOLIDATION` | SUPERSEDED (ISO-1 reorder; isotope axis was circular) | CAL ISO-1 |
 
 **Handoffs (`handoffs/SESSION_HANDOFF_*`, `PO*_HANDOFF_*`):** all are prior-Claude-session, first-person notes — history,
-not canonical direction. **CURRENT / LIVE:** `handoffs/SESSION_HANDOFF_2026-08-09_REWARD_SIGNED_READOUT_PART2.md` —
+not canonical direction. **CURRENT / LIVE:** `handoffs/SESSION_HANDOFF_2026-08-25_NETWORK_BLOCKER_AND_PRIMITIVE_NEGATIVES.md`
+— BOTH tracks: the biology's hard blocker (Frohlich condensation 25x short of threshold => cross-synapse
+entanglement has never been reachable; F4-b killed, EC2 stopped) and the primitive's three benchmark negatives
+(consolidated 7/7, then B9/B10/network all negative with each apparent win retracted against a control).
+Supersedes: `handoffs/SESSION_HANDOFF_2026-08-09_REWARD_SIGNED_READOUT_PART2.md` —
 the reward-signed-readout frontier (Part 2), with the SETTLED items and the exact next experiment. Older: `2026-08-08`
 (F-series/reground — superseded parts; its COV charter is off-program/reverted), `2026-07-30`, `2026-07-27`; the
 Mar/Apr/Jun handoffs are superseded. Always verify a handoff against the logs + skills before acting.
