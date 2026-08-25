@@ -6,8 +6,9 @@ other. Both are real results. Neither is a reason to restart from scratch.**
 
 ## 0. One line — and the GUARDRAIL that must survive
 
-**Biology:** Fröhlich condensation is **25× short of threshold**, so cross-synapse entanglement has *never
-once* been reachable in this codebase — every multi-synapse result ever run had the backbone inert.
+**Biology:** the F4 drive protocol produces **~40× too little metabolic power** to condense the backbone
+(r=0.039 vs the r>1 required), so cross-synapse entanglement is absent from every F4 run. **This is a
+CONFIGURATION failure, not a physical verdict** — see the CORRECTION box below.
 **Primitive:** consolidated into one implementation (7/7 regression), then **lost three benchmarks in a row**,
 each with the cause identified and each apparent win **retracted against a control**.
 
@@ -19,12 +20,37 @@ each with the cause identified and each apparent win **retracted against a contr
 > run the control that could explain it without your mechanism. This session, two apparent wins evaporated
 > that way. Report the control's number next to yours, always.
 
+### >>> CORRECTION (2026-08-25, after the handoff was first written) <<<
+
+The first draft of this handoff claimed cross-synapse entanglement "has never once been reachable in this
+codebase". **That is WRONG, and it was caught by recovering an orphaned commit (`4b4cc2d`) while checking
+whether `git worktree prune` was safe.** The evidence:
+
+- `sweep/po7_unit8_eta2_partition.py` header: **`NMDAR open 0.0000 -> 0.3806, r 0.3509 -> 1.6234,
+  eta 0.0000 -> 0.2376`** — the script's own acceptance criterion is that r reaches ~1.62 and eta ~0.238.
+  **Condensation is REACHABLE.**
+- Sarah's recovered Q7-1 correction (4 runs, 2 synapses, 45 s, seed 7): `eta_max` **0.0487–0.1069**,
+  `cross_bonds` **1179–2578**. Non-zero eta and thousands of cross bonds, in that configuration.
+
+So F4-b's `r = 0.039` is **~40× below a configuration that demonstrably condenses**, and the blocker is the
+**F4 DRIVE PROTOCOL**, not Fröhlich condensation per se. `eta_native = (r-1)/(r+1) if r >= 1 else 0.0`
+(`po7_unit8_eta2_partition.py:106`), so r<1 clamps eta to exactly 0 — which is all F4 ever saw.
+
+**This also changes the §4 recommendation: option (A) is no longer "re-derive P_c from scratch". It is the
+much cheaper DIFF — what does the PO-7/eta_probe rig drive that the F4 harness does not?** Start at
+`compute_metabolic_power(E_invasion, ca, p_active_max_W)` and compare the NMDAR open fraction (0.3806 in the
+condensing rig) against what F4's `--drive-mv -20 --elig-s 25` actually produces. Also note Sarah's caveat,
+preserved: whether the backbone condenses **is not reproducible at a fixed seed** (the range includes zero),
+so any comparison needs N runs, not one.
+
 ## 1. Read-order (ground first — do not skip)
 
 1. `src/models/Model_6/docs/README.md` — the documentation map (canonical vs stale).
 2. `session-discipline` and `agent-grounding-protocol` skills, in full.
 3. This handoff.
-4. Biology: `RESEARCH_LOG_CALCIUM_DIMER.md` entry **F4-b — 2026-08-24** (the blocker).
+4. Biology: `RESEARCH_LOG_CALCIUM_DIMER.md` entry **F4-b — 2026-08-24** (the blocker) AND its
+   **CORRECTION** appended 2026-08-25. Read both; the first framing was wrong.
+   Then `coordination/leads/po7-construct-validity.md` — final section, the recovered Q7-1 correction.
 5. Primitive: `src/coherence_gated_learning/` — `RESULT_nonstationary_bandit.md`,
    `RESULT_contextual_bandit.md`, `RESULT_network_primitive.md`, in that order.
 6. Code: `cgl_primitive.py` (the consolidated primitive), `network_cgl.py` (the network version),

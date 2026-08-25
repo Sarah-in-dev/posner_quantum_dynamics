@@ -146,6 +146,28 @@ is to re-derive `P_c` and `P_met` and establish whether a 25x gap is a parameter
 physical verdict on Frohlich condensation at physiological power, or a missing power source in the model.
 Until that is settled, network runs cannot produce network behaviour.
 
+### >>> CORRECTION appended 2026-08-25 — the framing above is WRONG <<<
+
+The entry above reads as a verdict on Frohlich condensation itself. **It is not. Condensation IS reachable
+in this codebase; the F4 DRIVE PROTOCOL is what fails to reach it.** Found by recovering orphaned commit
+`4b4cc2d` while checking whether `git worktree prune` was safe.
+
+- `sweep/po7_unit8_eta2_partition.py` header states its own acceptance criterion:
+  **`NMDAR open 0.0000 -> 0.3806, r 0.3509 -> 1.6234, eta 0.0000 -> 0.2376`.**
+- Sarah's recovered Q7-1 correction (2026-07-18; 4 runs, 2 synapses, 45 s, seed 7) measured
+  **`eta_max` 0.0487-0.1069** and **`cross_bonds` 1179-2578** — non-zero eta, thousands of cross bonds.
+
+So F4-b's `r = 0.039` sits **~40x below a configuration that demonstrably condenses**, and
+`eta_native = (r-1)/(r+1) if r >= 1 else 0.0` (`po7_unit8_eta2_partition.py:106`) clamps eta to exactly 0
+for any r<1 — which is all F4 ever saw. The "25x short of threshold" number is real as an observation of the
+F4 runs, but it must NOT be read as a physical limit.
+
+**Revised next step (cheaper than re-deriving P_c):** DIFF the two rigs. What does the PO-7/eta_probe
+configuration drive that the F4 harness does not? Start at `compute_metabolic_power(E_invasion, ca,
+p_active_max_W)` and compare NMDAR open fraction (0.3806 in the condensing rig) against what
+`--drive-mv -20 --elig-s 25` produces. **Caveat preserved from Q7-1: condensation is NOT reproducible at a
+fixed seed — the observed range includes zero — so any comparison needs N runs, not one.**
+
 **Cost note:** ~24.4 h on c5.9xlarge (~$37) produced zero completed runs; a full batch would have been days
 and several hundred dollars for an unreachable observable. Salvaged evidence:
 `results/f4_specificity_ec2/sweep_f4b_2026-08-24.log`.
