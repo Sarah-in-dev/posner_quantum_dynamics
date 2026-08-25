@@ -110,6 +110,68 @@ made, not just what it was.
 
 ## THE LOG (newest first)
 
+### F4-c — 2026-08-25 · THE RIG DIFF: F4 fails at the CALCIUM step, ~10x short — full causal chain measured
+
+Follow-up to F4-b and its correction. The question was: what does the PO-7/L·ETA-2 rig (which condenses,
+r=1.6234) drive that the F4 harness does not? **Answered, quantitatively, with cheap single-synapse runs.**
+
+**THE CHAIN (each link verified, not assumed):**
+```
+calcium -> actin_enlargement -> E_invasion -> P_met -> r -> eta -> cross-synapse bonds
+```
+1. `compute_metabolic_power` (`model6_parameters.py:57`) is a **PRODUCT**:
+   `P_met = P_BASAL + E_invasion * ca_open_fraction * P_active_max`.
+   **With E_invasion = 0 the calcium term is annihilated regardless of its size.**
+2. `E_invasion = clip((actin_enlargement - 0.1)/(E_ref - 0.1), 0, 1)` (`spine_plasticity_module.py:415`).
+3. **Actin growth is driven by CALCIUM, NOT by `structural_drive`** — measured, and it corrects the
+   reading the `step()` docstring invites ("structural_drive from DDSC sets the TARGET state"):
+
+   | structural_drive | Ca (uM) | actin | E_invasion |
+   |---|---|---|---|
+   | 0.00 / 0.25 / 0.50 / 1.00 | 0.2 | 0.0095 / 0.0075 / 0.0065 / 0.0056 | **0.0000 (shut)** |
+   | 0.00 | 2.0 | 1.7100 | **0.9096 (open)** |
+
+   Structural drive is irrelevant at low calcium — it slightly *reduces* actin. Calcium alone gates it.
+
+**THE THRESHOLD (120 s sustained):** the gate opens between **0.2 and 0.4 uM**.
+`0.20 -> E_inv 0.0000 (shut)` | `0.40 -> 0.0231 (open)` | `0.60 -> 0.2502` | `1.00 -> 0.7211` | `2.00 -> 0.9096`
+
+**WHERE THE TWO RIGS ACTUALLY SIT (measured on the 7-synapse L·ETA-2 rig, 2 s, seed 0):**
+- **voltage only (what F4 does): `ca_max = 0.20 uM`** — at/below the opening threshold, so **the gate never
+  opens at ANY duration.** This is exactly the F4-b observation: 24.4 h, 8 shards, `P_met` pinned at 0.84 fW
+  = *precisely* `P_BASAL`, i.e. `E_invasion * ca_open` was identically 0 the entire time.
+- **+ glutamate (what PO-7 does): `ca_max = 0.62 uM`** — above threshold. Glutamate raises calcium ~3x.
+  This is the ERR-2 defect the PO-7 docstring names by line: voltage-only leaves NMDARs structurally silent.
+
+**BUT GLUTAMATE ALONE IS NOT SUFFICIENT.** At the measured 0.62 uM the gate opens at ~20 s, yet r climbs only
+to **0.455 by 240 s** — still short of the r>1 condensation requirement:
+
+| drive (s) | actin | E_invasion | P_met (fW) | r |
+|---|---|---|---|---|
+| 10 | 0.0783 | 0.0000 | 0.84 | 0.039 |
+| 20 | 0.1493 | 0.0278 | 1.48 | 0.069 |
+| 60 | 0.3766 | 0.1562 | 4.41 | 0.205 |
+| 240 | 0.7933 | 0.3917 | 9.79 | 0.455 |
+
+(P_met bracketed at the rig's own NMDAR open fraction 0.3806.) **r>1 needs `E_invasion * ca_open > 0.3445`,
+i.e. E_invasion ~0.9 at that open fraction — which needs ~2 uM sustained for ~120 s.**
+
+**PRESCRIPTION for a runnable F4:** supply **glutamate** (F4 currently passes voltage only:
+`net.step(DT, {"per_synapse":[{"voltage":...}]})`, `sweep/f4_specificity.py:90,93`) **AND** reach
+**~2 uM sustained calcium for ~2 minutes** — roughly **10x the calcium F4 currently produces**, held for
+minutes rather than seconds. Neither a longer voltage drive nor a stronger one can substitute: at 0.20 uM the
+first link in the chain never fires.
+
+**WHAT MISLED THE F4-b DIAGNOSIS:** F4's diagnostic prints `invaded=True`, which reads as "the gate is open".
+It is **not this gate** — `set_microtubule_invasion()` (`model6_core.py:1144`) only sets `_mt_invaded` and
+raises the tryptophan count. The power gate is `E_invasion`, from actin. The two are unrelated, and F4 was
+watching the wrong one while the one that mattered sat at zero.
+
+**COST NOTE:** the whole diff was answered with single-synapse runs in seconds. A 7-synapse/30 s comparison
+was started first and killed after 90 min of CPU without producing its first row (~0.9 s per simulated step).
+**Cheap decisive probes before expensive full-rig runs.**
+
+
 ### F4-b — 2026-08-24 · HARD BLOCKER: Frohlich condensation is 25x short of threshold under physiological drive
 
 **Status: run KILLED and instance STOPPED after 24.4 h with ZERO completed runs. Not a null — a structural
