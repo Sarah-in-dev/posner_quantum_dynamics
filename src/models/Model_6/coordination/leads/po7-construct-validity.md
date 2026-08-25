@@ -784,3 +784,39 @@ solved problem here — that is how Arm B settled F-5. Reuse it; do not rebuild 
 **Status: WRAPPED.** Unit 1 complete and accepted. Q7-1 escalated to Sarah and unresolved by design.
 Q7-2/Q7-3 routings placed with the MO. Q7-4/Q7-5 filed. **Nothing seeded, nothing de-duplicated, no
 other owner's file touched.**
+
+---
+
+<!-- RECOVERED 2026-08-25 from orphaned commit 4b4cc2d (worktree intelligent-kowalevski-0d741d, since
+     deleted). This correction existed in NO branch and would have been lost to garbage collection.
+     Appended verbatim; the July file it was written against has since diverged by 500+ lines, so a
+     cherry-pick was abandoned in favour of this surgical append. -->
+---
+
+## UPDATE to Q7-1 — the in-process arm landed. **The spread is WORSE than I first reported.**
+
+The determinism script's fourth run completed after I filed the verdict. **Four runs, one script, one
+config (2 synapses, 45 s, seed 7), directly comparable:**
+
+| run | eta_max | cross_bonds | dimers |
+|---|---|---|---|
+| proc 1 | 0.09396788 | 1848 | 796 |
+| proc 2 | 0.10690230 | 1179 | 822 |
+| in-process A | 0.04873884 | 2578 | 873 |
+| in-process B | 0.10690230 | 1536 | 653 |
+
+- **`cross_bonds` spread = 2578 / 1179 = 2.19×.** I reported **1.57×** off two runs; **the correct
+  figure on the full comparable set is 2.19×,** and I am correcting my own number rather than
+  leaving the smaller one standing.
+- **`eta_max` spread = 2.19×** (0.0487 → 0.1069), and the Arm A null separately produced
+  **`eta_max = 0.0`** — so across all driven runs today the range **includes zero**: whether the
+  backbone condenses at all is not reproducible at a fixed seed.
+- `dimers` spread = 1.34× (653 → 873).
+
+**`agree: false` on the in-process pair, consistent with the cross-process pair.** The two
+enforcement paths agree with each other, which is what makes this a property of the model rather
+than of how I invoked it.
+
+**What this still is NOT:** four runs is a **range, not a distribution.** It bounds nothing and
+gives no variance. **The N-run distributional pass named in Q7-1 remains un-run and remains the
+decision-relevant missing number.** I am not upgrading a range into a spread estimate.
