@@ -82,12 +82,44 @@ def build_network(n_syn, seed):
 def run_one(n_syn, driven, rewarded, seed, elig_s, delay_s, reward_s, settle_s, burst_s, drive_v=DRIVE_V):
     """One network draw. `driven` = indices driven during the eligibility window. Returns per-synapse state."""
     import numpy as np
+    from presynaptic_release import PresynapticRelease
     net = build_network(n_syn, seed)
+    # === GLUTAMATE (added 2026-08-29, F4-c) ===
+    # Every F4 run to date drove VOLTAGE ONLY, which is the ERR-2 defect quantum-system-canonical §2.3 flags
+    # as "the live-model glutamate-wiring gap" and that sweep/po7_unit8_eta2_partition.py names by line
+    # ("the ERR-2 defect that made L·ETA-1 measure NMDARs structurally silent"; L·ETA-2's ignition came from
+    # glutamate reaching the drivers).
+    #
+    # WHAT IT ACTUALLY BUYS — MEASURED, and NOT what a first (broken) probe suggested. An earlier probe read a
+    # NONEXISTENT attribute `_nmdar_open_fraction` via getattr(...,0.0), so it silently reported ca_open = 0
+    # everywhere and produced a confident, WRONG story ("NMDARs never open without glutamate"). The correct
+    # call is the one po7's working rig uses: `s.calcium.channels.get_open_fraction()`. Re-measured with it,
+    # single synapse, -20 mV, 4 s:
+    #     voltage only        ca_open peak 0.44   r: 0.039 -> 0.072
+    #     voltage + glutamate ca_open peak 0.74   r: 0.039 -> 0.080
+    # Channels DO open without glutamate. What glutamate does is raise the peak open fraction ~1.7x, and
+    # because P_met = P_BASAL + E_invasion * ca_open * P_active_max (model6_parameters.py:57) is a PRODUCT,
+    # that directly relaxes how far the SLOW factor has to climb:
+    #     r > 1 requires E_invasion * ca_open > (21.51-0.84)/60 = 0.3445
+    #       at ca_open 0.44 (voltage only)  -> E_invasion > 0.783
+    #       at ca_open 0.74 (+ glutamate)   -> E_invasion > 0.466
+    # From the actin probe (120 s sustained): Ca 0.8 uM -> E_inv 0.531, 1.0 uM -> 0.721. So WITH glutamate the
+    # requirement sits inside the reachable range; without it, it needs E_invasion ~0.78, which is far harder.
+    # NB the binding constraint is therefore E_invasion, which grows on the SLOW structural-plasticity
+    # timescale -- so the eligibility drive must be LONG (tens of seconds), not merely present.
+    #
+    # Glutamate goes ONLY to the driven synapses, so the eligibility substrate stays perfectly specific by
+    # construction (undriven synapses still form no tag) -- the property that makes the credit question well
+    # posed in the first place.
+    rel = PresynapticRelease(seed=seed)
 
-    def phase(duration, drive_idx, da):
+    def phase(duration, drive_idx, da, glutamate=True):
         n = int(round(duration / DT))
         for _ in range(n):
-            per_syn = [{"voltage": (drive_v if i in drive_idx else REST_V)} for i in range(n_syn)]
+            g = rel.step(0.95, DT)
+            per_syn = [({"voltage": drive_v, "glutamate": g} if (glutamate and i in drive_idx)
+                        else {"voltage": (drive_v if i in drive_idx else REST_V)})
+                       for i in range(n_syn)]
             for s in net.synapses:
                 s._da_signal = da
             net.step(DT, {"per_synapse": per_syn, "reward": False})
@@ -115,7 +147,7 @@ def run_one(n_syn, driven, rewarded, seed, elig_s, delay_s, reward_s, settle_s, 
         da = (DA_BURST if (rewarded and k < nb) else DA_TONIC)
         for s in net.synapses:
             s._da_signal = da
-        net.step(DT, {"per_synapse": [{"voltage": REST_V}] * n_syn, "reward": False})
+        net.step(DT, {"per_synapse": [{"voltage": REST_V}] * n_syn, "reward": False})   # no drive, no glutamate
 
     # 4. settle
     phase(settle_s, set(), DA_TONIC)
@@ -170,7 +202,10 @@ def main():
         daemonize(os.path.join(RESULTS_DIR, "sweep.log"))
 
     os.environ.setdefault("OMP_NUM_THREADS", "1")
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    _M6 = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))          # .../src/models/Model_6
+    sys.path.insert(0, _M6)
+    # presynaptic_release lives in the PROJECT-ROOT sweep/, not Model_6's sweep/ (checked 2026-08-29)
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(_M6))), "sweep"))
     import logging; logging.disable(logging.INFO)
     import numpy as np
 
